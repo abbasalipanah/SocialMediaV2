@@ -1,0 +1,61 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+BACKEND = ROOT / "backend"
+FRONTEND = ROOT / "frontend"
+
+
+def test_dependency_manifests_and_real_locks_exist() -> None:
+    requirements = (BACKEND / "requirements.txt").read_text(encoding="utf-8")
+    runtime_lock = (BACKEND / "requirements.lock").read_text(encoding="utf-8")
+    development_lock = (BACKEND / "requirements-dev.lock").read_text(encoding="utf-8")
+    for package in ("fastapi", "uvicorn", "httpx", "sqlalchemy", "alembic", "psycopg"):
+        assert package in requirements
+        assert f"{package}==" in runtime_lock or f"{package}[binary]==" in runtime_lock
+        assert package in development_lock
+    assert "pytest==" in development_lock
+
+    package = json.loads((FRONTEND / "package.json").read_text(encoding="utf-8"))
+    package_lock = json.loads((FRONTEND / "package-lock.json").read_text(encoding="utf-8"))
+    assert package["dependencies"]["react"].startswith("^19")
+    assert len(package_lock["packages"]) > 1
+
+
+def test_safe_environment_contract_is_complete() -> None:
+    env = (BACKEND / ".env.example").read_text(encoding="utf-8")
+    required_lines = {
+        "SOCIAL_WRITES_ENABLED=false",
+        "SOCIAL_TIKTOK_PROVIDER_PROFILE=tiktok_business_accounts_v1_3",
+        "SOCIAL_TIKTOK_BUSINESS_APP_ID=7657818426198474768",
+        "SOCIAL_TIKTOK_ACCOUNT_ENABLED=false",
+        "SOCIAL_TIKTOK_ACCOUNT_OAUTH_MODE=disabled",
+        "SOCIAL_TIKTOK_COLLECTION_ENABLED=false",
+        "SOCIAL_TIKTOK_ADVERTISER_ENABLED=false",
+        "SOCIAL_TIKTOK_BUSINESS_APP_SECRET=",
+        "SOCIAL_TIKTOK_OAUTH_STATE_SECRET=",
+        "SOCIAL_CREDENTIAL_ACTIVE_KEY_ID=",
+        "SOCIAL_CREDENTIAL_KEYRING_JSON=",
+    }
+    assert required_lines.issubset(set(env.splitlines()))
+
+
+def test_canonical_scaffold_and_frontend_entrypoints_exist() -> None:
+    required = (
+        BACKEND / "app" / "main.py",
+        BACKEND / "app" / "core" / "config.py",
+        BACKEND / "app" / "core" / "write_policy.py",
+        BACKEND / "app" / "domain" / "platforms" / "__init__.py",
+        FRONTEND / "index.html",
+        FRONTEND / "vite.config.ts",
+        FRONTEND / "tsconfig.json",
+        FRONTEND / "src" / "main.tsx",
+    )
+    for path in required:
+        assert path.exists(), f"Missing required bootstrap path: {path}"
+
+
+def test_generic_migration_guide_is_not_a_repository_artifact() -> None:
+    assert not (ROOT / "docs" / "accumulate-alt-uygulama-teknik-entegrasyon-rehberi.md").exists()
