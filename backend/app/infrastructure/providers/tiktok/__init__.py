@@ -1,0 +1,1 @@
+"""Canonical TikTok provider scaffold."""

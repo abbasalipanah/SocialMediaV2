@@ -1,0 +1,1 @@
+"""Canonical settings API scaffold."""

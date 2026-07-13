@@ -1,0 +1,1 @@
+"""Canonical worker layer scaffold."""

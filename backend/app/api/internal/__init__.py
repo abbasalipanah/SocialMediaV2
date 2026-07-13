@@ -1,0 +1,1 @@
+"""Canonical internal API scaffold."""

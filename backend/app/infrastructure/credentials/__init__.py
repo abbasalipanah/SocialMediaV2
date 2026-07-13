@@ -1,0 +1,1 @@
+"""Canonical credentials infrastructure scaffold."""

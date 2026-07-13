@@ -1,0 +1,1 @@
+"""Canonical checkpoints infrastructure scaffold."""

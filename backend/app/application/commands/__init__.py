@@ -1,0 +1,1 @@
+"""Canonical commands package scaffold."""
