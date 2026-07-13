@@ -4,19 +4,26 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from app.api.auth import create_auth_router
+from app.api.internal import create_internal_router
+from app.application.ports import AuthorityStore
 from app.core import AppSettings, Boundary, WritePolicy, mark_boundary
 
 
-def create_api_router(settings: AppSettings, policy: WritePolicy) -> APIRouter:
-    router = APIRouter(prefix="/api")
+def create_api_router(
+    settings: AppSettings,
+    policy: WritePolicy,
+    store: AuthorityStore | None = None,
+) -> APIRouter:
+    router = APIRouter()
 
-    @router.get("/health", tags=["health"], summary="Health probe")
+    @router.get("/api/health", tags=["health"], summary="Health probe")
     @mark_boundary(Boundary.QUERY)
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
     @router.get(
-        "/operations/readiness",
+        "/api/operations/readiness",
         tags=["operations"],
         summary="Dormant readiness probe",
     )
@@ -29,6 +36,8 @@ def create_api_router(settings: AppSettings, policy: WritePolicy) -> APIRouter:
             "database_configured": settings.db.configured,
         }
 
+    router.include_router(create_auth_router(settings, policy, store))
+    router.include_router(create_internal_router(settings, policy, store))
     return router
 
 
