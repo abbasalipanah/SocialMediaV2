@@ -1,25 +1,23 @@
-"""Provisioning projection port contracts."""
+"""Provisioning inbox and projection persistence contract."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
-from typing import Any
+from datetime import datetime
+from typing import Any, Protocol
 
 
-@dataclass(frozen=True)
-class ProvisioningSnapshot:
-    brand_id: str
-    parent_brand_id: str | None
-    hidden_parent_brand_id: str | None
-    payload: Mapping[str, Any]
+class ProvisioningStore(Protocol):
+    def apply_event(
+        self,
+        *,
+        nonce_hash: str,
+        nonce_expires_at: datetime,
+        event_id: str,
+        event_type: str,
+        entity_key: str,
+        version: int,
+        payload: Mapping[str, Any],
+    ) -> str: ...
 
-
-class ProvisioningStore:
-    """Port for Brand/Platform provisioning persistence."""
-
-    def get(self, brand_id: str) -> ProvisioningSnapshot | None:
-        raise NotImplementedError
-
-    def put(self, snapshot: ProvisioningSnapshot) -> None:
-        raise NotImplementedError
+    def get_projection(self, entity_key: str) -> Mapping[str, Any] | None: ...

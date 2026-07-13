@@ -1,30 +1,24 @@
-"""Session projection port contracts for SSO/webhook phase."""
+"""Session persistence contract."""
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, Protocol
 
 
-@dataclass(frozen=True)
-class SessionRecord:
-    session_id: str
-    provider: str
-    payload: Mapping[str, Any]
-    created_at: datetime
-    expires_at: datetime | None = None
+class SessionStore(Protocol):
+    def create_from_jti(
+        self,
+        *,
+        jti_hash: str,
+        session_hash: str,
+        payload: Mapping[str, Any],
+        expires_at: datetime,
+    ) -> bool: ...
 
+    def get_session(self, session_hash: str) -> Mapping[str, Any] | None: ...
 
-class SessionStore:
-    """Port for persistent session projection."""
+    def revoke_session(self, session_hash: str) -> None: ...
 
-    def get(self, session_id: str) -> SessionRecord | None:
-        raise NotImplementedError
-
-    def save(self, record: SessionRecord) -> None:
-        raise NotImplementedError
-
-    def delete(self, session_id: str) -> None:
-        raise NotImplementedError
+    def revoke_authority_sessions(self, *, user_id: str | None, brand_id: str | None) -> int: ...
