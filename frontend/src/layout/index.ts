@@ -1,0 +1,1 @@
+// Canonical layout scaffold.

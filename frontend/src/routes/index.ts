@@ -1,0 +1,1 @@
+// Canonical route catalog scaffold.

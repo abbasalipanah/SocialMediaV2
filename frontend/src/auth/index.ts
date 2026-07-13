@@ -1,0 +1,1 @@
+// Canonical auth provider scaffold.

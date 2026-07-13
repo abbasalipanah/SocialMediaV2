@@ -1,0 +1,1 @@
+// Canonical UI primitive scaffold.
