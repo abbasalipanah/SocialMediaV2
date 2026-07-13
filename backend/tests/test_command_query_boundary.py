@@ -12,15 +12,37 @@ from app.main import create_app
 def _api_routes() -> list[APIRoute]:
     settings = load_settings()
     router = create_api_router(settings, WritePolicy.from_settings(settings))
-    return [route for route in router.routes if isinstance(route, APIRoute)]
+    routes: list[APIRoute] = []
+    pending = list(router.routes)
+    while pending:
+        route = pending.pop()
+        if isinstance(route, APIRoute):
+            routes.append(route)
+        elif included := getattr(route, "original_router", None):
+            pending.extend(included.routes)
+    return routes
 
 
-def test_all_bootstrap_get_routes_are_explicit_queries() -> None:
+def test_all_routes_have_explicit_boundary_semantics() -> None:
     routes = _api_routes()
-    assert {route.path for route in routes} == {"/api/health", "/api/operations/readiness"}
+    assert {route.path for route in routes} == {
+        "/api/health",
+        "/api/operations/readiness",
+        "/api/auth/me",
+        "/api/auth/logout",
+        "/sso/consume",
+        "/internal/provisioning/events",
+    }
     for route in routes:
-        assert route.methods == {"GET"}
-        assert route.endpoint.__route_boundary__ == "query"
+        boundary = route.endpoint.__route_boundary__
+        if route.path == "/sso/consume":
+            assert route.methods == {"GET"}
+            assert boundary == "protocol_command"
+        elif route.methods == {"GET"}:
+            assert boundary == "query"
+        else:
+            assert route.methods == {"POST"}
+            assert boundary == "command"
 
 
 @pytest.mark.asyncio
