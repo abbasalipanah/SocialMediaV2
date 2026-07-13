@@ -136,6 +136,9 @@ class AppSettings:
     db: DatabaseConfig
     vault_enabled: bool
     log_level: str
+    sso_hs256_secret: str
+    provisioning_hmac_secret: str
+    session_cookie_secure: bool
     tiktok: TikTokConfig
 
 
@@ -227,6 +230,10 @@ def load_settings() -> AppSettings:
     )
     _validate_database(app_env, runtime_mode, writes, db)
     _validate_tiktok(tiktok)
+    sso_secret = _env("SOCIAL_SSO_HS256_SECRET")
+    provisioning_secret = _env("SOCIAL_PROVISIONING_HMAC_SECRET")
+    if app_env in PRODUCTION_LIKE_ENVS and (sso_secret or provisioning_secret):
+        raise ConfigurationError("Production secrets are blocked before final cutover")
     return AppSettings(
         app_env=app_env,
         app_name=_env("APP_NAME", "social_media"),
@@ -235,5 +242,8 @@ def load_settings() -> AppSettings:
         db=db,
         vault_enabled=_bool("SOCIAL_VAULT_ENABLED"),
         log_level=_env("SOCIAL_LOG_LEVEL", "INFO").upper(),
+        sso_hs256_secret=sso_secret,
+        provisioning_hmac_secret=provisioning_secret,
+        session_cookie_secure=_bool("SOCIAL_SESSION_COOKIE_SECURE"),
         tiktok=tiktok,
     )
