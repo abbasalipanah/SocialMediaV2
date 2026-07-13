@@ -1,0 +1,75 @@
+{
+  "captured_at": "2026-07-13T06:25:16.748118+00:00",
+  "excluded_path_parts": [
+    ".git",
+    ".pytest_cache",
+    ".venv",
+    "__pycache__",
+    "dist",
+    "logs",
+    "node_modules",
+    "venv"
+  ],
+  "policy": "branch+head+status+tracked-diff+content-manifest",
+  "projects": {
+    "Accumulate": {
+      "branch": "feature/social-ai-insights-ui",
+      "content_file_count": 1411,
+      "content_manifest": "baseline_Accumulate_content.sha256",
+      "content_manifest_sha256": "4394c9828b1846c8549e12994a65545634356911260e38201b0162cf8c05dd5d",
+      "head": "7d65db2da0a9c7cb866e984422b22bd5d8a1b5f7",
+      "origin": "git@github-accumulate:dexcore/accumulate.git",
+      "root": "/home/api/colab_scripts/Accumulate",
+      "status": [
+        " M backend/app/connectors/facebook/legacy/collector.py",
+        " M backend/app/connectors/facebook/legacy/metrics_store.py",
+        " M backend/app/main.py",
+        " M backend/app/social_media/backfill_jobs.py",
+        " M how-to-work-accumulate.md",
+        "?? backend/logs/",
+        "?? \"how-to-work-accumulate (1).md\""
+      ],
+      "status_sha256": "d4bf42086d871b368a7af55001759fc908e05a6253299763a68389cc8284ef1e",
+      "tracked_diff_sha256": "326e96c9fdfde7058d485e245e34657f9e9b02f7476a348bdd02e56868e76b8b"
+    },
+    "SocialMedia": {
+      "branch": "main",
+      "content_file_count": 215,
+      "content_manifest": "baseline_SocialMedia_content.sha256",
+      "content_manifest_sha256": "0fc322f9b8c3900394fa6bfecefb09b86d511fe39b1386b1b24d9daa29ecb5ad",
+      "head": "e69fc5c7e0f1648f1f8215aa98915c48f53943e0",
+      "origin": "https://github.com/abbasalipanah/SocialMedia.git",
+      "root": "/home/api/colab_scripts/SocialMedia",
+      "status": [
+        " M backend/app/connectors/facebook/legacy/collector.py",
+        " M backend/app/social_media/backfill_jobs.py",
+        " M backend/app/social_media/runtime_contracts.py",
+        " M backend/app/social_media/settings_service.py",
+        " M scripts/whitelist_backfill_90d.py",
+        " M tests/test_connector_namespace.py",
+        " M tests/test_social_backfill_jobs_lifecycle.py",
+        " M tests/test_social_media_runtime_contracts.py",
+        " M tests/test_social_settings_api.py",
+        " M tests/test_social_settings_service.py"
+      ],
+      "status_sha256": "5bd2f164a9f7b92c91f4baa32723bae29836a4d96f9f16bf82e90f55b4fe8b97",
+      "tracked_diff_sha256": "ec9c8c6c6f1bb50f16c523fd056e579bbfec76cea25a4e8be8950ba7537a5726"
+    },
+    "performance_marketing": {
+      "branch": "main",
+      "content_file_count": 398,
+      "content_manifest": "baseline_performance_marketing_content.sha256",
+      "content_manifest_sha256": "0f16615d09758ed4a0c7f78263209a89d747c73c6d16a253475afb99275af1f4",
+      "head": "7d791162bbe0ab2eb3a4a4975ca9b12197341051",
+      "origin": "git@github.com:abbasalipanah/performance_marketing.git",
+      "root": "/home/api/colab_scripts/performance_marketing",
+      "status": [
+        "?? \"docs/Campaign report (1).csv\"",
+        "?? \"docs/Performance Marketing \\342\\200\\223 Accumulate Entegrasyonu Y\\303\\266netici Raporu.pdf\""
+      ],
+      "status_sha256": "acb3a4e8d5ff9a25fd99ef2fa40652a8d40c1de54e11504f91bf687fc0bd9485",
+      "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "schema_version": 2
+}
