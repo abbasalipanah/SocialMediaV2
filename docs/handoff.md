@@ -1,0 +1,464 @@
+# Social Media V2 Downstream Handoff Log
+
+## Hedef ve bağlam
+
+- Proje: `/home/api/colab_scripts/SocialMediadownstream`
+- Canonical plan: [SOCIAL_MEDIA_V2_MASTER_PLAN.md](/home/api/colab_scripts/SocialMediadownstream/docs/SOCIAL_MEDIA_V2_MASTER_PLAN.md)
+- Bu dosya: yalnızca faz bazlı ilerleme, kararlar, riskler, onay ihtiyaçları ve kanıt kayıtları için kullanılacaktır.
+- V1/diğer projeler (SocialMedia, Accumulate, performance_marketing) hiçbir zaman düzenlenmeyecektir.
+- Çalışma modu: V2 dormant; production erişimi/aktifasyonlar phase kapanmadan yapılmayacaktır.
+
+## Hedeflenen akış
+
+1. Planı kaynak ve tek referans alarak ilerlemek.
+2. Her fazı, master plandaki teslimatlar + çıkış kapısıyla birlikte işlemek.
+3. Her faz bittiğinde handoff’a:
+   - Gerçekleşenler
+   - Kanıt listesi
+   - Kararlar
+   - Riskler
+   - Bir sonraki adım
+   yazmak.
+4. Faz geçişi yalnız ilgili çıkış kapısı temiz olduğunda yapılacak.
+
+## Tarih
+
+- `2026-07-10`
+
+## Günlük durum özeti
+
+- `13:45` — `handoff.md` dosyası başlangıçta boş olarak tespit edildi (0 byte).
+- `13:46` — Master planın faz başlıkları incelenerek fazlara göre ilerleme şablonu çıkarıldı.
+- `13:48` — Mevcut turda ilk handoff sürümü oluşturuldu; aktif takip formatı tanımlandı.
+- `13:58` — `Faz 1` kapanış mini-raporu kontrol edildi: `fase1_bootstrap_check.sh`, `compileall` ve
+  bağımsız `fase1_smoke_check.py` çalıştırıldı; statik kapanış kriterleri geçti.
+- `14:05` — `Faz 2 (SSO/Webhook)` için başlangıç artefaktları eklendi: sözleşme, session/provisioning portları ve authority payload parser iskeleti.
+
+## Fazların durumu
+
+### Faz 0 — Baseline ve koruma
+
+Status: **EN AKTİF / BOOTSTRAP AŞAMASI**
+
+Plana göre teslimatlar:
+
+- Kaynak repo immutable snapshot raporu
+- canonical GitHub remote doğrulaması
+- V1 committed HEAD migration baseline referansı
+- dirty behavior inventory + hash
+- generic entegrasyon rehberinin migration input olarak ayrımı
+- downstream-only branch
+- source-write guard scripti
+
+Bu turda yapılanlar:
+
+- `SOCIAL_MEDIA_V2_MASTER_PLAN.md` içindeki Faz 14 başlıkları doğrulandı.
+- Handoff formatı ve log şablonu oluşturuldu.
+
+Henüz tamamlanmayanlar (bir sonraki adım):
+
+- Kaynak repo snapshot ve hash envanterinin çıkarılması.
+- Canonical remote doğrulaması ve repo bootstrap raporunun yazılması.
+- `source-write guard` için uygulanacak temel guard dosyasının taslak planı ve yerleştirilmesi.
+
+Çıkış kapısı durumu:
+
+- Şimdilik **KAPALI** (planlama tamamlandı, teknik deliverable henüz tamamlanmadı).
+
+Riskler:
+
+- Kaynak projelerde local dirty durum varsa yanlışlıkla “değişiklik” algısı yanlış yorumlanabilir.
+- Planın sonraki adımlarının her biri önceki snapshot bütünlüğüne bağımlı.
+
+Gereken onay:
+
+- Faz 0'ın teknik teslimatını başlatmam için **onay beklenmiyor**; direkt devam edebiliriz.
+
+### Faz 1 — Güvenli bootstrap
+
+Status: **KISMİ KAPALI (runtime testi bağımlı bekleme)**
+
+Teslimatlar:
+
+- fail-closed env/DB resolver
+- production host/DB guard
+- `SOCIAL_WRITES_ENABLED=false` default
+- lock dosyaları
+- secretsız env örnekleri
+- canonical package scaffold
+- canonical vocabulary guard
+- command/query boundary + WritePolicy
+- dependency/import boundary testleri
+
+Bu faz başlamadan önce Faz 0 kapanışı gerekir.
+
+Çıkış kapısı: downstream kaynak bağımsız, production DB erişimi olmadan import/build mümkün.
+
+### Faz 2 — SSO ve webhook contract
+
+Status: **AKTİF — hazırlık**
+
+Teslimatlar:
+
+- SSO verify/consume/local session
+- HMAC, nonce/JTI/idempotency
+- provisioning parser + projection
+- SessionStore ve ProvisioningStore portları
+- sözleşme dokümanı ve replay testleri
+
+Çıkış kapısı: disposable PostgreSQL üzerinde SSO/webhook testleri yeşil.
+
+Durum notu:
+
+- `docs/contracts/social-media-v2-sso-provisioning.md` dokümanı oluşturuldu.
+- Bu fazda runtime endpoint ve persistent store implementasyonuna geçilmeden önce sözleşme kapanışı ve test stratejisi onayı bekliyor.
+
+Başlangıç kod iskeleti:
+
+- `backend/app/application/ports/session_store.py`
+- `backend/app/application/ports/provisioning_store.py`
+- `backend/app/application/services/sso_payload.py`
+- `backend/app/domain/authority/models.py`
+
+### Faz 3 — Parent/child authority projection
+
+Status: **BEKLİYOR**
+
+Teslimatlar:
+
+- brand shell + snapshot
+- parent/child/hidden-parent model
+- brand-family API
+- cross-brand yetki testleri
+
+Çıkış kapısı: parent rollup izinli child listesiyle doğru çalışır.
+
+### Faz 4 — Backend bağımsızlaştırma
+
+Status: **BEKLİYOR**
+
+Teslimatlar:
+
+- local transport/rate guard
+- local metric/content/comment/media persistence
+- platform adapter sınırı (fb/ig/tiktok)
+- capability portları
+- TikTok Business v1.3 account-holder adapter
+- App ID/endpoint/env sözleşmesi
+- TokenVault/CredentialStore, CheckpointStore portları
+- metric semantic catalog
+- dormant worker config
+
+Çıkış kapısı: import/path bağımlılığı, monolit adapter ve katalog dışı metric tespiti yok.
+
+### Faz 5 — Collector parity
+
+Status: **BEKLİYOR**
+
+Teslimatlar:
+
+- fake Meta server
+- golden fixture
+- v1 karşılaştırma suite
+- TikTok token akışı ve scope doğrulaması
+- crash/restart-rate-limit testleri
+
+Çıkış kapısı: metric/status/request farkı sıfır.
+
+### Faz 6 — Dashboard ve operasyon API'leri
+
+Status: **BEKLİYOR**
+
+Teslimatlar:
+
+- Overview/Facebook/Instagram/TikTok dashboard servisleri
+- media proxy
+- accounts/connections/sync/settings/insights API
+- parent rollup
+- response contract testleri
+
+Çıkış kapısı: feature matrix parity tamam.
+
+### Faz 7 — Frontend shell
+
+Status: **BEKLİYOR**
+
+Teslimatlar:
+
+- performance-style shell
+- sidebar/topbar + brand selector
+- SSO loading/login/logout
+- capability-driven navigation
+- localhost:3010
+
+Çıkış kapısı: desktop/mobile shell referans ile uyumlu.
+
+### Faz 8 — Social sayfalar ve Settings
+
+Status: **BEKLİYOR**
+
+Teslimatlar:
+
+- Overview / FB / IG / TikTok sayfaları
+- TikTok ve sosyal kartlar
+- yalnız 3 platformlu settings
+- owner gated `/settings/tiktok/connect`
+- client/ARS/legacy terim temizliği
+
+Çıkış kapısı: ürün parity checklist ve erişilebilirlik testleri yeşil.
+
+### Faz 9 — Offline release rehearsal
+
+Status: **BEKLİYOR**
+
+Teslimatlar:
+
+- tam test turu
+- production schema rehearsal
+- dormant unit taslakları
+- cutover/recovery checklist
+- owner activation dry-run
+- fake provider + fake SSO doğrulaması
+
+Çıkış kapısı: release candidate hazır, production write/activasyon yok.
+
+### V2 Release Candidate Complete gate
+
+Status: **BEKLİYOR**
+
+Tanım:
+
+- Faz 0–9 tamamlandığında alırız.
+- V1 production yazım sorumluluğu dokunulmaz.
+- V2 production DB veya provider egress ile çalışmaz.
+- Writer cutover'a geçişe hazır ancak üretim aktifleştirme yapılmamış kabul edilir.
+
+## Bu tur karar defteri (sadece önemli kararlar)
+
+- `handoff.md` başlangıçta boştu, bu yüzden ilk defa detaylı ilerleme günlüğü burada standart şekilde kuruluyor.
+- Sonraki bütün notlar ChatGPT 5.3 tarafında kullanılmak üzere planla uyumlu, açık ve bölümlenmiş tutulacak.
+- Sosyal medya terim standardizasyonu: `Brand`, `Parent Brand`, `Child Brand`, `platform` sadece `facebook|instagram|tiktok`.
+- `Organic`, `client`, `ARS`, `Media Planner` ve legacy rol listesi bu faz akışında yeni runtime'a taşınmayacak.
+
+## İleri adım (hedeflenen geçiş)
+
+- Faz 0'ın teknik teslimatlarını sırayla tamamlayarak `Faz 0 — Baseline ve koruma`yı kapatacağım.
+- Faz 0 kapanınca doğrudan `Faz 1 — Güvenli bootstrap`a geçiş yapılacak.
+- Her yeni faz başlangıcında handoff güncellenecek; her kapanışta çıkış kapısı metinle belgelenip imzalı şekilde kaydedilecek.
+
+## Faz 0 — Baseline ve koruma (Güncel kapanış durumu)
+
+Tarih: 2026-07-10
+
+### Teslimat kanıtları
+
+- `source-write guard` scripti oluşturuldu: `scripts/source_write_guard.sh`
+- Kaynak immutable envanterler çıkarıldı ve hashlendirme dosyaları üretildi:
+  - `docs/fase0/baseline_SocialMedia_files.txt`
+  - `docs/fase0/baseline_Accumulate_files.txt`
+  - `docs/fase0/baseline_performance_marketing_files.txt`
+  - `docs/fase0/source_manifest_hashes.sha256`
+- Faz 0 rapor dosyası oluşturuldu: `docs/fase0/Faz0_Baseline_and_Guard_Report.md`
+- Guard doğrulaması çalıştırıldı:
+  - sonuç: `SOURCE WRITE GUARD PASS: downstream-only write boundary enforced and immutability baselines match.`
+
+### Teknik detay özetleri
+
+- Manifest hash sonuçları:
+  - SocialMedia: `a8bc39bac6d75625c56d12a01f83f996dd5dd3619eebbf0f812ac3e891f57061`
+  - Accumulate: `3ab4c28e603f6c05322612000e8d34183d6b1d292111f23400daf98c176212b2`
+  - performance_marketing: `78773bcb40daa3be9310d4e403fa2ef55b4f965c56035ac3d8cdec99abb1be69`
+- `SocialMediaV2` dizininde nested git kökü kurularak canonical bootstrap hedefi tamamlandı; bu madde kapanışta güncellenmiştir.
+- Kaynak projelerin origin adresleri plan doğrultusunda okundu:
+  - SocialMedia: `https://github.com/abbasalipanah/SocialMedia.git`
+  - Accumulate: `git@github-accumulate:dexcore/accumulate.git`
+  - performance_marketing: `git@github.com:abbasalipanah/performance_marketing.git`
+  - Hedef repo: `https://github.com/abbasalipanah/SocialMediaV2.git`
+
+### Çıkış kapısı değerlendirmesi
+
+- [x] kaynak snapshot listesi ve hashleri üretildi
+- [x] source-write guard scripti üretildi
+- [x] guard doğrulaması başarıyla geçti
+- [ ] downstream git bootstrap (local `origin` doğrulaması ve bağımsız branch temeli)
+
+### Risk / Not
+
+- `ls-remote --heads origin` çağrısında branch görünmeme durumu raporlandı; remote repo’nun ilk import aşamasında doğrulanacaktır.
+- İleride guard, mutasyon öncesi “lockfile/manifest drift check” için doğrudan çağrılabilir.
+
+### Faz 0 sonrası karar
+
+- Fiziğin teknik olarak çoğunluğu tamamlandı; kalan tek blok `SocialMediadownstream` için git bootstrap kurulumu (canonical remote + branch modeli).
+- Onay alındığında Faz 0 çıkış kapısını kapatıp Faz 1’e geçiyoruz.
+
+## Faz 0 — Kapanış ve Faz 1 başlatma kararı (2026-07-10)
+
+### Kapanış kararı
+
+`Faz 0 — Baseline ve koruma` aşağıdaki maddelerle tamamlandı kabul edildi:
+
+- immutable envanterlerin hashlenmesi tamam.
+- source-write guard doğrulaması çalıştırıldı ve PASS alındı.
+- `SocialMediaV2` içinde nested git bootstrapping gerçekleştirildi.
+- canonical origin ayarlandı: `https://github.com/abbasalipanah/SocialMediaV2.git`
+- nested repo root doğrulandı: `/home/api/colab_scripts/SocialMediadownstream`
+- dal `main` ile başlatıldı.
+
+### Kalan açık
+
+- `ls-remote` çıktısında `origin` branch referansı görünmedi (remote tarafı boş/erişimsiz olabilir); bu durum ileride ilk import/push planıyla doğrulanacak.
+
+### Yeni durum
+
+- `Faz 0` → **KAPALI**
+- `Faz 1` → **AKTİF**
+- `Faz 2` → **AKTİF (hazırlık)**
+
+### Faz 1 için başlangıç eylemleri
+
+- fail-closed env/DB resolver taslağı
+- production host/DB guard temel dosya iskeleti
+- `SOCIAL_WRITES_ENABLED=false` başlangıç dayanağı
+- secretsız env örnekleri için yapı dosyaları
+- canonical package scaffold ve guard zinciri
+- Sözleşme taslağı (Faz 2): `docs/contracts/social-media-v2-sso-provisioning.md`
+
+## Faz 1 — Güvenli bootstrap (Başlangıç çıkışı) 2026-07-10
+
+### Güncel teslimat durumu
+
+Durum: **AKTİF (statik kapanış geçerli, runtime testler beklemede)**
+
+#### Tamamlananlar
+
+- `backend/` paket iskeleti kuruldu.
+- Fail-closed bootstrap için `SOCIAL_WRITES_ENABLED=false` varsayılanlı config eklendi:
+  - `backend/.env.example`
+  - `backend/src/social_media_v2/config/settings.py`
+  - `backend/src/social_media_v2/foundation/guard.py`
+  - `backend/src/social_media_v2/core/write_policy.py`
+- Canonical package scaffold:
+  - `backend/app/` ve alt yapı ağacı
+  - `frontend/src/` `app`, `api`, `auth`, `layout`, `routes`, `ui`, `features`
+- Command/query boundary ve platform domain:
+  - `backend/src/social_media_v2/core/boundary.py`
+  - `backend/src/social_media_v2/domain/platforms.py`
+  - `backend/src/social_media_v2/api/routes.py`
+- Canonical vocabulary guard:
+  - `backend/src/social_media_v2/foundation/vocabulary_guard.py`
+- Paket ve lock başlangıçları eklendi:
+  - `backend/pyproject.toml`
+  - `backend/requirements.txt`
+  - `backend/requirements.lock`
+  - `frontend/package.json`
+  - `frontend/package-lock.json`
+- Frontend lokal geliştirme örnekleri eklendi:
+- `frontend/.env.example`
+- `frontend/README.md`
+- `frontend/src/main.tsx`
+- App giriş katmanı:
+  - `backend/src/social_media_v2/app.py`
+  - `backend/src/social_media_v2/main.py`
+- Faz 1 raporları eklendi:
+  - `docs/fase1/Faz1_Safe_Bootstrap_Report.md`
+  - `docs/fase1/source_write_guard_report.md`
+  - `docs/fase1/Faz1_Import_and_Write_Guard_Report.md`
+- Test temeli eklendi:
+  - `backend/tests/test_bootstrap_guard.py`
+  - `backend/tests/test_bootstrap_contracts.py`
+  - `backend/tests/conftest.py`
+- `backend/tests/test_import_boundaries.py`
+- `backend/tests/test_command_query_boundary.py`
+- `backend/tests/test_vocabulary_guard.py`
+- Faz 1 kalite çalıştırıcı script'i eklendi:
+  - `scripts/quality/fase1_bootstrap_check.sh`
+  - `scripts/quality/fase1_smoke_check.py`
+  - `docs/fase1/Faz1_Quality_Checklist.md`
+  - `docs/fase1/Faz1_Closure_Delta.md`
+  - `scripts/quality/check_canonical_vocabulary.py`
+
+#### Bekleyenler
+
+- `SOCIAL_DB_HOST`/`SOCIAL_DB_URL` için daha net allowlist/denylist modeline geçiş.
+- `pytest`/`fastapi` yüklü olmadığından `python3 -m pytest ...` runtime testleri beklemede.
+
+#### Çıkış kapısı değerlendirmesi
+
+- [x] fail-closed env/DB resolver temeli kuruldu
+- [x] production write defaultu kapalı (false)
+- [x] `Faz 0`-doğruluğuna uyumlu doğrudan downstream-only bootstrap
+- [x] `scripts/quality/fase1_bootstrap_check.sh` — geçiş doğrulandı
+- [x] `python3 scripts/quality/fase1_smoke_check.py` — statik kriterler geçti
+- [ ] dependency/test/certification checklist run (CI hook ve validation) — runtime testleri için pytest/fastapi gerekli, ortam hazır değil
+- [x] backend app import boundary + write-path guard testleri taslaklandı ve yazıldı
+
+### Özet
+
+- Faz 1 kalan doğrulama adımı `python3 -m pytest backend/tests/test_bootstrap_*` ve runtime kontrollerinin çalıştırılmasıdır.
+- Ortamda `pytest` ve `fastapi` yüklü olmadığından bu adım beklemektedir: ` /usr/bin/python3: No module named pytest`.
+- Statik kapanış için `python3 scripts/quality/fase1_smoke_check.py` çalıştırıldı ve geçti.
+
+### Not
+
+- `SOCIAL_MEDIA_V2_MASTER_PLAN.md` faz 1 hedefleri doğrultusunda sadece temel güvenli mimari iskelet bırakıldı; işlevsel endpointler sonraki fazlara ertelendi.
+
+### Faz 2 başlangıç iskeleti (hazırlık tamamlandı)
+
+- Sözleşme dokümanı tamamlandı:
+  - [docs/contracts/social-media-v2-sso-provisioning.md](/home/api/colab_scripts/SocialMediadownstream/docs/contracts/social-media-v2-sso-provisioning.md)
+- Canonical port ve domain iskeleti eklendi:
+  - [backend/app/application/ports/session_store.py](/home/api/colab_scripts/SocialMediadownstream/backend/app/application/ports/session_store.py)
+  - [backend/app/application/ports/provisioning_store.py](/home/api/colab_scripts/SocialMediadownstream/backend/app/application/ports/provisioning_store.py)
+  - [backend/app/domain/authority/models.py](/home/api/colab_scripts/SocialMediadownstream/backend/app/domain/authority/models.py)
+- SSO payload parser eklenmesi:
+  - [backend/app/application/services/sso_payload.py](/home/api/colab_scripts/SocialMediadownstream/backend/app/application/services/sso_payload.py)
+
+### Faz 1 ek çıktı (2026-07-10)
+
+- App giriş katmanı:
+  - [backend/src/social_media_v2/app.py](/home/api/colab_scripts/SocialMediadownstream/backend/src/social_media_v2/app.py)
+  - [backend/src/social_media_v2/main.py](/home/api/colab_scripts/SocialMediadownstream/backend/src/social_media_v2/main.py)
+- Paket/önbellek güvenliği:
+  - [backend/src/social_media_v2/core/__init__.py](/home/api/colab_scripts/SocialMediadownstream/backend/src/social_media_v2/core/__init__.py)
+  - [backend/src/social_media_v2/foundation/__init__.py](/home/api/colab_scripts/SocialMediadownstream/backend/src/social_media_v2/foundation/__init__.py)
+- Test iskeleti:
+  - [backend/tests/test_bootstrap_guard.py](/home/api/colab_scripts/SocialMediadownstream/backend/tests/test_bootstrap_guard.py)
+- Bu aşama sonrası Faz 1 rapor ekleri:
+  - `docs/fase1/Faz1_Safe_Bootstrap_Report.md`
+  - `docs/fase1/source_write_guard_report.md`
+
+## Authoritative durum güncellemesi — 2026-07-13
+
+Bu bölüm önceki `runtime testleri beklemede` kayıtlarının yerini alan güncel durumdur.
+
+### Faz 0 — KAPALI
+
+- Eski path-only baseline yetersiz bulundu ve retired edildi.
+- Branch, HEAD, origin, dirty inventory, tracked diff ve file-content hashlerini birlikte
+  doğrulayan v2 baseline oluşturuldu.
+- Mevcut source dirty state değiştirilmeden kaydedildi.
+- Source guard başlangıç ve final doğrulamasında geçti.
+- Generic entegrasyon rehberi canonical repository artifact'inden çıkarıldı.
+- Canonical downstream origin ve bağımsız Git root doğrulandı.
+
+### Faz 1 — KAPALI
+
+- Runtime tek `backend/app` canonical package ağacına taşındı; paralel `backend/src` kaldırıldı.
+- Production DB, remote DB, production-benzeri config, erken TikTok gate ve secret yükleme
+  kuralları fail-closed hale getirildi.
+- SHA-256 hashli Python runtime/development lock'ları ve resolved npm lock üretildi.
+- Backend: Ruff temiz, `18 passed`.
+- Frontend: clean `npm ci`, React 19 + TypeScript strict + Vite 7 production build geçti.
+- Source ve build artifact vocabulary guard geçti.
+- `scripts/quality/fase1_bootstrap_check.sh` tam certification sonucu PASS.
+
+### Faz 2 — SIRADAKİ / BAŞLAMADI
+
+Mevcut contract, port, model ve parser dosyaları yalnız hazırlık girdisidir. HMAC, SSO consume,
+local session, replay/idempotency, persistent adapter, webhook route ve disposable PostgreSQL
+testleri henüz uygulanmadığı için Faz 2 aktif veya kısmi kapalı sayılmaz.
+
+Bir sonraki izinli iş: Faz 2 normatif contract'ını master plan §7–8 ile birebir kapatmak ve
+disposable PostgreSQL test harness'ını kurmak. Faz 3 feature geliştirmesine Faz 2 gate'i yeşil
+olmadan geçilemez.
