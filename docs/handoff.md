@@ -462,3 +462,24 @@ testleri henüz uygulanmadığı için Faz 2 aktif veya kısmi kapalı sayılmaz
 Bir sonraki izinli iş: Faz 2 normatif contract'ını master plan §7–8 ile birebir kapatmak ve
 disposable PostgreSQL test harness'ını kurmak. Faz 3 feature geliştirmesine Faz 2 gate'i yeşil
 olmadan geçilemez.
+
+## Authoritative durum güncellemesi — 2026-07-13 / Faz 2 kapanış adayı
+
+Bu bölüm önceki `Faz 2 — SIRADAKİ / BAŞLAMADI` kaydının yerini alan güncel durumdur.
+
+### Faz 2 — UYGULAMA TAMAM / EXIT GATE BLOKE
+
+- Gerçek upstream nested `sso_contract` v1 şekli doğrulanmaktadır.
+- SSO consume, one-time JTI, hash-only local session ve session revoke tamamlandı.
+- Signed provisioning, nonce/event replay, version ordering ve typed parser tamamlandı.
+- PostgreSQL projection adapterı ve tam disposable test harness'ı tamamlandı.
+- Ruff, wheel, frontend build, vocabulary guard ve disposable PostgreSQL üzerindeki `33 passed`
+  sonucu yeşildir.
+- Full certificate, downstream dışındaki `performance_marketing` reposuna baseline sonrası gelen
+  yeni untracked CSV nedeniyle source guard'ın ilk adımında fail-closed durmuştur.
+- External dosyaya ve Faz 0 baseline'ına müdahale edilmedi; checkpoint commit'i oluşturulmadı.
+
+Canonical ayrıntı ve blokaj kanıtı:
+`docs/fase2/Faz2_SSO_Provisioning_Report.md`.
+
+Faz 3, source state hakkında açık karar verilip full Faz 2 sertifikası geçmeden başlamaz.
