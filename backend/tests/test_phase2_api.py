@@ -166,6 +166,8 @@ async def test_sso_session_logout_and_provisioning_routes(monkeypatch: pytest.Mo
         assert "SameSite=lax" in consumed.headers["set-cookie"]
         me = await client.get("/api/auth/me")
         assert me.json()["user_id"] == "1"
+        assert me.json()["email"] == "user@example.test"
+        assert me.json()["source_system"] == "accumulate"
         assert me.headers["cache-control"] == "no-store"
         assert me.headers["referrer-policy"] == "no-referrer"
         workspace = await client.get("/api/workspace/brands", params={"selected_brand_id": "10"})

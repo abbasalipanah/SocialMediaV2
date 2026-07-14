@@ -2,10 +2,11 @@
 
 ## Güncel durum — 2026-07-14
 
-- Faz 0–6: **KAPALI, sertifikasyon kapıları yeşil**.
-- Son canonical doğrulama: `./scripts/quality/fase6_dashboard_operations_check.sh`.
-- Faz 6 sonucu: disposable PostgreSQL full suite `115 passed`, hedefli suite `19 passed`.
-- Aktif sıradaki faz: **Faz 7 — Frontend shell**.
+- Faz 0–7: **KAPALI, sertifikasyon kapıları yeşil**.
+- Son canonical doğrulama: `./scripts/quality/fase7_frontend_shell_check.sh`.
+- Faz 7 sonucu: PostgreSQL regression `115 passed`, frontend `9 passed`, Chromium smoke
+  `4 passed` ve npm audit `0 vulnerabilities`.
+- Aktif sıradaki faz: **Faz 8 — Social sayfalar ve Settings**.
 - V2 hâlâ dormant; production DB/provider/traffic/schedule ve Git push yoktur.
 - Ayrıntı: `docs/fase6/Faz6_Dashboard_Operations_Report.md`.
 
@@ -633,3 +634,37 @@ Canonical kanıt: `docs/fase6/Faz6_Dashboard_Operations_Report.md`.
 selector'ları, SSO loading/login/logout, capability-driven navigation, gerçek routing ve Vite
 strict development port `3010`'dur. Faz 8 sosyal sayfa/Settings feature uygulaması Faz 7 shell
 çıkış kapısı yeşil olmadan başlamaz.
+
+## Authoritative durum güncellemesi — 2026-07-14 / Faz 7 kapanışı
+
+### Faz 6 — KAPALI
+
+- Dashboard/operations API kapanışı `e6bc35b` local checkpoint commit'i ile donduruldu.
+- Faz 6 canonical raporu ve disposable PostgreSQL kanıtı geçerlidir.
+
+### Faz 7 — KAPALI
+
+- React 19 + strict TypeScript shell; AuthProvider, BrandScopeProvider, TanStack Query ve gerçek
+  nested/lazy routing ile tamamlandı.
+- Performance-style desktop fixed sidebar ve `<1024px` mobile drawer/backdrop davranışı
+  reference kaynakları değiştirilmeden yeniden uygulandı.
+- Parent/child/all-child Brand scope ve platform-account selector'ları storage/reset/invalid
+  selection kurallarıyla tamamlandı; rollup frontend'de merge edilmez.
+- Navigation availability backend `linked_account_count + capability` cevabından gelir;
+  permission role string'inden türetilmez.
+- SSO loading/login/logout/profile ve accessible focus-trapped popover davranışı tamamlandı.
+- OpenAPI export → generated TypeScript → Zod runtime validation zinciri eklendi.
+- Vite development portu `3010` ve `strictPort=true`; PWA/service worker yok.
+- `scripts/quality/fase7_frontend_shell_check.sh`: Faz 6 PostgreSQL regression `115 passed`,
+  hedefli API suite `19 passed`, frontend `9 passed`, Playwright Chromium `4 passed`, build,
+  audit, secret/vocabulary/source guard temiz.
+
+Canonical kanıt: `docs/fase7/Faz7_Frontend_Shell_Report.md`.
+
+### Faz 8 — AKTİF
+
+İzinli sıradaki kapsam Overview, Facebook, Instagram (Stories aynı sayfa altında), TikTok,
+AI Insights/export, yalnız üç social platformlu table-first Settings/Brand Setup drawer,
+owner/fresh-SSO-gated TikTok activation, capability izinli audit/manual repair ve bütün
+loading/error/empty/partial state'leridir. Faz 9 offline release rehearsal çalışması Faz 8 ürün
+parity ve accessibility kapısı yeşil olmadan başlamaz.

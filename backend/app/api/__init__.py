@@ -110,7 +110,9 @@ def create_api_router(
     router.include_router(create_auth_router(settings, policy, store))
     router.include_router(create_internal_router(settings, policy, store))
     router.include_router(
-        create_workspace_router(store, capabilities, policy, settings.runtime_mode)
+        create_workspace_router(
+            store, reporting_store, capabilities, policy, settings.runtime_mode
+        )
     )
     router.include_router(create_dashboard_router(store, reporting_store, metric_catalog))
     router.include_router(create_platform_router(store, reporting_store))

@@ -1,1 +1,2 @@
-// Canonical route catalog scaffold.
+export * from "./AppRoutes";
+export * from "./ErrorBoundary";

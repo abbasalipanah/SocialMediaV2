@@ -511,6 +511,14 @@ async def test_phase6_routes_are_scoped_read_only_and_honest(phase6_fixture) -> 
         )
         assert capabilities.status_code == 200
         assert capabilities.json()["permissions"]["operation_mutation_available"] is False
+        assert {
+            item["platform"]: (item["linked_account_count"], item["navigation_available"])
+            for item in capabilities.json()["platforms"]
+        } == {
+            "facebook": (2, True),
+            "instagram": (1, True),
+            "tiktok": (1, True),
+        }
         readiness = await client.get(
             "/api/operations/readiness",
             params={"brand_id": "100", "rollup": "true"},

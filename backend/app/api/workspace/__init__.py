@@ -11,7 +11,7 @@ from app.api.contracts import (
     WorkspaceCapabilitiesResponse,
     WorkspacePermissions,
 )
-from app.application.ports import AuthorityStore
+from app.application.ports import AuthorityStore, ReportingStore
 from app.application.services.authority import AuthorityError, build_brand_workspace
 from app.application.services.sso import resolve_session
 from app.capabilities import PlatformCapabilityRegistry
@@ -22,6 +22,7 @@ from app.domain.platforms import PlatformId
 
 def create_workspace_router(
     store: AuthorityStore | None,
+    reporting_store: ReportingStore | None,
     capabilities: PlatformCapabilityRegistry,
     policy: WritePolicy,
     runtime_mode: RuntimeMode,
@@ -73,6 +74,13 @@ def create_workspace_router(
             )
         except AuthorityError as exc:
             raise HTTPException(403, str(exc)) from exc
+        accounts = (
+            reporting_store.list_accounts(
+                brand_ids=workspace.scope.resolved_brand_ids,
+            )
+            if reporting_store is not None
+            else ()
+        )
         response.headers["Cache-Control"] = "no-store"
         return WorkspaceCapabilitiesResponse(
             scope=workspace.scope,
@@ -83,6 +91,17 @@ def create_workspace_router(
                         record
                         for record in capabilities.records()
                         if record.platform is platform
+                    ),
+                    linked_account_count=sum(
+                        account.platform is platform for account in accounts
+                    ),
+                    navigation_available=(
+                        any(account.platform is platform for account in accounts)
+                        or any(
+                            record.platform is platform
+                            and record.status.value in {"available", "partial"}
+                            for record in capabilities.records()
+                        )
                     ),
                 )
                 for platform in PlatformId

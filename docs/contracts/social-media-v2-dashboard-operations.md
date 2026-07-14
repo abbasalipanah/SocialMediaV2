@@ -77,6 +77,12 @@ media persistence, job enqueue, commit veya upsert yapamaz. Audit store bu fazda
 boş ama dürüst `unavailable` cevabı döner. Stored AI insight okunur; GET LLM generation başlatmaz.
 Connection DTO token/credential/source URL içermez.
 
+Workspace capability cevabındaki her platform kaydı `linked_account_count` ve
+`navigation_available` taşır. Navigation availability, seçili backend scope'unda stored linked
+account bulunması veya ilgili capability'nin `available/partial` olmasıyla belirlenir; frontend
+rol ya da label'dan availability türetmez. Collector bootstrap registry yine sahte `available`
+üretmez.
+
 ## Media proxy
 
 `GET /api/media/instagram/{content_id}` yalnız authorized Brand/account kapsamındaki persisted

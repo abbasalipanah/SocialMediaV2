@@ -46,6 +46,7 @@ class SsoError(ValueError):
 @dataclass(frozen=True)
 class VerifiedSso:
     user_id: str
+    email: str
     brand_id: str
     role: str
     access_mode: str
@@ -139,6 +140,7 @@ def verify_sso(token: str, secret: str, now: datetime | None = None) -> Verified
         raise SsoError("missing_authority")
     if not isinstance(contract.get("email"), str) or not contract["email"].strip():
         raise SsoError("missing_identity")
+    email = contract["email"].strip()
 
     issued_at = _contract_datetime(contract.get("issued_at"), "issued_at")
     assert issued_at is not None
@@ -165,6 +167,7 @@ def verify_sso(token: str, secret: str, now: datetime | None = None) -> Verified
     expires_at = min(expires_at, current + timedelta(hours=12))
     return VerifiedSso(
         user_id=user_id,
+        email=email,
         brand_id=brand_id,
         role=role,
         access_mode=expected_access_mode,
@@ -181,6 +184,8 @@ def consume_sso(token: str, secret: str, store: SessionStore) -> tuple[str, Veri
     raw_session = secrets.token_urlsafe(32)
     payload = {
         "user_id": verified.user_id,
+        "email": verified.email,
+        "source_system": "accumulate",
         "brand_id": verified.brand_id,
         "role": verified.role,
         "access_mode": verified.access_mode,

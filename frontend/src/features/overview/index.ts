@@ -1,1 +1,0 @@
-// Canonical overview feature placeholder.

@@ -18,6 +18,21 @@ from app.domain.platforms import PlatformId
 
 
 @dataclass(frozen=True)
+class AuthMeResponse:
+    authenticated: bool
+    user_id: str
+    email: str | None
+    source_system: str | None
+    brand_id: str
+    role: str
+    access_mode: str
+    settings_visible: bool
+    is_internal_staff: bool
+    expires_at: datetime
+    revoked: bool
+
+
+@dataclass(frozen=True)
 class PlatformAccountsResponse:
     meta: BrandScope
     platform: PlatformId
@@ -103,6 +118,8 @@ class InsightsResponse:
 class CapabilityPlatform:
     platform: PlatformId
     capabilities: tuple[CapabilityRecord, ...]
+    linked_account_count: int
+    navigation_available: bool
 
 
 @dataclass(frozen=True)
@@ -148,6 +165,7 @@ class WorkspaceCapabilitiesResponse:
 
 __all__ = [
     "AuditResponse",
+    "AuthMeResponse",
     "BrandLinkItem",
     "BrandLinksResponse",
     "CapabilityPlatform",

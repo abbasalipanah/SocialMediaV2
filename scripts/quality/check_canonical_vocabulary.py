@@ -53,6 +53,7 @@ FRONTEND_VENDOR_ALLOWLIST = (
     "QueryClient",
     'client={queryCache}',
     '"react-dom/client"',
+    '"vite/client"',
 )
 TIKTOK_WIRE_ALIAS_FILE = (
     ROOT / "backend" / "app" / "infrastructure" / "providers" / "tiktok" / "accounts" / "wire.py"
