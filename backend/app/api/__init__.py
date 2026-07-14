@@ -18,6 +18,7 @@ from app.api.scope import resolve_request_scope
 from app.api.settings import create_settings_router
 from app.api.workspace import create_workspace_router
 from app.application.ports import AuthorityStore, ReportingStore
+from app.application.services.tiktok_activation import TikTokActivationCoordinator
 from app.capabilities import bootstrap_registry
 from app.core import AppSettings, Boundary, WritePolicy, mark_boundary
 from app.domain.metrics import bootstrap_metric_catalog
@@ -31,6 +32,7 @@ def create_api_router(
     *,
     reporting_store: ReportingStore | None = None,
     media_root: Path | None = None,
+    tiktok_activation: TikTokActivationCoordinator | None = None,
 ) -> APIRouter:
     router = APIRouter()
     capabilities = bootstrap_registry()
@@ -116,7 +118,15 @@ def create_api_router(
     )
     router.include_router(create_dashboard_router(store, reporting_store, metric_catalog))
     router.include_router(create_platform_router(store, reporting_store))
-    router.include_router(create_settings_router(store, reporting_store, capabilities, policy))
+    router.include_router(
+        create_settings_router(
+            store,
+            reporting_store,
+            capabilities,
+            policy,
+            activation=tiktok_activation,
+        )
+    )
     router.include_router(create_insights_router(store, reporting_store))
     router.include_router(create_operations_router(store, policy))
     router.include_router(create_media_router(store, reporting_store, media_root))

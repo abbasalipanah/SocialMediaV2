@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Cookie, HTTPException, Query, Request, Response
+from fastapi.responses import RedirectResponse
 
 from app.api.auth import COOKIE_NAME
 from app.api.contracts import (
@@ -21,9 +22,17 @@ from app.api.contracts import (
     TikTokConnectionResponse,
 )
 from app.api.scope import RequestScope, resolve_request_scope
-from app.application.ports import AuthorityStore, ReportingStore
+from app.application.ports import (
+    ActivationContext,
+    AuthorityStore,
+    ReportingStore,
+    TikTokActivationError,
+)
+from app.application.services.sso import TIKTOK_CONNECTION_MANAGE_PERMISSION
+from app.application.services.tiktok_activation import TikTokActivationCoordinator
 from app.capabilities import PlatformCapabilityRegistry
 from app.core import Boundary, WritePolicy, mark_boundary
+from app.core.security import sha256_text
 from app.domain.platforms import CapabilityId, PlatformId
 
 TIKTOK_CONNECTION_STATES = {
@@ -35,7 +44,7 @@ TIKTOK_CONNECTION_STATES = {
     "error",
 }
 TIKTOK_OWNER_LAUNCH_TARGET = "tiktok_owner_activation"
-TIKTOK_OWNER_SSO_FRESHNESS = timedelta(minutes=10)
+TIKTOK_OWNER_SSO_FRESHNESS = timedelta(minutes=5)
 
 
 def create_settings_router(
@@ -43,6 +52,7 @@ def create_settings_router(
     reporting_store: ReportingStore | None,
     capabilities: PlatformCapabilityRegistry,
     policy: WritePolicy,
+    activation: TikTokActivationCoordinator | None = None,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -75,6 +85,61 @@ def create_settings_router(
         if parsed.tzinfo is None:
             raise HTTPException(403, "fresh_owner_sso_required")
         return parsed.astimezone(UTC)
+
+    def _owner_context(
+        *,
+        raw_session: str | None,
+        requested_brand_id: str | None,
+    ) -> tuple[RequestScope, ActivationContext, datetime]:
+        scope = _scope(
+            raw_session=raw_session,
+            brand_id=requested_brand_id,
+            rollup=False,
+            require_write=True,
+        )
+        launch_brand_id = str(scope.session.get("brand_id") or "")
+        resolved_brand_ids = scope.workspace.scope.resolved_brand_ids
+        if (
+            scope.session.get("launch_target") != TIKTOK_OWNER_LAUNCH_TARGET
+            or scope.workspace.scope.requested_brand_id != launch_brand_id
+            or scope.workspace.scope.rollup
+            or resolved_brand_ids != (launch_brand_id,)
+        ):
+            raise HTTPException(403, "tiktok_owner_launch_required")
+        permissions = scope.session.get("permissions")
+        if (
+            not isinstance(permissions, (list, tuple))
+            or TIKTOK_CONNECTION_MANAGE_PERMISSION not in permissions
+        ):
+            raise HTTPException(403, "tiktok_connection_manage_required")
+        current = datetime.now(UTC)
+        issued_at = _session_time(scope.session, "sso_issued_at")
+        consumed_at = _session_time(scope.session, "sso_consumed_at")
+        fresh_until = min(
+            issued_at + TIKTOK_OWNER_SSO_FRESHNESS,
+            consumed_at + TIKTOK_OWNER_SSO_FRESHNESS,
+        )
+        if (
+            issued_at > current + timedelta(minutes=5)
+            or consumed_at > current
+            or current >= fresh_until
+        ):
+            raise HTTPException(403, "fresh_owner_sso_required")
+        jti_hash = scope.session.get("sso_jti_hash")
+        if not isinstance(jti_hash, str):
+            raise HTTPException(403, "fresh_owner_sso_required")
+        try:
+            numeric_brand_id = int(launch_brand_id)
+            context = ActivationContext(
+                user_id=str(scope.session.get("user_id") or ""),
+                brand_id=numeric_brand_id,
+                session_binding=sha256_text(raw_session or ""),
+                sso_jti_hash=jti_hash,
+                sso_consumed_at=consumed_at,
+            )
+        except (TypeError, ValueError, TikTokActivationError) as exc:
+            raise HTTPException(403, "tiktok_owner_launch_required") from exc
+        return scope, context, fresh_until
 
     @router.get("/api/settings/brands", response_model=SettingsBrandsResponse)
     @mark_boundary(Boundary.QUERY)
@@ -242,34 +307,12 @@ def create_settings_router(
         brand_id: str | None = Query(default=None),
         session: str | None = Cookie(default=None, alias=COOKIE_NAME),
     ) -> TikTokActivationReadinessResponse:
-        scope = _scope(
+        scope, owner_context, fresh_until = _owner_context(
             raw_session=session,
-            brand_id=brand_id,
-            rollup=False,
-            require_write=True,
+            requested_brand_id=brand_id,
         )
         launch_brand_id = str(scope.session.get("brand_id") or "")
-        requested_brand_id = scope.workspace.scope.requested_brand_id
-        if (
-            scope.session.get("launch_target") != TIKTOK_OWNER_LAUNCH_TARGET
-            or requested_brand_id != launch_brand_id
-            or scope.workspace.scope.rollup
-            or scope.workspace.scope.resolved_brand_ids != (launch_brand_id,)
-        ):
-            raise HTTPException(403, "tiktok_owner_launch_required")
         current = datetime.now(UTC)
-        issued_at = _session_time(scope.session, "sso_issued_at")
-        consumed_at = _session_time(scope.session, "sso_consumed_at")
-        fresh_until = min(
-            issued_at + TIKTOK_OWNER_SSO_FRESHNESS,
-            consumed_at + TIKTOK_OWNER_SSO_FRESHNESS,
-        )
-        if (
-            issued_at > current + timedelta(minutes=5)
-            or consumed_at > current
-            or current >= fresh_until
-        ):
-            raise HTTPException(403, "fresh_owner_sso_required")
         assert reporting_store is not None
         rows = tuple(
             row
@@ -279,6 +322,7 @@ def create_settings_router(
         connection_state = rows[-1].state if rows else "disconnected"
         if connection_state not in TIKTOK_CONNECTION_STATES:
             connection_state = "error"
+        start_available = activation is not None and activation.ready_for_start(owner_context)
         response.headers["Cache-Control"] = "no-store"
         response.headers["Referrer-Policy"] = "no-referrer"
         return TikTokActivationReadinessResponse(
@@ -289,10 +333,59 @@ def create_settings_router(
             runtime_mode=policy.runtime_mode,
             writes_enabled=policy.writes_enabled,
             connection_state=connection_state,
-            oauth_start_available=False,
-            reason="oauth_start_unavailable_before_cutover",
+            oauth_start_available=start_available,
+            reason=(
+                "manual_intent_available"
+                if start_available
+                else "oauth_start_unavailable_before_cutover"
+            ),
             checked_at=current,
         )
+
+    @router.post("/api/settings/tiktok/oauth/account/start", status_code=303)
+    @mark_boundary(Boundary.COMMAND)
+    async def tiktok_activation_start(
+        request: Request,
+        session: str | None = Cookie(default=None, alias=COOKIE_NAME),
+    ) -> RedirectResponse:
+        _same_origin(request)
+        if activation is None:
+            raise HTTPException(503, "owner_activation_unavailable")
+        _, context, _ = _owner_context(raw_session=session, requested_brand_id=None)
+        try:
+            started = activation.start(context)
+        except TikTokActivationError as exc:
+            _raise_activation_error(exc)
+        response = RedirectResponse(started.authorization_url, status_code=303)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        return response
+
+    @router.get("/api/social/tiktok/oauth/callback", status_code=303)
+    @mark_boundary(Boundary.PROTOCOL_COMMAND)
+    async def tiktok_activation_callback(
+        request: Request,
+        session: str | None = Cookie(default=None, alias=COOKIE_NAME),
+    ) -> RedirectResponse:
+        if activation is None:
+            raise HTTPException(503, "owner_activation_unavailable")
+        pairs = list(request.query_params.multi_items())
+        if len(pairs) != 2 or len({key for key, _ in pairs}) != 2:
+            raise HTTPException(400, "activation_callback_rejected")
+        _, context, _ = _owner_context(raw_session=session, requested_brand_id=None)
+        try:
+            result = activation.complete(query=dict(pairs), context=context)
+        except TikTokActivationError as exc:
+            _raise_activation_error(exc)
+        if result.state != "pending_verification":
+            raise HTTPException(503, "activation_completion_failed")
+        response = RedirectResponse(
+            "/settings/tiktok/connect?activation=pending_verification",
+            status_code=303,
+        )
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        return response
 
     @router.delete("/api/settings/tiktok/connection", status_code=503)
     @mark_boundary(Boundary.COMMAND)
@@ -322,6 +415,19 @@ def create_settings_router(
 def _same_origin(request: Request) -> None:
     if request.headers.get("origin") != f"{request.url.scheme}://{request.url.netloc}":
         raise HTTPException(403, "origin_invalid")
+
+
+def _raise_activation_error(exc: TikTokActivationError) -> None:
+    reason = str(exc)
+    if reason == "activation_disabled":
+        raise HTTPException(503, "owner_activation_unavailable") from exc
+    if reason == "activation_authority_denied":
+        raise HTTPException(403, "activation_authority_denied") from exc
+    if reason == "activation_callback_rejected":
+        raise HTTPException(400, "activation_callback_rejected") from exc
+    if reason in {"activation_scope_denied", "activation_scope_mismatch"}:
+        raise HTTPException(409, reason) from exc
+    raise HTTPException(503, "activation_completion_failed") from exc
 
 
 __all__ = ["create_settings_router"]

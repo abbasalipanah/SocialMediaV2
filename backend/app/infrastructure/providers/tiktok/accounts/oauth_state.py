@@ -25,6 +25,7 @@ class TikTokStateError(ValueError):
 @dataclass(frozen=True)
 class TikTokStateBinding:
     nonce: str
+    intent_hash: str = field(repr=False)
     user_id: str
     brand_id: int
     session_binding: str = field(repr=False)
@@ -35,6 +36,8 @@ class TikTokStateBinding:
     def __post_init__(self) -> None:
         if not re.fullmatch(r"[A-Za-z0-9_-]{16,128}", self.nonce):
             raise TikTokStateError("state_nonce_invalid")
+        if not re.fullmatch(r"[a-f0-9]{64}", self.intent_hash):
+            raise TikTokStateError("state_intent_invalid")
         if not re.fullmatch(r"[A-Za-z0-9._-]{1,128}", self.user_id):
             raise TikTokStateError("state_user_invalid")
         if self.brand_id < 1 or not re.fullmatch(r"[a-f0-9]{64}", self.session_binding):
@@ -126,6 +129,7 @@ def _payload(binding: TikTokStateBinding) -> dict[str, Any]:
         "brand_id": binding.brand_id,
         "expires_at": binding.expires_at.astimezone(UTC).isoformat(),
         "format_version": 1,
+        "intent_hash": binding.intent_hash,
         "nonce": binding.nonce,
         "provider_profile": binding.provider_profile,
         "redirect_uri": binding.redirect_uri,
@@ -139,6 +143,7 @@ def _binding(payload: object) -> TikTokStateBinding:
         "brand_id",
         "expires_at",
         "format_version",
+        "intent_hash",
         "nonce",
         "provider_profile",
         "redirect_uri",
@@ -152,6 +157,7 @@ def _binding(payload: object) -> TikTokStateBinding:
             raise ValueError
         return TikTokStateBinding(
             nonce=str(payload["nonce"]),
+            intent_hash=str(payload["intent_hash"]),
             user_id=str(payload["user_id"]),
             brand_id=int(payload["brand_id"]),
             session_binding=str(payload["session_binding"]),

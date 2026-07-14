@@ -50,6 +50,8 @@ def test_all_routes_have_explicit_boundary_semantics() -> None:
         ("/api/settings/tiktok/connection", ("DELETE",)),
         ("/api/settings/tiktok/connection", ("GET",)),
         ("/api/settings/tiktok/activation-readiness", ("GET",)),
+        ("/api/settings/tiktok/oauth/account/start", ("POST",)),
+        ("/api/social/tiktok/oauth/callback", ("GET",)),
         ("/api/workspace/brands", ("GET",)),
         ("/api/workspace/capabilities", ("GET",)),
         ("/internal/provisioning/events", ("POST",)),
@@ -57,7 +59,7 @@ def test_all_routes_have_explicit_boundary_semantics() -> None:
     }
     for route in routes:
         boundary = route.endpoint.__route_boundary__
-        if route.path == "/sso/consume":
+        if route.path in {"/sso/consume", "/api/social/tiktok/oauth/callback"}:
             assert route.methods == {"GET"}
             assert boundary == "protocol_command"
         elif route.methods == {"GET"}:

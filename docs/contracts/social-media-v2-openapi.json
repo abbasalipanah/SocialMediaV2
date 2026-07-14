@@ -3805,6 +3805,94 @@
         "summary": "Tiktok Connection"
       }
     },
+    "/api/settings/tiktok/oauth/account/start": {
+      "post": {
+        "operationId": "tiktok_activation_start_api_settings_tiktok_oauth_account_start_post",
+        "parameters": [
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "303": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tiktok Activation Start"
+      }
+    },
+    "/api/social/tiktok/oauth/callback": {
+      "get": {
+        "operationId": "tiktok_activation_callback_api_social_tiktok_oauth_callback_get",
+        "parameters": [
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "303": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tiktok Activation Callback"
+      }
+    },
     "/api/workspace/brands": {
       "get": {
         "operationId": "workspace_brands_api_workspace_brands_get",

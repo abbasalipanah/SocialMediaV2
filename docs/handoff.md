@@ -2,13 +2,15 @@
 
 ## Güncel durum — 2026-07-14
 
-- Faz 0–8: **KAPALI, sertifikasyon kapıları yeşil**.
-- Son canonical doğrulama: `./scripts/quality/fase8_social_pages_settings_check.sh`.
-- Faz 8 sonucu: disposable PostgreSQL backend `117 passed`, hedefli backend `15 passed`,
-  frontend `13 passed`, Chromium `8 passed` ve npm audit `0 vulnerabilities`.
-- Aktif sıradaki faz: **Faz 9 — Offline release rehearsal**.
-- V2 hâlâ dormant; production DB/provider/traffic/schedule ve Git push yoktur.
-- Ayrıntı: `docs/fase8/Faz8_Social_Pages_Settings_Report.md`.
+- Faz 0–9: **KAPALI, sertifikasyon kapıları yeşil**.
+- Son canonical doğrulama: `./scripts/quality/fase9_offline_release_check.sh`.
+- Faz 9 sonucu: migration-built PostgreSQL fingerprint eşleşti; full backend `121 passed`,
+  hedefli rehearsal `5 passed`, Faz 8 backend regression `15 passed`, frontend `13 passed`,
+  Chromium `8 passed` (`4` intentional skip) ve npm audit `0 vulnerabilities`.
+- **V2 Release Candidate Complete** gate'i kapandı; bu production aktivasyonu değildir.
+- V2 hâlâ dormant; production DB/provider/traffic/schedule, source-project write ve Git push yoktur.
+- Sonraki production/cutover adımı yalnız ayrı açık kullanıcı onayıyla başlayabilir.
+- Ayrıntı: `docs/fase9/Faz9_Offline_Release_Rehearsal_Report.md`.
 
 ## Hedef ve bağlam
 
@@ -219,7 +221,7 @@ Teslimatlar:
 
 ### Faz 9 — Offline release rehearsal
 
-Status: **AKTİF — sıradaki uygulama fazı**
+Status: **KAPALI — canonical sertifikasyon yeşil**
 
 Teslimatlar:
 
@@ -234,7 +236,7 @@ Teslimatlar:
 
 ### V2 Release Candidate Complete gate
 
-Status: **BEKLİYOR**
+Status: **TAMAMLANDI — production hâlâ dormant**
 
 Tanım:
 
@@ -668,3 +670,41 @@ AI Insights/export, yalnız üç social platformlu table-first Settings/Brand Se
 owner/fresh-SSO-gated TikTok activation, capability izinli audit/manual repair ve bütün
 loading/error/empty/partial state'leridir. Faz 9 offline release rehearsal çalışması Faz 8 ürün
 parity ve accessibility kapısı yeşil olmadan başlamaz.
+
+## Authoritative durum güncellemesi — 2026-07-14 / Faz 9 ve RC kapanışı
+
+### Faz 8 — KAPALI
+
+- Social sayfalar, Settings, owner handoff ve accessibility kapanışı `e3da54d` local checkpoint
+  commit'i ile donduruldu.
+- Faz 8 canonical ürün ve browser kanıtı geçerlidir.
+
+### Faz 9 — KAPALI
+
+- Immutable SocialMedia migration zinciri temporary kopyada PostgreSQL 16'ya uygulandı; head
+  `0009_tiktok_organic_oauth_config`, 23 tablo/259 kolon/79 constraint/81 index ve
+  `fe786adb32c556b572e316457b4c008e39883ae4b4510f738800179d4be9ab15` fingerprint eşleşti.
+- Fixture Accumulate outbox emitted/applied watermark `5`, full snapshot `S=4`, duplicate ack,
+  ordered drain/replay ve launch-order provası tamamlandı.
+- Owner akışı safe GET → 5 dakikalık fresh SSO + hashed JTI → same-origin explicit POST →
+  create+lease intent → one-time state → fake callback/exchange → exact scope gate → AES-GCM
+  credential → exact Brand link `pending_verification` zincirinde doğrulandı.
+- Invalid/replayed state provider exchange öncesi kapanır; callback sırasında access revoke veya
+  required scope eksiği token revoke/discard eder ve credential/link yazmaz.
+- Runtime'da live TikTok activation transport yoktur; default production assembly coordinator
+  enjekte etmez ve bütün TikTok gate'leri disabled kalır.
+- Dormant/static systemd, loopback-only dark Nginx, environment, cutover, rollback ve writer
+  inventory taslakları üretildi; hiçbir artifact kurulmadı veya çalıştırılmadı.
+- Accumulate final cutover patch'i review draft olarak üretildi; source projeye uygulanmadı.
+- `scripts/quality/fase9_offline_release_check.sh`: full backend `121 passed`, targeted rehearsal
+  `5 passed`, frontend `13 passed`, Chromium `8 passed` + `4` intentional skip, build 1878 module,
+  audit 0; secret/vocabulary/source guard temiz.
+
+Canonical kanıt: `docs/fase9/Faz9_Offline_Release_Rehearsal_Report.md`.
+
+### V2 Release Candidate Complete — TAMAMLANDI
+
+Faz 0–9 kapalıdır. V1 production social verisi ve media için tek writer olmaya devam eder. V2'nin
+production DB credential'ı, provider secret'ı, process'i, traffic route'u, mutation'ı, worker'ı,
+timer'ı veya schedule'ı yoktur. Writer Ownership Cutover, dark deployment ve owner TikTok
+aktivasyonu bu kapanışla otomatik yetkilendirilmez; her biri ayrı açık kullanıcı onayı gerektirir.

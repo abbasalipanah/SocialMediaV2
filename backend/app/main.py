@@ -10,6 +10,7 @@ from sqlalchemy import create_engine
 
 from app.api import create_api_router
 from app.application.ports import AuthorityStore, ReportingStore
+from app.application.services.tiktok_activation import TikTokActivationCoordinator
 from app.core import WritePolicy, load_settings
 from app.infrastructure.persistence.legacy_socialmedia import LegacyReportingStore
 from app.infrastructure.persistence.projection_state import ProjectionStateStore
@@ -19,6 +20,7 @@ def create_app(
     store: AuthorityStore | None = None,
     reporting_store: ReportingStore | None = None,
     media_root: Path | None = None,
+    tiktok_activation: TikTokActivationCoordinator | None = None,
 ) -> FastAPI:
     settings = load_settings()
     policy = WritePolicy.from_settings(settings)
@@ -36,7 +38,12 @@ def create_app(
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         response = await call_next(request)
-        if request.url.path == "/sso/consume" or request.url.path.startswith("/api/auth/"):
+        if (
+            request.url.path == "/sso/consume"
+            or request.url.path == "/api/social/tiktok/oauth/callback"
+            or request.url.path.startswith("/api/auth/")
+            or request.url.path.startswith("/api/settings/tiktok/oauth/")
+        ):
             response.headers["Cache-Control"] = "no-store"
             response.headers["Referrer-Policy"] = "no-referrer"
         return response
@@ -57,6 +64,7 @@ def create_app(
             store,
             reporting_store=reporting_store,
             media_root=resolved_media_root,
+            tiktok_activation=tiktok_activation,
         )
     )
     return application

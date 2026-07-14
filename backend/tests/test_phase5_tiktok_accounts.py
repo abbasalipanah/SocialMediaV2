@@ -45,6 +45,7 @@ from app.infrastructure.providers.tiktok.accounts import (
 FIXTURE = Path(__file__).parent / "fixtures" / "phase5" / "tiktok_accounts_golden.json"
 NOW = datetime(2026, 7, 14, 13, tzinfo=UTC)
 SESSION_BINDING = hashlib.sha256(b"fixture-session").hexdigest()
+INTENT_HASH = hashlib.sha256(b"fixture-intent").hexdigest()
 
 
 def _config() -> TikTokConfig:
@@ -199,6 +200,7 @@ def test_state_is_bound_single_use_and_provider_family_checked() -> None:
     )
     binding = TikTokStateBinding(
         nonce="nonce-for-fixture-1234",
+        intent_hash=INTENT_HASH,
         user_id="user-1",
         brand_id=7,
         session_binding=SESSION_BINDING,
@@ -221,6 +223,7 @@ def test_state_is_bound_single_use_and_provider_family_checked() -> None:
         )
     mismatched = TikTokStateBinding(
         nonce="nonce-for-fixture-5678",
+        intent_hash=INTENT_HASH,
         user_id="user-1",
         brand_id=7,
         session_binding=SESSION_BINDING,

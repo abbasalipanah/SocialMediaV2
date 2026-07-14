@@ -1,0 +1,10 @@
+{
+  "alembic_head": "0009_tiktok_organic_oauth_config",
+  "column_count": 259,
+  "constraint_count": 79,
+  "fingerprint_sha256": "fe786adb32c556b572e316457b4c008e39883ae4b4510f738800179d4be9ab15",
+  "index_count": 81,
+  "oauth_config_row_count": 1,
+  "source_migration_count": 9,
+  "table_count": 23
+}

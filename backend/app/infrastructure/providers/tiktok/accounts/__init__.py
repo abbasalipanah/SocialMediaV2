@@ -1,5 +1,10 @@
 """TikTok Business Accounts adapter boundary."""
 
+from .activation import (
+    TikTokAccountsActivationProvider,
+    TikTokActivationStateAdapter,
+    activation_config_version,
+)
 from .content import TikTokContentReader
 from .oauth_state import (
     TikTokStateBinding,
@@ -20,6 +25,9 @@ from .scopes import ScopeDecision, evaluate_scopes
 from .wire import TikTokAccountsWireMapper, TikTokWireError
 
 __all__ = [
+    "TikTokAccountsActivationProvider",
+    "TikTokActivationStateAdapter",
+    "activation_config_version",
     "ScopeDecision",
     "TikTokAccountsWireMapper",
     "TikTokContentReader",

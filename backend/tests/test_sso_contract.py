@@ -119,6 +119,9 @@ def test_owner_launch_context_is_preserved_in_the_hash_only_session() -> None:
     assert session["launch_target"] == "tiktok_owner_activation"
     assert session["sso_issued_at"] == verified.issued_at.isoformat()
     assert isinstance(session["sso_consumed_at"], str)
+    assert session["permissions"] == ("tiktok.connection.manage",)
+    assert session["sso_jti_hash"] == sha256_text(verified.jti)
+    assert verified.jti not in repr(session)
 
 
 def test_role_status_access_and_visibility_invariants_fail_closed() -> None:

@@ -14,6 +14,7 @@ from app.core.security import sha256_text
 
 CANONICAL_ROLES = {"super_admin", "agency_admin", "agency_operator", "viewer"}
 WRITE_ROLES = {"super_admin", "agency_admin", "agency_operator"}
+TIKTOK_CONNECTION_MANAGE_PERMISSION = "tiktok.connection.manage"
 BRAND_STATUSES = {"active", "suspended", "archived"}
 LAUNCH_TARGETS = {None: "/overview", "tiktok_owner_activation": "/settings/tiktok/connect"}
 REQUIRED_CONTRACT_FIELDS = {
@@ -187,6 +188,12 @@ def consume_sso(token: str, secret: str, store: SessionStore) -> tuple[str, Veri
     verified = verify_sso(token, secret)
     raw_session = secrets.token_urlsafe(32)
     consumed_at = datetime.now(UTC)
+    jti_hash = sha256_text(verified.jti)
+    permissions = (
+        (TIKTOK_CONNECTION_MANAGE_PERMISSION,)
+        if verified.settings_visible and verified.access_mode == "write"
+        else ()
+    )
     payload = {
         "user_id": verified.user_id,
         "email": verified.email,
@@ -200,10 +207,12 @@ def consume_sso(token: str, secret: str, store: SessionStore) -> tuple[str, Veri
         "sso_issued_at": verified.issued_at.isoformat(),
         "sso_consumed_at": consumed_at.isoformat(),
         "launch_target": verified.launch_target,
+        "permissions": permissions,
+        "sso_jti_hash": jti_hash,
         "revoked": False,
     }
     created = store.create_from_jti(
-        jti_hash=sha256_text(verified.jti),
+        jti_hash=jti_hash,
         session_hash=sha256_text(raw_session),
         payload=payload,
         expires_at=verified.expires_at,

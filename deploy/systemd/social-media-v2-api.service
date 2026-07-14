@@ -1,0 +1,22 @@
+# OFFLINE DRAFT ONLY. Keep static, stopped and uninstalled during RC rehearsal.
+[Unit]
+Description=Social Media V2 dormant API draft
+After=network.target
+ConditionPathExists=/etc/social-media-v2/enable-dormant-api
+
+[Service]
+Type=simple
+User=social-media-v2
+Group=social-media-v2
+WorkingDirectory=/opt/social-media-v2/backend
+EnvironmentFile=/etc/social-media-v2/dormant.env
+ExecStart=/opt/social-media-v2/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8010
+Restart=no
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/social-media-v2
+
+# Intentionally no [Install] section: this draft cannot be enabled.

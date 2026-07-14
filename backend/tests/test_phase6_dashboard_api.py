@@ -43,7 +43,9 @@ class MemoryAuthority:
                 "access_mode": "write",
                 "settings_visible": True,
                 "is_internal_staff": True,
+                "permissions": ("tiktok.connection.manage",),
                 "revoked": False,
+                "sso_jti_hash": sha256_text("phase6-jti"),
             }
         }
         self.projections = {
@@ -622,7 +624,7 @@ async def test_tiktok_activation_handoff_requires_fresh_targeted_sso_and_is_read
         assert ready.headers["cache-control"] == "no-store"
         assert ready.headers["referrer-policy"] == "no-referrer"
 
-        session["sso_issued_at"] = (current - timedelta(minutes=11)).isoformat()
+        session["sso_issued_at"] = (current - timedelta(minutes=6)).isoformat()
         stale = await client.get(
             "/api/settings/tiktok/activation-readiness",
             params={"brand_id": "101"},
@@ -634,7 +636,7 @@ async def test_tiktok_activation_handoff_requires_fresh_targeted_sso_and_is_read
     expected_sessions[sha256_text(authority.raw_session)].update(
         {
             "launch_target": "tiktok_owner_activation",
-            "sso_issued_at": (current - timedelta(minutes=11)).isoformat(),
+            "sso_issued_at": (current - timedelta(minutes=6)).isoformat(),
             "sso_consumed_at": current.isoformat(),
         }
     )

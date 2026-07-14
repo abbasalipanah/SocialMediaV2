@@ -21,6 +21,7 @@ DATABASE_URL = os.getenv("TEST_POSTGRES_URL")
 pytestmark = pytest.mark.skipif(not DATABASE_URL, reason="TEST_POSTGRES_URL is not configured")
 NOW = datetime.now(UTC)
 SESSION_BINDING = hashlib.sha256(b"postgres-fixture-session").hexdigest()
+INTENT_HASH = hashlib.sha256(b"postgres-fixture-intent").hexdigest()
 
 
 @pytest.fixture()
@@ -54,6 +55,7 @@ def test_tiktok_state_replay_claim_is_durable_in_postgres(engine: Engine) -> Non
     token = codec.issue(
         TikTokStateBinding(
             nonce="postgres-nonce-fixture-1234",
+            intent_hash=INTENT_HASH,
             user_id="user-1",
             brand_id=7,
             session_binding=SESSION_BINDING,
