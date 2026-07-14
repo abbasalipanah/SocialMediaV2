@@ -30,6 +30,7 @@ def test_all_routes_have_explicit_boundary_semantics() -> None:
         "/api/operations/readiness",
         "/api/auth/me",
         "/api/auth/logout",
+        "/api/workspace/brands",
         "/sso/consume",
         "/internal/provisioning/events",
     }

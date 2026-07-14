@@ -11,6 +11,13 @@ All notable changes to Social Media V2 are documented in this file.
 - Enforce the existing `varchar(255)` projection-key limit before persistence.
 - Exercise PostgreSQL integration tests against the V1-compatible table contract.
 
+### Added
+
+- Atomic full Brand-access snapshot replacement in the schema-compatible projection store.
+- Typed parent/child/hidden-parent authority models and backend family scope resolution.
+- Current-projection session authorization and `/api/workspace/brands` query API.
+- Cross-brand, rollup, revoke and stale-snapshot PostgreSQL certification.
+
 ## [0.1.0] - 2026-07-13
 
 ### Added

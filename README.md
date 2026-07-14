@@ -11,7 +11,9 @@ developed under the safety and migration rules in
 - Phase 2: SSO, local session and signed provisioning implementation complete; source
   immutability and disposable PostgreSQL exit gates are green. Closure evidence is tracked in
   [`docs/fase2/Faz2_SSO_Provisioning_Report.md`](docs/fase2/Faz2_SSO_Provisioning_Report.md).
-- Phase 3: parent/child authority projection is active.
+- Phase 3: parent/child authority projection, hidden-parent rollup and cross-brand authorization
+  gates are complete.
+- Phase 4: backend independence and platform capability ports are next.
 - Production DB access, provider activation, workers and schedules remain disabled.
 
 ## Verification

@@ -1,5 +1,19 @@
-"""Canonical domain scaffold."""
+"""Authority domain models."""
 
-from .models import BrandFamilyProjection, BrandProjection, PlatformAccount
+from .models import (
+    BrandAccess,
+    BrandFamilyProjection,
+    BrandScope,
+    BrandShell,
+    BrandWorkspace,
+    WorkspaceBrand,
+)
 
-__all__ = ["BrandFamilyProjection", "BrandProjection", "PlatformAccount"]
+__all__ = [
+    "BrandAccess",
+    "BrandFamilyProjection",
+    "BrandScope",
+    "BrandShell",
+    "BrandWorkspace",
+    "WorkspaceBrand",
+]

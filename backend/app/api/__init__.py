@@ -6,6 +6,7 @@ from fastapi import APIRouter
 
 from app.api.auth import create_auth_router
 from app.api.internal import create_internal_router
+from app.api.workspace import create_workspace_router
 from app.application.ports import AuthorityStore
 from app.core import AppSettings, Boundary, WritePolicy, mark_boundary
 
@@ -38,6 +39,7 @@ def create_api_router(
 
     router.include_router(create_auth_router(settings, policy, store))
     router.include_router(create_internal_router(settings, policy, store))
+    router.include_router(create_workspace_router(store))
     return router
 
 

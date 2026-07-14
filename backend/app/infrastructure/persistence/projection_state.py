@@ -7,6 +7,9 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import Engine, create_engine, text
+from sqlalchemy.engine import Connection
+
+from app.application.ports import ProjectionReplacement, ProjectionWrite
 
 
 class ProjectionStateStore:
@@ -107,6 +110,8 @@ class ProjectionStateStore:
         entity_key: str,
         version: int,
         payload: Mapping[str, Any],
+        projection_writes: tuple[ProjectionWrite, ...] = (),
+        replacement: ProjectionReplacement | None = None,
     ) -> str:
         nonce_payload = _json({"expires_at": nonce_expires_at.isoformat()})
         with self.engine.begin() as connection:
@@ -155,7 +160,13 @@ class ProjectionStateStore:
                 ),
                 {"key": entity_key, "payload": _json(payload), "version": version},
             )
-            return "applied" if result.rowcount else "stale_ignored"
+            if not result.rowcount:
+                return "stale_ignored"
+            for projection_write in projection_writes:
+                _upsert_projection(connection, projection_write, version)
+            if replacement is not None:
+                _replace_projections(connection, replacement)
+            return "applied"
 
     def get_projection(self, entity_key: str) -> Mapping[str, Any] | None:
         with self.engine.begin() as connection:
@@ -165,6 +176,102 @@ class ProjectionStateStore:
                 ),
                 {"key": entity_key},
             ).scalar_one_or_none()
+
+    def list_projections(self, projection_key_prefix: str) -> list[Mapping[str, Any]]:
+        with self.engine.begin() as connection:
+            return list(
+                connection.execute(
+                    text(
+                        """SELECT payload_json FROM social_projection_state
+                        WHERE projection_key LIKE :prefix
+                        ORDER BY projection_key"""
+                    ),
+                    {"prefix": f"{projection_key_prefix}%"},
+                ).scalars()
+            )
+
+
+def _upsert_projection(
+    connection: Connection, projection_write: ProjectionWrite, version: int
+) -> None:
+    payload = {**projection_write.payload, "version": version}
+    if projection_write.insert_only:
+        connection.execute(
+            text(
+                """INSERT INTO social_projection_state
+                (projection_key, payload_json, updated_at)
+                VALUES (:key, CAST(:payload AS jsonb), now())
+                ON CONFLICT (projection_key) DO NOTHING"""
+            ),
+            {"key": projection_write.projection_key, "payload": _json(payload)},
+        )
+        return
+    connection.execute(
+        text(
+            """INSERT INTO social_projection_state
+            (projection_key, payload_json, updated_at)
+            VALUES (:key, CAST(:payload AS jsonb), now())
+            ON CONFLICT (projection_key) DO UPDATE
+            SET payload_json=EXCLUDED.payload_json, updated_at=now()
+            WHERE COALESCE(
+                      (social_projection_state.payload_json->>'version')::bigint,
+                      -1
+                  )
+                  < :version"""
+        ),
+        {
+            "key": projection_write.projection_key,
+            "payload": _json(payload),
+            "version": version,
+        },
+    )
+
+
+def _replace_projections(connection: Connection, replacement: ProjectionReplacement) -> None:
+    desired_keys = {write.projection_key for write in replacement.writes}
+    if len(desired_keys) != len(replacement.writes) or any(
+        not key.startswith(replacement.projection_key_prefix) for key in desired_keys
+    ):
+        raise ValueError("invalid_projection_replacement")
+
+    existing = connection.execute(
+        text(
+            """SELECT projection_key, payload_json FROM social_projection_state
+            WHERE projection_key LIKE :prefix
+            FOR UPDATE"""
+        ),
+        {"prefix": f"{replacement.projection_key_prefix}%"},
+    ).mappings()
+    for row in existing:
+        projection_key = str(row["projection_key"])
+        if projection_key in desired_keys:
+            continue
+        payload = dict(row["payload_json"])
+        try:
+            current_version = int(payload.get("version", -1))
+        except (TypeError, ValueError):
+            current_version = -1
+        if current_version >= replacement.version:
+            continue
+        payload.update(
+            {
+                "active": False,
+                "event_type": replacement.event_type,
+                "snapshot_removed": True,
+                "version": replacement.version,
+            }
+        )
+        connection.execute(
+            text(
+                """UPDATE social_projection_state
+                SET payload_json=CAST(:payload AS jsonb), updated_at=now()
+                WHERE projection_key=:key"""
+            ),
+            {"key": projection_key, "payload": _json(payload)},
+        )
+
+    for projection_write in replacement.writes:
+        _upsert_projection(connection, projection_write, replacement.version)
 
 
 def _json(value: Mapping[str, Any]) -> str:

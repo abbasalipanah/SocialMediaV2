@@ -527,3 +527,28 @@ yenileme ve tek koşuda yeşil full certification sonrasında kapatılabilir. Fa
 İzinli sıradaki kapsam parent/child authority projection'dır: Brand shell/access projection,
 full snapshot semantiği, parent/child/hidden-parent model, brand-family API ve cross-brand
 authorization testleri. Faz 4 çalışması Faz 3 çıkış kapısı yeşil olmadan başlamaz.
+
+## Authoritative durum güncellemesi — 2026-07-14 / Faz 3 kapanışı
+
+### Faz 3 — KAPALI
+
+- Typed Brand shell ve user–Brand access projection'ları tamamlandı.
+- Full snapshot atomic replacement, empty snapshot ve stale version davranışı gerçek PostgreSQL
+  üzerinde doğrulandı.
+- Hidden parent yalnız rollup shell'i olarak modellendi; mevcut gerçek shell placeholder ile
+  overwrite edilmez.
+- Parent rollup yalnız izinli active descendant'ları içerir; unrelated Brand/sibling scope'a
+  sızmaz.
+- Incremental membership, entitlement + app access olmadan erişim açamaz.
+- Concrete mutation write access ister; read-only veya rollup mutation fail-closed olur.
+- `/api/workspace/brands` ve session current-authority doğrulaması eklendi.
+- `scripts/quality/fase3_authority_check.sh`: full suite `44 passed`, targeted suite `20 passed`,
+  source guards ve bütün build/artifact kontrolleri yeşil.
+
+Canonical kanıt: `docs/fase3/Faz3_Authority_Projection_Report.md`.
+
+### Faz 4 — SIRADAKİ
+
+İzinli sıradaki kapsam backend bağımsızlaştırmadır: küçük platform capability portları, local
+Meta/TikTok adapter sınırları, schema-compatible persistence, TokenVault/CredentialStore,
+CheckpointStore, metric semantic catalog, explicit model registry ve dormant worker config.

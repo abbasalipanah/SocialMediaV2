@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+from app.application.ports import ProjectionReplacement, ProjectionWrite
 from app.application.services.provisioning import (
     ProvisioningError,
     SignedRequest,
@@ -36,6 +37,8 @@ class MemoryProvisioningStore:
         entity_key: str,
         version: int,
         payload: Mapping[str, Any],
+        projection_writes: tuple[ProjectionWrite, ...] = (),
+        replacement: ProjectionReplacement | None = None,
     ) -> str:
         del nonce_expires_at, event_type
         if nonce_hash in self.nonces:
@@ -48,10 +51,41 @@ class MemoryProvisioningStore:
         if current and current["version"] >= version:
             return "stale_ignored"
         self.projections[entity_key] = dict(payload)
+        for projection_write in projection_writes:
+            if projection_write.insert_only and projection_write.projection_key in self.projections:
+                continue
+            self.projections[projection_write.projection_key] = {
+                **projection_write.payload,
+                "version": version,
+            }
+        if replacement is not None:
+            desired = {write.projection_key for write in replacement.writes}
+            for key, existing in self.projections.items():
+                if key.startswith(replacement.projection_key_prefix) and key not in desired:
+                    existing.update(
+                        {
+                            "active": False,
+                            "event_type": replacement.event_type,
+                            "snapshot_removed": True,
+                            "version": replacement.version,
+                        }
+                    )
+            for projection_write in replacement.writes:
+                self.projections[projection_write.projection_key] = {
+                    **projection_write.payload,
+                    "version": replacement.version,
+                }
         return "applied"
 
     def get_projection(self, entity_key: str) -> Mapping[str, Any] | None:
         return self.projections.get(entity_key)
+
+    def list_projections(self, projection_key_prefix: str) -> list[Mapping[str, Any]]:
+        return [
+            projection
+            for key, projection in sorted(self.projections.items())
+            if key.startswith(projection_key_prefix)
+        ]
 
     def revoke_authority_sessions(self, *, user_id: str | None, brand_id: str | None) -> int:
         if user_id:
@@ -206,7 +240,7 @@ def test_nested_entitlement_status_is_normalized_and_revokes_brand_sessions() ->
         == "applied"
     )
     assert store.revoked_brands == ["brand-1"]
-    assert store.projections["v2:entitlement:brand-1"]["active"] is False
+    assert store.projections["v2:brand-entitlement:brand-1"]["active"] is False
 
 
 def test_membership_role_and_empty_full_snapshot_are_fail_closed_and_revoking() -> None:
@@ -262,6 +296,54 @@ def test_membership_role_and_empty_full_snapshot_are_fail_closed_and_revoking() 
         )
         == "applied"
     )
+    assert store.revoked_users == ["user-1"]
+
+
+def test_full_snapshot_projects_shells_access_and_revokes_existing_sessions() -> None:
+    store = MemoryProvisioningStore()
+    snapshot = json.dumps(
+        {
+            "event_id": "snapshot-projection-1",
+            "event_type": "brand_access.sync",
+            "entity_id": "user-1",
+            "version": 3,
+            "payload": {
+                "user": {
+                    "id": "user-1",
+                    "role": "agency_operator",
+                    "access_mode": "write",
+                },
+                "brands": [
+                    {
+                        "id": "child-1",
+                        "name": "Child 1",
+                        "parent_brand_id": "parent-1",
+                        "status": "active",
+                    }
+                ],
+                "default_brand_id": "child-1",
+            },
+        },
+        separators=(",", ":"),
+    ).encode()
+
+    assert (
+        apply_signed_event(
+            secret=SECRET,
+            method="POST",
+            path=PATH,
+            body=snapshot,
+            signed=signed(snapshot, "snapshot-projection-nonce"),
+            store=store,
+            session_store=store,
+        )
+        == "applied"
+    )
+    access = store.projections["v2:brand-access:user-1:child-1"]
+    assert access["active"] is True
+    assert access["authority_source"] == "full_snapshot"
+    assert store.projections["v2:brand-shell:child-1"]["placeholder"] is False
+    assert store.projections["v2:brand-shell:parent-1"]["placeholder"] is True
     assert store.revoked_users == ["user-1"]
 
 
