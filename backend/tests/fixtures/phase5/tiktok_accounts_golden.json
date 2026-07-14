@@ -1,0 +1,114 @@
+{
+  "token": {
+    "code": 0,
+    "message": "OK",
+    "request_id": "request-token",
+    "data": {
+      "access_token": "fixture-access-value",
+      "refresh_token": "fixture-refresh-value",
+      "token_type": "Bearer",
+      "expires_in": 86400,
+      "refresh_expires_in": 31536000,
+      "scope": "user.info.basic,user.info.stats,user.insights,video.list,video.insights,user.info.username"
+    }
+  },
+  "refresh": {
+    "code": 0,
+    "message": "OK",
+    "request_id": "request-refresh",
+    "data": {
+      "access_token": "fixture-access-refreshed",
+      "refresh_token": "fixture-refresh-rotated",
+      "token_type": "Bearer",
+      "expires_in": 86400,
+      "refresh_expires_in": 31536000,
+      "scope": "user.info.basic,user.info.stats,user.insights,video.list,video.insights,user.info.username"
+    }
+  },
+  "revoke": {
+    "code": 0,
+    "message": "OK",
+    "request_id": "request-revoke",
+    "data": {}
+  },
+  "token_info": {
+    "code": 0,
+    "message": "OK",
+    "request_id": "request-info",
+    "data": {
+      "business_id": "business-1",
+      "scope": [
+        "user.info.basic",
+        "user.info.stats",
+        "user.insights",
+        "video.list",
+        "video.insights",
+        "user.info.username"
+      ]
+    }
+  },
+  "profile": {
+    "code": 0,
+    "message": "OK",
+    "request_id": "request-profile",
+    "data": {
+      "business_id": "business-1",
+      "display_name": "Golden TikTok",
+      "username": "golden.tiktok",
+      "profile_image": "https://example.test/tiktok-profile.jpg",
+      "followers_count": 310,
+      "likes": 900,
+      "video_count": 2
+    }
+  },
+  "profile_metric_unavailable": {
+    "code": 0,
+    "message": "OK",
+    "request_id": "request-profile-partial",
+    "data": {
+      "business_id": "business-1",
+      "display_name": "Golden TikTok"
+    }
+  },
+  "video_first": {
+    "code": 0,
+    "message": "OK",
+    "request_id": "request-video-1",
+    "data": {
+      "videos": [
+        {
+          "item_id": "video-1",
+          "thumbnail_url": "https://example.test/video-1.jpg",
+          "caption": "Golden video one",
+          "likes": 21,
+          "comments": 4,
+          "shares": 3,
+          "video_views": 450,
+          "create_time": 1784016000
+        }
+      ],
+      "cursor": "video-next",
+      "has_more": true
+    }
+  },
+  "video_second": {
+    "code": 0,
+    "message": "OK",
+    "request_id": "request-video-2",
+    "data": {
+      "videos": [
+        {
+          "item_id": "video-2",
+          "caption": "Golden video two",
+          "likes": 8,
+          "comments": 1,
+          "shares": 0,
+          "video_views": 90,
+          "create_time": "2026-07-14T12:00:00Z"
+        }
+      ],
+      "cursor": "ignored-when-complete",
+      "has_more": false
+    }
+  }
+}

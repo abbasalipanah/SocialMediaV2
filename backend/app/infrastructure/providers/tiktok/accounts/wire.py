@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 
 from app.core.config import TIKTOK_APP_ID, TIKTOK_PROVIDER_PROFILE, TikTokConfig
@@ -72,6 +73,61 @@ class TikTokAccountsWireMapper:
             "client_id": self.config.app_id,
             "client_secret": self.config.app_secret,
         }
+
+    def token_info_headers(self, *, access_token: str) -> dict[str, str]:
+        self._assert_profile()
+        if not access_token:
+            raise TikTokWireError("access_token_required")
+        return {"Access-Token": access_token}
+
+    def profile_fields(self, *, business_id: str) -> dict[str, str]:
+        self._assert_profile()
+        if not business_id:
+            raise TikTokWireError("business_id_required")
+        return {
+            "business_id": business_id,
+            "fields": json.dumps(
+                [
+                    "business_id",
+                    "display_name",
+                    "username",
+                    "profile_image",
+                    "followers_count",
+                    "likes",
+                    "video_count",
+                ],
+                separators=(",", ":"),
+            ),
+        }
+
+    def video_fields(
+        self,
+        *,
+        business_id: str,
+        cursor: str | None = None,
+    ) -> dict[str, str]:
+        self._assert_profile()
+        if not business_id:
+            raise TikTokWireError("business_id_required")
+        fields = {
+            "business_id": business_id,
+            "fields": json.dumps(
+                [
+                    "item_id",
+                    "thumbnail_url",
+                    "caption",
+                    "likes",
+                    "comments",
+                    "shares",
+                    "video_views",
+                    "create_time",
+                ],
+                separators=(",", ":"),
+            ),
+        }
+        if cursor:
+            fields["cursor"] = cursor
+        return fields
 
     def _assert_secret_request(self, value: str, missing_error: str) -> None:
         self._assert_profile()

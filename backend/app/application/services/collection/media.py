@@ -1,0 +1,85 @@
+"""Content cover persistence across the file and metadata stores."""
+
+from __future__ import annotations
+
+import re
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import datetime
+
+from app.application.ports.persistence import MediaRecord, MediaStore
+from app.application.ports.platforms import ProviderRecord
+from app.core.time import utc_now
+from app.infrastructure.persistence.media_files import AtomicMediaFiles
+
+from .contracts import CollectionTarget
+
+
+@dataclass(frozen=True)
+class FetchedMedia:
+    data: bytes
+    mime_type: str
+    status_code: int
+
+    def __post_init__(self) -> None:
+        if not self.data or not self.mime_type or not 200 <= self.status_code < 300:
+            raise ValueError("fetched_media_invalid")
+
+
+class ContentMediaWriter:
+    def __init__(
+        self,
+        *,
+        target: CollectionTarget,
+        files: AtomicMediaFiles,
+        media_store: MediaStore,
+        fetch: Callable[[str], FetchedMedia],
+        clock: Callable[[], datetime] = utc_now,
+    ) -> None:
+        self._target = target
+        self._files = files
+        self._media_store = media_store
+        self._fetch = fetch
+        self._clock = clock
+
+    def persist(self, item: ProviderRecord) -> int:
+        source_url = item.fields.get("media_url")
+        if not isinstance(source_url, str) or not source_url:
+            return 0
+        fetched = self._fetch(source_url)
+        suffix = _suffix(fetched.mime_type)
+        safe_id = re.sub(r"[^A-Za-z0-9._-]", "_", item.external_id)
+        relative_path = (
+            f"{self._target.account.platform.value}/"
+            f"{self._target.local_account_id}/{safe_id}.{suffix}"
+        )
+        persisted = self._files.persist(relative_path, fetched.data)
+        self._media_store.upsert(
+            MediaRecord(
+                platform=self._target.account.platform,
+                account_id=self._target.local_account_id,
+                brand_id=self._target.brand_id,
+                external_content_id=item.external_id,
+                media_kind="cover",
+                storage_path=persisted.relative_path,
+                source_url=source_url,
+                source_status=fetched.status_code,
+                mime_type=fetched.mime_type,
+                size_bytes=persisted.size_bytes,
+                checksum=persisted.checksum,
+                verified_at=self._clock(),
+            )
+        )
+        return 1
+
+
+def _suffix(mime_type: str) -> str:
+    return {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+        "video/mp4": "mp4",
+    }.get(mime_type.lower(), "bin")
+
+
+__all__ = ["ContentMediaWriter", "FetchedMedia"]

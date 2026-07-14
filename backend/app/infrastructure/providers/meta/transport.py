@@ -5,6 +5,7 @@ from __future__ import annotations
 import random
 import time
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlparse
 
@@ -15,6 +16,13 @@ from app.application.ports.platforms import ProviderCredential
 from .rate_guard import MetaRateGuard
 
 META_GRAPH_BASE_URL = "https://graph.facebook.com"
+
+
+@dataclass(frozen=True)
+class MetaPage:
+    items: tuple[Mapping[str, Any], ...]
+    next_cursor: str | None
+    payload: Mapping[str, Any]
 
 
 class MetaTransportError(RuntimeError):
@@ -140,6 +148,41 @@ class MetaTransport:
             return payload
         raise last_error or MetaTransportError("meta_transport_failure")
 
+    def page(
+        self,
+        path: str,
+        params: Mapping[str, str | int | float] | None = None,
+        *,
+        cursor: str | None = None,
+    ) -> MetaPage:
+        request_params = dict(params or {})
+        if cursor:
+            request_params["after"] = cursor
+        payload = self.get(path, request_params)
+        raw_items = payload.get("data", [])
+        if raw_items is None:
+            raw_items = []
+        if not isinstance(raw_items, list):
+            raise MetaTransportError("meta_page_data_invalid")
+        items: list[Mapping[str, Any]] = []
+        for item in raw_items:
+            if not isinstance(item, Mapping):
+                raise MetaTransportError("meta_page_item_invalid")
+            items.append(item)
+        paging = payload.get("paging", {})
+        if paging is None:
+            paging = {}
+        if not isinstance(paging, Mapping):
+            raise MetaTransportError("meta_page_paging_invalid")
+        cursors = paging.get("cursors", {})
+        if cursors is None:
+            cursors = {}
+        if not isinstance(cursors, Mapping):
+            raise MetaTransportError("meta_page_cursors_invalid")
+        raw_cursor = cursors.get("after")
+        next_cursor = str(raw_cursor) if raw_cursor not in (None, "") else None
+        return MetaPage(items=tuple(items), next_cursor=next_cursor, payload=payload)
+
     def close(self) -> None:
         self._wire.close()
 
@@ -185,4 +228,4 @@ def _retry_after(response: httpx.Response, payload: Mapping[str, Any]) -> float 
     return max(parsed) if parsed else None
 
 
-__all__ = ["META_GRAPH_BASE_URL", "MetaTransport", "MetaTransportError"]
+__all__ = ["META_GRAPH_BASE_URL", "MetaPage", "MetaTransport", "MetaTransportError"]

@@ -1,5 +1,6 @@
 """Dormant worker runtime surface."""
 
+from .contracts import WORKER_CONTRACTS, WorkerContract
 from .runtime import (
     ManualWorkerSelection,
     WorkerRuntimeConfig,
@@ -9,7 +10,9 @@ from .runtime import (
 )
 
 __all__ = [
+    "WORKER_CONTRACTS",
     "ManualWorkerSelection",
+    "WorkerContract",
     "WorkerRuntimeConfig",
     "assert_manual_worker_allowed",
     "dormant_worker_config",

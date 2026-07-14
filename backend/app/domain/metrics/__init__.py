@@ -17,6 +17,21 @@ class MetricCatalogError(ValueError):
 
 class MetricId(StrEnum):
     FOLLOWERS = "followers"
+    FOLLOWING = "following"
+    NEW_FOLLOWERS = "new_followers"
+    REACH = "reach"
+    REACH_PAID = "reach_paid"
+    REACH_ORGANIC = "reach_organic"
+    VIEWS = "views"
+    VIEWS_PAID = "views_paid"
+    VIEWS_ORGANIC = "views_organic"
+    INTERACTIONS = "interactions"
+    PAGE_VIEWS = "page_views"
+    PROFILE_VIEWS = "profile_views"
+    WEBSITE_CLICKS = "website_clicks"
+    TOTAL_ACTIONS = "total_actions"
+    REACTIONS = "reactions"
+    MEDIA_COUNT = "media_count"
     VIDEO_VIEWS_TOTAL = "video_views_total"
     VIDEO_VIEWS_CHANGE = "video_views_change"
     VIDEO_LIKES_TOTAL = "video_likes_total"
@@ -237,9 +252,11 @@ class MetricCatalog:
         return tuple(self._definitions.values())
 
 
-def _followers(platform: PlatformId, source_field: str) -> MetricDefinition:
+def _profile_snapshot(
+    platform: PlatformId, metric_id: MetricId, source_field: str
+) -> MetricDefinition:
     return MetricDefinition(
-        metric_id=MetricId.FOLLOWERS,
+        metric_id=metric_id,
         platform=platform,
         entity_scope=EntityScope.PROFILE,
         semantic_type=SemanticType.SNAPSHOT,
@@ -262,6 +279,55 @@ def _followers(platform: PlatformId, source_field: str) -> MetricDefinition:
         required_capability=CapabilityId.PROFILE,
         version=1,
     )
+
+
+def _profile_flow(
+    platform: PlatformId, metric_id: MetricId, source_field: str
+) -> MetricDefinition:
+    return MetricDefinition(
+        metric_id=metric_id,
+        platform=platform,
+        entity_scope=EntityScope.PROFILE,
+        semantic_type=SemanticType.FLOW,
+        unit=Unit.COUNT,
+        source_field=source_field,
+        collection_granularity=CollectionGranularity.DAY,
+        period_aggregation=AggregationPolicy.SUM,
+        brand_rollup_aggregation=AggregationPolicy.SUM,
+        null_policy=NullPolicy.NOT_AVAILABLE,
+        reset_policy=ResetPolicy.NOT_APPLICABLE,
+        derived_from_metric_ids=(),
+        derivation_operator=None,
+        derivation_version=None,
+        derivation_window=None,
+        first_sample_policy=FirstSamplePolicy.NOT_APPLICABLE,
+        numerator_metric_id=None,
+        denominator_metric_id=None,
+        zero_denominator_policy=ZeroDenominatorPolicy.NOT_APPLICABLE,
+        allowed_breakdowns=(),
+        required_capability=CapabilityId.PROFILE,
+        version=1,
+    )
+
+
+FACEBOOK_DAILY_SOURCE_METRICS = (
+    ("page_media_view", MetricId.VIEWS),
+    ("page_posts_impressions", MetricId.VIEWS),
+    ("page_impressions_unique", MetricId.REACH),
+    ("page_posts_impressions_unique", MetricId.REACH),
+    ("page_views_total", MetricId.PAGE_VIEWS),
+    ("page_post_engagements", MetricId.INTERACTIONS),
+    ("page_total_actions", MetricId.TOTAL_ACTIONS),
+    ("page_actions_post_reactions_total", MetricId.REACTIONS),
+)
+
+INSTAGRAM_DAILY_SOURCE_METRICS = (
+    ("reach", MetricId.REACH),
+    ("views", MetricId.VIEWS),
+    ("profile_views", MetricId.PROFILE_VIEWS),
+    ("website_clicks", MetricId.WEBSITE_CLICKS),
+    ("total_interactions", MetricId.INTERACTIONS),
+)
 
 
 def bootstrap_metric_catalog() -> MetricCatalog:
@@ -398,9 +464,35 @@ def bootstrap_metric_catalog() -> MetricCatalog:
     )
     return MetricCatalog(
         (
-            _followers(PlatformId.FACEBOOK, "followers_count"),
-            _followers(PlatformId.INSTAGRAM, "followers_count"),
-            _followers(PlatformId.TIKTOK, "follower_count"),
+            _profile_snapshot(
+                PlatformId.FACEBOOK, MetricId.FOLLOWERS, "followers_count"
+            ),
+            *(
+                _profile_flow(PlatformId.FACEBOOK, metric_id, source_field)
+                for metric_id, source_field in {
+                    metric_id: source_field
+                    for source_field, metric_id in FACEBOOK_DAILY_SOURCE_METRICS
+                }.items()
+            ),
+            _profile_snapshot(
+                PlatformId.INSTAGRAM, MetricId.FOLLOWERS, "followers_count"
+            ),
+            _profile_snapshot(
+                PlatformId.INSTAGRAM, MetricId.FOLLOWING, "follows_count"
+            ),
+            _profile_snapshot(
+                PlatformId.INSTAGRAM, MetricId.MEDIA_COUNT, "media_count"
+            ),
+            _profile_flow(
+                PlatformId.INSTAGRAM, MetricId.NEW_FOLLOWERS, "follower_count"
+            ),
+            *(
+                _profile_flow(PlatformId.INSTAGRAM, metric_id, source_field)
+                for source_field, metric_id in INSTAGRAM_DAILY_SOURCE_METRICS
+            ),
+            _profile_snapshot(
+                PlatformId.TIKTOK, MetricId.FOLLOWERS, "followers_count"
+            ),
             views_total,
             views_change,
             *engagement_counters,
@@ -416,6 +508,8 @@ __all__ = [
     "DerivationOperator",
     "EntityScope",
     "FirstSamplePolicy",
+    "FACEBOOK_DAILY_SOURCE_METRICS",
+    "INSTAGRAM_DAILY_SOURCE_METRICS",
     "MetricCatalog",
     "MetricCatalogError",
     "MetricDefinition",

@@ -2,12 +2,12 @@
 
 ## Güncel durum — 2026-07-14
 
-- Faz 0–4: **KAPALI, sertifikasyon kapıları yeşil**.
-- Son canonical doğrulama: `./scripts/quality/fase4_backend_independence_check.sh`.
-- Faz 4 sonucu: disposable PostgreSQL full suite `83 passed`, hedefli suite `44 passed`.
-- Aktif sıradaki faz: **Faz 5 — Collector parity**.
+- Faz 0–5: **KAPALI, sertifikasyon kapıları yeşil**.
+- Son canonical doğrulama: `./scripts/quality/fase5_collector_parity_check.sh`.
+- Faz 5 sonucu: disposable PostgreSQL full suite `108 passed`, hedefli suite `35 passed`.
+- Aktif sıradaki faz: **Faz 6 — Dashboard ve operasyon API'leri**.
 - V2 hâlâ dormant; production DB/provider/traffic/schedule ve Git push yoktur.
-- Ayrıntı: `docs/fase4/Faz4_Backend_Independence_Report.md`.
+- Ayrıntı: `docs/fase5/Faz5_Collector_Parity_Report.md`.
 
 ## Hedef ve bağlam
 
@@ -561,3 +561,38 @@ Canonical kanıt: `docs/fase3/Faz3_Authority_Projection_Report.md`.
 İzinli sıradaki kapsam backend bağımsızlaştırmadır: küçük platform capability portları, local
 Meta/TikTok adapter sınırları, schema-compatible persistence, TokenVault/CredentialStore,
 CheckpointStore, metric semantic catalog, explicit model registry ve dormant worker config.
+
+## Authoritative durum güncellemesi — 2026-07-14 / Faz 5 kapanışı
+
+### Faz 4 — KAPALI
+
+- Backend bağımsızlaştırma `510a98e` local checkpoint commit'i ile donduruldu.
+- Faz 4 canonical raporu ve certification sonucu geçerlidir.
+
+### Faz 5 — KAPALI
+
+- Gerçek V1 Meta transport oracle'ı ve ayrı V2 candidate subprocess'i deterministic localhost
+  fake provider üzerinde aynı pagination ve `500 → 429 → 200` sequence'ini üretti.
+- Gerçek V1 `metrics_store` oracle'ı ile V2 persistence candidate iki ayrı disposable PostgreSQL
+  database üzerinde çalıştı; metric/content persistence exact karşılaştırıldı.
+- Facebook/Instagram profile, daily metrics, content, stories, comments, audience ve media
+  capability'leri küçük adapter ve collector servislerine ayrıldı.
+- Page-level durable checkpoint/replay, atomic media write, bounded retry/rate davranışı, D-1
+  coverage, 30d + kalan 60d backfill ve follower history sözleşmeleri test edildi.
+- TikTok Business Accounts v1.3 token/profile/video parser'ları, scope gate'i, exact callback ve
+  PostgreSQL üzerinde atomic single-use OAuth state tamamlandı.
+- SocialMedia source dirty davranışları hash-bound envanterle V2 karşılıklarına bağlandı; source
+  projeler değiştirilmedi.
+- `scripts/quality/fase5_collector_parity_check.sh`: full disposable PostgreSQL suite
+  `108 passed`, hedefli suite `35 passed`; Ruff, secret/vocabulary/source guard temiz.
+- Canonical differential sonucu request sequence, metric ID/value, status/summary,
+  content/comment/media row ve media SHA-256 için `0` farktır.
+
+Canonical kanıt: `docs/fase5/Faz5_Collector_Parity_Report.md`.
+
+### Faz 6 — AKTİF
+
+İzinli sıradaki kapsam Overview/Facebook/Instagram/TikTok dashboard servisleri, güvenli media
+proxy, yalnız üç platform için accounts/connections/sync/settings/insights API'leri, backend
+parent rollup ve response contract testleridir. Faz 7 frontend shell çalışması Faz 6 feature
+matrix çıkış kapısı yeşil olmadan başlamaz.
