@@ -1,0 +1,133 @@
+"""Local SQLAlchemy registry for the schema-compatible social data surface."""
+
+from __future__ import annotations
+
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    Text,
+    UniqueConstraint,
+    text,
+)
+
+metadata = MetaData()
+
+metric_rows = Table(
+    "metrics_daily",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True, nullable=False),
+    Column("asset_id", Integer, ForeignKey("assets.id"), nullable=False),
+    Column("brand_id", Integer, ForeignKey("brands.id"), nullable=False),
+    Column("date", Date, primary_key=True, nullable=False),
+    Column("metric_id", String(64), nullable=False),
+    Column("value_numeric", Float, nullable=False),
+    Column("breakdown_key", String(64), nullable=True),
+    Column("breakdown_value", String(128), nullable=True),
+    UniqueConstraint(
+        "asset_id",
+        "date",
+        "metric_id",
+        "breakdown_key",
+        "breakdown_value",
+        name="uq_metrics_daily_key",
+    ),
+)
+Index(
+    "uq_metrics_daily_account_rows",
+    metric_rows.c.asset_id,
+    metric_rows.c.date,
+    metric_rows.c.metric_id,
+    unique=True,
+    postgresql_where=text("breakdown_key IS NULL AND breakdown_value IS NULL"),
+)
+Index(
+    "uq_metrics_daily_breakdown_rows",
+    metric_rows.c.asset_id,
+    metric_rows.c.date,
+    metric_rows.c.metric_id,
+    metric_rows.c.breakdown_key,
+    metric_rows.c.breakdown_value,
+    unique=True,
+    postgresql_where=text("breakdown_key IS NOT NULL AND breakdown_value IS NOT NULL"),
+)
+
+content_rows = Table(
+    "content_items",
+    metadata,
+    Column("id", Integer, primary_key=True),
+    Column("asset_id", Integer, ForeignKey("assets.id"), nullable=False),
+    Column("brand_id", Integer, ForeignKey("brands.id"), nullable=False),
+    Column("content_id", String(128), nullable=False),
+    Column("content_type", String(32), nullable=False),
+    Column("permalink", String(512), nullable=False),
+    Column("message", String(4096), nullable=False),
+    Column("media_url", String(512), nullable=False),
+    Column("created_time", DateTime(timezone=True), nullable=True),
+    Column("likes_count", Integer, nullable=False),
+    Column("comments_count", Integer, nullable=False),
+    Column("shares_count", Integer, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    UniqueConstraint("asset_id", "content_id", name="uq_content_items_asset_content"),
+)
+
+comment_rows = Table(
+    "content_comments",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("asset_id", Integer, ForeignKey("assets.id"), nullable=False),
+    Column("content_id", String(255), nullable=False),
+    Column("platform", String(32), nullable=False),
+    Column("comment_id", String(255), nullable=False),
+    Column("user_id", String(255), nullable=True),
+    Column("user_name", String(255), nullable=True),
+    Column("text", Text, nullable=False),
+    Column("like_count", Integer, nullable=False),
+    Column("reply_count", Integer, nullable=False),
+    Column("answered", Boolean, nullable=False),
+    Column("attachment_type", String(64), nullable=True),
+    Column("attachment_media_type", String(64), nullable=True),
+    Column("attachment_url", String(1024), nullable=True),
+    Column("commented_at", DateTime(timezone=True), nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+    UniqueConstraint("asset_id", "comment_id", name="uq_content_comments_asset_comment"),
+)
+
+media_rows = Table(
+    "media_assets",
+    metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("brand_id", Integer, ForeignKey("brands.id"), nullable=False),
+    Column("asset_id", Integer, ForeignKey("assets.id"), nullable=False),
+    Column("content_id", String(128), nullable=False),
+    Column("platform", String(32), nullable=False),
+    Column("media_kind", String(32), nullable=False),
+    Column("storage_path", String(1024), nullable=False),
+    Column("source_url", String(2048), nullable=False),
+    Column("source_status", Integer, nullable=True),
+    Column("mime_type", String(128), nullable=False),
+    Column("size_bytes", Integer, nullable=False),
+    Column("checksum", String(64), nullable=False),
+    Column("last_verified_at", DateTime(timezone=True), nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False),
+    UniqueConstraint(
+        "asset_id",
+        "content_id",
+        "media_kind",
+        name="uq_media_assets_asset_content_kind",
+    ),
+)
+
+REGISTERED_TABLES = (metric_rows, content_rows, comment_rows, media_rows)
+
+__all__ = ["REGISTERED_TABLES", "metadata"]

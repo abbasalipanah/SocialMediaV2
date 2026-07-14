@@ -13,4 +13,11 @@ class PlatformId(StrEnum):
         return {item.value for item in cls}
 
 
-__all__ = ["PlatformId"]
+class CapabilityId(StrEnum):
+    PROFILE = "profile"
+    CONTENT = "content"
+    COMMENTS = "comments"
+    AUDIENCE = "audience"
+
+
+__all__ = ["CapabilityId", "PlatformId"]
