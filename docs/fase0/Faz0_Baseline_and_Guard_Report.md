@@ -44,6 +44,17 @@ SOURCE WRITE GUARD PASS: source Git and content baselines match.
 Guard downstream dışındaki explicit write hedeflerini de reddeder. Faz 1 sertifikasyonu
 öncesinde ve sonrasında guard yeniden çalıştırılmıştır.
 
+## Onaylı source state yenilemesi — 2026-07-14
+
+`performance_marketing` projesi Faz 0 kapanışından sonra bağımsız geliştirme çalışmalarıyla
+ilerledi. Kullanıcı güncel `main` HEAD, dirty inventory ve üç untracked dokümanın beklenen kaynak
+durumu olduğunu açıkça onayladı. `source_baseline_v2.json` ve ilgili content manifesti
+`--approve-current-state` acknowledgement ile yeniden üretildi.
+
+Yenileme yalnız Git metadata ve SHA-256 manifestlerini downstream içinde güncelledi; kaynak
+projelerde dosya oluşturulmadı, değiştirilmedi veya silinmedi. Yenileme sonrasında source guard ve
+tam Faz 2 sertifikasının başlangıç/final guard adımları geçti.
+
 ## Exclusion kararı
 
 Generic `accumulate-alt-uygulama-teknik-entegrasyon-rehberi.md` yalnız migration girdisiydi;

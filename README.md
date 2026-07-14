@@ -8,9 +8,10 @@ developed under the safety and migration rules in
 
 - Phase 0: immutable source baselines and downstream-only write guard complete.
 - Phase 1: fail-closed backend/frontend bootstrap complete.
-- Phase 2: SSO, local session and signed provisioning implementation complete; final source
-  immutability certification is tracked in
+- Phase 2: SSO, local session and signed provisioning implementation complete; source
+  immutability and disposable PostgreSQL exit gates are green. Closure evidence is tracked in
   [`docs/fase2/Faz2_SSO_Provisioning_Report.md`](docs/fase2/Faz2_SSO_Provisioning_Report.md).
+- Phase 3: parent/child authority projection is active.
 - Production DB access, provider activation, workers and schedules remain disabled.
 
 ## Verification

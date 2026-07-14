@@ -21,29 +21,30 @@ class ProjectionStateStore:
         payload: Mapping[str, Any],
         expires_at: datetime,
     ) -> bool:
+        expiry_payload = _json({"expires_at": expires_at.isoformat()})
+        session_payload = _json({**payload, "expires_at": expires_at.isoformat()})
         with self.engine.begin() as connection:
             claimed = connection.execute(
                 text(
                     """INSERT INTO social_projection_state
-                    (projection_key, payload, expires_at, updated_at)
-                    VALUES (:key, CAST(:payload AS jsonb), :expires_at, now())
+                    (projection_key, payload_json, updated_at)
+                    VALUES (:key, CAST(:payload AS jsonb), now())
                     ON CONFLICT (projection_key) DO NOTHING
                     RETURNING projection_key"""
                 ),
-                {"key": f"v2:sso-jti:{jti_hash}", "payload": "{}", "expires_at": expires_at},
+                {"key": f"v2:sso-jti:{jti_hash}", "payload": expiry_payload},
             ).scalar_one_or_none()
             if claimed is None:
                 return False
             connection.execute(
                 text(
                     """INSERT INTO social_projection_state
-                    (projection_key, payload, expires_at, updated_at)
-                    VALUES (:key, CAST(:payload AS jsonb), :expires_at, now())"""
+                    (projection_key, payload_json, updated_at)
+                    VALUES (:key, CAST(:payload AS jsonb), now())"""
                 ),
                 {
                     "key": f"v2:session:{session_hash}",
-                    "payload": _json(payload),
-                    "expires_at": expires_at,
+                    "payload": session_payload,
                 },
             )
             return True
@@ -52,8 +53,10 @@ class ProjectionStateStore:
         with self.engine.begin() as connection:
             row = connection.execute(
                 text(
-                    """SELECT payload FROM social_projection_state
-                    WHERE projection_key=:key AND (expires_at IS NULL OR expires_at > now())"""
+                    """SELECT payload_json FROM social_projection_state
+                    WHERE projection_key=:key
+                      AND payload_json->>'expires_at' IS NOT NULL
+                      AND (payload_json->>'expires_at')::timestamptz > now()"""
                 ),
                 {"key": f"v2:session:{session_hash}"},
             ).scalar_one_or_none()
@@ -64,7 +67,8 @@ class ProjectionStateStore:
             connection.execute(
                 text(
                     """UPDATE social_projection_state
-                    SET payload = payload || jsonb_build_object('revoked', true), updated_at=now()
+                    SET payload_json = payload_json || jsonb_build_object('revoked', true),
+                        updated_at=now()
                     WHERE projection_key=:key"""
                 ),
                 {"key": f"v2:session:{session_hash}"},
@@ -76,16 +80,17 @@ class ProjectionStateStore:
         clauses = ["projection_key LIKE 'v2:session:%'"]
         parameters: dict[str, Any] = {}
         if user_id:
-            clauses.append("payload->>'user_id'=:user_id")
+            clauses.append("payload_json->>'user_id'=:user_id")
             parameters["user_id"] = user_id
         if brand_id:
-            clauses.append("payload->>'brand_id'=:brand_id")
+            clauses.append("payload_json->>'brand_id'=:brand_id")
             parameters["brand_id"] = brand_id
         with self.engine.begin() as connection:
             result = connection.execute(
                 text(
                     f"""UPDATE social_projection_state
-                    SET payload = payload || jsonb_build_object('revoked', true), updated_at=now()
+                    SET payload_json = payload_json || jsonb_build_object('revoked', true),
+                        updated_at=now()
                     WHERE {" AND ".join(clauses)}"""
                 ),
                 parameters,
@@ -103,25 +108,28 @@ class ProjectionStateStore:
         version: int,
         payload: Mapping[str, Any],
     ) -> str:
+        nonce_payload = _json({"expires_at": nonce_expires_at.isoformat()})
         with self.engine.begin() as connection:
             nonce = connection.execute(
                 text(
                     """INSERT INTO social_projection_state
-                    (projection_key, payload, expires_at, updated_at)
-                    VALUES (:key, '{}'::jsonb, :expires_at, now())
+                    (projection_key, payload_json, updated_at)
+                    VALUES (:key, CAST(:payload AS jsonb), now())
                     ON CONFLICT (projection_key) DO UPDATE
-                    SET payload='{}'::jsonb, expires_at=EXCLUDED.expires_at, updated_at=now()
-                    WHERE social_projection_state.expires_at <= now()
+                    SET payload_json=EXCLUDED.payload_json, updated_at=now()
+                    WHERE social_projection_state.payload_json->>'expires_at' IS NOT NULL
+                      AND (social_projection_state.payload_json->>'expires_at')::timestamptz
+                          <= now()
                     RETURNING projection_key"""
                 ),
-                {"key": f"v2:hmac-nonce:{nonce_hash}", "expires_at": nonce_expires_at},
+                {"key": f"v2:hmac-nonce:{nonce_hash}", "payload": nonce_payload},
             ).scalar_one_or_none()
             if nonce is None:
                 return "nonce_replayed"
             event = connection.execute(
                 text(
                     """INSERT INTO social_projection_state
-                    (projection_key, payload, updated_at)
+                    (projection_key, payload_json, updated_at)
                     VALUES (:key, CAST(:payload AS jsonb), now())
                     ON CONFLICT (projection_key) DO NOTHING RETURNING projection_key"""
                 ),
@@ -135,11 +143,14 @@ class ProjectionStateStore:
             result = connection.execute(
                 text(
                     """INSERT INTO social_projection_state
-                    (projection_key, payload, updated_at)
+                    (projection_key, payload_json, updated_at)
                     VALUES (:key, CAST(:payload AS jsonb), now())
                     ON CONFLICT (projection_key) DO UPDATE
-                    SET payload=EXCLUDED.payload, updated_at=now()
-                    WHERE COALESCE((social_projection_state.payload->>'version')::bigint, -1)
+                    SET payload_json=EXCLUDED.payload_json, updated_at=now()
+                    WHERE COALESCE(
+                              (social_projection_state.payload_json->>'version')::bigint,
+                              -1
+                          )
                           < :version"""
                 ),
                 {"key": entity_key, "payload": _json(payload), "version": version},
@@ -149,7 +160,9 @@ class ProjectionStateStore:
     def get_projection(self, entity_key: str) -> Mapping[str, Any] | None:
         with self.engine.begin() as connection:
             return connection.execute(
-                text("SELECT payload FROM social_projection_state WHERE projection_key=:key"),
+                text(
+                    "SELECT payload_json FROM social_projection_state WHERE projection_key=:key"
+                ),
                 {"key": entity_key},
             ).scalar_one_or_none()
 

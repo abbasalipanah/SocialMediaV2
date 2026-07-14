@@ -33,6 +33,7 @@ ENTITY_KINDS = {
     "brand_access.sync": "brand-access",
     "user.deleted": "user",
 }
+PROJECTION_KEY_MAX_LENGTH = 255
 
 
 class ProvisioningError(ValueError):
@@ -204,6 +205,10 @@ def apply_signed_event(
         or version < 0
     ):
         raise ProvisioningError("invalid_event")
+    event_key = f"v2:event:{event_id}"
+    entity_key = f"v2:{ENTITY_KINDS[event_type]}:{entity_id}"
+    if len(event_key) > PROJECTION_KEY_MAX_LENGTH or len(entity_key) > PROJECTION_KEY_MAX_LENGTH:
+        raise ProvisioningError("invalid_event")
     projection = _normalize_event(event_type, entity_id, _mapping(event.get("payload"), "payload"))
     projection.update({"event_type": event_type, "version": version, "entity_id": entity_id})
     status = store.apply_event(
@@ -211,7 +216,7 @@ def apply_signed_event(
         nonce_expires_at=datetime.now(UTC) + timedelta(minutes=10),
         event_id=event_id,
         event_type=event_type,
-        entity_key=f"v2:{ENTITY_KINDS[event_type]}:{entity_id}",
+        entity_key=entity_key,
         version=version,
         payload=projection,
     )

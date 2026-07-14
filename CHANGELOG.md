@@ -2,6 +2,15 @@
 
 All notable changes to Social Media V2 are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- Align the Phase 2 projection/session adapter with the existing
+  `social_projection_state.payload_json` schema without adding DDL.
+- Enforce the existing `varchar(255)` projection-key limit before persistence.
+- Exercise PostgreSQL integration tests against the V1-compatible table contract.
+
 ## [0.1.0] - 2026-07-13
 
 ### Added

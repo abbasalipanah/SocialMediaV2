@@ -263,3 +263,33 @@ def test_membership_role_and_empty_full_snapshot_are_fail_closed_and_revoking() 
         == "applied"
     )
     assert store.revoked_users == ["user-1"]
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("event_id", "e" * 247),
+        ("entity_id", "b" * 236),
+    ),
+)
+def test_projection_keys_must_fit_the_existing_schema(field: str, value: str) -> None:
+    store = MemoryProvisioningStore()
+    event = {
+        "event_id": "event-1",
+        "event_type": "brand.app_access.changed",
+        "entity_id": "brand-1",
+        "version": 1,
+        "payload": {"status": "enabled"},
+    }
+    event[field] = value
+    payload = json.dumps(event, separators=(",", ":")).encode()
+
+    with pytest.raises(ProvisioningError, match="invalid_event"):
+        apply_signed_event(
+            secret=SECRET,
+            method="POST",
+            path=PATH,
+            body=payload,
+            signed=signed(payload, f"long-{field}"),
+            store=store,
+        )

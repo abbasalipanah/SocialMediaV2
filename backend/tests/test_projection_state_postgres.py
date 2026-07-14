@@ -17,17 +17,24 @@ def store() -> ProjectionStateStore:
     assert DATABASE_URL
     engine = create_engine(DATABASE_URL)
     with engine.begin() as connection:
+        connection.execute(text("DROP TABLE IF EXISTS social_projection_state"))
+        connection.execute(text("DROP TABLE IF EXISTS brands"))
+        connection.execute(text("CREATE TABLE brands (id integer PRIMARY KEY)"))
         connection.execute(
             text(
-                """CREATE TABLE IF NOT EXISTS social_projection_state (
-                    projection_key text PRIMARY KEY,
-                    payload jsonb NOT NULL,
-                    expires_at timestamptz NULL,
-                    updated_at timestamptz NOT NULL DEFAULT now()
+                """CREATE TABLE social_projection_state (
+                    projection_key varchar(255) PRIMARY KEY,
+                    brand_id integer NULL REFERENCES brands(id),
+                    status varchar(32) NOT NULL DEFAULT 'pending',
+                    projection_source varchar(64) NOT NULL DEFAULT 'accumulate',
+                    source_updated_at timestamptz NULL,
+                    projected_at timestamptz NULL,
+                    payload_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+                    created_at timestamptz DEFAULT now(),
+                    updated_at timestamptz DEFAULT now()
                 )"""
             )
         )
-        connection.execute(text("TRUNCATE social_projection_state"))
     return ProjectionStateStore(DATABASE_URL)
 
 
@@ -43,6 +50,38 @@ def test_session_jti_claim_is_atomic_and_session_is_revocable(store: ProjectionS
     assert store.get_session("s1")["user_id"] == "u1"
     assert store.revoke_authority_sessions(user_id="u1", brand_id=None) == 1
     assert store.get_session("s1")["revoked"] is True
+
+
+def test_session_expiry_uses_schema_compatible_payload_json(store: ProjectionStateStore) -> None:
+    expired_at = datetime.now(UTC) - timedelta(seconds=1)
+    assert store.create_from_jti(
+        jti_hash="expired-jti",
+        session_hash="expired-session",
+        payload={"user_id": "u1", "brand_id": "b1", "revoked": False},
+        expires_at=expired_at,
+    )
+    assert store.get_session("expired-session") is None
+
+    with store.engine.connect() as connection:
+        columns = set(
+            connection.execute(
+                text(
+                    """SELECT column_name FROM information_schema.columns
+                    WHERE table_schema='public' AND table_name='social_projection_state'"""
+                )
+            ).scalars()
+        )
+        stored_expiry = connection.execute(
+            text(
+                """SELECT payload_json->>'expires_at' FROM social_projection_state
+                WHERE projection_key='v2:session:expired-session'"""
+            )
+        ).scalar_one()
+
+    assert "payload_json" in columns
+    assert "payload" not in columns
+    assert "expires_at" not in columns
+    assert stored_expiry == expired_at.isoformat()
 
 
 def test_event_nonce_duplicate_and_version_ordering_are_atomic(store: ProjectionStateStore) -> None:

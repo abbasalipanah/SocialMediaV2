@@ -112,8 +112,11 @@ Event ID `v2:event:<event_id>` ile atomik claim edilir. Aynı event yeni nonce i
 ## Persistence ve güvenlik sınırı
 
 İlk adapter yalnız disposable PostgreSQL'deki schema-compatible `social_projection_state`
-tablosunu kullanır. `create_all`, Alembic veya production schema inspection çalıştırmaz. Payload
-typed JSONB, key unique; claim ve projection update tek transaction içindedir. Session ve replay
+tablosunu kullanır. `create_all`, Alembic veya production schema inspection çalıştırmaz. Typed
+payload mevcut `payload_json` kolonuna yazılır; session/JTI/nonce expiry değeri yeni kolon veya
+DDL eklenmeden payload içindeki ISO-8601 `expires_at` alanında tutulur. `projection_key`
+`varchar(255)` sınırı event ve entity key'leri persistence çağrısından önce fail-closed doğrulanır.
+Unique key claim'i ve projection update tek transaction içindedir. Session ve replay
 anahtarlarında raw token/JTI/nonce değil SHA-256 digest tutulur.
 
 Secretlar yalnız `SOCIAL_SSO_HS256_SECRET` ve `SOCIAL_PROVISIONING_HMAC_SECRET` environment

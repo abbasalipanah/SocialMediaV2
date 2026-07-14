@@ -483,3 +483,47 @@ Canonical ayrıntı ve blokaj kanıtı:
 `docs/fase2/Faz2_SSO_Provisioning_Report.md`.
 
 Faz 3, source state hakkında açık karar verilip full Faz 2 sertifikası geçmeden başlamaz.
+
+## Authoritative durum güncellemesi — 2026-07-14 / Schema compatibility düzeltmesi
+
+Bu bölüm önceki Faz 2 kapanış adayındaki PostgreSQL adapter kanıtını düzeltir.
+
+### Faz 2 — UYGULAMA DÜZELTİLDİ / EXIT GATE BLOKE
+
+- İlk PostgreSQL test fixture'ının gerçek V1 `social_projection_state` şemasını temsil etmediği
+  tespit edildi: fixture `payload` ve `expires_at` kolonlarını üretirken mevcut şema
+  `payload_json` kullanır ve ayrı expiry kolonu içermez.
+- Adapter mevcut `payload_json` kolonuna geçirildi; TTL typed payload içinde tutuldu ve yeni DDL
+  ihtiyacı kaldırıldı.
+- Fixture, V1 kolon/default/key sözleşmesiyle değiştirildi; gerçek kolon kopyasındaki önceki
+  `UndefinedColumn` hatası giderildi.
+- `projection_key varchar(255)` sınırı event/entity parserında fail-closed uygulanıp negatif
+  testlerle doğrulandı.
+- Disposable PostgreSQL ile backend `36 passed`; Ruff, wheel, frontend clean build, vocabulary
+  scan ve `git diff --check` yeşildir.
+- Source guard hâlâ kırmızıdır: `performance_marketing` HEAD'i baseline'daki `7d79116...`
+  değerinden `9d93374...` değerine ilerlemiş, content file count `398` yerine `418` olmuştur ve
+  yeni untracked CSV bulunmaktadır.
+
+Faz 2 ancak güncel external source state için açık kullanıcı kararı, gerekiyorsa onaylı baseline
+yenileme ve tek koşuda yeşil full certification sonrasında kapatılabilir. Faz 3 başlamamıştır.
+
+## Authoritative durum güncellemesi — 2026-07-14 / Faz 2 kapanışı
+
+### Faz 2 — KAPALI
+
+- Kullanıcı güncel `performance_marketing` HEAD ve untracked inventory'sini beklenen source state
+  olarak açıkça onayladı.
+- Faz 0 v2 baseline acknowledgement ile yenilendi; source projelere write yapılmadı.
+- `scripts/quality/fase2_contract_check.sh` tek koşuda tamamen geçti.
+- Başlangıç ve final source guard adımları yeşildir.
+- Faz 1 certification yeniden geçti.
+- Disposable PostgreSQL suite sonucu `36 passed` oldu.
+- Schema-compatible `payload_json` adapterı, SSO/session, HMAC provisioning, replay/version
+  ordering ve session revoke teslimatları Faz 2 gate'ini karşılamaktadır.
+
+### Faz 3 — AKTİF
+
+İzinli sıradaki kapsam parent/child authority projection'dır: Brand shell/access projection,
+full snapshot semantiği, parent/child/hidden-parent model, brand-family API ve cross-brand
+authorization testleri. Faz 4 çalışması Faz 3 çıkış kapısı yeşil olmadan başlamaz.

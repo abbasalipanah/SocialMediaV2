@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-07-13T06:25:16.748118+00:00",
+  "captured_at": "2026-07-14T16:49:57.744307+00:00",
   "excluded_path_parts": [
     ".git",
     ".pytest_cache",
@@ -57,17 +57,18 @@
     },
     "performance_marketing": {
       "branch": "main",
-      "content_file_count": 398,
+      "content_file_count": 418,
       "content_manifest": "baseline_performance_marketing_content.sha256",
-      "content_manifest_sha256": "0f16615d09758ed4a0c7f78263209a89d747c73c6d16a253475afb99275af1f4",
-      "head": "7d791162bbe0ab2eb3a4a4975ca9b12197341051",
+      "content_manifest_sha256": "7e3c7ff5e7102ef07ad94f9a90692537b444b09c457eb99b09028bb4a01f2e76",
+      "head": "9d93374d05e542685f14ab6739b8c5a660db658f",
       "origin": "git@github.com:abbasalipanah/performance_marketing.git",
       "root": "/home/api/colab_scripts/performance_marketing",
       "status": [
         "?? \"docs/Campaign report (1).csv\"",
-        "?? \"docs/Performance Marketing \\342\\200\\223 Accumulate Entegrasyonu Y\\303\\266netici Raporu.pdf\""
+        "?? \"docs/Performance Marketing \\342\\200\\223 Accumulate Entegrasyonu Y\\303\\266netici Raporu.pdf\"",
+        "?? \"docs/Trafik_edinme_Oturumla_ili\\305\\237kilendirilen_birincil_kanal_grubu_(Varsay\\304\\261lan_Kanal_Grubu) (3).csv\""
       ],
-      "status_sha256": "acb3a4e8d5ff9a25fd99ef2fa40652a8d40c1de54e11504f91bf687fc0bd9485",
+      "status_sha256": "f5baba2449ab382052eeb4e2b5b0ca2f0d4abb465bf137e0de082556af757096",
       "tracked_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     }
   },
