@@ -361,6 +361,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/tiktok/activation-readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tiktok Activation Readiness */
+        get: operations["tiktok_activation_readiness_api_settings_tiktok_activation_readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings/tiktok/connection": {
         parameters: {
             query?: never;
@@ -910,6 +927,34 @@ export interface components {
             /** Items */
             items: components["schemas"]["ReportingSyncJob"][];
             meta: components["schemas"]["BrandScope"];
+        };
+        /** TikTokActivationReadinessResponse */
+        TikTokActivationReadinessResponse: {
+            /** Brand Id */
+            brand_id: string;
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            /** Connection State */
+            connection_state: string;
+            /**
+             * Fresh Until
+             * Format: date-time
+             */
+            fresh_until: string;
+            /** Handoff Ready */
+            handoff_ready: boolean;
+            /** Launch Target */
+            launch_target: string;
+            /** Oauth Start Available */
+            oauth_start_available: boolean;
+            /** Reason */
+            reason: string;
+            runtime_mode: components["schemas"]["RuntimeMode"];
+            /** Writes Enabled */
+            writes_enabled: boolean;
         };
         /** TikTokConnectionResponse */
         TikTokConnectionResponse: {
@@ -1700,6 +1745,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncJobsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tiktok_activation_readiness_api_settings_tiktok_activation_readiness_get: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TikTokActivationReadinessResponse"];
                 };
             };
             /** @description Validation Error */

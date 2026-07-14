@@ -83,7 +83,47 @@ const capabilities = {
   runtime: { mode: "dormant", writes_enabled: false, automated_schedule_available: false },
 };
 
-async function mockApi(page: Page, authenticated = true) {
+const dashboardMeta = (platform: "facebook" | "instagram" | "tiktok" | null) => ({
+  dashboard_id: platform ?? "overview",
+  platform,
+  requested_brand_id: "hotel-1",
+  rollup: false,
+  resolved_brand_ids: ["hotel-1"],
+  resolved_account_ids: platform ? [31] : [31],
+  date_range: { start_on: "2026-06-15", end_on: "2026-07-14", key: "last_30_days" },
+  generated_at: "2026-07-14T12:00:00Z",
+  last_sync_at: "2026-07-14T11:00:00Z",
+  freshness: "fresh",
+  observed_days: 30,
+  expected_days: 30,
+  data_status: "available",
+  warnings: [],
+});
+
+const metrics = [
+  { metric_id: "followers", value: 1200, previous_value: 1100, delta_pct: 9.1, semantic_type: "snapshot", unit: "count", data_status: "available" },
+  { metric_id: "reach", value: 8500, previous_value: 8000, delta_pct: 6.25, semantic_type: "flow", unit: "count", data_status: "available" },
+  { metric_id: "interactions", value: null, previous_value: null, delta_pct: null, semantic_type: "flow", unit: "count", data_status: "unavailable" },
+];
+
+const facebookDashboard = {
+  meta: dashboardMeta("facebook"),
+  metrics,
+  series: [{ metric_id: "followers", semantic_type: "snapshot", points: [{ observed_on: "2026-06-15", value: 1100 }, { observed_on: "2026-07-14", value: 1200 }] }],
+  breakdowns: [{ metric_id: "followers", dimension: "age", items: [{ key: "25_34", value: 500, percentage: 41.7 }] }],
+  content: [{ account_id: 31, external_content_id: "post-1", content_type: "image", permalink: "https://example.test/post-1", message: "Coastal update", media_url: "", published_at: "2026-07-13T10:00:00Z", likes_count: 25, comments_count: 4, shares_count: 2, interactions: 31 }],
+  community: { total_comments: 4, answered_comments: 3, unanswered_comments: 1, comment_likes: 8, data_status: "available" },
+};
+
+const overviewDashboard = {
+  meta: dashboardMeta(null),
+  metrics,
+  platforms: [facebookDashboard],
+  content: facebookDashboard.content,
+  community: facebookDashboard.community,
+};
+
+export async function mockApi(page: Page, authenticated = true) {
   await page.route(/^http:\/\/127\.0\.0\.1:3010\/api\//, async (route) => {
     const url = new URL(route.request().url());
     if (url.pathname === "/api/auth/me") {
@@ -122,6 +162,46 @@ async function mockApi(page: Page, authenticated = true) {
       });
       return;
     }
+    if (url.pathname === "/api/dashboards/facebook") {
+      await route.fulfill({ json: facebookDashboard });
+      return;
+    }
+    if (url.pathname === "/api/dashboards/overview") {
+      await route.fulfill({ json: overviewDashboard });
+      return;
+    }
+    if (url.pathname === "/api/insights") {
+      await route.fulfill({ json: { meta: workspace.scope, items: [] } });
+      return;
+    }
+    if (url.pathname === "/api/settings/brands") {
+      await route.fulfill({ json: { meta: workspace.scope, items: workspace.brands.map((brand, index) => ({ ...brand, linked_account_count: index === 1 ? 1 : 0, last_sync_at: index === 1 ? "2026-07-14T11:00:00Z" : null })) } });
+      return;
+    }
+    if (url.pathname === "/api/settings/social-accounts") {
+      await route.fulfill({ json: { meta: workspace.scope, items: [{ account_id: 31, brand_id: "hotel-1", platform: "facebook", external_id: "page-31", display_name: "Coastal Facebook", status: "active", connection_state: "connected", health_status: "healthy", backfill_status: "complete", nightly_enabled: true, last_synced_at: "2026-07-14T11:00:00Z" }] } });
+      return;
+    }
+    if (url.pathname === "/api/settings/brand-links") {
+      await route.fulfill({ json: { meta: workspace.scope, items: [{ brand_id: "hotel-1", platform: "facebook", account_id: 31, external_id: "page-31", display_name: "Coastal Facebook", link_status: "active" }] } });
+      return;
+    }
+    if (url.pathname === "/api/settings/connections") {
+      await route.fulfill({ json: { meta: workspace.scope, items: [] } });
+      return;
+    }
+    if (url.pathname === "/api/settings/sync-jobs") {
+      await route.fulfill({ json: { meta: workspace.scope, items: [] } });
+      return;
+    }
+    if (url.pathname === "/api/operations/readiness") {
+      await route.fulfill({ json: { status: "ready", runtime_mode: "dormant", writes_enabled: false, database_configured: true, scope: workspace.scope, platforms: [{ platform: "facebook", account_count: 1, last_sync_at: "2026-07-14T11:00:00Z", pending_job_count: 0 }] } });
+      return;
+    }
+    if (url.pathname === "/api/settings/tiktok/activation-readiness") {
+      await route.fulfill({ status: 403, json: { detail: "tiktok_owner_launch_required" } });
+      return;
+    }
     await route.abort("blockedbyclient");
   });
 }
@@ -130,7 +210,7 @@ test("desktop shell preserves a reloaded social route and capability navigation"
   test.skip(!testInfo.project.name.startsWith("desktop"), "desktop viewport assertion");
   await mockApi(page);
   await page.goto("/facebook");
-  await expect(page.getByRole("heading", { name: "Facebook" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Facebook", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Facebook" })).toHaveAttribute("href", "/facebook");
   await expect(page.locator(".sidebar-link.locked").filter({ hasText: "Instagram" })).toHaveAttribute(
     "aria-disabled",
@@ -142,7 +222,7 @@ test("desktop shell preserves a reloaded social route and capability navigation"
 
   await page.reload();
   await expect(page).toHaveURL(/\/facebook$/);
-  await expect(page.getByRole("heading", { name: "Facebook" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Facebook", exact: true })).toBeVisible();
 });
 
 test("mobile shell uses a drawer and full-width selector grid", async ({ page }, testInfo) => {

@@ -1,11 +1,10 @@
-import { PhaseShellPage } from "../shared/PhaseShellPage";
+import { PlatformPage } from "../dashboard/PlatformPage";
 
 export default function InstagramPage() {
   return (
-    <PhaseShellPage
-      description="Instagram posts, reels and stories for the selected scope."
+    <PlatformPage
+      description="Profile, content, Stories and audience reporting for the selected Brand scope."
       platform="instagram"
-      title="Instagram"
     />
   );
 }

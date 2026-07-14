@@ -54,6 +54,8 @@ class VerifiedSso:
     is_internal_staff: bool
     jti: str
     expires_at: datetime
+    issued_at: datetime
+    launch_target: str | None
     launch_path: str
 
 
@@ -175,6 +177,8 @@ def verify_sso(token: str, secret: str, now: datetime | None = None) -> Verified
         is_internal_staff=internal_staff,
         jti=jti,
         expires_at=expires_at,
+        issued_at=issued_at,
+        launch_target=launch_target,
         launch_path=LAUNCH_TARGETS[launch_target],
     )
 
@@ -182,6 +186,7 @@ def verify_sso(token: str, secret: str, now: datetime | None = None) -> Verified
 def consume_sso(token: str, secret: str, store: SessionStore) -> tuple[str, VerifiedSso]:
     verified = verify_sso(token, secret)
     raw_session = secrets.token_urlsafe(32)
+    consumed_at = datetime.now(UTC)
     payload = {
         "user_id": verified.user_id,
         "email": verified.email,
@@ -192,6 +197,9 @@ def consume_sso(token: str, secret: str, store: SessionStore) -> tuple[str, Veri
         "settings_visible": verified.settings_visible,
         "is_internal_staff": verified.is_internal_staff,
         "expires_at": verified.expires_at.isoformat(),
+        "sso_issued_at": verified.issued_at.isoformat(),
+        "sso_consumed_at": consumed_at.isoformat(),
+        "launch_target": verified.launch_target,
         "revoked": False,
     }
     created = store.create_from_jti(

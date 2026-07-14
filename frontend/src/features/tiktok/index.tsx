@@ -1,11 +1,10 @@
-import { PhaseShellPage } from "../shared/PhaseShellPage";
+import { PlatformPage } from "../dashboard/PlatformPage";
 
 export default function TikTokPage() {
   return (
-    <PhaseShellPage
-      description="TikTok profile and video performance for the selected scope."
+    <PlatformPage
+      description="Profile and video reporting for the selected Brand scope."
       platform="tiktok"
-      title="TikTok"
     />
   );
 }

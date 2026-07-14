@@ -1502,6 +1502,65 @@
         "title": "SyncJobsResponse",
         "type": "object"
       },
+      "TikTokActivationReadinessResponse": {
+        "properties": {
+          "brand_id": {
+            "title": "Brand Id",
+            "type": "string"
+          },
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "connection_state": {
+            "title": "Connection State",
+            "type": "string"
+          },
+          "fresh_until": {
+            "format": "date-time",
+            "title": "Fresh Until",
+            "type": "string"
+          },
+          "handoff_ready": {
+            "title": "Handoff Ready",
+            "type": "boolean"
+          },
+          "launch_target": {
+            "title": "Launch Target",
+            "type": "string"
+          },
+          "oauth_start_available": {
+            "title": "Oauth Start Available",
+            "type": "boolean"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "runtime_mode": {
+            "$ref": "#/components/schemas/RuntimeMode"
+          },
+          "writes_enabled": {
+            "title": "Writes Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "handoff_ready",
+          "brand_id",
+          "launch_target",
+          "fresh_until",
+          "runtime_mode",
+          "writes_enabled",
+          "connection_state",
+          "oauth_start_available",
+          "reason",
+          "checked_at"
+        ],
+        "title": "TikTokActivationReadinessResponse",
+        "type": "object"
+      },
       "TikTokConnectionResponse": {
         "properties": {
           "capabilities": {
@@ -3562,6 +3621,68 @@
           }
         },
         "summary": "Sync Jobs"
+      }
+    },
+    "/api/settings/tiktok/activation-readiness": {
+      "get": {
+        "operationId": "tiktok_activation_readiness_api_settings_tiktok_activation_readiness_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Brand Id"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TikTokActivationReadinessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tiktok Activation Readiness"
       }
     },
     "/api/settings/tiktok/connection": {

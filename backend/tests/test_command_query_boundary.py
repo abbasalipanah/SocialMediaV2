@@ -49,6 +49,7 @@ def test_all_routes_have_explicit_boundary_semantics() -> None:
         ("/api/settings/sync-jobs", ("GET",)),
         ("/api/settings/tiktok/connection", ("DELETE",)),
         ("/api/settings/tiktok/connection", ("GET",)),
+        ("/api/settings/tiktok/activation-readiness", ("GET",)),
         ("/api/workspace/brands", ("GET",)),
         ("/api/workspace/capabilities", ("GET",)),
         ("/internal/provisioning/events", ("POST",)),

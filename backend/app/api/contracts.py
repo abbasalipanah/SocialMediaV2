@@ -109,6 +109,20 @@ class TikTokConnectionResponse:
 
 
 @dataclass(frozen=True)
+class TikTokActivationReadinessResponse:
+    handoff_ready: bool
+    brand_id: str
+    launch_target: str
+    fresh_until: datetime
+    runtime_mode: RuntimeMode
+    writes_enabled: bool
+    connection_state: str
+    oauth_start_available: bool
+    reason: str
+    checked_at: datetime
+
+
+@dataclass(frozen=True)
 class InsightsResponse:
     meta: BrandScope
     items: tuple[ReportingInsight, ...]
@@ -180,6 +194,7 @@ __all__ = [
     "SocialAccountsResponse",
     "SyncJobsResponse",
     "TikTokConnectionResponse",
+    "TikTokActivationReadinessResponse",
     "WorkspaceCapabilitiesResponse",
     "WorkspacePermissions",
 ]

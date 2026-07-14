@@ -1,11 +1,10 @@
-import { PhaseShellPage } from "../shared/PhaseShellPage";
+import { PlatformPage } from "../dashboard/PlatformPage";
 
 export default function FacebookPage() {
   return (
-    <PhaseShellPage
-      description="Facebook performance for the selected Brand and account scope."
+    <PlatformPage
+      description="Page growth, content and audience reporting for the selected Brand scope."
       platform="facebook"
-      title="Facebook"
     />
   );
 }

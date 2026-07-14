@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, HTTPException, Query, Request
+from fastapi import APIRouter, Cookie, HTTPException, Query, Request, Response
 
 from app.api.auth import COOKIE_NAME
 from app.api.contracts import (
@@ -17,6 +17,7 @@ from app.api.contracts import (
     SettingsBrandsResponse,
     SocialAccountsResponse,
     SyncJobsResponse,
+    TikTokActivationReadinessResponse,
     TikTokConnectionResponse,
 )
 from app.api.scope import RequestScope, resolve_request_scope
@@ -33,6 +34,8 @@ TIKTOK_CONNECTION_STATES = {
     "revoked",
     "error",
 }
+TIKTOK_OWNER_LAUNCH_TARGET = "tiktok_owner_activation"
+TIKTOK_OWNER_SSO_FRESHNESS = timedelta(minutes=10)
 
 
 def create_settings_router(
@@ -44,7 +47,11 @@ def create_settings_router(
     router = APIRouter()
 
     def _scope(
-        *, raw_session: str | None, brand_id: str | None, rollup: bool
+        *,
+        raw_session: str | None,
+        brand_id: str | None,
+        rollup: bool,
+        require_write: bool = False,
     ) -> RequestScope:
         if reporting_store is None:
             raise HTTPException(503, "reporting_store_unavailable")
@@ -53,8 +60,21 @@ def create_settings_router(
             raw_session=raw_session,
             selected_brand_id=brand_id,
             rollup=rollup,
+            require_write=require_write,
             require_settings=True,
         )
+
+    def _session_time(session: dict[str, object], field: str) -> datetime:
+        value = session.get(field)
+        if not isinstance(value, str):
+            raise HTTPException(403, "fresh_owner_sso_required")
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise HTTPException(403, "fresh_owner_sso_required") from exc
+        if parsed.tzinfo is None:
+            raise HTTPException(403, "fresh_owner_sso_required")
+        return parsed.astimezone(UTC)
 
     @router.get("/api/settings/brands", response_model=SettingsBrandsResponse)
     @mark_boundary(Boundary.QUERY)
@@ -210,6 +230,68 @@ def create_settings_router(
                 for capability in CapabilityId
             ),
             checked_at=datetime.now(UTC),
+        )
+
+    @router.get(
+        "/api/settings/tiktok/activation-readiness",
+        response_model=TikTokActivationReadinessResponse,
+    )
+    @mark_boundary(Boundary.QUERY)
+    async def tiktok_activation_readiness(
+        response: Response,
+        brand_id: str | None = Query(default=None),
+        session: str | None = Cookie(default=None, alias=COOKIE_NAME),
+    ) -> TikTokActivationReadinessResponse:
+        scope = _scope(
+            raw_session=session,
+            brand_id=brand_id,
+            rollup=False,
+            require_write=True,
+        )
+        launch_brand_id = str(scope.session.get("brand_id") or "")
+        requested_brand_id = scope.workspace.scope.requested_brand_id
+        if (
+            scope.session.get("launch_target") != TIKTOK_OWNER_LAUNCH_TARGET
+            or requested_brand_id != launch_brand_id
+            or scope.workspace.scope.rollup
+            or scope.workspace.scope.resolved_brand_ids != (launch_brand_id,)
+        ):
+            raise HTTPException(403, "tiktok_owner_launch_required")
+        current = datetime.now(UTC)
+        issued_at = _session_time(scope.session, "sso_issued_at")
+        consumed_at = _session_time(scope.session, "sso_consumed_at")
+        fresh_until = min(
+            issued_at + TIKTOK_OWNER_SSO_FRESHNESS,
+            consumed_at + TIKTOK_OWNER_SSO_FRESHNESS,
+        )
+        if (
+            issued_at > current + timedelta(minutes=5)
+            or consumed_at > current
+            or current >= fresh_until
+        ):
+            raise HTTPException(403, "fresh_owner_sso_required")
+        assert reporting_store is not None
+        rows = tuple(
+            row
+            for row in reporting_store.list_connections(brand_ids=(launch_brand_id,))
+            if row.platform is PlatformId.TIKTOK
+        )
+        connection_state = rows[-1].state if rows else "disconnected"
+        if connection_state not in TIKTOK_CONNECTION_STATES:
+            connection_state = "error"
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        return TikTokActivationReadinessResponse(
+            handoff_ready=True,
+            brand_id=launch_brand_id,
+            launch_target=TIKTOK_OWNER_LAUNCH_TARGET,
+            fresh_until=fresh_until,
+            runtime_mode=policy.runtime_mode,
+            writes_enabled=policy.writes_enabled,
+            connection_state=connection_state,
+            oauth_start_available=False,
+            reason="oauth_start_unavailable_before_cutover",
+            checked_at=current,
         )
 
     @router.delete("/api/settings/tiktok/connection", status_code=503)

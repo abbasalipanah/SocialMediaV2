@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Mapping
+from copy import deepcopy
 from dataclasses import replace
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -447,6 +448,7 @@ def test_phase6_openapi_publishes_typed_response_contracts() -> None:
         "/api/settings/sync-jobs": "SyncJobsResponse",
         "/api/settings/audit": "AuditResponse",
         "/api/settings/tiktok/connection": "TikTokConnectionResponse",
+        "/api/settings/tiktok/activation-readiness": "TikTokActivationReadinessResponse",
         "/api/insights": "InsightsResponse",
         "/api/operations/readiness": "OperationsReadinessResponse",
         "/api/workspace/capabilities": "WorkspaceCapabilitiesResponse",
@@ -566,6 +568,77 @@ async def test_phase6_routes_are_scoped_read_only_and_honest(phase6_fixture) -> 
         authority.sessions[sha256_text(authority.raw_session)]["settings_visible"] = True
 
     assert authority.sessions == before[0]
+    assert authority.projections == before[1]
+
+
+@pytest.mark.asyncio
+async def test_tiktok_activation_handoff_requires_fresh_targeted_sso_and_is_read_only(
+    phase6_fixture,
+) -> None:
+    authority, reporting, media_root = phase6_fixture
+    app = create_app(authority, reporting, media_root)
+    session = authority.sessions[sha256_text(authority.raw_session)]
+    before = (deepcopy(authority.sessions), deepcopy(authority.projections))
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        cookies={COOKIE_NAME: authority.raw_session},
+    ) as client:
+        untargeted = await client.get(
+            "/api/settings/tiktok/activation-readiness",
+            params={"brand_id": "101"},
+        )
+        assert untargeted.status_code == 403
+        assert untargeted.json() == {"detail": "tiktok_owner_launch_required"}
+
+        current = datetime.now(UTC)
+        session.update(
+            {
+                "launch_target": "tiktok_owner_activation",
+                "sso_issued_at": (current - timedelta(minutes=1)).isoformat(),
+                "sso_consumed_at": current.isoformat(),
+            }
+        )
+        ready = await client.get(
+            "/api/settings/tiktok/activation-readiness",
+            params={"brand_id": "101"},
+        )
+        assert ready.status_code == 200
+        assert ready.json() | {
+            "fresh_until": "ignored",
+            "checked_at": "ignored",
+        } == {
+            "handoff_ready": True,
+            "brand_id": "101",
+            "launch_target": "tiktok_owner_activation",
+            "fresh_until": "ignored",
+            "runtime_mode": "development",
+            "writes_enabled": False,
+            "connection_state": "disconnected",
+            "oauth_start_available": False,
+            "reason": "oauth_start_unavailable_before_cutover",
+            "checked_at": "ignored",
+        }
+        assert ready.headers["cache-control"] == "no-store"
+        assert ready.headers["referrer-policy"] == "no-referrer"
+
+        session["sso_issued_at"] = (current - timedelta(minutes=11)).isoformat()
+        stale = await client.get(
+            "/api/settings/tiktok/activation-readiness",
+            params={"brand_id": "101"},
+        )
+        assert stale.status_code == 403
+        assert stale.json() == {"detail": "fresh_owner_sso_required"}
+
+    expected_sessions = deepcopy(before[0])
+    expected_sessions[sha256_text(authority.raw_session)].update(
+        {
+            "launch_target": "tiktok_owner_activation",
+            "sso_issued_at": (current - timedelta(minutes=11)).isoformat(),
+            "sso_consumed_at": current.isoformat(),
+        }
+    )
+    assert authority.sessions == expected_sessions
     assert authority.projections == before[1]
 
 

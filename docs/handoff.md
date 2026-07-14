@@ -2,13 +2,13 @@
 
 ## Güncel durum — 2026-07-14
 
-- Faz 0–7: **KAPALI, sertifikasyon kapıları yeşil**.
-- Son canonical doğrulama: `./scripts/quality/fase7_frontend_shell_check.sh`.
-- Faz 7 sonucu: PostgreSQL regression `115 passed`, frontend `9 passed`, Chromium smoke
-  `4 passed` ve npm audit `0 vulnerabilities`.
-- Aktif sıradaki faz: **Faz 8 — Social sayfalar ve Settings**.
+- Faz 0–8: **KAPALI, sertifikasyon kapıları yeşil**.
+- Son canonical doğrulama: `./scripts/quality/fase8_social_pages_settings_check.sh`.
+- Faz 8 sonucu: disposable PostgreSQL backend `117 passed`, hedefli backend `15 passed`,
+  frontend `13 passed`, Chromium `8 passed` ve npm audit `0 vulnerabilities`.
+- Aktif sıradaki faz: **Faz 9 — Offline release rehearsal**.
 - V2 hâlâ dormant; production DB/provider/traffic/schedule ve Git push yoktur.
-- Ayrıntı: `docs/fase6/Faz6_Dashboard_Operations_Report.md`.
+- Ayrıntı: `docs/fase8/Faz8_Social_Pages_Settings_Report.md`.
 
 ## Hedef ve bağlam
 
@@ -205,7 +205,7 @@ Teslimatlar:
 
 ### Faz 8 — Social sayfalar ve Settings
 
-Status: **BEKLİYOR**
+Status: **KAPALI — canonical sertifikasyon yeşil**
 
 Teslimatlar:
 
@@ -219,7 +219,7 @@ Teslimatlar:
 
 ### Faz 9 — Offline release rehearsal
 
-Status: **BEKLİYOR**
+Status: **AKTİF — sıradaki uygulama fazı**
 
 Teslimatlar:
 

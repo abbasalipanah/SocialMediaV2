@@ -53,7 +53,9 @@ export async function apiCommand(path: string, init: RequestInit): Promise<void>
   if (!response.ok) throw await responseError(response);
 }
 
-export function queryString(values: Record<string, boolean | string | undefined>): string {
+export function queryString(
+  values: Record<string, boolean | number | string | undefined>,
+): string {
   const params = new URLSearchParams();
   Object.entries(values).forEach(([key, value]) => {
     if (value !== undefined) params.set(key, String(value));
