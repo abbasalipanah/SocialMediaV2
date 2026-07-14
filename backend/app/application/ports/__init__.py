@@ -3,6 +3,7 @@
 from typing import Protocol
 
 from .provisioning_store import ProjectionReplacement, ProjectionWrite, ProvisioningStore
+from .reporting import ReportingStore
 from .session_store import SessionStore
 
 
@@ -15,5 +16,6 @@ __all__ = [
     "ProjectionReplacement",
     "ProjectionWrite",
     "ProvisioningStore",
+    "ReportingStore",
     "SessionStore",
 ]

@@ -13,8 +13,10 @@ from app.application.ports import ProjectionReplacement, ProjectionWrite
 
 
 class ProjectionStateStore:
-    def __init__(self, database_url: str) -> None:
-        self.engine: Engine = create_engine(database_url, pool_pre_ping=True)
+    def __init__(self, database_url: str | None = None, *, engine: Engine | None = None) -> None:
+        if engine is None and not database_url:
+            raise ValueError("projection_database_required")
+        self.engine = engine or create_engine(database_url, pool_pre_ping=True)
 
     def create_from_jti(
         self,

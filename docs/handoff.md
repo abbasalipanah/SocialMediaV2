@@ -2,12 +2,12 @@
 
 ## Güncel durum — 2026-07-14
 
-- Faz 0–5: **KAPALI, sertifikasyon kapıları yeşil**.
-- Son canonical doğrulama: `./scripts/quality/fase5_collector_parity_check.sh`.
-- Faz 5 sonucu: disposable PostgreSQL full suite `108 passed`, hedefli suite `35 passed`.
-- Aktif sıradaki faz: **Faz 6 — Dashboard ve operasyon API'leri**.
+- Faz 0–6: **KAPALI, sertifikasyon kapıları yeşil**.
+- Son canonical doğrulama: `./scripts/quality/fase6_dashboard_operations_check.sh`.
+- Faz 6 sonucu: disposable PostgreSQL full suite `115 passed`, hedefli suite `19 passed`.
+- Aktif sıradaki faz: **Faz 7 — Frontend shell**.
 - V2 hâlâ dormant; production DB/provider/traffic/schedule ve Git push yoktur.
-- Ayrıntı: `docs/fase5/Faz5_Collector_Parity_Report.md`.
+- Ayrıntı: `docs/fase6/Faz6_Dashboard_Operations_Report.md`.
 
 ## Hedef ve bağlam
 
@@ -596,3 +596,40 @@ Canonical kanıt: `docs/fase5/Faz5_Collector_Parity_Report.md`.
 proxy, yalnız üç platform için accounts/connections/sync/settings/insights API'leri, backend
 parent rollup ve response contract testleridir. Faz 7 frontend shell çalışması Faz 6 feature
 matrix çıkış kapısı yeşil olmadan başlamaz.
+
+## Authoritative durum güncellemesi — 2026-07-14 / Faz 6 kapanışı
+
+### Faz 5 — KAPALI
+
+- Collector parity `9648db7` local checkpoint commit'i ile donduruldu.
+- Faz 5 canonical raporu ve sıfır-difference sonucu geçerlidir.
+
+### Faz 6 — KAPALI
+
+- Overview, Facebook, Instagram ve TikTok dashboard servisleri typed response DTO'larıyla
+  tamamlandı.
+- Snapshot/flow/cumulative/ratio ve previous-period aggregation yalnız metric catalog
+  semantiğiyle yapılır; missing metric sahte `0` olmaz.
+- Parent Brand rollup yalnız authorized active child Brand/account kapsamını backend'de toplar;
+  arbitrary Brand ve account filter erişimi fail-closed olur.
+- Platform accounts, Settings Brands/Social Accounts/Brand Links/connections/sync-jobs,
+  readiness, stored insights ve workspace capabilities API'leri eklendi.
+- Instagram media proxy yalnız persisted local dosyayı root confinement, size ve SHA-256
+  doğrulamasından sonra servis eder; provider fallback veya GET-side persistence yoktur.
+- Sync/backfill/disconnect command route'ları same-origin + concrete write scope + merkezi
+  WritePolicy arkasında cutover öncesi fail-closed kalır.
+- Response modelleri OpenAPI component schema olarak yayınlanır; canonical platform enum exact
+  üçlü seti korunur.
+- Live feature matrix'te internal audit store dürüst `unavailable`, PNG export ise Faz 8 frontend
+  işi olarak işaretlendi; sahte veri/işlev üretilmedi.
+- `scripts/quality/fase6_dashboard_operations_check.sh`: full disposable PostgreSQL suite
+  `115 passed`, hedefli suite `19 passed`; Ruff, secret/vocabulary/source guard temiz.
+
+Canonical kanıt: `docs/fase6/Faz6_Dashboard_Operations_Report.md`.
+
+### Faz 7 — AKTİF
+
+İzinli sıradaki kapsam Performance-style responsive shell, sidebar/topbar, Brand/child/account
+selector'ları, SSO loading/login/logout, capability-driven navigation, gerçek routing ve Vite
+strict development port `3010`'dur. Faz 8 sosyal sayfa/Settings feature uygulaması Faz 7 shell
+çıkış kapısı yeşil olmadan başlamaz.

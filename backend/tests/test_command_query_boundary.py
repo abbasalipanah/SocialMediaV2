@@ -25,14 +25,34 @@ def _api_routes() -> list[APIRoute]:
 
 def test_all_routes_have_explicit_boundary_semantics() -> None:
     routes = _api_routes()
-    assert {route.path for route in routes} == {
-        "/api/health",
-        "/api/operations/readiness",
-        "/api/auth/me",
-        "/api/auth/logout",
-        "/api/workspace/brands",
-        "/sso/consume",
-        "/internal/provisioning/events",
+    assert {(route.path, tuple(sorted(route.methods))) for route in routes} == {
+        ("/api/auth/logout", ("POST",)),
+        ("/api/auth/me", ("GET",)),
+        ("/api/dashboards/facebook", ("GET",)),
+        ("/api/dashboards/instagram", ("GET",)),
+        ("/api/dashboards/overview", ("GET",)),
+        ("/api/dashboards/tiktok", ("GET",)),
+        ("/api/health", ("GET",)),
+        ("/api/insights", ("GET",)),
+        ("/api/media/instagram/{content_id}", ("GET",)),
+        ("/api/operations/backfill", ("POST",)),
+        ("/api/operations/readiness", ("GET",)),
+        ("/api/operations/sync", ("POST",)),
+        ("/api/platforms/facebook/accounts", ("GET",)),
+        ("/api/platforms/instagram/accounts", ("GET",)),
+        ("/api/platforms/tiktok/accounts", ("GET",)),
+        ("/api/settings/audit", ("GET",)),
+        ("/api/settings/brand-links", ("GET",)),
+        ("/api/settings/brands", ("GET",)),
+        ("/api/settings/connections", ("GET",)),
+        ("/api/settings/social-accounts", ("GET",)),
+        ("/api/settings/sync-jobs", ("GET",)),
+        ("/api/settings/tiktok/connection", ("DELETE",)),
+        ("/api/settings/tiktok/connection", ("GET",)),
+        ("/api/workspace/brands", ("GET",)),
+        ("/api/workspace/capabilities", ("GET",)),
+        ("/internal/provisioning/events", ("POST",)),
+        ("/sso/consume", ("GET",)),
     }
     for route in routes:
         boundary = route.endpoint.__route_boundary__
@@ -42,7 +62,7 @@ def test_all_routes_have_explicit_boundary_semantics() -> None:
         elif route.methods == {"GET"}:
             assert boundary == "query"
         else:
-            assert route.methods == {"POST"}
+            assert route.methods in ({"POST"}, {"DELETE"})
             assert boundary == "command"
 
 
