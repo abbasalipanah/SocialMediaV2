@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, ClipboardCheck, Layers3, LockKeyhole, Settings2, Share2, ShieldCheck, UsersRound, X } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Link2, ListChecks, LockKeyhole, RefreshCw, ShieldCheck, X } from "lucide-react";
 import { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 
@@ -9,11 +9,11 @@ import { AccountsTable, BrandsTable, LinksTable, SettingsTableError, SettingsTab
 import { SetupDrawer } from "./SetupDrawer";
 import { useSettingsData } from "./useSettingsData";
 
-const VIEWS: Array<{ id: SettingsView; label: string; icon: typeof Layers3 }> = [
-  { id: "brands", label: "Brands", icon: Layers3 },
-  { id: "accounts", label: "Social Accounts", icon: UsersRound },
-  { id: "links", label: "Brand Links", icon: Share2 },
-  { id: "sync", label: "Sync & Backfill", icon: ClipboardCheck },
+const VIEWS: Array<{ id: SettingsView; label: string; hint: string }> = [
+  { id: "brands", label: "Brands", hint: "Accumulate Brands and social setup readiness" },
+  { id: "accounts", label: "Platform Accounts", hint: "Accounts projected from social connectors" },
+  { id: "links", label: "Mappings", hint: "Active Brand-to-account links" },
+  { id: "sync", label: "Sync & Backfill", hint: "Sync history and backfill readiness" },
 ];
 
 export default function SettingsPage() {
@@ -21,9 +21,48 @@ export default function SettingsPage() {
   const nested = location.pathname !== "/settings";
   const [view, setView] = useState<SettingsView>("brands");
   const [setupOpen, setSetupOpen] = useState(false);
-  const { capabilities, selectedBrand } = useBrandScope();
+  const { capabilities } = useBrandScope();
   const data = useSettingsData();
   const mutationAvailable = capabilities?.permissions.operation_mutation_available ?? false;
+  const brands = data.brands.data?.items ?? [];
+  const accounts = data.accounts.data?.items ?? [];
+  const links = data.links.data?.items ?? [];
+  const jobs = data.jobs.data?.items ?? [];
+  const currentAccess = brands.filter((item) => item.access_mode !== null).length;
+  const ready = brands.filter((item) => item.linked_account_count > 0 && item.last_sync_at !== null).length;
+  const pendingSetup = brands.filter((item) => item.linked_account_count > 0 && item.last_sync_at === null).length;
+  const missingAccounts = brands.filter((item) => item.linked_account_count === 0).length;
+  const connected = accounts.filter((item) => item.connection_state === "connected").length;
+  const needsAttention = accounts.filter((item) => item.health_status !== "healthy" || item.connection_state !== "connected").length
+    + jobs.filter((item) => item.status === "failed").length;
+  const summary = [
+    { label: "Current Access", value: currentAccess, tone: "indigo" },
+    { label: "Ready", value: ready, tone: "emerald" },
+    { label: "Pending Setup", value: pendingSetup, tone: "amber" },
+    { label: "Missing Accounts", value: missingAccounts, tone: "rose" },
+    { label: "Connected", value: connected, tone: "sky" },
+    { label: "Needs Attention", value: needsAttention, tone: needsAttention > 0 ? "rose" : "slate" },
+  ];
+  const refreshing = data.brands.isFetching || data.accounts.isFetching || data.links.isFetching || data.jobs.isFetching;
+
+  const navigation = VIEWS.map(({ id, label, hint }) => (
+    <button
+      aria-label={`${label}: ${hint}`}
+      aria-selected={view === id}
+      className={view === id ? "active" : ""}
+      key={id}
+      onClick={() => setView(id)}
+      role="tab"
+      title={hint}
+      type="button"
+    >
+      {label}
+    </button>
+  ));
+
+  const refreshPlatform = async () => {
+    await Promise.all([data.accounts.refetch(), data.links.refetch(), data.jobs.refetch(), data.brands.refetch()]);
+  };
 
   const selectedQuery = view === "brands" ? data.brands : view === "accounts" ? data.accounts : view === "links" ? data.links : data.jobs;
   const table = selectedQuery.isPending
@@ -31,18 +70,29 @@ export default function SettingsPage() {
     : selectedQuery.isError || !selectedQuery.data
       ? <SettingsTableError retry={() => void selectedQuery.refetch()} />
       : view === "brands"
-        ? <BrandsTable items={data.brands.data?.items ?? []} />
+        ? <BrandsTable items={brands} navigation={navigation} onSetup={() => setSetupOpen(true)} />
         : view === "accounts"
-          ? <AccountsTable items={data.accounts.data?.items ?? []} mutationAvailable={mutationAvailable} />
+          ? <AccountsTable items={accounts} mutationAvailable={mutationAvailable} navigation={navigation} />
           : view === "links"
-            ? <LinksTable items={data.links.data?.items ?? []} />
-            : <SyncTable items={data.jobs.data?.items ?? []} mutationAvailable={mutationAvailable} />;
+            ? <LinksTable items={links} navigation={navigation} />
+            : <SyncTable items={jobs} mutationAvailable={mutationAvailable} navigation={navigation} />;
 
   return (
     <main className="page-shell settings-page">
-      <header className="settings-header"><div><p className="eyebrow">Social Media</p><h1>Settings</h1><p>Manage reporting visibility for {selectedBrand?.name ?? "the selected Brand"}.</p></div><button className="primary-button compact-button" onClick={() => setSetupOpen(true)} type="button"><Settings2 size={17} /> Brand Setup</button></header>
+      <header className="settings-header performance-settings-header">
+        <div>
+          <p className="eyebrow">Settings</p>
+          <h1>Brand Setup and Account Mapping</h1>
+          <p>Manage social Brands, platform accounts and sync readiness from one table-first workspace.</p>
+        </div>
+        <div className="settings-header-actions">
+          <button className="settings-action-button" onClick={() => setView("links")} type="button"><Link2 size={16} />Linked brands</button>
+          <button className="settings-action-button emphasized" onClick={() => setView("sync")} type="button"><ListChecks size={16} />Manual sync</button>
+          <button className="settings-action-button" disabled={refreshing} onClick={() => void refreshPlatform()} type="button"><RefreshCw className={refreshing ? "spin" : ""} size={16} />{refreshing ? "Refreshing" : "Refresh Platform"}</button>
+        </div>
+      </header>
       {data.completionMessage && <div className="settings-toast" role="status"><CheckCircle2 size={18} /><span>{data.completionMessage}</span><button aria-label="Dismiss" onClick={data.dismissCompletion} type="button"><X size={16} /></button></div>}
-      <div aria-label="Settings views" className="settings-tabs" role="tablist">{VIEWS.map(({ id, label, icon: Icon }) => <button aria-selected={view === id} className={view === id ? "active" : ""} key={id} onClick={() => setView(id)} role="tab" type="button"><Icon size={17} />{label}</button>)}</div>
+      <section aria-label="Settings summary" className="settings-summary-grid">{summary.map((item) => <article className={`tone-${item.tone}`} key={item.label}><span>{item.label}</span><strong>{item.value}</strong></article>)}</section>
       <div role="tabpanel">{table}</div>
       {nested && <Outlet />}
       <SetupDrawer

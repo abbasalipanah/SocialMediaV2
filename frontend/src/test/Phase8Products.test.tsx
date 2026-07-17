@@ -261,11 +261,11 @@ describe("Phase 8 product surfaces", () => {
 
   it("filters the table and leaves manual sync disabled when backend mutation is unavailable", async () => {
     const user = userEvent.setup();
-    render(<AccountsTable items={[account]} mutationAvailable={false} />);
+    render(<AccountsTable items={[account]} mutationAvailable={false} navigation={null} />);
     expect(screen.getByText("Coastal Facebook")).toBeInTheDocument();
-    await user.type(screen.getByPlaceholderText("Search this view"), "missing");
+    await user.type(screen.getByPlaceholderText("Search by name or ID"), "missing");
     expect(screen.getByText("No matching records.")).toBeInTheDocument();
-    await user.clear(screen.getByPlaceholderText("Search this view"));
+    await user.clear(screen.getByPlaceholderText("Search by name or ID"));
     await user.click(screen.getByRole("button", { name: "Review Coastal Facebook" }));
     expect(screen.getByRole("dialog", { name: "Coastal Facebook" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Sync now/ })).toBeDisabled();
