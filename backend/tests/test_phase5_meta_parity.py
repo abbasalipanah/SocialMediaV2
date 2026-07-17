@@ -28,6 +28,9 @@ ROOT = BACKEND.parent
 GOLDEN = Path(__file__).parent / "fixtures" / "phase5" / "meta_golden.json"
 RETRY_GOLDEN = Path(__file__).parent / "fixtures" / "phase5" / "meta_retry_golden.json"
 FIXED_NOW = datetime(2026, 7, 14, 13, tzinfo=UTC)
+DEFAULT_V1_META_GRAPH_PATH = Path(
+    "/home/api/colab_scripts/Accumulate/backend/app/connectors/facebook/legacy/meta_graph.py"
+)
 
 
 @pytest.fixture()
@@ -51,9 +54,13 @@ def _run(
         "FIXTURE_PROVIDER_TOKEN": "fixture-token-not-secret",
     }
     if v1:
-        env["V1_META_GRAPH_PATH"] = str(
-            Path("/home/api/colab_scripts/Accumulate/backend/app/connectors/facebook/legacy/meta_graph.py")
-        )
+        source_path = Path(os.getenv("V1_META_GRAPH_PATH", str(DEFAULT_V1_META_GRAPH_PATH)))
+        if not source_path.is_file():
+            pytest.skip(
+                "V1 Meta transport source is unavailable; set V1_META_GRAPH_PATH "
+                "to run the immutable-source differential oracle"
+            )
+        env["V1_META_GRAPH_PATH"] = str(source_path)
     if scenario:
         env["PARITY_SCENARIO"] = scenario
     result = subprocess.run(
