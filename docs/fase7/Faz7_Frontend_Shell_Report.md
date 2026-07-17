@@ -2,7 +2,30 @@
 
 Tarih: `2026-07-14`
 
-Durum: **KAPALI — çıkış kapısı yeşil**
+Düzeltme tarihi: `2026-07-17`
+
+Durum: **2026-07-14 KAPANIŞ KARARI GEÇERSİZ KILINDI — parity düzeltmesi uygulandı**
+
+## 2026-07-17 düzeltme notu
+
+Bu raporun ilk sürümündeki “desktop/mobile shell reference ile eşleşmektedir” sonucu kaynak
+render zinciriyle doğrulanmıyordu. Uygulamadaki koyu, özel sidebar; Performance Marketing
+referansındaki beyaz/blur sidebar, Analytics ağacı, connector çizgileri ve alt aksiyon düzeniyle
+aynı değildi. Bu nedenle ilk kapanış kanıtı release/parity kanıtı olarak kullanılamaz.
+
+2026-07-17 çalışma ağacı düzeltmesinde shell tekrar kaynak koda göre kuruldu:
+
+- `performance_marketing/frontend/src/layout/AppSidebar.tsx` ve `AppTopbar.tsx` davranışsal/görsel
+  referans olarak yeniden okundu;
+- beyaz/blur sabit sidebar, Overview + açılır Analytics ağacı, connector/locked state, Settings,
+  Support, Back to Accumulate ve Sign out hiyerarşisi uygulandı;
+- topbar Brand family, child Brand, platform account ve profile seçicileri korunup referansın açık
+  surface ve yoğunluğuna hizalandı;
+- `<1024px` drawer ve 390 px mobil yerleşim gerçek tarayıcı screenshot smoke ile doğrulandı.
+
+Güncel local doğrulama: frontend production build yeşil, Vitest `17 passed`; 1440×1000 desktop
+ve 390×844 mobile browser smoke'larında yatay taşma veya session bağlantı hatası görülmedi.
+Bu düzeltme, production aktivasyonu veya `RELEASE_CANDIDATE_COMPLETE` kararı değildir.
 
 ## Sonuç
 
@@ -73,7 +96,9 @@ Tek başarılı koşudaki sonuçlar:
 - Social dashboard detayları ve Settings tabloları bilinçli olarak Faz 8'e bırakıldı; Faz 7
   placeholder'ları sahte KPI/data üretmez.
 
-## Çıkış kapısı kararı
+## Tarihsel çıkış kapısı kararı — superseded
 
 Desktop/mobile shell davranışı reference sözleşmesi ve browser smoke'larıyla eşleşmektedir.
 Faz 7 kapanmıştır. Sıradaki izinli iş **Faz 8 — Social sayfalar ve Settings** kapsamıdır.
+
+Yukarıdaki 2026-07-14 kararı 2026-07-17 düzeltme notuyla supersede edilmiştir.
