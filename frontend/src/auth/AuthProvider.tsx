@@ -12,12 +12,21 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+const localDemoEnabled =
+  import.meta.env.DEV && import.meta.env.VITE_LOCAL_DEMO?.trim().toLowerCase() === "true";
 
 async function currentUser(signal?: AbortSignal): Promise<AuthUser | null> {
   try {
     return await apiQuery("/api/auth/me", authUserSchema, signal);
   } catch (error) {
-    if (error instanceof ApiError && error.status === 401) return null;
+    if (error instanceof ApiError && error.status === 401) {
+      if (!localDemoEnabled) return null;
+      await apiCommand("/api/dev/session", {
+        method: "POST",
+        headers: { "X-Social-Local-Demo": "true" },
+      });
+      return apiQuery("/api/auth/me", authUserSchema, signal);
+    }
     throw error;
   }
 }
@@ -41,7 +50,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     error: query.error,
     retry: () => void query.refetch(),
     logout: async () => {
-      await apiCommand("/api/auth/logout", { method: "POST" });
+      await apiCommand(localDemoEnabled ? "/api/dev/logout" : "/api/auth/logout", {
+        method: "POST",
+        headers: localDemoEnabled ? { "X-Social-Local-Demo": "true" } : undefined,
+      });
       queryClient.setQueryData(["auth", "me"], null);
       queryClient.removeQueries({ queryKey: ["workspace"] });
     },

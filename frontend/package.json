@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:local": "../scripts/dev/start_local.sh",
     "generate:api": "openapi-typescript ../docs/contracts/social-media-v2-openapi.json -o src/api/openapi.generated.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
