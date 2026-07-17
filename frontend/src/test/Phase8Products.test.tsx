@@ -2,10 +2,14 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import type { DashboardMetric, ReportingAccount } from "../api";
+import type { DashboardMetric, MetricId, OverviewDashboard, PlatformDashboard, ReportingAccount } from "../api";
 import { MetricBand } from "../features/dashboard/DashboardCards";
 import { platformTabs } from "../features/dashboard/catalog";
+import { FacebookPulseDashboard } from "../features/facebook/FacebookPulseDashboard";
+import { InstagramPulseDashboard } from "../features/instagram/InstagramPulseDashboard";
+import { AccumulateSocialOverview } from "../features/overview/AccumulateSocialOverview";
 import { AccountsTable } from "../features/settings/SettingsTables";
+import { TikTokPulseDashboard } from "../features/tiktok/TikTokPulseDashboard";
 import { Dialog } from "../ui";
 
 const metric = (value: number | null, status: "available" | "partial" | "unavailable"): DashboardMetric => ({
@@ -16,6 +20,16 @@ const metric = (value: number | null, status: "available" | "partial" | "unavail
   semantic_type: "snapshot",
   unit: "count",
   data_status: status,
+});
+
+const tiktokMetric = (metricId: MetricId, value: number, unit: "count" | "ratio" = "count"): DashboardMetric => ({
+  metric_id: metricId,
+  value,
+  previous_value: null,
+  delta_pct: null,
+  semantic_type: unit === "ratio" ? "ratio" : metricId === "followers" ? "snapshot" : "cumulative",
+  unit,
+  data_status: "available",
 });
 
 const baseDashboard = {
@@ -75,6 +89,174 @@ describe("Phase 8 product surfaces", () => {
     ]);
     expect(platformTabs("tiktok", false).map((tab) => tab.label)).toEqual(["Overview", "Videos"]);
     expect(platformTabs("tiktok", true).map((tab) => tab.label)).toEqual(["Overview", "Videos", "Audience"]);
+  });
+
+  it("keeps the active Accumulate Social overview information architecture", () => {
+    const platformDashboard = {
+      ...baseDashboard,
+      meta: { ...baseDashboard.meta, data_status: "available" as const, freshness: "fresh" as const },
+      metrics: [metric(1200, "available")],
+      series: [{ metric_id: "followers" as const, semantic_type: "snapshot" as const, points: [{ observed_on: "2026-07-14", value: 1200 }] }],
+    };
+    const data = {
+      meta: { ...baseDashboard.meta, platform: null, data_status: "available" as const, freshness: "fresh" as const },
+      metrics: [metric(1200, "available")],
+      platforms: [platformDashboard],
+      content: [],
+      community: baseDashboard.community,
+    } as unknown as OverviewDashboard;
+
+    render(
+      <AccumulateSocialOverview
+        brandName="Hotel One"
+        data={data}
+        insights={[]}
+        insightsError={false}
+        insightsLoading={false}
+        onRange={() => undefined}
+        range="last_30_days"
+      />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Social Media Overview" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Audience Growth" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Cross-Channel" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Content Type" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI Insights" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Action Breakdown" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Top Performing Posts" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Platform Breakdown" })).toBeInTheDocument();
+  });
+
+  it("keeps the Accumulate Facebook Cover as the combined Page, Content and Audience view", () => {
+    const data = {
+      ...baseDashboard,
+      meta: { ...baseDashboard.meta, data_status: "available" as const, freshness: "fresh" as const },
+      metrics: [metric(1200, "available")],
+      series: [{
+        metric_id: "followers" as const,
+        semantic_type: "snapshot" as const,
+        points: [{ observed_on: "2026-07-14", value: 1200 }],
+      }],
+      content: [{
+        account_id: 1,
+        external_content_id: "post-1",
+        content_type: "image",
+        permalink: "https://example.test/post-1",
+        message: "A quiet morning by the pool.",
+        media_url: "",
+        published_at: "2026-07-14T12:00:00Z",
+        likes_count: 18,
+        comments_count: 4,
+        shares_count: 2,
+        interactions: 24,
+      }],
+    } as unknown as PlatformDashboard;
+
+    render(<FacebookPulseDashboard data={data} tab="cover" />);
+
+    expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Content" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Audience" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Performance Trends" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "All Performing Content" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Top Countries" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Followers Trend" })).toHaveLength(2);
+    expect(screen.getAllByText("A quiet morning by the pool.")).toHaveLength(4);
+  });
+
+  it("keeps the Accumulate Instagram Cover as the combined Page, Content, Stories and Audience view", () => {
+    const data = {
+      ...baseDashboard,
+      meta: {
+        ...baseDashboard.meta,
+        platform: "instagram" as const,
+        data_status: "available" as const,
+        freshness: "fresh" as const,
+      },
+      metrics: [metric(8560, "available")],
+      series: [{
+        metric_id: "followers" as const,
+        semantic_type: "snapshot" as const,
+        points: [{ observed_on: "2026-07-14", value: 8560 }],
+      }],
+      content: [{
+        account_id: 21,
+        external_content_id: "reel-1",
+        content_type: "reel",
+        permalink: "https://example.test/reel-1",
+        message: "Sunset from the terrace.",
+        media_url: "",
+        published_at: "2026-07-14T12:00:00Z",
+        likes_count: 92,
+        comments_count: 6,
+        shares_count: 11,
+        interactions: 109,
+      }],
+    } as unknown as PlatformDashboard;
+
+    render(<InstagramPulseDashboard data={data} tab="cover" />);
+
+    expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Content" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Audience" })).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Stories" })).toHaveLength(2);
+    expect(screen.getByRole("heading", { name: "Story Performance Trends" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Age & Gender" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Audience by Country" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Content Type" })).not.toBeInTheDocument();
+  });
+
+  it("uses the shared pulse structure with TikTok-specific metrics and honest video rows", () => {
+    const data: PlatformDashboard = {
+      ...baseDashboard,
+      meta: { ...baseDashboard.meta, dashboard_id: "tiktok", platform: "tiktok", data_status: "available", freshness: "fresh" },
+      metrics: [
+        tiktokMetric("followers", 3890),
+        tiktokMetric("video_views_total", 126000),
+        tiktokMetric("video_likes_total", 9400),
+        tiktokMetric("video_comments_total", 620),
+        tiktokMetric("video_shares_total", 1180),
+        tiktokMetric("video_engagements_total", 11200),
+        tiktokMetric("video_engagement_rate", 0.089, "ratio"),
+      ],
+      series: [
+        { metric_id: "followers", semantic_type: "snapshot", points: [{ observed_on: "2026-06-15", value: 3400 }, { observed_on: "2026-07-14", value: 3890 }] },
+        { metric_id: "video_views_total", semantic_type: "cumulative", points: [{ observed_on: "2026-06-15", value: 98000 }, { observed_on: "2026-07-14", value: 126000 }] },
+        { metric_id: "video_engagements_total", semantic_type: "cumulative", points: [{ observed_on: "2026-06-15", value: 8600 }, { observed_on: "2026-07-14", value: 11200 }] },
+      ],
+      breakdowns: [{ metric_id: "followers", dimension: "country", items: [{ key: "tr", value: 2100, percentage: 54 }] }],
+      content: [{
+        account_id: 31,
+        external_content_id: "video-1",
+        content_type: "video",
+        permalink: "https://example.test/video-1",
+        message: "A day at the resort.",
+        media_url: "",
+        published_at: "2026-07-13T12:00:00Z",
+        likes_count: 2240,
+        comments_count: 143,
+        shares_count: 305,
+        interactions: 2688,
+      }],
+    };
+
+    const { rerender } = render(<TikTokPulseDashboard data={data} tab="overview" />);
+    expect(screen.getByText("Engagement Rate")).toBeInTheDocument();
+    expect(screen.getByText("8.9%")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Video Performance Trends" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Video Engagement Mix" })).toBeInTheDocument();
+
+    rerender(<TikTokPulseDashboard data={data} tab="videos" />);
+    expect(screen.getByRole("heading", { name: "All Videos" })).toBeInTheDocument();
+    expect(screen.getAllByText("A day at the resort.").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/Video-level view counts are not exposed/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "View" })).toHaveAttribute("href", "https://example.test/video-1");
+
+    rerender(<TikTokPulseDashboard data={data} tab="audience" />);
+    expect(screen.getByRole("heading", { name: "Best Time to Engage" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Top Countries" })).toBeInTheDocument();
+    expect(screen.getByText(/does not return hourly TikTok audience activity/)).toBeInTheDocument();
   });
 
   it("filters the table and leaves manual sync disabled when backend mutation is unavailable", async () => {

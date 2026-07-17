@@ -208,7 +208,7 @@ describe("Phase 7 application shell", () => {
   it("opens the mobile drawer, closes on backdrop and signs out to the SSO-first login", async () => {
     const user = userEvent.setup();
     const { fetchMock } = renderApp("/overview");
-    await screen.findByRole("heading", { name: "Overview" });
+    await screen.findByRole("heading", { name: "Social Media Overview" });
 
     await user.click(screen.getByRole("button", { name: "Open navigation" }));
     const sidebar = screen.getByRole("complementary", { name: "Primary navigation" });
@@ -252,7 +252,7 @@ describe("Phase 7 application shell", () => {
 
   it("redirects a direct Settings route when the backend permission is absent", async () => {
     renderApp("/settings", mockApi({ settingsVisible: false }));
-    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Social Media Overview" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Settings" })).not.toBeInTheDocument();
   });
 
