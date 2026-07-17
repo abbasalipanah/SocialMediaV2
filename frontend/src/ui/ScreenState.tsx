@@ -11,7 +11,7 @@ export function ScreenState({
 }) {
   return (
     <main className="screen-state">
-      <div className="state-mark" aria-hidden="true">SM</div>
+      <img alt="Accumulate" className="state-logo" src="/accumulate-logo.svg" />
       <p className="eyebrow">{eyebrow}</p>
       <h1>{title}</h1>
       <div className="state-copy">{children}</div>

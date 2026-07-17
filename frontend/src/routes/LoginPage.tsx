@@ -30,7 +30,7 @@ export function LoginPage() {
   return (
     <main className="login-page">
       <section className="login-card">
-        <div aria-hidden="true" className="login-mark">A</div>
+        <img alt="Accumulate" className="login-logo" src="/accumulate-logo.svg" />
         <p className="eyebrow">ACCUMULATE</p>
         <h1>Social Media</h1>
         <p>Open this workspace from Accumulate to continue with your Brand access and permissions.</p>

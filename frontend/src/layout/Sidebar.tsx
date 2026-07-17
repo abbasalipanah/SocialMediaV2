@@ -1,15 +1,18 @@
 import {
   ArrowLeft,
-  BarChart3,
+  ChevronDown,
+  ChevronRight,
   Facebook,
   HelpCircle,
+  Home,
   Instagram,
   LockKeyhole,
   LogOut,
+  PieChart,
   Settings,
   X,
 } from "lucide-react";
-import type { ComponentType } from "react";
+import { useState, type ComponentType } from "react";
 import { NavLink } from "react-router-dom";
 
 import type { Platform } from "../api";
@@ -73,6 +76,7 @@ function NavigationLink({
 }
 
 export function Sidebar({ open, onClose, onLogout, loggingOut }: SidebarProps) {
+  const [analyticsExpanded, setAnalyticsExpanded] = useState(true);
   const { capabilities, isLoading } = useBrandScope();
   const settingsVisible = capabilities?.permissions.settings_visible === true;
 
@@ -87,38 +91,52 @@ export function Sidebar({ open, onClose, onLogout, loggingOut }: SidebarProps) {
       />
       <aside aria-label="Primary navigation" className={`app-sidebar${open ? " open" : ""}`}>
         <div className="sidebar-brand">
-          <div aria-hidden="true" className="brand-symbol">A</div>
-          <div>
-            <strong>ACCUMULATE</strong>
-            <span>Social Media</span>
-          </div>
+          <NavLink aria-label="Accumulate Social Media overview" onClick={onClose} to="/overview">
+            <img alt="" className="accumulate-sidebar-logo" src="/accumulate-logo.svg" />
+          </NavLink>
           <button aria-label="Close navigation" className="sidebar-close" onClick={onClose} type="button">
             <X size={20} />
           </button>
         </div>
 
         <nav className="sidebar-nav">
-          <p className="sidebar-section-label">Workspace</p>
-          <NavigationLink icon={BarChart3} label="Overview" onClick={onClose} path="/overview" />
-          <p className="sidebar-section-label channel-label">Channels</p>
-          {platformNavigation.map(({ icon: Icon, label, path, platform }) => {
-            const available = platformAvailable(platform, capabilities);
-            return available ? (
-              <NavigationLink icon={Icon} key={platform} label={label} onClick={onClose} path={path} />
-            ) : (
-              <div
-                aria-disabled="true"
-                className="sidebar-link locked"
-                data-loading={isLoading || undefined}
-                key={platform}
-                title={isLoading ? "Checking availability" : "Connect this channel in Settings"}
-              >
-                <Icon size={20} />
-                <span>{label}</span>
-                <LockKeyhole className="link-lock" size={14} />
-              </div>
-            );
-          })}
+          <NavigationLink icon={Home} label="Overview" onClick={onClose} path="/overview" />
+          <button
+            aria-expanded={analyticsExpanded}
+            className="sidebar-link analytics-toggle"
+            onClick={() => setAnalyticsExpanded((current) => !current)}
+            type="button"
+          >
+            <PieChart size={18} />
+            <span>Analytics</span>
+            {analyticsExpanded ? <ChevronDown className="link-chevron" size={14} /> : <ChevronRight className="link-chevron" size={14} />}
+          </button>
+          {analyticsExpanded && (
+            <div className="sidebar-channel-tree">
+              {platformNavigation.map(({ icon: Icon, label, path, platform }) => {
+                const available = platformAvailable(platform, capabilities);
+                return (
+                  <div className="sidebar-channel-row" key={platform}>
+                    <span aria-hidden="true" className="channel-connector" />
+                    {available ? (
+                      <NavigationLink icon={Icon} label={label} onClick={onClose} path={path} />
+                    ) : (
+                      <div
+                        aria-disabled="true"
+                        className="sidebar-link locked"
+                        data-loading={isLoading || undefined}
+                        title={isLoading ? "Checking availability" : `Connect ${label} in Settings`}
+                      >
+                        <Icon size={17} />
+                        <span>{label}</span>
+                        <LockKeyhole className="link-lock" size={13} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </nav>
 
         <nav aria-label="Account navigation" className="sidebar-footer">
@@ -129,7 +147,7 @@ export function Sidebar({ open, onClose, onLogout, loggingOut }: SidebarProps) {
             <HelpCircle size={20} />
             <span>Support</span>
           </a>
-          <a className="sidebar-link" href="https://app.theaccumulate.com">
+          <a className="sidebar-return-link" href="https://app.theaccumulate.com">
             <ArrowLeft size={20} />
             <span>Back to Accumulate</span>
           </a>
