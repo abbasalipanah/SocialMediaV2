@@ -1,0 +1,30 @@
+{
+  "routes": [
+    {
+      "path": "/v23.0/page-1",
+      "after": null,
+      "responses": [
+        {
+          "status": 500,
+          "json": {"error": {"message": "temporary"}}
+        },
+        {
+          "status": 429,
+          "headers": {"Retry-After": "0"},
+          "json": {"error": {"message": "slow"}}
+        },
+        {
+          "status": 200,
+          "json": {
+            "id": "page-1",
+            "name": "Golden Facebook",
+            "followers_count": 125
+          }
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "facebook": {"followers": 125, "content_ids": []}
+  }
+}

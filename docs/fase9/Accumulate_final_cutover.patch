@@ -1,0 +1,111 @@
+# NOT APPLIED — OFFLINE REVIEW DRAFT
+# Base reviewed: Accumulate 7d65db2da0a9c7cb866e984422b22bd5d8a1b5f7
+# Rebase, complete migrations/tests, and obtain explicit production approval before use.
+
+diff --git a/backend/app/core/sso_contract.py b/backend/app/core/sso_contract.py
+--- a/backend/app/core/sso_contract.py
++++ b/backend/app/core/sso_contract.py
+@@
+ def create_sso_contract_token(
+     *,
++    launch_target: str | None = None,
+     user_id: int,
+@@
+     payload: dict[str, Any] = {
+         "token_type": "app_sso",
+         "jti": str(uuid4()),
+         "aud": app_id,
+         "sso_contract": contract,
+     }
++    if launch_target not in {None, "tiktok_owner_activation"}:
++        raise ValueError("invalid_launch_target")
++    if launch_target is not None:
++        payload["launch_target"] = launch_target
+
+diff --git a/backend/app/api/routes/app_sso.py b/backend/app/api/routes/app_sso.py
+--- a/backend/app/api/routes/app_sso.py
++++ b/backend/app/api/routes/app_sso.py
+@@
++class AppSsoTokenRequest(BaseModel):
++    launch_target: str | None = None
++
+ @router.post("/{app_id}/token", response_model=AppSsoTokenResponse)
+ def issue_app_sso_token(
+     app_id: str,
++    body: AppSsoTokenRequest,
+@@
+     token = create_sso_contract_token(
++        launch_target=body.launch_target,
+         user_id=current_user.id,
+@@
++    if body.launch_target == "tiktok_owner_activation" and app_id != "social_media":
++        raise HTTPException(status_code=400, detail="invalid_launch_target")
+
+diff --git a/backend/app/services/provisioning_outbox.py b/backend/app/services/provisioning_outbox.py
+--- a/backend/app/services/provisioning_outbox.py
++++ b/backend/app/services/provisioning_outbox.py
+@@
+     outgoing_payload = {
+-        "event_id": event.id,
++        "event_id": str(event.id),
+         "event_type": event.event_type,
+         "app_id": app_id,
++        "entity_id": str(event.user_id if event.event_type in {
++            "brand_access.sync", "membership.upserted", "user.deleted"
++        } else event.brand_id),
++        # The ordered outbox primary key is the emitted watermark and a
++        # monotonic projection version for each entity on this sender.
++        "version": int(event.id),
+         "brand_id": event.brand_id,
+@@
+-        if 200 <= response.status_code < 300:
++        acknowledgement = response.json() if 200 <= response.status_code < 300 else {}
++        if acknowledgement.get("status") in {
++            "applied", "duplicate_ignored", "stale_ignored"
++        }:
+             _mark_success(event)
+@@
++def social_media_watermarks(db: Session) -> tuple[int, int]:
++    emitted = db.scalar(
++        select(func.coalesce(func.max(ProvisioningEvent.id), 0))
++        .where(ProvisioningEvent.app_id == "social_media")
++    )
++    applied = db.scalar(
++        select(func.coalesce(func.max(ProvisioningEvent.id), 0))
++        .where(ProvisioningEvent.app_id == "social_media")
++        .where(ProvisioningEvent.status == "dispatched")
++    )
++    return int(emitted or 0), int(applied or 0)
+
+diff --git a/backend/app/api/routes/app_sso.py b/backend/app/api/routes/app_sso.py
+--- a/backend/app/api/routes/app_sso.py
++++ b/backend/app/api/routes/app_sso.py
+@@
+-    if app_id == "influencer_marketing":
++    if app_id in {"influencer_marketing", "social_media"}:
++        # build_full_access_snapshot is introduced in the same reviewed change.
++        # It must read authority state and enqueue the snapshot in one transaction.
++        sync_payload = build_full_access_snapshot(
++            db, user=current_user, brand_id=brand.brand_id, app_id=app_id
++        )
++        enqueue_provisioning_event(
++            db,
++            event_type="brand_access.sync",
++            app_id=app_id,
++            brand_id=brand.brand_id,
++            user_id=current_user.id,
++            payload=sync_payload,
++        )
++        db.commit()
++        # SSO routing must not switch until emitted == applied is verified by the
++        # signed cutover command and the final barrier watermark is acknowledged.
+
+# Required companion work before this draft can be applied:
+# - additive outbox sequence/status indexes and migration at the then-current head;
+# - build_full_access_snapshot implementation and empty-snapshot semantics;
+# - ordered dispatch with explicit failed-row requeue and row locking;
+# - emitted/applied/final-barrier operator endpoints with audit and write policy;
+# - fixed-target request tests, open-redirect denial, snapshot/drain/replay tests;
+# - cutover command that changes provisioning routing before SSO routing;
+# - rollback command that restores control-plane routing before SSO routing;
+# - no source-project edit until explicit approval is granted.

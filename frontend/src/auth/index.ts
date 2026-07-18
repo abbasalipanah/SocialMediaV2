@@ -1,1 +1,1 @@
-// Canonical auth provider scaffold.
+export * from "./AuthProvider";

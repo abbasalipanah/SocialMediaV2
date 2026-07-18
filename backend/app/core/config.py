@@ -139,6 +139,7 @@ class AppSettings:
     sso_hs256_secret: str
     provisioning_hmac_secret: str
     session_cookie_secure: bool
+    media_storage_root: str
     tiktok: TikTokConfig
 
 
@@ -245,5 +246,6 @@ def load_settings() -> AppSettings:
         sso_hs256_secret=sso_secret,
         provisioning_hmac_secret=provisioning_secret,
         session_cookie_secure=_bool("SOCIAL_SESSION_COOKIE_SECURE"),
+        media_storage_root=_env("SOCIAL_MEDIA_STORAGE_ROOT"),
         tiktok=tiktok,
     )

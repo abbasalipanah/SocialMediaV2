@@ -1,0 +1,291 @@
+"""Small read-only dashboard query services."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import UTC, datetime
+
+from app.application.ports.reporting import ReportingStore
+from app.application.queries.dashboard_aggregation import (
+    community_summary,
+    content_cards,
+    freshness,
+    metric_breakdowns,
+    metric_cards,
+    metric_series,
+)
+from app.application.queries.reporting_range import previous_reporting_range
+from app.domain.metrics import MetricCatalog, MetricId
+from app.domain.platforms import PlatformId
+from app.domain.reporting import (
+    CommunitySummary,
+    DashboardMeta,
+    DashboardMetric,
+    DataStatus,
+    FreshnessStatus,
+    OverviewDashboard,
+    PlatformDashboard,
+    ReportingRange,
+)
+
+
+@dataclass(frozen=True)
+class DashboardQuery:
+    requested_brand_id: str
+    resolved_brand_ids: tuple[str, ...]
+    rollup: bool
+    date_range: ReportingRange
+    account_id: int | None = None
+    content_type: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.requested_brand_id or not self.resolved_brand_ids:
+            raise ValueError("dashboard_scope_invalid")
+        if self.account_id is not None and self.account_id < 1:
+            raise ValueError("dashboard_account_invalid")
+        if self.content_type is not None and (
+            not self.content_type.replace("_", "").replace("-", "").isalnum()
+            or len(self.content_type) > 32
+        ):
+            raise ValueError("dashboard_content_type_invalid")
+
+
+def build_platform_dashboard(
+    *,
+    store: ReportingStore,
+    catalog: MetricCatalog,
+    platform: PlatformId,
+    query: DashboardQuery,
+    now: datetime | None = None,
+) -> PlatformDashboard:
+    generated = (now or datetime.now(UTC)).astimezone(UTC)
+    accounts = store.list_accounts(brand_ids=query.resolved_brand_ids, platform=platform)
+    if query.account_id is not None:
+        accounts = tuple(
+            account for account in accounts if account.account_id == query.account_id
+        )
+        if not accounts:
+            raise ValueError("dashboard_account_scope_denied")
+    account_ids = tuple(account.account_id for account in accounts)
+    previous_range = previous_reporting_range(query.date_range)
+    samples = (
+        store.list_metrics(
+            account_ids=account_ids,
+            start_on=query.date_range.start_on,
+            end_on=query.date_range.end_on,
+        )
+        if account_ids
+        else ()
+    )
+    previous_samples = (
+        store.list_metrics(
+            account_ids=account_ids,
+            start_on=previous_range.start_on,
+            end_on=previous_range.end_on,
+        )
+        if account_ids
+        else ()
+    )
+    content_rows = (
+        store.list_content(
+            account_ids=account_ids,
+            start_on=query.date_range.start_on,
+            end_on=query.date_range.end_on,
+            content_type=query.content_type,
+        )
+        if account_ids
+        else ()
+    )
+    comment_rows = (
+        store.list_comments(
+            account_ids=account_ids,
+            start_on=query.date_range.start_on,
+            end_on=query.date_range.end_on,
+        )
+        if account_ids
+        else ()
+    )
+    cards, metric_warnings = metric_cards(
+        platform=platform,
+        account_ids=account_ids,
+        samples=samples,
+        previous_samples=previous_samples,
+        catalog=catalog,
+    )
+    available = sum(card.data_status is not DataStatus.UNAVAILABLE for card in cards)
+    if not accounts or not available:
+        status = DataStatus.UNAVAILABLE
+    elif any(card.data_status is not DataStatus.AVAILABLE for card in cards):
+        status = DataStatus.PARTIAL
+    else:
+        status = DataStatus.AVAILABLE
+    warnings = list(metric_warnings)
+    if not accounts:
+        warnings.insert(0, "no_accounts")
+    last_sync, freshness_status = freshness(accounts, generated)
+    if freshness_status is not FreshnessStatus.FRESH:
+        warnings.append(f"freshness:{freshness_status.value}")
+    observed_days = len({sample.observed_on for sample in samples})
+    expected_days = (query.date_range.end_on - query.date_range.start_on).days + 1
+    return PlatformDashboard(
+        meta=DashboardMeta(
+            dashboard_id=platform.value,
+            platform=platform,
+            requested_brand_id=query.requested_brand_id,
+            rollup=query.rollup,
+            resolved_brand_ids=query.resolved_brand_ids,
+            resolved_account_ids=account_ids,
+            date_range=query.date_range,
+            generated_at=generated,
+            last_sync_at=last_sync,
+            freshness=freshness_status,
+            observed_days=observed_days,
+            expected_days=expected_days,
+            data_status=status,
+            warnings=tuple(warnings),
+        ),
+        metrics=cards,
+        series=metric_series(platform=platform, samples=samples, catalog=catalog),
+        breakdowns=metric_breakdowns(samples),
+        content=content_cards(content_rows),
+        community=community_summary(comment_rows, accounts_available=bool(accounts)),
+    )
+
+
+def build_overview_dashboard(
+    *,
+    store: ReportingStore,
+    catalog: MetricCatalog,
+    query: DashboardQuery,
+    now: datetime | None = None,
+) -> OverviewDashboard:
+    generated = (now or datetime.now(UTC)).astimezone(UTC)
+    dashboards = tuple(
+        build_platform_dashboard(
+            store=store,
+            catalog=catalog,
+            platform=platform,
+            query=query,
+            now=generated,
+        )
+        for platform in PlatformId
+    )
+    metrics = tuple(
+        result
+        for metric_id in (MetricId.FOLLOWERS, MetricId.REACH, MetricId.INTERACTIONS)
+        if (result := _overview_metric(metric_id, dashboards)) is not None
+    )
+    all_content = tuple(
+        sorted(
+            (item for dashboard in dashboards for item in dashboard.content),
+            key=lambda item: (
+                item.published_at or datetime.min.replace(tzinfo=UTC),
+                item.external_content_id,
+            ),
+            reverse=True,
+        )[:50]
+    )
+    communities = tuple(dashboard.community for dashboard in dashboards)
+    account_ids = tuple(
+        sorted({value for dashboard in dashboards for value in dashboard.meta.resolved_account_ids})
+    )
+    statuses = {dashboard.meta.data_status for dashboard in dashboards}
+    if statuses == {DataStatus.UNAVAILABLE}:
+        data_status = DataStatus.UNAVAILABLE
+    elif statuses == {DataStatus.AVAILABLE}:
+        data_status = DataStatus.AVAILABLE
+    else:
+        data_status = DataStatus.PARTIAL
+    last_sync_values = tuple(
+        dashboard.meta.last_sync_at
+        for dashboard in dashboards
+        if dashboard.meta.last_sync_at is not None
+    )
+    freshness_status = _overview_freshness(dashboards)
+    warnings = tuple(
+        f"{dashboard.meta.dashboard_id}:{warning}"
+        for dashboard in dashboards
+        for warning in dashboard.meta.warnings
+    )
+    expected_days = (query.date_range.end_on - query.date_range.start_on).days + 1
+    return OverviewDashboard(
+        meta=DashboardMeta(
+            dashboard_id="overview",
+            platform=None,
+            requested_brand_id=query.requested_brand_id,
+            rollup=query.rollup,
+            resolved_brand_ids=query.resolved_brand_ids,
+            resolved_account_ids=account_ids,
+            date_range=query.date_range,
+            generated_at=generated,
+            last_sync_at=max(last_sync_values) if last_sync_values else None,
+            freshness=freshness_status,
+            observed_days=max((item.meta.observed_days for item in dashboards), default=0),
+            expected_days=expected_days,
+            data_status=data_status,
+            warnings=warnings,
+        ),
+        metrics=metrics,
+        platforms=dashboards,
+        content=all_content,
+        community=CommunitySummary(
+            total_comments=sum(item.total_comments for item in communities),
+            answered_comments=sum(item.answered_comments for item in communities),
+            unanswered_comments=sum(item.unanswered_comments for item in communities),
+            comment_likes=sum(item.comment_likes for item in communities),
+            data_status=data_status,
+        ),
+    )
+
+
+def _overview_metric(
+    metric_id: MetricId, dashboards: tuple[PlatformDashboard, ...]
+) -> DashboardMetric | None:
+    cards = tuple(
+        card
+        for dashboard in dashboards
+        for card in dashboard.metrics
+        if card.metric_id is metric_id
+    )
+    if not cards:
+        return None
+    values = tuple(card.value for card in cards if card.value is not None)
+    previous_values = tuple(
+        card.previous_value for card in cards if card.previous_value is not None
+    )
+    value = sum(values) if values else None
+    previous = sum(previous_values) if previous_values else None
+    delta = None
+    if value is not None and previous not in {None, 0}:
+        delta = (value - previous) / abs(previous) * 100
+    if not values:
+        status = DataStatus.UNAVAILABLE
+    elif any(card.data_status is not DataStatus.AVAILABLE for card in cards):
+        status = DataStatus.PARTIAL
+    else:
+        status = DataStatus.AVAILABLE
+    first = cards[0]
+    return DashboardMetric(
+        metric_id=metric_id,
+        value=value,
+        previous_value=previous,
+        delta_pct=delta,
+        semantic_type=first.semantic_type,
+        unit=first.unit,
+        data_status=status,
+    )
+
+
+def _overview_freshness(
+    dashboards: tuple[PlatformDashboard, ...],
+) -> FreshnessStatus:
+    rank = {
+        FreshnessStatus.FRESH: 0,
+        FreshnessStatus.STALE: 1,
+        FreshnessStatus.OUTDATED: 2,
+        FreshnessStatus.NEVER_SYNCED: 3,
+    }
+    return max((item.meta.freshness for item in dashboards), key=rank.__getitem__)
+
+
+__all__ = ["DashboardQuery", "build_overview_dashboard", "build_platform_dashboard"]

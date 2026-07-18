@@ -53,7 +53,44 @@ FRONTEND_VENDOR_ALLOWLIST = (
     "QueryClient",
     'client={queryCache}',
     '"react-dom/client"',
+    '"vite/client"',
 )
+TIKTOK_WIRE_ALIAS_FILE = (
+    ROOT / "backend" / "app" / "infrastructure" / "providers" / "tiktok" / "accounts" / "wire.py"
+)
+TIKTOK_WIRE_ALIASES = ("client_key", "client_id", "client_secret")
+LEGACY_PLATFORM_ALIAS_FILE = (
+    ROOT
+    / "backend"
+    / "app"
+    / "infrastructure"
+    / "persistence"
+    / "legacy_socialmedia"
+    / "platforms.py"
+)
+LEGACY_PLATFORM_ALIASES = (
+    "facebook_organic",
+    "instagram_organic",
+    "tiktok_organic",
+)
+
+
+def apply_narrow_source_allowlist(path: Path, text: str) -> str:
+    aliases: tuple[str, ...] = ()
+    if path == TIKTOK_WIRE_ALIAS_FILE:
+        aliases = TIKTOK_WIRE_ALIASES
+    elif path == LEGACY_PLATFORM_ALIAS_FILE:
+        aliases = LEGACY_PLATFORM_ALIASES
+    for alias in aliases:
+        text = text.replace(f'"{alias}"', '""').replace(f"'{alias}'", "''")
+    return text
+
+
+def apply_narrow_artifact_allowlist(member: str, text: str) -> str:
+    if member.endswith("app/infrastructure/persistence/legacy_socialmedia/platforms.py"):
+        for alias in LEGACY_PLATFORM_ALIASES:
+            text = text.replace(f'"{alias}"', '""').replace(f"'{alias}'", "''")
+    return text
 
 
 def files_to_scan() -> list[Path]:
@@ -82,6 +119,8 @@ def main() -> int:
         if path.suffix in {".ts", ".tsx", ".js", ".jsx"} and not is_built_artifact:
             for exact_vendor_token in FRONTEND_VENDOR_ALLOWLIST:
                 text = text.replace(exact_vendor_token, "")
+        if not is_built_artifact:
+            text = apply_narrow_source_allowlist(path, text)
         patterns = ARTIFACT_PATTERNS if is_built_artifact else PATTERNS
         findings.extend(scan_text(str(path.relative_to(ROOT)), text, patterns))
     if BACKEND_DIST.is_dir():
@@ -91,6 +130,7 @@ def main() -> int:
                     if Path(member).suffix not in TEXT_SUFFIXES:
                         continue
                     text = archive.read(member).decode("utf-8", errors="ignore")
+                    text = apply_narrow_artifact_allowlist(member, text)
                     findings.extend(
                         scan_text(
                             f"{wheel.relative_to(ROOT)}!/{member}",

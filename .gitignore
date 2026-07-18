@@ -26,3 +26,4 @@ test-results/
 *.log
 *.tmp
 *.swp
+*.tsbuildinfo

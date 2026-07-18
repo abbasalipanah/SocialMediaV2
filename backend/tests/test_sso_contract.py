@@ -104,8 +104,24 @@ def test_valid_upstream_contract_creates_hash_only_session_and_blocks_jti_replay
 def test_fixed_owner_launch_target_is_allowlisted() -> None:
     verified = verify_sso(token(launch_target="tiktok_owner_activation"), SECRET)
     assert verified.launch_path == "/settings/tiktok/connect"
+    assert verified.launch_target == "tiktok_owner_activation"
     with pytest.raises(SsoError, match="invalid_launch_target"):
         verify_sso(token(launch_target="https://evil.example"), SECRET)
+
+
+def test_owner_launch_context_is_preserved_in_the_hash_only_session() -> None:
+    store = MemorySessionStore()
+    raw_session, verified = consume_sso(
+        token(launch_target="tiktok_owner_activation"), SECRET, store
+    )
+    session = resolve_session(raw_session, store)
+    assert session is not None
+    assert session["launch_target"] == "tiktok_owner_activation"
+    assert session["sso_issued_at"] == verified.issued_at.isoformat()
+    assert isinstance(session["sso_consumed_at"], str)
+    assert session["permissions"] == ("tiktok.connection.manage",)
+    assert session["sso_jti_hash"] == sha256_text(verified.jti)
+    assert verified.jti not in repr(session)
 
 
 def test_role_status_access_and_visibility_invariants_fail_closed() -> None:

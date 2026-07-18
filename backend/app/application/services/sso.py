@@ -14,6 +14,7 @@ from app.core.security import sha256_text
 
 CANONICAL_ROLES = {"super_admin", "agency_admin", "agency_operator", "viewer"}
 WRITE_ROLES = {"super_admin", "agency_admin", "agency_operator"}
+TIKTOK_CONNECTION_MANAGE_PERMISSION = "tiktok.connection.manage"
 BRAND_STATUSES = {"active", "suspended", "archived"}
 LAUNCH_TARGETS = {None: "/overview", "tiktok_owner_activation": "/settings/tiktok/connect"}
 REQUIRED_CONTRACT_FIELDS = {
@@ -46,6 +47,7 @@ class SsoError(ValueError):
 @dataclass(frozen=True)
 class VerifiedSso:
     user_id: str
+    email: str
     brand_id: str
     role: str
     access_mode: str
@@ -53,6 +55,8 @@ class VerifiedSso:
     is_internal_staff: bool
     jti: str
     expires_at: datetime
+    issued_at: datetime
+    launch_target: str | None
     launch_path: str
 
 
@@ -139,6 +143,7 @@ def verify_sso(token: str, secret: str, now: datetime | None = None) -> Verified
         raise SsoError("missing_authority")
     if not isinstance(contract.get("email"), str) or not contract["email"].strip():
         raise SsoError("missing_identity")
+    email = contract["email"].strip()
 
     issued_at = _contract_datetime(contract.get("issued_at"), "issued_at")
     assert issued_at is not None
@@ -165,6 +170,7 @@ def verify_sso(token: str, secret: str, now: datetime | None = None) -> Verified
     expires_at = min(expires_at, current + timedelta(hours=12))
     return VerifiedSso(
         user_id=user_id,
+        email=email,
         brand_id=brand_id,
         role=role,
         access_mode=expected_access_mode,
@@ -172,6 +178,8 @@ def verify_sso(token: str, secret: str, now: datetime | None = None) -> Verified
         is_internal_staff=internal_staff,
         jti=jti,
         expires_at=expires_at,
+        issued_at=issued_at,
+        launch_target=launch_target,
         launch_path=LAUNCH_TARGETS[launch_target],
     )
 
@@ -179,18 +187,32 @@ def verify_sso(token: str, secret: str, now: datetime | None = None) -> Verified
 def consume_sso(token: str, secret: str, store: SessionStore) -> tuple[str, VerifiedSso]:
     verified = verify_sso(token, secret)
     raw_session = secrets.token_urlsafe(32)
+    consumed_at = datetime.now(UTC)
+    jti_hash = sha256_text(verified.jti)
+    permissions = (
+        (TIKTOK_CONNECTION_MANAGE_PERMISSION,)
+        if verified.settings_visible and verified.access_mode == "write"
+        else ()
+    )
     payload = {
         "user_id": verified.user_id,
+        "email": verified.email,
+        "source_system": "accumulate",
         "brand_id": verified.brand_id,
         "role": verified.role,
         "access_mode": verified.access_mode,
         "settings_visible": verified.settings_visible,
         "is_internal_staff": verified.is_internal_staff,
         "expires_at": verified.expires_at.isoformat(),
+        "sso_issued_at": verified.issued_at.isoformat(),
+        "sso_consumed_at": consumed_at.isoformat(),
+        "launch_target": verified.launch_target,
+        "permissions": permissions,
+        "sso_jti_hash": jti_hash,
         "revoked": False,
     }
     created = store.create_from_jti(
-        jti_hash=sha256_text(verified.jti),
+        jti_hash=jti_hash,
         session_hash=sha256_text(raw_session),
         payload=payload,
         expires_at=verified.expires_at,

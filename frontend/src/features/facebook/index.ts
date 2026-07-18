@@ -1,1 +1,0 @@
-// Canonical facebook feature placeholder.

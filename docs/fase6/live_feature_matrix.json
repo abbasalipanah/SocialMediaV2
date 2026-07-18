@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "captured_on": "2026-07-14",
+  "sources": {
+    "product_contract": "docs/SOCIAL_MEDIA_V2_MASTER_PLAN.md sections 6.6, 6.7, 9.2, 10, 14/Faz 6",
+    "live_backend_reference": "/home/api/colab_scripts/Accumulate/backend/app/api/routes/dashboards.py",
+    "live_frontend_reference": "/home/api/colab_scripts/Accumulate/frontend/components/PlatformDashboard.tsx"
+  },
+  "policy": "behavioral contract only; source files remain read-only and monoliths are not copied",
+  "features": [
+    {
+      "feature": "overview KPI and platform rollup",
+      "status": "implemented",
+      "surface": "GET /api/dashboards/overview",
+      "evidence": "test_phase6_dashboard_api.py"
+    },
+    {
+      "feature": "Facebook cover/page/content/audience data",
+      "status": "implemented",
+      "surface": "GET /api/dashboards/facebook",
+      "evidence": "PlatformDashboard content, metrics, series, breakdowns and community"
+    },
+    {
+      "feature": "Instagram cover/page/content/stories/audience data",
+      "status": "implemented",
+      "surface": "GET /api/dashboards/instagram; tab=stories",
+      "evidence": "typed response contract and stories content filter"
+    },
+    {
+      "feature": "TikTok profile/overview/videos and honest audience availability",
+      "status": "implemented",
+      "surface": "GET /api/dashboards/tiktok",
+      "evidence": "cumulative/delta/ratio test and capability response"
+    },
+    {
+      "feature": "backend Parent Brand rollup and account filter",
+      "status": "implemented",
+      "surface": "all dashboard/account query routes",
+      "evidence": "two-child rollup and cross-scope denial tests"
+    },
+    {
+      "feature": "recent/top content and community summary",
+      "status": "implemented",
+      "surface": "PlatformDashboard.content and community",
+      "evidence": "response contract and deterministic ordering tests"
+    },
+    {
+      "feature": "platform health, freshness and readiness",
+      "status": "implemented",
+      "surface": "DashboardMeta; GET /api/operations/readiness",
+      "evidence": "freshness, account and pending-job DTOs"
+    },
+    {
+      "feature": "Facebook/Instagram/TikTok account selectors",
+      "status": "implemented",
+      "surface": "GET /api/platforms/{platform}/accounts",
+      "evidence": "exact canonical platform route and OpenAPI tests"
+    },
+    {
+      "feature": "Settings Brands, Social Accounts, Brand Links, Sync and Backfill",
+      "status": "implemented",
+      "surface": "GET /api/settings/*; dormant POST operation routes",
+      "evidence": "settings capability and fail-closed mutation tests"
+    },
+    {
+      "feature": "TikTok connection health",
+      "status": "implemented",
+      "surface": "GET /api/settings/tiktok/connection",
+      "evidence": "exact connection state and secret-free response test"
+    },
+    {
+      "feature": "internal operational audit rows",
+      "status": "honest_unavailable",
+      "surface": "GET /api/settings/audit",
+      "evidence": "explicit unavailable response; no fabricated rows"
+    },
+    {
+      "feature": "stored AI Insights",
+      "status": "implemented",
+      "surface": "GET /api/insights",
+      "evidence": "read-only stored insight response; no generation side effect"
+    },
+    {
+      "feature": "Instagram persisted media proxy",
+      "status": "implemented",
+      "surface": "GET /api/media/instagram/{content_id}",
+      "evidence": "scope, root confinement, size and SHA-256 tests"
+    },
+    {
+      "feature": "PNG export",
+      "status": "frontend_phase",
+      "surface": "Faz 8 Overview UI",
+      "evidence": "no additional backend mutation or endpoint required"
+    }
+  ]
+}

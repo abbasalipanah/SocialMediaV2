@@ -1510,6 +1510,13 @@ Teslimatlar:
 
 Bu gate, V2'nin kod/ürün olarak tamamlandığını fakat henüz canlı çalışmadığını ifade eder. Production aktivasyonu bu gate'in parçası değildir.
 
+> **Durum düzeltmesi — 2026-07-17:** Bu bölüm bir gate tanımıdır; mevcut repository için
+> verilmiş geçerli bir `RELEASE_CANDIDATE_COMPLETE` beyanı değildir. 2026-07-14 Faz 7 ve Faz 8
+> raporlarındaki frontend parity kapanışı, gerçek Performance Marketing shell'i ve Accumulate
+> aktif Social render zinciriyle eşleşmediği için supersede edilmiştir. Local parity düzeltmesi
+> uygulanmıştır; global gate ancak güncel source baseline/immutability kontrolü ve tüm canonical
+> kalite turu yeniden yeşil olduğunda ayrıca verilebilir.
+
 - Faz 0–9 tamamdır.
 - V1; production social DB/media için cronjob, timer, orchestrator, API mutation, manual CLI, backfill ve bütün data write işlerinin tek sahibidir.
 - V1 service/timer state'ine dokunulmamıştır.

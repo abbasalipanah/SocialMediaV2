@@ -1,1 +1,0 @@
-// Canonical tiktok feature placeholder.

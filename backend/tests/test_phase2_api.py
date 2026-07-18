@@ -19,6 +19,23 @@ class MemoryStore:
         self.sessions: dict[str, dict[str, Any]] = {}
         self.nonces: set[str] = set()
         self.events: set[str] = set()
+        self.projections: dict[str, dict[str, Any]] = {
+            "v2:brand-shell:10": {
+                "active": True,
+                "brand_id": "10",
+                "name": "Example Brand",
+                "parent_brand_id": None,
+                "placeholder": False,
+            },
+            "v2:brand-access:1:10": {
+                "access_mode": "read",
+                "active": True,
+                "authority_source": "full_snapshot",
+                "brand_id": "10",
+                "role": "viewer",
+                "user_id": "1",
+            },
+        }
 
     def create_from_jti(
         self,
@@ -43,8 +60,15 @@ class MemoryStore:
             self.sessions[session_hash]["revoked"] = True
 
     def revoke_authority_sessions(self, *, user_id: str | None, brand_id: str | None) -> int:
-        del user_id, brand_id
-        return 0
+        count = 0
+        for payload in self.sessions.values():
+            if user_id and payload.get("user_id") != user_id:
+                continue
+            if brand_id and payload.get("brand_id") != brand_id:
+                continue
+            payload["revoked"] = True
+            count += 1
+        return count
 
     def apply_event(self, **values: Any) -> str:
         if values["nonce_hash"] in self.nonces:
@@ -53,11 +77,36 @@ class MemoryStore:
         if values["event_id"] in self.events:
             return "duplicate_ignored"
         self.events.add(values["event_id"])
+        self.projections[values["entity_key"]] = dict(values["payload"])
+        for projection_write in values.get("projection_writes", ()):
+            if projection_write.insert_only and projection_write.projection_key in self.projections:
+                continue
+            self.projections[projection_write.projection_key] = {
+                **projection_write.payload,
+                "version": values["version"],
+            }
+        replacement = values.get("replacement")
+        if replacement is not None:
+            desired_keys = {write.projection_key for write in replacement.writes}
+            for key, projection in self.projections.items():
+                if key.startswith(replacement.projection_key_prefix) and key not in desired_keys:
+                    projection.update({"active": False, "version": replacement.version})
+            for projection_write in replacement.writes:
+                self.projections[projection_write.projection_key] = {
+                    **projection_write.payload,
+                    "version": replacement.version,
+                }
         return "applied"
 
     def get_projection(self, entity_key: str) -> Mapping[str, Any] | None:
-        del entity_key
-        return None
+        return self.projections.get(entity_key)
+
+    def list_projections(self, projection_key_prefix: str) -> list[Mapping[str, Any]]:
+        return [
+            projection
+            for key, projection in sorted(self.projections.items())
+            if key.startswith(projection_key_prefix)
+        ]
 
 
 def sso_token(secret: str) -> str:
@@ -117,8 +166,23 @@ async def test_sso_session_logout_and_provisioning_routes(monkeypatch: pytest.Mo
         assert "SameSite=lax" in consumed.headers["set-cookie"]
         me = await client.get("/api/auth/me")
         assert me.json()["user_id"] == "1"
+        assert me.json()["email"] == "user@example.test"
+        assert me.json()["source_system"] == "accumulate"
         assert me.headers["cache-control"] == "no-store"
         assert me.headers["referrer-policy"] == "no-referrer"
+        workspace = await client.get("/api/workspace/brands", params={"selected_brand_id": "10"})
+        assert workspace.status_code == 200
+        assert workspace.json()["scope"] == {
+            "requested_brand_id": "10",
+            "resolved_brand_ids": ["10"],
+            "rollup": False,
+        }
+        assert workspace.headers["cache-control"] == "no-store"
+        assert (
+            await client.get(
+                "/api/workspace/brands", params={"selected_brand_id": "other"}
+            )
+        ).status_code == 403
 
         event = json.dumps(
             {
@@ -155,6 +219,37 @@ async def test_sso_session_logout_and_provisioning_routes(monkeypatch: pytest.Mo
             },
         )
         assert replayed.status_code == 409
+
+        revoked_event = json.dumps(
+            {
+                "event_id": "e2",
+                "event_type": "brand.app_access.changed",
+                "entity_id": "10",
+                "version": 2,
+                "payload": {"status": "disabled"},
+            },
+            separators=(",", ":"),
+        ).encode()
+        revoked_nonce = "api-revoke-nonce"
+        revoked_signature = sign_request(
+            hmac_secret,
+            "POST",
+            "/internal/provisioning/events",
+            timestamp,
+            revoked_nonce,
+            revoked_event,
+        )
+        revoked = await client.post(
+            "/internal/provisioning/events",
+            content=revoked_event,
+            headers={
+                "X-Accumulate-Timestamp": timestamp,
+                "X-Accumulate-Nonce": revoked_nonce,
+                "X-Accumulate-Signature": revoked_signature,
+            },
+        )
+        assert revoked.json() == {"status": "applied"}
+        assert (await client.get("/api/auth/me")).status_code == 401
         assert (await client.post("/api/auth/logout")).status_code == 403
         assert (
             await client.post("/api/auth/logout", headers={"Origin": "http://test"})

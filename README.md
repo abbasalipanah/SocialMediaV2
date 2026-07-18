@@ -6,22 +6,40 @@ developed under the safety and migration rules in
 
 ## Current status
 
-- Phase 0: immutable source baselines and downstream-only write guard complete.
-- Phase 1: fail-closed backend/frontend bootstrap complete.
-- Phase 2: SSO, local session and signed provisioning implementation complete; final source
-  immutability certification is tracked in
-  [`docs/fase2/Faz2_SSO_Provisioning_Report.md`](docs/fase2/Faz2_SSO_Provisioning_Report.md).
+- Historical Phase 0–9 reports exist, but the repository must not currently be represented as
+  `RELEASE_CANDIDATE_COMPLETE`. The status correction is recorded in the master plan and the
+  Phase 7/8 reports.
+- On 2026-07-17 the frontend shell was realigned to the Performance Marketing reference and the
+  Social overview/platform surfaces were rebuilt from Accumulate's active Social render chain.
+- The local frontend candidate passes strict TypeScript, production build and `17` Vitest tests;
+  desktop, full-page and mobile browser smoke checks are green.
+- The full canonical release gate still requires a refreshed immutable-source baseline check and
+  complete quality rerun.
 - Production DB access, provider activation, workers and schedules remain disabled.
 
 ## Verification
 
-Local certification uses a disposable PostgreSQL container and also verifies the three
-read-only source repositories:
+Frontend parity verification:
 
 ```bash
-./scripts/quality/fase2_contract_check.sh
+cd frontend
+npm test -- --run
+npm run build
 ```
 
-GitHub Actions runs the self-contained downstream checks through
-`./scripts/quality/ci_check.sh` with hash-locked Python dependencies, a PostgreSQL 16 service,
-clean npm installation, production builds and artifact vocabulary scanning.
+The full certification path remains `./scripts/quality/ci_check.sh`; it also checks the
+read-only source baselines, backend, artifacts and vocabulary. A baseline mismatch is a release
+blocker, not a reason to skip the guard.
+
+## Local product demo
+
+Run the frontend and its loopback-only demo backend together from the repository root:
+
+```bash
+./scripts/dev/start_local.sh
+```
+
+Then open `http://127.0.0.1:3010/`. The explicit local demo mode creates an in-memory session,
+Brand hierarchy, linked social accounts and reporting rows. It does not use a production
+database, external identity handoff, provider credentials or provider network calls. Stop both
+processes with `Ctrl+C`.

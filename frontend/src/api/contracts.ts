@@ -1,0 +1,407 @@
+import { z } from "zod";
+
+import type { components } from "./openapi.generated";
+
+export const platformSchema = z.enum(["facebook", "instagram", "tiktok"]);
+export type Platform = z.infer<typeof platformSchema>;
+
+export const authUserSchema = z.object({
+  authenticated: z.literal(true),
+  user_id: z.string(),
+  email: z.string().email().nullable(),
+  source_system: z.literal("accumulate").nullable(),
+  brand_id: z.string(),
+  role: z.string(),
+  access_mode: z.enum(["read", "write"]),
+  settings_visible: z.boolean(),
+  is_internal_staff: z.boolean(),
+  expires_at: z.string(),
+  revoked: z.literal(false),
+});
+export type AuthUser = z.infer<typeof authUserSchema> & components["schemas"]["AuthMeResponse"];
+
+export const brandScopeSchema = z.object({
+  requested_brand_id: z.string(),
+  rollup: z.boolean(),
+  resolved_brand_ids: z.array(z.string()),
+});
+
+export const workspaceBrandSchema = z.object({
+  brand_id: z.string(),
+  name: z.string().nullable(),
+  parent_brand_id: z.string().nullable(),
+  visibility: z.enum(["active", "hidden_parent"]),
+  access_mode: z.enum(["read", "write"]).nullable(),
+  role: z.string().nullable(),
+});
+export type WorkspaceBrand = z.infer<typeof workspaceBrandSchema>;
+
+export const brandWorkspaceSchema = z.object({
+  default_brand_id: z.string(),
+  brands: z.array(workspaceBrandSchema),
+  families: z.array(
+    z.object({
+      root_brand_id: z.string(),
+      brand_ids: z.array(z.string()),
+    }),
+  ),
+  scope: brandScopeSchema,
+});
+export type BrandWorkspace = z.infer<typeof brandWorkspaceSchema> &
+  components["schemas"]["BrandWorkspace"];
+
+export const capabilityStatusSchema = z.enum([
+  "unsupported",
+  "not_approved",
+  "not_configured",
+  "blocked_configuration",
+  "manual_activation_required",
+  "partial",
+  "available",
+]);
+export const capabilitySchema = z.enum(["profile", "content", "comments", "audience"]);
+
+export const workspaceCapabilitiesSchema = z.object({
+  scope: brandScopeSchema,
+  platforms: z.array(
+    z.object({
+      platform: platformSchema,
+      capabilities: z.array(
+        z.object({
+          platform: platformSchema,
+          capability: capabilitySchema,
+          status: capabilityStatusSchema,
+          reason: z.string(),
+        }),
+      ),
+      linked_account_count: z.number().int().nonnegative(),
+      navigation_available: z.boolean(),
+    }),
+  ),
+  permissions: z.object({
+    settings_visible: z.boolean(),
+    internal_audit_visible: z.boolean(),
+    rollup_available: z.boolean(),
+    operation_mutation_available: z.boolean(),
+  }),
+  runtime: z.object({
+    mode: z.enum([
+      "development",
+      "dormant",
+      "cutover_read_only",
+      "cutover_credential_migration",
+      "cutover_canary",
+      "cutover_control_plane_drain",
+      "cutover_activation",
+      "active",
+    ]),
+    writes_enabled: z.boolean(),
+    automated_schedule_available: z.boolean(),
+  }),
+});
+export type WorkspaceCapabilities = z.infer<typeof workspaceCapabilitiesSchema> &
+  components["schemas"]["WorkspaceCapabilitiesResponse"];
+
+export const reportingAccountSchema = z.object({
+  account_id: z.number().int(),
+  brand_id: z.string(),
+  platform: platformSchema,
+  external_id: z.string(),
+  display_name: z.string(),
+  status: z.string(),
+  connection_state: z.string(),
+  health_status: z.string(),
+  backfill_status: z.string(),
+  nightly_enabled: z.boolean(),
+  last_synced_at: z.string().nullable(),
+});
+export type ReportingAccount = z.infer<typeof reportingAccountSchema> &
+  components["schemas"]["ReportingAccount"];
+
+export const platformAccountsSchema = z.object({
+  meta: brandScopeSchema,
+  platform: platformSchema,
+  accounts: z.array(reportingAccountSchema),
+});
+
+export const metricIdSchema = z.enum([
+  "followers",
+  "following",
+  "new_followers",
+  "reach",
+  "reach_paid",
+  "reach_organic",
+  "views",
+  "views_paid",
+  "views_organic",
+  "interactions",
+  "page_views",
+  "profile_views",
+  "website_clicks",
+  "total_actions",
+  "reactions",
+  "media_count",
+  "video_views_total",
+  "video_views_change",
+  "video_likes_total",
+  "video_comments_total",
+  "video_shares_total",
+  "video_engagements_total",
+  "video_engagement_rate",
+]);
+export type MetricId = z.infer<typeof metricIdSchema>;
+
+export const dataStatusSchema = z.enum(["available", "partial", "unavailable"]);
+export type DataStatus = z.infer<typeof dataStatusSchema>;
+
+const dashboardMetaSchema = z.object({
+  dashboard_id: z.string(),
+  platform: platformSchema.nullable(),
+  requested_brand_id: z.string(),
+  rollup: z.boolean(),
+  resolved_brand_ids: z.array(z.string()),
+  resolved_account_ids: z.array(z.number().int()),
+  date_range: z.object({
+    start_on: z.string(),
+    end_on: z.string(),
+    key: z.string(),
+  }),
+  generated_at: z.string(),
+  last_sync_at: z.string().nullable(),
+  freshness: z.enum(["fresh", "stale", "outdated", "never_synced"]),
+  observed_days: z.number().int().nonnegative(),
+  expected_days: z.number().int().positive(),
+  data_status: dataStatusSchema,
+  warnings: z.array(z.string()),
+});
+
+export const dashboardMetricSchema = z.object({
+  metric_id: metricIdSchema,
+  value: z.number().nullable(),
+  previous_value: z.number().nullable(),
+  delta_pct: z.number().nullable(),
+  semantic_type: z.enum(["snapshot", "flow", "cumulative", "ratio"]),
+  unit: z.enum(["count", "ratio"]),
+  data_status: dataStatusSchema,
+});
+export type DashboardMetric = z.infer<typeof dashboardMetricSchema>;
+
+const dashboardSeriesSchema = z.object({
+  metric_id: metricIdSchema,
+  semantic_type: z.enum(["snapshot", "flow", "cumulative", "ratio"]),
+  points: z.array(z.object({ observed_on: z.string(), value: z.number() })),
+});
+export type DashboardSeries = z.infer<typeof dashboardSeriesSchema>;
+
+const dashboardBreakdownSchema = z.object({
+  metric_id: metricIdSchema,
+  dimension: z.string(),
+  items: z.array(
+    z.object({
+      key: z.string(),
+      value: z.number(),
+      percentage: z.number().nullable(),
+    }),
+  ),
+});
+export type DashboardBreakdown = z.infer<typeof dashboardBreakdownSchema>;
+
+export const dashboardContentSchema = z.object({
+  account_id: z.number().int(),
+  external_content_id: z.string(),
+  content_type: z.string(),
+  permalink: z.string(),
+  message: z.string(),
+  media_url: z.string(),
+  published_at: z.string().nullable(),
+  likes_count: z.number().int(),
+  comments_count: z.number().int(),
+  shares_count: z.number().int(),
+  interactions: z.number().int(),
+});
+export type DashboardContent = z.infer<typeof dashboardContentSchema>;
+
+const communitySchema = z.object({
+  total_comments: z.number().int().nonnegative(),
+  answered_comments: z.number().int().nonnegative(),
+  unanswered_comments: z.number().int().nonnegative(),
+  comment_likes: z.number().int().nonnegative(),
+  data_status: dataStatusSchema,
+});
+
+export const platformDashboardSchema = z.object({
+  meta: dashboardMetaSchema,
+  metrics: z.array(dashboardMetricSchema),
+  series: z.array(dashboardSeriesSchema),
+  breakdowns: z.array(dashboardBreakdownSchema),
+  content: z.array(dashboardContentSchema),
+  community: communitySchema,
+});
+export type PlatformDashboard = z.infer<typeof platformDashboardSchema> &
+  components["schemas"]["PlatformDashboard"];
+
+export const overviewDashboardSchema = z.object({
+  meta: dashboardMetaSchema,
+  metrics: z.array(dashboardMetricSchema),
+  platforms: z.array(platformDashboardSchema),
+  content: z.array(dashboardContentSchema),
+  community: communitySchema,
+});
+export type OverviewDashboard = z.infer<typeof overviewDashboardSchema> &
+  components["schemas"]["OverviewDashboard"];
+
+const settingsBrandSchema = z.object({
+  brand_id: z.string(),
+  name: z.string().nullable(),
+  parent_brand_id: z.string().nullable(),
+  visibility: z.string(),
+  access_mode: z.string().nullable(),
+  role: z.string().nullable(),
+  linked_account_count: z.number().int().nonnegative(),
+  last_sync_at: z.string().nullable(),
+});
+export type SettingsBrand = z.infer<typeof settingsBrandSchema>;
+
+export const settingsBrandsSchema = z.object({
+  meta: brandScopeSchema,
+  items: z.array(settingsBrandSchema),
+});
+export type SettingsBrands = z.infer<typeof settingsBrandsSchema>;
+
+export const socialAccountsSchema = z.object({
+  meta: brandScopeSchema,
+  items: z.array(reportingAccountSchema),
+});
+export type SocialAccounts = z.infer<typeof socialAccountsSchema>;
+
+const brandLinkSchema = z.object({
+  brand_id: z.string(),
+  platform: platformSchema,
+  account_id: z.number().int(),
+  external_id: z.string(),
+  display_name: z.string(),
+  link_status: z.string(),
+});
+export type BrandLink = z.infer<typeof brandLinkSchema>;
+
+export const brandLinksSchema = z.object({
+  meta: brandScopeSchema,
+  items: z.array(brandLinkSchema),
+});
+export type BrandLinks = z.infer<typeof brandLinksSchema>;
+
+const connectionSchema = z.object({
+  connection_id: z.number().int(),
+  brand_id: z.string(),
+  platform: platformSchema,
+  state: z.string(),
+  expires_at: z.string().nullable(),
+  projected_at: z.string().nullable(),
+});
+export type ReportingConnection = z.infer<typeof connectionSchema>;
+
+export const connectionsSchema = z.object({
+  meta: brandScopeSchema,
+  items: z.array(connectionSchema),
+});
+export type ReportingConnections = z.infer<typeof connectionsSchema>;
+
+const syncJobSchema = z.object({
+  job_id: z.number().int(),
+  brand_id: z.string(),
+  account_id: z.number().int().nullable(),
+  platform: platformSchema,
+  stage: z.string(),
+  status: z.string(),
+  scheduled_for: z.string(),
+  started_at: z.string().nullable(),
+  finished_at: z.string().nullable(),
+  error_code: z.string().nullable(),
+});
+export type ReportingSyncJob = z.infer<typeof syncJobSchema>;
+
+export const syncJobsSchema = z.object({
+  meta: brandScopeSchema,
+  items: z.array(syncJobSchema),
+});
+export type ReportingSyncJobs = z.infer<typeof syncJobsSchema>;
+
+const insightSchema = z.object({
+  insight_id: z.number().int(),
+  brand_id: z.string(),
+  status: z.string(),
+  date_from: z.string().nullable(),
+  date_to: z.string().nullable(),
+  summary: z.string().nullable(),
+  recommendations: z.string().nullable(),
+  created_at: z.string(),
+  completed_at: z.string().nullable(),
+});
+export type ReportingInsight = z.infer<typeof insightSchema>;
+
+export const insightsSchema = z.object({
+  meta: brandScopeSchema,
+  items: z.array(insightSchema),
+});
+
+export const readinessSchema = z.object({
+  status: z.string(),
+  runtime_mode: z.string(),
+  writes_enabled: z.boolean(),
+  database_configured: z.boolean(),
+  scope: brandScopeSchema.nullable().optional(),
+  platforms: z
+    .array(
+      z.object({
+        platform: platformSchema,
+        account_count: z.number().int().nonnegative(),
+        last_sync_at: z.string().nullable(),
+        pending_job_count: z.number().int().nonnegative(),
+      }),
+    )
+    .default([]),
+});
+export type OperationsReadiness = z.infer<typeof readinessSchema>;
+
+export const auditSchema = z.object({
+  meta: brandScopeSchema,
+  status: z.string(),
+  reason: z.string(),
+  items: z.array(z.unknown()),
+});
+export type ReportingAudit = z.infer<typeof auditSchema>;
+
+export const tiktokConnectionSchema = z.object({
+  meta: brandScopeSchema,
+  state: z.string(),
+  connection: connectionSchema.nullable(),
+  capabilities: z.array(
+    z.object({
+      platform: platformSchema,
+      capability: capabilitySchema,
+      status: capabilityStatusSchema,
+      reason: z.string(),
+    }),
+  ),
+  checked_at: z.string(),
+});
+export type TikTokConnection = z.infer<typeof tiktokConnectionSchema>;
+
+export const tiktokActivationReadinessSchema = z.object({
+  handoff_ready: z.literal(true),
+  brand_id: z.string(),
+  launch_target: z.literal("tiktok_owner_activation"),
+  fresh_until: z.string(),
+  runtime_mode: z.string(),
+  writes_enabled: z.boolean(),
+  connection_state: z.string(),
+  oauth_start_available: z.boolean(),
+  reason: z.string(),
+  checked_at: z.string(),
+});
+export type TikTokActivationReadiness = z.infer<typeof tiktokActivationReadinessSchema> &
+  components["schemas"]["TikTokActivationReadinessResponse"];
+
+export const apiProblemSchema = z.object({
+  detail: z.unknown().optional(),
+});

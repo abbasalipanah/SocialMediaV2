@@ -5,7 +5,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Cookie, HTTPException, Query, Request, Response
 from fastapi.responses import RedirectResponse
 
+from app.api.contracts import AuthMeResponse
 from app.application.ports import AuthorityStore
+from app.application.services.authority import session_has_current_brand_access
 from app.application.services.sso import SsoError, consume_sso, resolve_session
 from app.core import AppSettings, Boundary, WritePolicy, mark_boundary
 from app.core.security import sha256_text
@@ -52,14 +54,25 @@ def create_auth_router(
         response.headers["Referrer-Policy"] = "no-referrer"
         return response
 
-    @router.get("/api/auth/me")
+    @router.get("/api/auth/me", response_model=AuthMeResponse)
     @mark_boundary(Boundary.QUERY)
     async def auth_me(
         session: str | None = Cookie(default=None, alias=COOKIE_NAME),
     ) -> dict[str, object]:
         if store is None or not session or not (payload := resolve_session(session, store)):
             raise HTTPException(401, "session_invalid")
-        return {"authenticated": True, **payload}
+        if not session_has_current_brand_access(
+            store=store,
+            user_id=str(payload.get("user_id") or ""),
+            brand_id=str(payload.get("brand_id") or ""),
+        ):
+            raise HTTPException(401, "session_authority_revoked")
+        return {
+            "authenticated": True,
+            "email": payload.get("email"),
+            "source_system": payload.get("source_system"),
+            **payload,
+        }
 
     @router.post("/api/auth/logout", status_code=204)
     @mark_boundary(Boundary.COMMAND)

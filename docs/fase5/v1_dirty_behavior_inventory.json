@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "captured_source_head": "e69fc5c7e0f1648f1f8215aa98915c48f53943e0",
+  "tracked_diff_sha256": "ec9c8c6c6f1bb50f16c523fd056e579bbfec76cea25a4e8be8950ba7537a5726",
+  "source_file_count": 10,
+  "policy": "behavioral-equivalent-only; no raw patch or source copy",
+  "equivalents": [
+    {
+      "behavior": "cover persistence resolves the durable account and Brand scope",
+      "v2_surface": "CollectionTarget + ContentMediaWriter + LegacyMediaStore scope assertion",
+      "evidence": "test_phase5_persistence_differential.py; test_phase5_recovery_contracts.py"
+    },
+    {
+      "behavior": "newly linked accounts start with the 30-day historical window",
+      "v2_surface": "initial_backfill_window",
+      "evidence": "test_dirty_backfill_windows_stale_recovery_and_rate_defer"
+    },
+    {
+      "behavior": "the 90-day stage covers only the remaining 60 days after the first stage",
+      "v2_surface": "remaining_backfill_window",
+      "evidence": "test_dirty_backfill_windows_stale_recovery_and_rate_defer"
+    },
+    {
+      "behavior": "readiness no longer reports a seven-day state and begins at 30d loading",
+      "v2_surface": "backfill_readiness",
+      "evidence": "test_dirty_backfill_windows_stale_recovery_and_rate_defer"
+    },
+    {
+      "behavior": "first Instagram follower snapshot triggers deterministic history reconstruction",
+      "v2_surface": "follower_series",
+      "evidence": "test_first_follower_snapshot_history_repair_and_rolling_window"
+    },
+    {
+      "behavior": "legacy follower-write toggle checksum branch is absent",
+      "v2_surface": "catalog-validated MetricStore mutation behind the central WritePolicy",
+      "evidence": "test_partial_profile_does_not_write_synthetic_zero; Phase 4 write-policy tests"
+    },
+    {
+      "behavior": "Settings assignment creates the initial 30-day stage",
+      "v2_surface": "initial_backfill_window shared domain contract",
+      "evidence": "test_dirty_backfill_windows_stale_recovery_and_rate_defer"
+    }
+  ]
+}

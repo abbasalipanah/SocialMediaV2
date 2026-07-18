@@ -1,5 +1,17 @@
 # Social Media V2 Downstream Handoff Log
 
+## Güncel durum — 2026-07-14
+
+- Faz 0–9: **KAPALI, sertifikasyon kapıları yeşil**.
+- Son canonical doğrulama: `./scripts/quality/fase9_offline_release_check.sh`.
+- Faz 9 sonucu: migration-built PostgreSQL fingerprint eşleşti; full backend `121 passed`,
+  hedefli rehearsal `5 passed`, Faz 8 backend regression `15 passed`, frontend `13 passed`,
+  Chromium `8 passed` (`4` intentional skip) ve npm audit `0 vulnerabilities`.
+- **V2 Release Candidate Complete** gate'i kapandı; bu production aktivasyonu değildir.
+- V2 hâlâ dormant; production DB/provider/traffic/schedule, source-project write ve Git push yoktur.
+- Sonraki production/cutover adımı yalnız ayrı açık kullanıcı onayıyla başlayabilir.
+- Ayrıntı: `docs/fase9/Faz9_Offline_Release_Rehearsal_Report.md`.
+
 ## Hedef ve bağlam
 
 - Proje: `/home/api/colab_scripts/SocialMediadownstream`
@@ -195,7 +207,7 @@ Teslimatlar:
 
 ### Faz 8 — Social sayfalar ve Settings
 
-Status: **BEKLİYOR**
+Status: **KAPALI — canonical sertifikasyon yeşil**
 
 Teslimatlar:
 
@@ -209,7 +221,7 @@ Teslimatlar:
 
 ### Faz 9 — Offline release rehearsal
 
-Status: **BEKLİYOR**
+Status: **KAPALI — canonical sertifikasyon yeşil**
 
 Teslimatlar:
 
@@ -224,7 +236,7 @@ Teslimatlar:
 
 ### V2 Release Candidate Complete gate
 
-Status: **BEKLİYOR**
+Status: **TAMAMLANDI — production hâlâ dormant**
 
 Tanım:
 
@@ -483,3 +495,216 @@ Canonical ayrıntı ve blokaj kanıtı:
 `docs/fase2/Faz2_SSO_Provisioning_Report.md`.
 
 Faz 3, source state hakkında açık karar verilip full Faz 2 sertifikası geçmeden başlamaz.
+
+## Authoritative durum güncellemesi — 2026-07-14 / Schema compatibility düzeltmesi
+
+Bu bölüm önceki Faz 2 kapanış adayındaki PostgreSQL adapter kanıtını düzeltir.
+
+### Faz 2 — UYGULAMA DÜZELTİLDİ / EXIT GATE BLOKE
+
+- İlk PostgreSQL test fixture'ının gerçek V1 `social_projection_state` şemasını temsil etmediği
+  tespit edildi: fixture `payload` ve `expires_at` kolonlarını üretirken mevcut şema
+  `payload_json` kullanır ve ayrı expiry kolonu içermez.
+- Adapter mevcut `payload_json` kolonuna geçirildi; TTL typed payload içinde tutuldu ve yeni DDL
+  ihtiyacı kaldırıldı.
+- Fixture, V1 kolon/default/key sözleşmesiyle değiştirildi; gerçek kolon kopyasındaki önceki
+  `UndefinedColumn` hatası giderildi.
+- `projection_key varchar(255)` sınırı event/entity parserında fail-closed uygulanıp negatif
+  testlerle doğrulandı.
+- Disposable PostgreSQL ile backend `36 passed`; Ruff, wheel, frontend clean build, vocabulary
+  scan ve `git diff --check` yeşildir.
+- Source guard hâlâ kırmızıdır: `performance_marketing` HEAD'i baseline'daki `7d79116...`
+  değerinden `9d93374...` değerine ilerlemiş, content file count `398` yerine `418` olmuştur ve
+  yeni untracked CSV bulunmaktadır.
+
+Faz 2 ancak güncel external source state için açık kullanıcı kararı, gerekiyorsa onaylı baseline
+yenileme ve tek koşuda yeşil full certification sonrasında kapatılabilir. Faz 3 başlamamıştır.
+
+## Authoritative durum güncellemesi — 2026-07-14 / Faz 2 kapanışı
+
+### Faz 2 — KAPALI
+
+- Kullanıcı güncel `performance_marketing` HEAD ve untracked inventory'sini beklenen source state
+  olarak açıkça onayladı.
+- Faz 0 v2 baseline acknowledgement ile yenilendi; source projelere write yapılmadı.
+- `scripts/quality/fase2_contract_check.sh` tek koşuda tamamen geçti.
+- Başlangıç ve final source guard adımları yeşildir.
+- Faz 1 certification yeniden geçti.
+- Disposable PostgreSQL suite sonucu `36 passed` oldu.
+- Schema-compatible `payload_json` adapterı, SSO/session, HMAC provisioning, replay/version
+  ordering ve session revoke teslimatları Faz 2 gate'ini karşılamaktadır.
+
+### Faz 3 — AKTİF
+
+İzinli sıradaki kapsam parent/child authority projection'dır: Brand shell/access projection,
+full snapshot semantiği, parent/child/hidden-parent model, brand-family API ve cross-brand
+authorization testleri. Faz 4 çalışması Faz 3 çıkış kapısı yeşil olmadan başlamaz.
+
+## Authoritative durum güncellemesi — 2026-07-14 / Faz 3 kapanışı
+
+### Faz 3 — KAPALI
+
+- Typed Brand shell ve user–Brand access projection'ları tamamlandı.
+- Full snapshot atomic replacement, empty snapshot ve stale version davranışı gerçek PostgreSQL
+  üzerinde doğrulandı.
+- Hidden parent yalnız rollup shell'i olarak modellendi; mevcut gerçek shell placeholder ile
+  overwrite edilmez.
+- Parent rollup yalnız izinli active descendant'ları içerir; unrelated Brand/sibling scope'a
+  sızmaz.
+- Incremental membership, entitlement + app access olmadan erişim açamaz.
+- Concrete mutation write access ister; read-only veya rollup mutation fail-closed olur.
+- `/api/workspace/brands` ve session current-authority doğrulaması eklendi.
+- `scripts/quality/fase3_authority_check.sh`: full suite `44 passed`, targeted suite `20 passed`,
+  source guards ve bütün build/artifact kontrolleri yeşil.
+
+Canonical kanıt: `docs/fase3/Faz3_Authority_Projection_Report.md`.
+
+### Faz 4 — SIRADAKİ
+
+İzinli sıradaki kapsam backend bağımsızlaştırmadır: küçük platform capability portları, local
+Meta/TikTok adapter sınırları, schema-compatible persistence, TokenVault/CredentialStore,
+CheckpointStore, metric semantic catalog, explicit model registry ve dormant worker config.
+
+## Authoritative durum güncellemesi — 2026-07-14 / Faz 5 kapanışı
+
+### Faz 4 — KAPALI
+
+- Backend bağımsızlaştırma `510a98e` local checkpoint commit'i ile donduruldu.
+- Faz 4 canonical raporu ve certification sonucu geçerlidir.
+
+### Faz 5 — KAPALI
+
+- Gerçek V1 Meta transport oracle'ı ve ayrı V2 candidate subprocess'i deterministic localhost
+  fake provider üzerinde aynı pagination ve `500 → 429 → 200` sequence'ini üretti.
+- Gerçek V1 `metrics_store` oracle'ı ile V2 persistence candidate iki ayrı disposable PostgreSQL
+  database üzerinde çalıştı; metric/content persistence exact karşılaştırıldı.
+- Facebook/Instagram profile, daily metrics, content, stories, comments, audience ve media
+  capability'leri küçük adapter ve collector servislerine ayrıldı.
+- Page-level durable checkpoint/replay, atomic media write, bounded retry/rate davranışı, D-1
+  coverage, 30d + kalan 60d backfill ve follower history sözleşmeleri test edildi.
+- TikTok Business Accounts v1.3 token/profile/video parser'ları, scope gate'i, exact callback ve
+  PostgreSQL üzerinde atomic single-use OAuth state tamamlandı.
+- SocialMedia source dirty davranışları hash-bound envanterle V2 karşılıklarına bağlandı; source
+  projeler değiştirilmedi.
+- `scripts/quality/fase5_collector_parity_check.sh`: full disposable PostgreSQL suite
+  `108 passed`, hedefli suite `35 passed`; Ruff, secret/vocabulary/source guard temiz.
+- Canonical differential sonucu request sequence, metric ID/value, status/summary,
+  content/comment/media row ve media SHA-256 için `0` farktır.
+
+Canonical kanıt: `docs/fase5/Faz5_Collector_Parity_Report.md`.
+
+### Faz 6 — AKTİF
+
+İzinli sıradaki kapsam Overview/Facebook/Instagram/TikTok dashboard servisleri, güvenli media
+proxy, yalnız üç platform için accounts/connections/sync/settings/insights API'leri, backend
+parent rollup ve response contract testleridir. Faz 7 frontend shell çalışması Faz 6 feature
+matrix çıkış kapısı yeşil olmadan başlamaz.
+
+## Authoritative durum güncellemesi — 2026-07-14 / Faz 6 kapanışı
+
+### Faz 5 — KAPALI
+
+- Collector parity `9648db7` local checkpoint commit'i ile donduruldu.
+- Faz 5 canonical raporu ve sıfır-difference sonucu geçerlidir.
+
+### Faz 6 — KAPALI
+
+- Overview, Facebook, Instagram ve TikTok dashboard servisleri typed response DTO'larıyla
+  tamamlandı.
+- Snapshot/flow/cumulative/ratio ve previous-period aggregation yalnız metric catalog
+  semantiğiyle yapılır; missing metric sahte `0` olmaz.
+- Parent Brand rollup yalnız authorized active child Brand/account kapsamını backend'de toplar;
+  arbitrary Brand ve account filter erişimi fail-closed olur.
+- Platform accounts, Settings Brands/Social Accounts/Brand Links/connections/sync-jobs,
+  readiness, stored insights ve workspace capabilities API'leri eklendi.
+- Instagram media proxy yalnız persisted local dosyayı root confinement, size ve SHA-256
+  doğrulamasından sonra servis eder; provider fallback veya GET-side persistence yoktur.
+- Sync/backfill/disconnect command route'ları same-origin + concrete write scope + merkezi
+  WritePolicy arkasında cutover öncesi fail-closed kalır.
+- Response modelleri OpenAPI component schema olarak yayınlanır; canonical platform enum exact
+  üçlü seti korunur.
+- Live feature matrix'te internal audit store dürüst `unavailable`, PNG export ise Faz 8 frontend
+  işi olarak işaretlendi; sahte veri/işlev üretilmedi.
+- `scripts/quality/fase6_dashboard_operations_check.sh`: full disposable PostgreSQL suite
+  `115 passed`, hedefli suite `19 passed`; Ruff, secret/vocabulary/source guard temiz.
+
+Canonical kanıt: `docs/fase6/Faz6_Dashboard_Operations_Report.md`.
+
+### Faz 7 — AKTİF
+
+İzinli sıradaki kapsam Performance-style responsive shell, sidebar/topbar, Brand/child/account
+selector'ları, SSO loading/login/logout, capability-driven navigation, gerçek routing ve Vite
+strict development port `3010`'dur. Faz 8 sosyal sayfa/Settings feature uygulaması Faz 7 shell
+çıkış kapısı yeşil olmadan başlamaz.
+
+## Authoritative durum güncellemesi — 2026-07-14 / Faz 7 kapanışı
+
+### Faz 6 — KAPALI
+
+- Dashboard/operations API kapanışı `e6bc35b` local checkpoint commit'i ile donduruldu.
+- Faz 6 canonical raporu ve disposable PostgreSQL kanıtı geçerlidir.
+
+### Faz 7 — KAPALI
+
+- React 19 + strict TypeScript shell; AuthProvider, BrandScopeProvider, TanStack Query ve gerçek
+  nested/lazy routing ile tamamlandı.
+- Performance-style desktop fixed sidebar ve `<1024px` mobile drawer/backdrop davranışı
+  reference kaynakları değiştirilmeden yeniden uygulandı.
+- Parent/child/all-child Brand scope ve platform-account selector'ları storage/reset/invalid
+  selection kurallarıyla tamamlandı; rollup frontend'de merge edilmez.
+- Navigation availability backend `linked_account_count + capability` cevabından gelir;
+  permission role string'inden türetilmez.
+- SSO loading/login/logout/profile ve accessible focus-trapped popover davranışı tamamlandı.
+- OpenAPI export → generated TypeScript → Zod runtime validation zinciri eklendi.
+- Vite development portu `3010` ve `strictPort=true`; PWA/service worker yok.
+- `scripts/quality/fase7_frontend_shell_check.sh`: Faz 6 PostgreSQL regression `115 passed`,
+  hedefli API suite `19 passed`, frontend `9 passed`, Playwright Chromium `4 passed`, build,
+  audit, secret/vocabulary/source guard temiz.
+
+Canonical kanıt: `docs/fase7/Faz7_Frontend_Shell_Report.md`.
+
+### Faz 8 — AKTİF
+
+İzinli sıradaki kapsam Overview, Facebook, Instagram (Stories aynı sayfa altında), TikTok,
+AI Insights/export, yalnız üç social platformlu table-first Settings/Brand Setup drawer,
+owner/fresh-SSO-gated TikTok activation, capability izinli audit/manual repair ve bütün
+loading/error/empty/partial state'leridir. Faz 9 offline release rehearsal çalışması Faz 8 ürün
+parity ve accessibility kapısı yeşil olmadan başlamaz.
+
+## Authoritative durum güncellemesi — 2026-07-14 / Faz 9 ve RC kapanışı
+
+### Faz 8 — KAPALI
+
+- Social sayfalar, Settings, owner handoff ve accessibility kapanışı `e3da54d` local checkpoint
+  commit'i ile donduruldu.
+- Faz 8 canonical ürün ve browser kanıtı geçerlidir.
+
+### Faz 9 — KAPALI
+
+- Immutable SocialMedia migration zinciri temporary kopyada PostgreSQL 16'ya uygulandı; head
+  `0009_tiktok_organic_oauth_config`, 23 tablo/259 kolon/79 constraint/81 index ve
+  `fe786adb32c556b572e316457b4c008e39883ae4b4510f738800179d4be9ab15` fingerprint eşleşti.
+- Fixture Accumulate outbox emitted/applied watermark `5`, full snapshot `S=4`, duplicate ack,
+  ordered drain/replay ve launch-order provası tamamlandı.
+- Owner akışı safe GET → 5 dakikalık fresh SSO + hashed JTI → same-origin explicit POST →
+  create+lease intent → one-time state → fake callback/exchange → exact scope gate → AES-GCM
+  credential → exact Brand link `pending_verification` zincirinde doğrulandı.
+- Invalid/replayed state provider exchange öncesi kapanır; callback sırasında access revoke veya
+  required scope eksiği token revoke/discard eder ve credential/link yazmaz.
+- Runtime'da live TikTok activation transport yoktur; default production assembly coordinator
+  enjekte etmez ve bütün TikTok gate'leri disabled kalır.
+- Dormant/static systemd, loopback-only dark Nginx, environment, cutover, rollback ve writer
+  inventory taslakları üretildi; hiçbir artifact kurulmadı veya çalıştırılmadı.
+- Accumulate final cutover patch'i review draft olarak üretildi; source projeye uygulanmadı.
+- `scripts/quality/fase9_offline_release_check.sh`: full backend `121 passed`, targeted rehearsal
+  `5 passed`, frontend `13 passed`, Chromium `8 passed` + `4` intentional skip, build 1878 module,
+  audit 0; secret/vocabulary/source guard temiz.
+
+Canonical kanıt: `docs/fase9/Faz9_Offline_Release_Rehearsal_Report.md`.
+
+### V2 Release Candidate Complete — TAMAMLANDI
+
+Faz 0–9 kapalıdır. V1 production social verisi ve media için tek writer olmaya devam eder. V2'nin
+production DB credential'ı, provider secret'ı, process'i, traffic route'u, mutation'ı, worker'ı,
+timer'ı veya schedule'ı yoktur. Writer Ownership Cutover, dark deployment ve owner TikTok
+aktivasyonu bu kapanışla otomatik yetkilendirilmez; her biri ayrı açık kullanıcı onayı gerektirir.

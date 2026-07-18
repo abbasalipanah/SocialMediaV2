@@ -1,1 +1,41 @@
-"""Canonical domain scaffold."""
+"""Sync domain contracts."""
+
+from .parity import (
+    AccountSelection,
+    BackfillJobState,
+    BackfillStage,
+    BackfillWindow,
+    CoverageOutcome,
+    FollowerSeries,
+    JobStatus,
+    SelectionSource,
+    backfill_readiness,
+    d1_coverage,
+    defer_rate_limited_job,
+    follower_series,
+    initial_backfill_window,
+    recover_stale_job,
+    remaining_backfill_window,
+    rolling_refresh_window,
+    select_collection_accounts,
+)
+
+__all__ = [
+    "AccountSelection",
+    "BackfillJobState",
+    "BackfillStage",
+    "BackfillWindow",
+    "CoverageOutcome",
+    "FollowerSeries",
+    "JobStatus",
+    "SelectionSource",
+    "backfill_readiness",
+    "d1_coverage",
+    "defer_rate_limited_job",
+    "follower_series",
+    "initial_backfill_window",
+    "recover_stale_job",
+    "remaining_backfill_window",
+    "rolling_refresh_window",
+    "select_collection_accounts",
+]

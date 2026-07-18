@@ -1,0 +1,60 @@
+{
+  "phase": 8,
+  "captured_at": "2026-07-14",
+  "sources_are_read_only": true,
+  "social_page_reference": {
+    "root": "/home/api/colab_scripts/Accumulate/frontend",
+    "inspected": [
+      "components/SocialMediaOverview.tsx",
+      "components/socialDashboard/dashboard/Header.tsx",
+      "components/socialDashboard/dashboard/KPIBand.tsx",
+      "components/socialDashboard/dashboard/PerformanceCharts.tsx",
+      "components/socialDashboard/dashboard/PlatformHealth.tsx",
+      "components/socialDashboard/dashboard/ContentIntelligence.tsx",
+      "components/socialDashboard/dashboard/CommunitySection.tsx",
+      "components/socialDashboard/dashboard/AudienceSection.tsx",
+      "components/socialDashboard/types.ts"
+    ],
+    "reapplied_behaviors": [
+      "dense KPI band",
+      "trend and status card hierarchy",
+      "platform health summary",
+      "content and community sections",
+      "audience breakdown presentation"
+    ],
+    "not_copied": [
+      "legacy dashboard monoliths",
+      "legacy platform sets",
+      "unsupported metric assumptions"
+    ]
+  },
+  "settings_reference": {
+    "root": "/home/api/colab_scripts/performance_marketing/frontend",
+    "inspected": [
+      "SettingsWorkspace.tsx",
+      "BrandSetupDrawer.tsx",
+      "BrandPlatformSyncModal.tsx",
+      "SyncModals.tsx",
+      "settingsShared.tsx"
+    ],
+    "reapplied_behaviors": [
+      "table-first workspace",
+      "sticky table headings",
+      "search, filter, sort and count toolbar",
+      "details and operation dialogs",
+      "four-step setup drawer",
+      "readiness and sync-state summaries"
+    ],
+    "not_copied": [
+      "paid-media fields and APIs",
+      "analytics and spend concepts",
+      "non-social platforms",
+      "source project code modules"
+    ]
+  },
+  "canonical_platforms": [
+    "facebook",
+    "instagram",
+    "tiktok"
+  ]
+}

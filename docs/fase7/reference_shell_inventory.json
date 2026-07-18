@@ -1,0 +1,29 @@
+{
+  "phase": 7,
+  "reference_project": "/home/api/colab_scripts/performance_marketing/frontend",
+  "reference_files_read": [
+    "src/App.tsx",
+    "src/layout/AppSidebar.tsx",
+    "src/layout/AppTopbar.tsx",
+    "src/styles.css",
+    "src/features/auth/authApi.ts"
+  ],
+  "behavior_reimplemented": [
+    "fixed desktop sidebar",
+    "mobile drawer and backdrop below 1024px",
+    "active and locked navigation rows",
+    "lower account navigation",
+    "parent, child and platform-account selectors",
+    "profile and SSO session surface"
+  ],
+  "intentionally_excluded": [
+    "paid-media platforms",
+    "Google Analytics",
+    "campaign state",
+    "currency and spend state",
+    "fake alerts and notification dots",
+    "local-password authentication"
+  ],
+  "source_project_modified": false,
+  "asset_copied": false
+}
