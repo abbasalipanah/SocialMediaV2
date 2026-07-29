@@ -43,4 +43,4 @@ export TEST_POSTGRES_URL="postgresql+psycopg://postgres:${PASSWORD}@127.0.0.1:${
 )
 
 "$ROOT/scripts/source_write_guard.sh"
-echo "OK: Faz 2 SSO/provisioning contract certification passed."
+echo "OK: Faz 2 SSO-only contract certification passed."

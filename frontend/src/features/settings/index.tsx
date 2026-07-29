@@ -10,8 +10,8 @@ import { SetupDrawer } from "./SetupDrawer";
 import { useSettingsData } from "./useSettingsData";
 
 const VIEWS: Array<{ id: SettingsView; label: string; hint: string }> = [
-  { id: "brands", label: "Brands", hint: "Accumulate Brands and social setup readiness" },
-  { id: "accounts", label: "Platform Accounts", hint: "Accounts projected from social connectors" },
+  { id: "brands", label: "Brands", hint: "SSO-authorized Brands and social setup readiness" },
+  { id: "accounts", label: "Platform Accounts", hint: "Accounts stored by Social Media" },
   { id: "links", label: "Mappings", hint: "Active Brand-to-account links" },
   { id: "sync", label: "Sync & Backfill", hint: "Sync history and backfill readiness" },
 ];

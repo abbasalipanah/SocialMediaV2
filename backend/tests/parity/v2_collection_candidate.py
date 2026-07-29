@@ -29,13 +29,13 @@ from app.core.write_policy import WritePolicy  # noqa: E402
 from app.domain.metrics import bootstrap_metric_catalog  # noqa: E402
 from app.domain.platforms import PlatformId  # noqa: E402
 from app.infrastructure.checkpoints import ProjectionCheckpointStore  # noqa: E402
-from app.infrastructure.persistence.legacy_socialmedia import (  # noqa: E402
-    LegacyCommentStore,
-    LegacyContentStore,
-    LegacyMediaStore,
-    LegacyMetricStore,
-)
 from app.infrastructure.persistence.media_files import AtomicMediaFiles  # noqa: E402
+from app.infrastructure.persistence.social_v2 import (  # noqa: E402
+    SocialCommentStore,
+    SocialContentStore,
+    SocialMediaStore,
+    SocialMetricStore,
+)
 from app.infrastructure.providers.meta.facebook.comments import (  # noqa: E402
     FacebookCommentsReader,
 )
@@ -95,19 +95,19 @@ def main() -> int:
     fb_profile = collect_profile(
         target=fb_target,
         reader=FacebookProfileReader(transport, clock=lambda: FIXED_NOW),
-        metric_store=LegacyMetricStore(engine, policy, bootstrap_metric_catalog()),
+        metric_store=SocialMetricStore(engine, policy, bootstrap_metric_catalog()),
     )
     media_writer = ContentMediaWriter(
         target=fb_target,
         files=AtomicMediaFiles(Path(os.environ["PARITY_MEDIA_ROOT"])),
-        media_store=LegacyMediaStore(engine, policy),
+        media_store=SocialMediaStore(engine, policy),
         fetch=_fetch,
         clock=lambda: FIXED_NOW,
     )
     fb_content = collect_content(
         target=fb_target,
         reader=FacebookContentReader(transport, clock=lambda: FIXED_NOW),
-        content_store=LegacyContentStore(engine, policy),
+        content_store=SocialContentStore(engine, policy),
         checkpoint_store=ProjectionCheckpointStore(engine, policy, clock=lambda: FIXED_NOW),
         record_sink=media_writer.persist,
     )
@@ -115,24 +115,24 @@ def main() -> int:
         target=fb_target,
         content_id="post-1",
         reader=FacebookCommentsReader(transport, clock=lambda: FIXED_NOW),
-        comment_store=LegacyCommentStore(engine, policy),
+        comment_store=SocialCommentStore(engine, policy),
     )
     ig_profile = collect_profile(
         target=ig_target,
         reader=InstagramProfileReader(transport, clock=lambda: FIXED_NOW),
-        metric_store=LegacyMetricStore(engine, policy, bootstrap_metric_catalog()),
+        metric_store=SocialMetricStore(engine, policy, bootstrap_metric_catalog()),
     )
     ig_media_writer = ContentMediaWriter(
         target=ig_target,
         files=AtomicMediaFiles(Path(os.environ["PARITY_MEDIA_ROOT"])),
-        media_store=LegacyMediaStore(engine, policy),
+        media_store=SocialMediaStore(engine, policy),
         fetch=_fetch,
         clock=lambda: FIXED_NOW,
     )
     ig_content = collect_content(
         target=ig_target,
         reader=InstagramContentReader(transport, clock=lambda: FIXED_NOW),
-        content_store=LegacyContentStore(engine, policy),
+        content_store=SocialContentStore(engine, policy),
         checkpoint_store=ProjectionCheckpointStore(engine, policy, clock=lambda: FIXED_NOW),
         record_sink=ig_media_writer.persist,
     )
@@ -143,7 +143,7 @@ def main() -> int:
             stories=True,
             clock=lambda: FIXED_NOW,
         ),
-        content_store=LegacyContentStore(engine, policy),
+        content_store=SocialContentStore(engine, policy),
         checkpoint_store=ProjectionCheckpointStore(engine, policy, clock=lambda: FIXED_NOW),
         record_sink=ig_media_writer.persist,
     )
@@ -151,7 +151,7 @@ def main() -> int:
         target=ig_target,
         content_id="ig-post-1",
         reader=InstagramCommentsReader(transport, clock=lambda: FIXED_NOW),
-        comment_store=LegacyCommentStore(engine, policy),
+        comment_store=SocialCommentStore(engine, policy),
     )
     transport.close()
     engine.dispose()

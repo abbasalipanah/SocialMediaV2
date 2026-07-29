@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sqlalchemy import MetaData, Table
 
-from app.infrastructure.persistence.legacy_socialmedia.models import (
+from app.infrastructure.persistence.social_v2.models import (
     REGISTERED_TABLES,
     metadata,
 )

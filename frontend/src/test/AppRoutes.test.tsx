@@ -309,7 +309,7 @@ describe("Phase 7 application shell", () => {
     expect(await screen.findByText("Instagram Business profiles, posts, reels, stories and audience reporting linked to the selected Brand.")).toBeInTheDocument();
     expect(screen.getAllByText("Connected").length).toBeGreaterThan(0);
     expect(screen.getAllByText("No account linked")).toHaveLength(2);
-    expect(screen.getByText("Managed through the Accumulate Meta connection")).toBeInTheDocument();
+    expect(screen.getAllByText("Brand-scoped Meta self-service").length).toBeGreaterThan(0);
 
     await user.type(screen.getByPlaceholderText("Search platforms or accounts"), "TikTok");
     expect(screen.getByText("TikTok Business account, video performance and audience capabilities with Brand-scoped self-service connection.")).toBeInTheDocument();

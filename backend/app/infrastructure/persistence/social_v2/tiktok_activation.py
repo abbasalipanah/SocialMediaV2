@@ -1,4 +1,4 @@
-"""Schema-compatible PostgreSQL intent and Brand-link persistence."""
+"""V2-owned PostgreSQL intent and Brand-link persistence."""
 
 from __future__ import annotations
 

@@ -39,7 +39,7 @@ def test_all_routes_have_explicit_boundary_semantics() -> None:
         ("/api/integrations/meta/self-service/readiness", ("GET",)),
         ("/api/integrations/tiktok/oauth/start", ("POST",)),
         ("/api/integrations/tiktok/self-service/readiness", ("GET",)),
-        ("/api/media/instagram/{content_id}", ("GET",)),
+        ("/api/media/{platform}/{content_id}", ("GET",)),
         ("/api/operations/backfill", ("POST",)),
         ("/api/operations/readiness", ("GET",)),
         ("/api/operations/sync", ("POST",)),
@@ -60,7 +60,6 @@ def test_all_routes_have_explicit_boundary_semantics() -> None:
         ("/api/social/meta/oauth/callback", ("GET",)),
         ("/api/workspace/brands", ("GET",)),
         ("/api/workspace/capabilities", ("GET",)),
-        ("/internal/provisioning/events", ("POST",)),
         ("/sso/consume", ("GET",)),
     }
     for route in routes:

@@ -354,11 +354,10 @@ def test_timeout_malformed_page_story_expiry_and_status_classification() -> None
     assert limited.exit_code == 75
 
 
-def test_worker_cli_lock_cadence_contracts_are_declared_but_not_scheduled() -> None:
+def test_worker_cli_lock_and_cadence_contracts_match_the_standalone_runtime() -> None:
     by_name = {contract.name: contract for contract in WORKER_CONTRACTS}
-    assert by_name["facebook_followers_hourly"].cadence == "hourly-at-minute-10"
-    assert by_name["instagram_followers_hourly"].cadence == "hourly-at-minute-05"
-    assert by_name["instagram_stories"].cadence == "hourly-at-minute-15"
-    assert by_name["social_backfill_jobs"].cadence == "minute-07-27-47"
+    assert by_name["standalone_social_collection"].cadence == "every-30-minutes"
+    assert by_name["tiktok_connection_verification"].cadence == "manual-only"
     assert all(contract.lock_busy_exit_code == 0 for contract in WORKER_CONTRACTS)
-    assert all("--brand-id" in contract.arguments for contract in WORKER_CONTRACTS)
+    assert "--brand-id" in by_name["standalone_social_collection"].arguments
+    assert "--connection-id" in by_name["tiktok_connection_verification"].arguments

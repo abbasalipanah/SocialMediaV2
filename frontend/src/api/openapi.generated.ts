@@ -225,15 +225,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/media/instagram/{content_id}": {
+    "/api/media/{platform}/{content_id}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Instagram Media */
-        get: operations["instagram_media_api_media_instagram__content_id__get"];
+        /** Social Media */
+        get: operations["social_media_api_media__platform___content_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -560,23 +560,6 @@ export interface paths {
         get: operations["workspace_capabilities_api_workspace_capabilities_get"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/internal/provisioning/events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Provisioning Event */
-        post: operations["provisioning_event_internal_provisioning_events_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1723,7 +1706,7 @@ export interface operations {
             };
         };
     };
-    instagram_media_api_media_instagram__content_id__get: {
+    social_media_api_media__platform___content_id__get: {
         parameters: {
             query?: {
                 brand_id?: string | null;
@@ -1732,6 +1715,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                platform: components["schemas"]["PlatformId"];
                 content_id: string;
             };
             cookie?: {
@@ -2418,41 +2402,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceCapabilitiesResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    provisioning_event_internal_provisioning_events_post: {
-        parameters: {
-            query?: never;
-            header: {
-                "X-Accumulate-Timestamp": string;
-                "X-Accumulate-Nonce": string;
-                "X-Accumulate-Signature": string;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: string;
-                    };
                 };
             };
             /** @description Validation Error */

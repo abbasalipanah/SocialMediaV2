@@ -71,7 +71,8 @@ META_REQUIRED_SCOPES = (
 )
 
 LOCAL_DB_HOSTS = {"127.0.0.1", "localhost", "::1", "postgres", "db"}
-PRODUCTION_DB_NAMES = {"socialmedia_adv"}
+BLOCKED_SOURCE_DB_NAMES = {"socialmedia_adv"}
+V2_DATABASE_PREFIX = "social_media_v2"
 PRODUCTION_LIKE_ENVS = {"production", "prod", "staging"}
 
 
@@ -192,6 +193,7 @@ class MetaConfig:
     token_url: str
     redirect_uri: str
     required_scopes: tuple[str, ...]
+    collection_enabled: bool = False
 
 
 @dataclass(frozen=True)
@@ -215,9 +217,9 @@ class AppSettings:
     vault_enabled: bool
     log_level: str
     sso_hs256_secret: str
-    provisioning_hmac_secret: str
     session_cookie_secure: bool
     media_storage_root: str
+    worker_schedule_enabled: bool
     tiktok: TikTokConfig
     tiktok_activation: TikTokActivationRuntimeConfig
     meta: MetaConfig
@@ -227,20 +229,27 @@ class AppSettings:
 def _validate_database(app_env: str, mode: RuntimeMode, writes: bool, db: DatabaseConfig) -> None:
     if db.port < 1 or db.port > 65535:
         raise ConfigurationError("SOCIAL_DB_PORT must be between 1 and 65535")
-    if app_env in PRODUCTION_LIKE_ENVS and db.configured:
-        raise ConfigurationError("Production-like bootstrap cannot receive a database connection")
-    if db.resolved_name in PRODUCTION_DB_NAMES:
+    if db.resolved_name in BLOCKED_SOURCE_DB_NAMES:
+        raise ConfigurationError("A live source-project database can never be used by V2")
+    production_like = app_env in PRODUCTION_LIKE_ENVS
+    if production_like and mode is RuntimeMode.ACTIVE:
+        if not db.url or not db.resolved_name.startswith(V2_DATABASE_PREFIX):
+            raise ConfigurationError("Active runtime requires a dedicated Social Media V2 database")
+        if not writes:
+            raise ConfigurationError("Active runtime requires local session and provider writes")
+        if db.resolved_host not in LOCAL_DB_HOSTS and not db.require_tls:
+            raise ConfigurationError("Remote production database connections require TLS")
+    if not production_like and db.configured and db.resolved_host not in LOCAL_DB_HOSTS:
         raise ConfigurationError(
-            "Production social database is blocked before the final cutover gate"
+            "Development may only use a local Social Media V2 database"
         )
-    if db.configured and db.resolved_host not in LOCAL_DB_HOSTS:
-        raise ConfigurationError(
-            "Only disposable local database hosts are allowed during bootstrap"
-        )
-    if writes and (app_env != "development" or mode is not RuntimeMode.DEVELOPMENT):
-        raise ConfigurationError("Writes may only be enabled in disposable development mode")
+    if writes and not (
+        (app_env == "development" and mode is RuntimeMode.DEVELOPMENT)
+        or (production_like and mode is RuntimeMode.ACTIVE)
+    ):
+        raise ConfigurationError("Writes require development mode or the active V2 runtime")
     if writes and not db.configured:
-        raise ConfigurationError("Development writes require an explicit disposable database")
+        raise ConfigurationError("Writes require an explicit V2 database")
 
 
 def _validate_tiktok(
@@ -250,6 +259,7 @@ def _validate_tiktok(
     writes: bool,
     db: DatabaseConfig,
     vault_enabled: bool,
+    production_like: bool,
 ) -> None:
     if config.provider_profile != TIKTOK_PROVIDER_PROFILE:
         raise ConfigurationError("TikTok provider profile does not match the canonical contract")
@@ -261,8 +271,22 @@ def _validate_tiktok(
         raise ConfigurationError(
             "TikTok OAuth mode must remain disabled while the account gate is off"
         )
-    if config.collection_enabled or config.advertiser_enabled:
-        raise ConfigurationError("TikTok collection and advertiser gates are not available")
+    if config.advertiser_enabled:
+        raise ConfigurationError("TikTok advertiser integration is not available")
+    _validate_public_endpoint(
+        config.redirect_uri,
+        expected_path="/api/social/tiktok/oauth/callback",
+        label="TikTok OAuth redirect URI",
+        production_like=production_like,
+    )
+    _validate_public_endpoint(
+        config.activation_link_base,
+        expected_path="/settings/tiktok/connect",
+        label="TikTok activation link",
+        production_like=production_like,
+    )
+    if _origin(config.redirect_uri) != _origin(config.activation_link_base):
+        raise ConfigurationError("TikTok callback and activation link must use the same origin")
     if config.required_scopes != TIKTOK_REQUIRED_SCOPES:
         raise ConfigurationError("TikTok required scope set differs from the canonical contract")
     if not set(config.optional_scopes).issubset(TIKTOK_OPTIONAL_SCOPES):
@@ -270,6 +294,8 @@ def _validate_tiktok(
     if not config.account_enabled:
         if activation.gate_enabled:
             raise ConfigurationError("TikTok activation gate requires the account gate")
+        if config.collection_enabled:
+            raise ConfigurationError("TikTok collection requires the account integration")
         return
     if config.oauth_mode != "manual_intent_only":
         raise ConfigurationError("TikTok account activation requires manual_intent_only mode")
@@ -297,6 +323,8 @@ def _validate_tiktok(
         raise ConfigurationError("TikTok credential keyring is not configured")
     if not set(activation.requested_optional_scopes).issubset(config.optional_scopes):
         raise ConfigurationError("TikTok requested optional scopes are not allowed")
+    if config.collection_enabled and not vault_enabled:
+        raise ConfigurationError("TikTok collection requires the credential vault")
 
 
 def _validate_meta(
@@ -306,6 +334,7 @@ def _validate_meta(
     writes: bool,
     db: DatabaseConfig,
     vault_enabled: bool,
+    production_like: bool,
 ) -> None:
     if config.app_id != META_APP_ID or not re.fullmatch(r"[0-9]{16}", config.app_id):
         raise ConfigurationError("Meta App ID must match the approved Social application")
@@ -317,13 +346,19 @@ def _validate_meta(
         raise ConfigurationError("Meta Graph base URL differs from the approved contract")
     if config.authorization_url != META_AUTHORIZATION_URL or config.token_url != META_TOKEN_URL:
         raise ConfigurationError("Meta OAuth endpoints differ from the approved contract")
-    if config.redirect_uri != META_REDIRECT_URI:
-        raise ConfigurationError("Meta OAuth redirect URI differs from the approved contract")
+    _validate_public_endpoint(
+        config.redirect_uri,
+        expected_path="/api/social/meta/oauth/callback",
+        label="Meta OAuth redirect URI",
+        production_like=production_like,
+    )
     if config.required_scopes != META_REQUIRED_SCOPES:
         raise ConfigurationError("Meta OAuth scope set differs from the approved contract")
     if not config.account_enabled:
         if config.oauth_mode != "disabled" or activation.gate_enabled:
             raise ConfigurationError("Meta OAuth gates must remain disabled together")
+        if config.collection_enabled:
+            raise ConfigurationError("Meta collection requires the account integration")
         return
     if config.oauth_mode != "manual_intent_only":
         raise ConfigurationError("Meta account activation requires manual_intent_only mode")
@@ -345,6 +380,37 @@ def _validate_meta(
         raise ConfigurationError("Meta OAuth state secret must contain at least 32 bytes")
     if not activation.credential_active_key_id or not activation.credential_keyring_json:
         raise ConfigurationError("Meta credential keyring is not configured")
+    if config.collection_enabled and not vault_enabled:
+        raise ConfigurationError("Meta collection requires the credential vault")
+
+
+def _origin(value: str) -> tuple[str, str, int | None]:
+    parsed = urlparse(value)
+    return parsed.scheme.lower(), (parsed.hostname or "").lower(), parsed.port
+
+
+def _validate_public_endpoint(
+    value: str,
+    *,
+    expected_path: str,
+    label: str,
+    production_like: bool,
+) -> None:
+    parsed = urlparse(value)
+    if (
+        not parsed.hostname
+        or parsed.path != expected_path
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+        or parsed.username
+        or parsed.password
+    ):
+        raise ConfigurationError(f"{label} is invalid")
+    if production_like and parsed.scheme != "https":
+        raise ConfigurationError(f"{label} must use HTTPS")
+    if not production_like and parsed.scheme not in {"http", "https"}:
+        raise ConfigurationError(f"{label} must use HTTP or HTTPS")
 
 
 def load_settings() -> AppSettings:
@@ -415,6 +481,7 @@ def load_settings() -> AppSettings:
         app_secret=_env("SOCIAL_META_APP_SECRET"),
         account_enabled=_bool("SOCIAL_META_ACCOUNT_ENABLED"),
         oauth_mode=_env("SOCIAL_META_ACCOUNT_OAUTH_MODE", "disabled"),
+        collection_enabled=_bool("SOCIAL_META_COLLECTION_ENABLED"),
         graph_version=_env("SOCIAL_META_GRAPH_VERSION", META_GRAPH_VERSION),
         graph_base_url=_env("SOCIAL_META_GRAPH_BASE_URL", META_GRAPH_BASE_URL),
         authorization_url=_env("SOCIAL_META_AUTHORIZATION_URL", META_AUTHORIZATION_URL),
@@ -442,6 +509,7 @@ def load_settings() -> AppSettings:
         writes=writes,
         db=db,
         vault_enabled=vault_enabled,
+        production_like=app_env in PRODUCTION_LIKE_ENVS,
     )
     _validate_meta(
         meta,
@@ -449,23 +517,36 @@ def load_settings() -> AppSettings:
         writes=writes,
         db=db,
         vault_enabled=vault_enabled,
+        production_like=app_env in PRODUCTION_LIKE_ENVS,
     )
     sso_secret = _env("SOCIAL_SSO_HS256_SECRET")
-    provisioning_secret = _env("SOCIAL_PROVISIONING_HMAC_SECRET")
-    if app_env in PRODUCTION_LIKE_ENVS and (sso_secret or provisioning_secret):
-        raise ConfigurationError("Production secrets are blocked before final cutover")
+    session_cookie_secure = _bool("SOCIAL_SESSION_COOKIE_SECURE")
+    worker_schedule_enabled = _bool("SOCIAL_WORKER_SCHEDULE_ENABLED")
+    if worker_schedule_enabled and (
+        not writes
+        or not db.url
+        or not (meta.collection_enabled or tiktok.collection_enabled)
+    ):
+        raise ConfigurationError(
+            "Worker schedule requires a writable V2 database and an enabled collector"
+        )
+    if app_env in PRODUCTION_LIKE_ENVS and runtime_mode is RuntimeMode.ACTIVE:
+        if len(sso_secret.encode()) < 32:
+            raise ConfigurationError("Active runtime requires a strong SSO secret")
+        if not session_cookie_secure:
+            raise ConfigurationError("Active runtime requires secure session cookies")
     return AppSettings(
         app_env=app_env,
-        app_name=_env("APP_NAME", "social_media"),
+        app_name=_env("APP_NAME", "social_media_v2"),
         runtime_mode=runtime_mode,
         social_writes_enabled=writes,
         db=db,
         vault_enabled=vault_enabled,
         log_level=_env("SOCIAL_LOG_LEVEL", "INFO").upper(),
         sso_hs256_secret=sso_secret,
-        provisioning_hmac_secret=provisioning_secret,
-        session_cookie_secure=_bool("SOCIAL_SESSION_COOKIE_SECURE"),
+        session_cookie_secure=session_cookie_secure,
         media_storage_root=_env("SOCIAL_MEDIA_STORAGE_ROOT"),
+        worker_schedule_enabled=worker_schedule_enabled,
         tiktok=tiktok,
         tiktok_activation=tiktok_activation,
         meta=meta,

@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from app.domain.platforms import CapabilityId, PlatformId
+
+if TYPE_CHECKING:
+    from app.core.config import AppSettings
 
 
 class CapabilityStatus(StrEnum):
@@ -48,31 +52,58 @@ class PlatformCapabilityRegistry:
         return self._records
 
 
-def bootstrap_registry() -> PlatformCapabilityRegistry:
+def bootstrap_registry(settings: AppSettings | None = None) -> PlatformCapabilityRegistry:
     records: list[CapabilityRecord] = []
     for platform in (PlatformId.FACEBOOK, PlatformId.INSTAGRAM):
         records.extend(
             CapabilityRecord(
                 platform=platform,
                 capability=capability,
-                status=CapabilityStatus.NOT_CONFIGURED,
-                reason="provider_not_configured",
+                status=(
+                    CapabilityStatus.AVAILABLE
+                    if settings is not None and settings.meta.collection_enabled
+                    else CapabilityStatus.NOT_CONFIGURED
+                ),
+                reason=(
+                    "standalone_collector_available"
+                    if settings is not None and settings.meta.collection_enabled
+                    else "provider_not_configured"
+                ),
             )
             for capability in CapabilityId
         )
+    tiktok_collection = (
+        settings is not None and settings.tiktok.collection_enabled
+    )
     records.extend(
         (
             CapabilityRecord(
                 platform=PlatformId.TIKTOK,
                 capability=CapabilityId.PROFILE,
-                status=CapabilityStatus.MANUAL_ACTIVATION_REQUIRED,
-                reason="owner_activation_required",
+                status=(
+                    CapabilityStatus.AVAILABLE
+                    if tiktok_collection
+                    else CapabilityStatus.MANUAL_ACTIVATION_REQUIRED
+                ),
+                reason=(
+                    "standalone_collector_available"
+                    if tiktok_collection
+                    else "owner_activation_required"
+                ),
             ),
             CapabilityRecord(
                 platform=PlatformId.TIKTOK,
                 capability=CapabilityId.CONTENT,
-                status=CapabilityStatus.MANUAL_ACTIVATION_REQUIRED,
-                reason="owner_activation_required",
+                status=(
+                    CapabilityStatus.AVAILABLE
+                    if tiktok_collection
+                    else CapabilityStatus.MANUAL_ACTIVATION_REQUIRED
+                ),
+                reason=(
+                    "standalone_collector_available"
+                    if tiktok_collection
+                    else "owner_activation_required"
+                ),
             ),
             CapabilityRecord(
                 platform=PlatformId.TIKTOK,
@@ -83,8 +114,16 @@ def bootstrap_registry() -> PlatformCapabilityRegistry:
             CapabilityRecord(
                 platform=PlatformId.TIKTOK,
                 capability=CapabilityId.AUDIENCE,
-                status=CapabilityStatus.MANUAL_ACTIVATION_REQUIRED,
-                reason="owner_activation_required",
+                status=(
+                    CapabilityStatus.PARTIAL
+                    if tiktok_collection
+                    else CapabilityStatus.MANUAL_ACTIVATION_REQUIRED
+                ),
+                reason=(
+                    "profile_totals_only"
+                    if tiktok_collection
+                    else "owner_activation_required"
+                ),
             ),
         )
     )

@@ -12,7 +12,6 @@ from typing import Any
 from fastapi import HTTPException, Request, Response
 
 from app.api.auth import COOKIE_NAME
-from app.application.ports import ProjectionReplacement, ProjectionWrite
 from app.application.ports.reporting import (
     ReportingAccount,
     ReportingComment,
@@ -38,45 +37,7 @@ class LocalDemoAuthority:
 
     def __init__(self) -> None:
         self.sessions: dict[str, dict[str, Any]] = {}
-        self.projections: dict[str, dict[str, Any]] = {
-            "v2:brand-shell:100": {
-                "active": True,
-                "brand_id": "100",
-                "name": "Demo Hotel Group",
-                "parent_brand_id": None,
-                "placeholder": False,
-            },
-            "v2:brand-shell:101": {
-                "active": True,
-                "brand_id": "101",
-                "name": "Demo Resort",
-                "parent_brand_id": "100",
-                "placeholder": False,
-            },
-            "v2:brand-shell:102": {
-                "active": True,
-                "brand_id": "102",
-                "name": "Demo City Hotel",
-                "parent_brand_id": "100",
-                "placeholder": False,
-            },
-            "v2:brand-access:local-demo-user:101": {
-                "access_mode": "write",
-                "active": True,
-                "authority_source": "full_snapshot",
-                "brand_id": "101",
-                "role": "agency_admin",
-                "user_id": "local-demo-user",
-            },
-            "v2:brand-access:local-demo-user:102": {
-                "access_mode": "read",
-                "active": True,
-                "authority_source": "full_snapshot",
-                "brand_id": "102",
-                "role": "viewer",
-                "user_id": "local-demo-user",
-            },
-        }
+        self.jtis: set[str] = set()
 
     def open_session(self) -> str:
         raw_session = secrets.token_urlsafe(32)
@@ -87,6 +48,36 @@ class LocalDemoAuthority:
             "email": "local.demo@example.test",
             "source_system": "accumulate",
             "brand_id": "101",
+            "brand_scope": {
+                "version": "v1",
+                "default_brand_id": "101",
+                "brands": [
+                    {
+                        "brand_id": "100",
+                        "name": "Demo Hotel Group",
+                        "parent_brand_id": None,
+                        "visibility": "hidden_parent",
+                        "access_mode": None,
+                        "role": None,
+                    },
+                    {
+                        "brand_id": "101",
+                        "name": "Demo Resort",
+                        "parent_brand_id": "100",
+                        "visibility": "active",
+                        "access_mode": "write",
+                        "role": "agency_admin",
+                    },
+                    {
+                        "brand_id": "102",
+                        "name": "Demo City Hotel",
+                        "parent_brand_id": "100",
+                        "visibility": "active",
+                        "access_mode": "read",
+                        "role": "viewer",
+                    },
+                ],
+            },
             "role": "agency_admin",
             "access_mode": "write",
             "settings_visible": True,
@@ -110,10 +101,9 @@ class LocalDemoAuthority:
         expires_at: datetime,
     ) -> bool:
         del expires_at
-        replay_key = f"v2:sso-jti:{jti_hash}"
-        if replay_key in self.projections:
+        if jti_hash in self.jtis:
             return False
-        self.projections[replay_key] = {"consumed": True}
+        self.jtis.add(jti_hash)
         self.sessions[session_hash] = dict(payload)
         return True
 
@@ -123,69 +113,6 @@ class LocalDemoAuthority:
     def revoke_session(self, session_hash: str) -> None:
         if payload := self.sessions.get(session_hash):
             payload["revoked"] = True
-
-    def revoke_authority_sessions(self, *, user_id: str | None, brand_id: str | None) -> int:
-        revoked = 0
-        for payload in self.sessions.values():
-            if user_id and payload.get("user_id") != user_id:
-                continue
-            if brand_id and payload.get("brand_id") != brand_id:
-                continue
-            if payload.get("revoked") is not True:
-                payload["revoked"] = True
-                revoked += 1
-        return revoked
-
-    def apply_event(
-        self,
-        *,
-        nonce_hash: str,
-        nonce_expires_at: datetime,
-        event_id: str,
-        event_type: str,
-        entity_key: str,
-        version: int,
-        payload: Mapping[str, Any],
-        projection_writes: tuple[ProjectionWrite, ...] = (),
-        replacement: ProjectionReplacement | None = None,
-    ) -> str:
-        del nonce_hash, nonce_expires_at, event_type
-        event_key = f"v2:event:{event_id}"
-        if event_key in self.projections:
-            return "duplicate_ignored"
-        current = self.projections.get(entity_key, {})
-        if int(current.get("version", -1)) >= version:
-            return "stale_ignored"
-        self.projections[event_key] = {"version": version}
-        self.projections[entity_key] = {**payload, "version": version}
-        for write in projection_writes:
-            self.projections[write.projection_key] = {**write.payload, "version": version}
-        if replacement is not None:
-            desired = {write.projection_key for write in replacement.writes}
-            for key in tuple(self.projections):
-                if key.startswith(replacement.projection_key_prefix) and key not in desired:
-                    self.projections[key] = {
-                        **self.projections[key],
-                        "active": False,
-                        "version": replacement.version,
-                    }
-            for write in replacement.writes:
-                self.projections[write.projection_key] = {
-                    **write.payload,
-                    "version": replacement.version,
-                }
-        return "applied"
-
-    def get_projection(self, entity_key: str) -> Mapping[str, Any] | None:
-        return self.projections.get(entity_key)
-
-    def list_projections(self, projection_key_prefix: str) -> list[Mapping[str, Any]]:
-        return [
-            payload
-            for key, payload in sorted(self.projections.items())
-            if key.startswith(projection_key_prefix)
-        ]
-
 
 def _metric(
     account_id: int,

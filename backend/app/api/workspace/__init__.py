@@ -26,6 +26,7 @@ def create_workspace_router(
     capabilities: PlatformCapabilityRegistry,
     policy: WritePolicy,
     runtime_mode: RuntimeMode,
+    automated_schedule_available: bool = False,
 ) -> APIRouter:
     router = APIRouter()
 
@@ -39,12 +40,10 @@ def create_workspace_router(
     ) -> BrandWorkspace:
         if store is None or not session or not (payload := resolve_session(session, store)):
             raise HTTPException(401, "session_invalid")
-        user_id = str(payload.get("user_id") or "")
         launch_brand_id = str(payload.get("brand_id") or "")
         try:
             workspace = build_brand_workspace(
-                store=store,
-                user_id=user_id,
+                session=payload,
                 selected_brand_id=selected_brand_id or launch_brand_id,
                 rollup=rollup,
             )
@@ -67,8 +66,7 @@ def create_workspace_router(
             raise HTTPException(401, "session_invalid")
         try:
             workspace = build_brand_workspace(
-                store=store,
-                user_id=str(payload.get("user_id") or ""),
+                session=payload,
                 selected_brand_id=selected_brand_id or str(payload.get("brand_id") or ""),
                 rollup=rollup,
             )
@@ -138,7 +136,7 @@ def create_workspace_router(
             runtime=RuntimeCapabilities(
                 mode=runtime_mode,
                 writes_enabled=policy.writes_enabled,
-                automated_schedule_available=False,
+                automated_schedule_available=automated_schedule_available,
             ),
         )
 

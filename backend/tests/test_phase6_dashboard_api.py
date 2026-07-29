@@ -39,6 +39,36 @@ class MemoryAuthority:
             sha256_text(raw_session): {
                 "user_id": "user-1",
                 "brand_id": "101",
+                "brand_scope": {
+                    "version": "v1",
+                    "default_brand_id": "101",
+                    "brands": [
+                        {
+                            "brand_id": "100",
+                            "name": "Parent Brand",
+                            "parent_brand_id": None,
+                            "visibility": "hidden_parent",
+                            "access_mode": None,
+                            "role": None,
+                        },
+                        {
+                            "brand_id": "101",
+                            "name": "Child A",
+                            "parent_brand_id": "100",
+                            "visibility": "active",
+                            "access_mode": "write",
+                            "role": "agency_operator",
+                        },
+                        {
+                            "brand_id": "102",
+                            "name": "Child B",
+                            "parent_brand_id": "100",
+                            "visibility": "active",
+                            "access_mode": "read",
+                            "role": "viewer",
+                        },
+                    ],
+                },
                 "role": "agency_operator",
                 "access_mode": "write",
                 "settings_visible": True,

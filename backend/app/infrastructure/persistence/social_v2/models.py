@@ -1,4 +1,4 @@
-"""Local SQLAlchemy registry for the schema-compatible social data surface."""
+"""Local SQLAlchemy registry for the V2-owned social data surface."""
 
 from __future__ import annotations
 

@@ -1,4 +1,4 @@
-"""Schema-compatible comment persistence."""
+"""V2 comment persistence."""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ from sqlalchemy import Engine, text
 from app.application.ports.persistence import CommentRecord
 from app.core.write_policy import WritePolicy
 
-from .base import LegacyStoreBase
-from .platforms import normalize_legacy_platform
+from .base import SocialStoreBase
+from .platforms import normalize_platform
 
 
-class LegacyCommentStore(LegacyStoreBase):
+class SocialCommentStore(SocialStoreBase):
     def __init__(self, engine: Engine, write_policy: WritePolicy) -> None:
         super().__init__(engine, write_policy)
 
@@ -89,7 +89,7 @@ class LegacyCommentStore(LegacyStoreBase):
             ).mappings()
             return tuple(
                 CommentRecord(
-                    platform=normalize_legacy_platform(row["platform"]),
+                    platform=normalize_platform(row["platform"]),
                     account_id=int(row["asset_id"]),
                     external_content_id=str(row["content_id"]),
                     external_comment_id=str(row["comment_id"]),
@@ -108,4 +108,4 @@ class LegacyCommentStore(LegacyStoreBase):
             )
 
 
-__all__ = ["LegacyCommentStore"]
+__all__ = ["SocialCommentStore"]

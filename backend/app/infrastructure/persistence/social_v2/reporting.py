@@ -1,9 +1,10 @@
-"""Read-only compatibility adapter for dashboard and operations queries."""
+"""Read-only V2 adapter for dashboard and operations queries."""
 
 from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
+from urllib.parse import quote
 
 from sqlalchemy import Engine, bindparam, text
 
@@ -20,14 +21,14 @@ from app.application.ports.reporting import (
 from app.domain.metrics import MetricId
 from app.domain.platforms import PlatformId
 
-from .platforms import normalize_legacy_platform
+from .platforms import normalize_platform
 
 
 def _expanded(statement: str, parameter: str):
     return text(statement).bindparams(bindparam(parameter, expanding=True))
 
 
-class LegacyReportingStore:
+class SocialReportingStore:
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
 
@@ -68,7 +69,7 @@ class LegacyReportingStore:
                 ReportingAccount(
                     account_id=int(row["id"]),
                     brand_id=str(row["brand_id"]),
-                    platform=normalize_legacy_platform(row["platform"]),
+                    platform=normalize_platform(row["platform"]),
                     external_id=str(row["external_id"]),
                     display_name=str(row["display_name"]),
                     status=str(row["status"]),
@@ -111,7 +112,7 @@ class LegacyReportingStore:
                 ReportingMetric(
                     account_id=int(row["asset_id"]),
                     brand_id=str(row["brand_id"]),
-                    platform=normalize_legacy_platform(row["platform"]),
+                    platform=normalize_platform(row["platform"]),
                     observed_on=row["date"],
                     metric_id=MetricId(str(row["metric_id"])),
                     value=float(row["value_numeric"]),
@@ -136,7 +137,12 @@ class LegacyReportingStore:
         statement = _expanded(
             f"""SELECT i.asset_id, CAST(i.brand_id AS text) AS brand_id, a.platform,
                        i.content_id, i.content_type, i.permalink, i.message, i.media_url,
-                       i.created_time, i.likes_count, i.comments_count, i.shares_count
+                       i.created_time, i.likes_count, i.comments_count, i.shares_count,
+                       EXISTS (
+                           SELECT 1 FROM media_assets AS m
+                           WHERE m.asset_id=i.asset_id AND m.content_id=i.content_id
+                             AND m.media_kind='cover'
+                       ) AS local_media_available
                 FROM content_items AS i
                 JOIN assets AS a ON a.id=i.asset_id
                 WHERE i.asset_id IN :account_ids
@@ -159,12 +165,21 @@ class LegacyReportingStore:
                 ReportingContent(
                     account_id=int(row["asset_id"]),
                     brand_id=str(row["brand_id"]),
-                    platform=normalize_legacy_platform(row["platform"]),
+                    platform=normalize_platform(row["platform"]),
                     external_content_id=str(row["content_id"]),
                     content_type=str(row["content_type"]),
                     permalink=str(row["permalink"]),
                     message=str(row["message"]),
-                    media_url=str(row["media_url"]),
+                    media_url=(
+                        _local_media_url(
+                            platform=normalize_platform(row["platform"]),
+                            content_id=str(row["content_id"]),
+                            brand_id=str(row["brand_id"]),
+                            account_id=int(row["asset_id"]),
+                        )
+                        if row["local_media_available"]
+                        else str(row["media_url"])
+                    ),
                     published_at=row["created_time"],
                     likes_count=int(row["likes_count"]),
                     comments_count=int(row["comments_count"]),
@@ -202,7 +217,7 @@ class LegacyReportingStore:
             return tuple(
                 ReportingComment(
                     account_id=int(row["asset_id"]),
-                    platform=normalize_legacy_platform(row["platform"]),
+                    platform=normalize_platform(row["platform"]),
                     external_content_id=str(row["content_id"]),
                     external_comment_id=str(row["comment_id"]),
                     author_name=row["user_name"],
@@ -253,7 +268,7 @@ class LegacyReportingStore:
         return ReportingMedia(
             account_id=int(row["asset_id"]),
             brand_id=str(row["brand_id"]),
-            platform=normalize_legacy_platform(row["platform"]),
+            platform=normalize_platform(row["platform"]),
             external_content_id=str(row["content_id"]),
             media_kind=str(row["media_kind"]),
             storage_path=Path(str(row["storage_path"])),
@@ -281,7 +296,7 @@ class LegacyReportingStore:
                 ReportingConnection(
                     connection_id=int(row["id"]),
                     brand_id=str(row["brand_id"]),
-                    platform=normalize_legacy_platform(row["platform"]),
+                    platform=normalize_platform(row["platform"]),
                     state=str(row["status"]),
                     expires_at=row["expires_at"],
                     projected_at=row["projected_at"],
@@ -309,7 +324,7 @@ class LegacyReportingStore:
                     job_id=int(row["id"]),
                     brand_id=str(row["brand_id"]),
                     account_id=int(row["asset_id"]) if row["asset_id"] is not None else None,
-                    platform=normalize_legacy_platform(row["platform"]),
+                    platform=normalize_platform(row["platform"]),
                     stage=str(row["stage"]),
                     status=str(row["status"]),
                     scheduled_for=row["scheduled_for"],
@@ -371,8 +386,17 @@ def _validate_range(start_on: date, end_on: date) -> None:
         raise ValueError("reporting_range_invalid")
 
 
+def _local_media_url(
+    *, platform: PlatformId, content_id: str, brand_id: str, account_id: int
+) -> str:
+    return (
+        f"/api/media/{platform.value}/{quote(content_id, safe='')}"
+        f"?brand_id={quote(brand_id, safe='')}&account_id={account_id}"
+    )
+
+
 def _platform_values(platform: PlatformId) -> tuple[str, ...]:
     return (platform.value, f"{platform.value}_organic")
 
 
-__all__ = ["LegacyReportingStore"]
+__all__ = ["SocialReportingStore"]

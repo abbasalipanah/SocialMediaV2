@@ -42,8 +42,7 @@ export TEST_POSTGRES_URL="postgresql+psycopg://postgres:${PASSWORD}@127.0.0.1:${
   "$PYTHON" -m pytest -q \
     tests/test_authority_projection.py \
     tests/test_phase2_api.py \
-    tests/test_projection_state_postgres.py \
-    tests/test_provisioning_contract.py
+    tests/test_projection_state_postgres.py
 )
 
 "$ROOT/scripts/source_write_guard.sh"

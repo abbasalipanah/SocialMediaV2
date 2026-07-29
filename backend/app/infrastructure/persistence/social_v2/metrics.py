@@ -1,4 +1,4 @@
-"""Schema-compatible metric persistence."""
+"""V2 metric persistence."""
 
 from __future__ import annotations
 
@@ -11,10 +11,10 @@ from app.application.queries.metrics import MetricQuery
 from app.core.write_policy import WritePolicy
 from app.domain.metrics import MetricCatalog, MetricId
 
-from .base import LegacyStoreBase
+from .base import SocialStoreBase
 
 
-class LegacyMetricStore(LegacyStoreBase):
+class SocialMetricStore(SocialStoreBase):
     def __init__(
         self,
         engine: Engine,
@@ -120,4 +120,4 @@ class LegacyMetricStore(LegacyStoreBase):
             )
 
 
-__all__ = ["LegacyMetricStore"]
+__all__ = ["SocialMetricStore"]

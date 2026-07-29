@@ -65,7 +65,7 @@ LEGACY_PLATFORM_ALIAS_FILE = (
     / "app"
     / "infrastructure"
     / "persistence"
-    / "legacy_socialmedia"
+    / "social_v2"
     / "platforms.py"
 )
 LEGACY_PLATFORM_ALIASES = (
@@ -87,7 +87,7 @@ def apply_narrow_source_allowlist(path: Path, text: str) -> str:
 
 
 def apply_narrow_artifact_allowlist(member: str, text: str) -> str:
-    if member.endswith("app/infrastructure/persistence/legacy_socialmedia/platforms.py"):
+    if member.endswith("app/infrastructure/persistence/social_v2/platforms.py"):
         for alias in LEGACY_PLATFORM_ALIASES:
             text = text.replace(f'"{alias}"', '""').replace(f"'{alias}'", "''")
     return text

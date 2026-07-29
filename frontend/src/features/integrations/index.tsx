@@ -54,13 +54,13 @@ const PLATFORMS: Platform[] = ["facebook", "instagram", "tiktok"];
 const PLATFORM_META: Record<Platform, { label: string; description: string; connectionMode: string }> = {
   facebook: {
     label: "Facebook",
-    description: "Facebook Pages, audience, content and community reporting projected from the approved Meta connector.",
-    connectionMode: "Managed through the Accumulate Meta connection",
+    description: "Facebook Pages, audience, content and community reporting collected by Social Media.",
+    connectionMode: "Brand-scoped Meta self-service",
   },
   instagram: {
     label: "Instagram",
     description: "Instagram Business profiles, posts, reels, stories and audience reporting linked to the selected Brand.",
-    connectionMode: "Managed through the Accumulate Meta connection",
+    connectionMode: "Brand-scoped Meta self-service",
   },
   tiktok: {
     label: "TikTok",

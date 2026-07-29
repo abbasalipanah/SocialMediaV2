@@ -1,4 +1,4 @@
-"""Schema-compatible media metadata persistence."""
+"""V2 media metadata persistence."""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ from sqlalchemy import Engine, text
 from app.application.ports.persistence import MediaRecord
 from app.core.write_policy import WritePolicy
 
-from .base import LegacyStoreBase
-from .platforms import normalize_legacy_platform
+from .base import SocialStoreBase
+from .platforms import normalize_platform
 
 
-class LegacyMediaStore(LegacyStoreBase):
+class SocialMediaStore(SocialStoreBase):
     def __init__(self, engine: Engine, write_policy: WritePolicy) -> None:
         super().__init__(engine, write_policy)
 
@@ -92,7 +92,7 @@ class LegacyMediaStore(LegacyStoreBase):
         if row is None:
             return None
         return MediaRecord(
-            platform=normalize_legacy_platform(row["platform"]),
+            platform=normalize_platform(row["platform"]),
             account_id=int(row["asset_id"]),
             brand_id=int(row["brand_id"]),
             external_content_id=str(row["content_id"]),
@@ -107,4 +107,4 @@ class LegacyMediaStore(LegacyStoreBase):
         )
 
 
-__all__ = ["LegacyMediaStore"]
+__all__ = ["SocialMediaStore"]

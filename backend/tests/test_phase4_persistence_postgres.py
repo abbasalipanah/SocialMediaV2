@@ -18,11 +18,11 @@ from app.core.config import RuntimeMode
 from app.core.write_policy import WritePolicy
 from app.domain.metrics import MetricId, bootstrap_metric_catalog
 from app.domain.platforms import PlatformId
-from app.infrastructure.persistence.legacy_socialmedia import (
-    LegacyCommentStore,
-    LegacyContentStore,
-    LegacyMediaStore,
-    LegacyMetricStore,
+from app.infrastructure.persistence.social_v2 import (
+    SocialCommentStore,
+    SocialContentStore,
+    SocialMediaStore,
+    SocialMetricStore,
 )
 
 DATABASE_URL = os.getenv("TEST_POSTGRES_URL")
@@ -31,7 +31,7 @@ pytestmark = pytest.mark.skipif(not DATABASE_URL, reason="TEST_POSTGRES_URL is n
 
 @pytest.fixture()
 def stores() -> Iterator[
-    tuple[LegacyMetricStore, LegacyContentStore, LegacyCommentStore, LegacyMediaStore]
+    tuple[SocialMetricStore, SocialContentStore, SocialCommentStore, SocialMediaStore]
 ]:
     assert DATABASE_URL
     engine = create_engine(DATABASE_URL)
@@ -158,10 +158,10 @@ def stores() -> Iterator[
         )
     policy = WritePolicy(runtime_mode=RuntimeMode.DEVELOPMENT, writes_enabled=True)
     result = (
-        LegacyMetricStore(engine, policy, bootstrap_metric_catalog()),
-        LegacyContentStore(engine, policy),
-        LegacyCommentStore(engine, policy),
-        LegacyMediaStore(engine, policy),
+        SocialMetricStore(engine, policy, bootstrap_metric_catalog()),
+        SocialContentStore(engine, policy),
+        SocialCommentStore(engine, policy),
+        SocialMediaStore(engine, policy),
     )
     yield result
     with engine.begin() as connection:
@@ -179,10 +179,10 @@ def stores() -> Iterator[
 
 def test_social_data_stores_are_idempotent_and_query_side_effect_free(
     stores: tuple[
-        LegacyMetricStore,
-        LegacyContentStore,
-        LegacyCommentStore,
-        LegacyMediaStore,
+        SocialMetricStore,
+        SocialContentStore,
+        SocialCommentStore,
+        SocialMediaStore,
     ],
 ) -> None:
     metric_store, content_store, comment_store, media_store = stores
@@ -269,7 +269,7 @@ def test_social_data_stores_are_idempotent_and_query_side_effect_free(
     assert _row_counts(metric_store) == before == (1, 1, 1, 1)
 
 
-def _row_counts(store: LegacyMetricStore) -> tuple[int, int, int, int]:
+def _row_counts(store: SocialMetricStore) -> tuple[int, int, int, int]:
     with store.engine.connect() as connection:
         return tuple(
             int(connection.execute(text(f"SELECT count(*) FROM {table_name}")).scalar_one())
@@ -284,14 +284,14 @@ def _row_counts(store: LegacyMetricStore) -> tuple[int, int, int, int]:
 
 def test_dormant_policy_rejects_every_social_data_mutation(
     stores: tuple[
-        LegacyMetricStore,
-        LegacyContentStore,
-        LegacyCommentStore,
-        LegacyMediaStore,
+        SocialMetricStore,
+        SocialContentStore,
+        SocialCommentStore,
+        SocialMediaStore,
     ],
 ) -> None:
     metric_store = stores[0]
-    blocked = LegacyMetricStore(
+    blocked = SocialMetricStore(
         metric_store.engine,
         WritePolicy(runtime_mode=RuntimeMode.DORMANT, writes_enabled=False),
         bootstrap_metric_catalog(),
@@ -312,10 +312,10 @@ def test_dormant_policy_rejects_every_social_data_mutation(
 
 def test_persistence_rejects_cross_brand_or_platform_account_scope(
     stores: tuple[
-        LegacyMetricStore,
-        LegacyContentStore,
-        LegacyCommentStore,
-        LegacyMediaStore,
+        SocialMetricStore,
+        SocialContentStore,
+        SocialCommentStore,
+        SocialMediaStore,
     ],
 ) -> None:
     metric_store = stores[0]

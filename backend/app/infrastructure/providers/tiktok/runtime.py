@@ -8,13 +8,13 @@ from app.application.ports import AuthorityStore
 from app.application.ports.credentials import CredentialError
 from app.application.services.tiktok_activation import (
     ActivationGate,
-    ProjectionActivationAuthority,
+    SessionActivationAuthority,
     TikTokActivationCoordinator,
 )
 from app.core import AppSettings, ConfigurationError, WritePolicy
 from app.infrastructure.checkpoints import ProjectionCheckpointStore
 from app.infrastructure.credentials import AesGcmTokenVault, ProjectionCredentialStore
-from app.infrastructure.persistence.legacy_socialmedia.tiktok_activation import (
+from app.infrastructure.persistence.social_v2.tiktok_activation import (
     ProjectionTikTokActivationStore,
 )
 
@@ -84,7 +84,7 @@ def create_tiktok_activation_runtime(
         provider=provider,
         credential_store=ProjectionCredentialStore(engine, policy, vault),
         link_store=activation_store,
-        authority=ProjectionActivationAuthority(authority_store),
+        authority=SessionActivationAuthority(authority_store),
     )
 
 

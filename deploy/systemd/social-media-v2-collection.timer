@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Social Media V2 collection every 30 minutes
+
+[Timer]
+OnCalendar=*:0/30
+Persistent=true
+RandomizedDelaySec=90
+Unit=social-media-v2-collection.service
+
+[Install]
+WantedBy=timers.target

@@ -212,7 +212,7 @@ test("desktop shell preserves a reloaded social route and capability navigation"
   test.skip(!testInfo.project.name.startsWith("desktop"), "desktop viewport assertion");
   await mockApi(page);
   await page.goto("/facebook");
-  await expect(page.getByRole("heading", { name: "Facebook", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Facebook Dashboard", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Facebook" })).toHaveAttribute("href", "/facebook");
   await expect(page.locator(".sidebar-link.locked").filter({ hasText: "Instagram" })).toHaveAttribute(
     "aria-disabled",
@@ -224,7 +224,7 @@ test("desktop shell preserves a reloaded social route and capability navigation"
 
   await page.reload();
   await expect(page).toHaveURL(/\/facebook$/);
-  await expect(page.getByRole("heading", { name: "Facebook", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Facebook Dashboard", exact: true })).toBeVisible();
 });
 
 test("mobile shell uses a drawer and full-width selector grid", async ({ page }, testInfo) => {

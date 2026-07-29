@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import secrets
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -58,6 +59,7 @@ class VerifiedSso:
     issued_at: datetime
     launch_target: str | None
     launch_path: str
+    brand_scope: Mapping[str, object]
 
 
 def _contract_datetime(value: object, field: str) -> datetime | None:
@@ -72,6 +74,99 @@ def _contract_datetime(value: object, field: str) -> datetime | None:
     if parsed.tzinfo is None:
         raise SsoError(f"invalid_{field}")
     return parsed.astimezone(UTC)
+
+
+def _verified_brand_scope(
+    contract: Mapping[str, Any], *, brand_id: str, role: str, access_mode: str
+) -> dict[str, object]:
+    """Validate optional multi-Brand scope; fall back to the launch Brand only."""
+
+    raw_scope = contract.get("brand_scope")
+    if raw_scope is None:
+        brand_name = contract.get("brand_name")
+        if brand_name is not None and not isinstance(brand_name, str):
+            raise SsoError("invalid_brand_scope")
+        return {
+            "version": "v1",
+            "default_brand_id": brand_id,
+            "brands": [
+                {
+                    "brand_id": brand_id,
+                    "name": brand_name.strip() or None if isinstance(brand_name, str) else None,
+                    "parent_brand_id": None,
+                    "visibility": "active",
+                    "access_mode": access_mode,
+                    "role": role,
+                }
+            ],
+        }
+    if not isinstance(raw_scope, Mapping) or raw_scope.get("version") != "v1":
+        raise SsoError("invalid_brand_scope")
+    if str(raw_scope.get("default_brand_id") or "").strip() != brand_id:
+        raise SsoError("brand_scope_default_mismatch")
+    raw_brands = raw_scope.get("brands")
+    if (
+        not isinstance(raw_brands, Sequence)
+        or isinstance(raw_brands, (str, bytes))
+        or not 1 <= len(raw_brands) <= 500
+    ):
+        raise SsoError("invalid_brand_scope")
+
+    brands: list[dict[str, object]] = []
+    known: dict[str, dict[str, object]] = {}
+    for raw in raw_brands:
+        if not isinstance(raw, Mapping):
+            raise SsoError("invalid_brand_scope")
+        item_brand_id = str(raw.get("brand_id") or "").strip()
+        if not item_brand_id or item_brand_id in known:
+            raise SsoError("invalid_brand_scope")
+        name = raw.get("name")
+        if name is not None and not isinstance(name, str):
+            raise SsoError("invalid_brand_scope")
+        parent = raw.get("parent_brand_id")
+        parent_brand_id = str(parent).strip() if parent is not None else None
+        if parent_brand_id == "":
+            parent_brand_id = None
+        item_role = raw.get("role")
+        item_access_mode = raw.get("access_mode")
+        if item_role is None and item_access_mode is None:
+            visibility = "hidden_parent"
+        elif item_role in CANONICAL_ROLES and item_access_mode in {"read", "write"}:
+            visibility = "active"
+        else:
+            raise SsoError("invalid_brand_scope")
+        item = {
+            "brand_id": item_brand_id,
+            "name": name.strip() or None if isinstance(name, str) else None,
+            "parent_brand_id": parent_brand_id,
+            "visibility": visibility,
+            "access_mode": item_access_mode,
+            "role": item_role,
+        }
+        brands.append(item)
+        known[item_brand_id] = item
+
+    default = known.get(brand_id)
+    if (
+        default is None
+        or default["visibility"] != "active"
+        or default["role"] != role
+        or default["access_mode"] != access_mode
+    ):
+        raise SsoError("brand_scope_default_mismatch")
+    for item in brands:
+        parent_id = item["parent_brand_id"]
+        if parent_id is not None and parent_id not in known:
+            raise SsoError("invalid_brand_scope")
+        seen = {item["brand_id"]}
+        current = item
+        while current["parent_brand_id"] is not None:
+            parent_id = current["parent_brand_id"]
+            if parent_id in seen:
+                raise SsoError("brand_scope_cycle")
+            seen.add(parent_id)
+            current = known[str(parent_id)]
+    return {"version": "v1", "default_brand_id": brand_id, "brands": brands}
 
 
 def verify_sso(token: str, secret: str, now: datetime | None = None) -> VerifiedSso:
@@ -168,6 +263,12 @@ def verify_sso(token: str, secret: str, now: datetime | None = None) -> Verified
     if access_expiry is not None:
         expires_at = min(expires_at, access_expiry)
     expires_at = min(expires_at, current + timedelta(hours=12))
+    brand_scope = _verified_brand_scope(
+        contract,
+        brand_id=brand_id,
+        role=role,
+        access_mode=expected_access_mode,
+    )
     return VerifiedSso(
         user_id=user_id,
         email=email,
@@ -181,6 +282,7 @@ def verify_sso(token: str, secret: str, now: datetime | None = None) -> Verified
         issued_at=issued_at,
         launch_target=launch_target,
         launch_path=LAUNCH_TARGETS[launch_target],
+        brand_scope=brand_scope,
     )
 
 
@@ -199,6 +301,7 @@ def consume_sso(token: str, secret: str, store: SessionStore) -> tuple[str, Veri
         "email": verified.email,
         "source_system": "accumulate",
         "brand_id": verified.brand_id,
+        "brand_scope": verified.brand_scope,
         "role": verified.role,
         "access_mode": verified.access_mode,
         "settings_visible": verified.settings_visible,

@@ -92,7 +92,7 @@ export function Sidebar({ open, onClose, onLogout, loggingOut }: SidebarProps) {
       />
       <aside aria-label="Primary navigation" className={`app-sidebar${open ? " open" : ""}`}>
         <div className="sidebar-brand">
-          <NavLink aria-label="Accumulate Social Media overview" onClick={onClose} to="/overview">
+          <NavLink aria-label="Social Media overview" onClick={onClose} to="/overview">
             <img alt="" className="accumulate-sidebar-logo" src="/accumulate-logo.svg" />
           </NavLink>
           <button aria-label="Close navigation" className="sidebar-close" onClick={onClose} type="button">

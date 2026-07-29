@@ -14,7 +14,6 @@ from .meta_activation import (
     MetaProviderAccount,
     MetaProviderGrant,
 )
-from .provisioning_store import ProjectionReplacement, ProjectionWrite, ProvisioningStore
 from .reporting import ReportingStore
 from .session_store import SessionStore
 from .tiktok_activation import (
@@ -36,8 +35,8 @@ from .tiktok_activation import (
 )
 
 
-class AuthorityStore(SessionStore, ProvisioningStore, Protocol):
-    """Combined schema-compatible store used by the first local adapter."""
+class AuthorityStore(SessionStore, Protocol):
+    """V2-owned local session store used by the SSO boundary."""
 
 
 __all__ = [
@@ -62,9 +61,6 @@ __all__ = [
     "MetaLinkSelection",
     "MetaProviderAccount",
     "MetaProviderGrant",
-    "ProjectionReplacement",
-    "ProjectionWrite",
-    "ProvisioningStore",
     "ReportingStore",
     "SessionStore",
     "ProviderAccountGrant",

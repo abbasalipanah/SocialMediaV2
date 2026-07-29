@@ -15,8 +15,8 @@ from app.core.config import ConfigurationError, RuntimeMode, load_settings
 from app.core.write_policy import WritePolicy
 from app.domain.metrics import MetricId
 from app.domain.platforms import CapabilityId, PlatformId
-from app.infrastructure.persistence.legacy_socialmedia.platforms import (
-    normalize_legacy_platform,
+from app.infrastructure.persistence.social_v2.platforms import (
+    normalize_platform,
 )
 from app.workers import (
     ManualWorkerSelection,
@@ -30,12 +30,12 @@ BACKEND = Path(__file__).resolve().parents[1]
 APP = BACKEND / "app"
 
 
-def test_worker_runtime_is_dormant_and_has_no_automated_schedule() -> None:
+def test_worker_runtime_is_fail_closed_until_a_v2_collector_is_enabled() -> None:
     config = dormant_worker_config(load_settings())
     assert config.provider_egress_enabled is False
     assert config.automated_schedule_enabled is False
 
-    with pytest.raises(ConfigurationError, match="worker_schedule_unavailable_before_cutover"):
+    with pytest.raises(ConfigurationError, match="worker_schedule_requires_provider_egress"):
         WorkerRuntimeConfig(
             runtime_mode=RuntimeMode.ACTIVE,
             writes_enabled=True,
@@ -43,7 +43,7 @@ def test_worker_runtime_is_dormant_and_has_no_automated_schedule() -> None:
             automated_schedule_enabled=True,
         )
     with pytest.raises(
-        ConfigurationError, match="worker_egress_requires_disposable_development"
+        ConfigurationError, match="worker_egress_requires_writable_v2_runtime"
     ):
         WorkerRuntimeConfig(
             runtime_mode=RuntimeMode.DORMANT,
@@ -119,7 +119,7 @@ def test_metric_ids_are_not_reintroduced_as_free_literals() -> None:
 
 
 def test_schema_identifiers_are_isolated_to_compatibility_adapter() -> None:
-    compatibility_root = APP / "infrastructure" / "persistence" / "legacy_socialmedia"
+    compatibility_root = APP / "infrastructure" / "persistence" / "social_v2"
     schema_identifiers = {"metrics_daily", "content_items", "content_comments", "media_assets"}
     violations: list[str] = []
     for path in APP.rglob("*.py"):
@@ -133,12 +133,12 @@ def test_schema_identifiers_are_isolated_to_compatibility_adapter() -> None:
 
 
 def test_legacy_platform_values_normalize_without_raw_error_echo() -> None:
-    assert normalize_legacy_platform("facebook_organic") is PlatformId.FACEBOOK
-    assert normalize_legacy_platform("instagram_organic") is PlatformId.INSTAGRAM
-    assert normalize_legacy_platform("tiktok_organic") is PlatformId.TIKTOK
-    assert normalize_legacy_platform("facebook") is PlatformId.FACEBOOK
+    assert normalize_platform("facebook_organic") is PlatformId.FACEBOOK
+    assert normalize_platform("instagram_organic") is PlatformId.INSTAGRAM
+    assert normalize_platform("tiktok_organic") is PlatformId.TIKTOK
+    assert normalize_platform("facebook") is PlatformId.FACEBOOK
     with pytest.raises(ValueError, match="^unsupported_platform$") as raised:
-        normalize_legacy_platform("unknown_raw_platform")
+        normalize_platform("unknown_raw_platform")
     assert "unknown_raw_platform" not in str(raised.value)
 
 

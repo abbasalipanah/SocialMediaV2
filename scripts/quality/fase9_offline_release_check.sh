@@ -4,26 +4,23 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BACKEND="$ROOT/backend"
 PYTHON="$BACKEND/.venv/bin/python"
-CONTAINER="social-media-v2-phase9-$$"
-PASSWORD="disposable_phase9_password"
+CONTAINER="social-media-v2-standalone-$PPID-$$"
+PASSWORD="disposable_standalone_password"
 
 cleanup() {
   docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
-"$ROOT/scripts/source_write_guard.sh"
-"$ROOT/scripts/quality/fase8_social_pages_settings_check.sh"
-
 docker run \
   --name "$CONTAINER" \
   -e POSTGRES_PASSWORD="$PASSWORD" \
-  -e POSTGRES_DB=phase9_schema_clone \
+  -e POSTGRES_DB=social_media_v2_test \
   -p 127.0.0.1::5432 \
   -d postgres:16-alpine >/dev/null
 
 for attempt in $(seq 1 30); do
-  if docker exec "$CONTAINER" pg_isready -U postgres -d phase9_schema_clone \
+  if docker exec "$CONTAINER" pg_isready -U postgres -d social_media_v2_test \
     >/dev/null 2>&1; then
     break
   fi
@@ -34,25 +31,26 @@ for attempt in $(seq 1 30); do
   sleep 1
 done
 
-docker exec "$CONTAINER" createdb -U postgres phase9_full_test
 PORT="$(docker port "$CONTAINER" 5432/tcp | awk -F: '{print $NF}')"
-BASE_URL="postgresql+psycopg://postgres:${PASSWORD}@127.0.0.1:${PORT}"
-export PHASE9_POSTGRES_URL="${BASE_URL}/phase9_schema_clone"
-export TEST_POSTGRES_URL="${BASE_URL}/phase9_full_test"
+export TEST_POSTGRES_URL="postgresql+psycopg://postgres:${PASSWORD}@127.0.0.1:${PORT}/social_media_v2_test"
 
-"$PYTHON" "$ROOT/scripts/rehearsal/production_schema_clone.py" \
-  --database-url "$PHASE9_POSTGRES_URL" \
-  --confirm-disposable phase9-offline-only \
-  --expected "$ROOT/docs/fase9/production_schema_fingerprint.json"
+SOCIAL_DB_URL="$TEST_POSTGRES_URL" "$PYTHON" "$BACKEND/scripts/apply_migrations.py"
+SOCIAL_DB_URL="$TEST_POSTGRES_URL" "$PYTHON" "$BACKEND/scripts/apply_migrations.py"
 
 (
   cd "$BACKEND"
   "$PYTHON" -m ruff check app tests
   "$PYTHON" -m pytest -q
-  "$PYTHON" -m pytest -q tests/test_phase9_release_rehearsal.py
 )
 
 "$PYTHON" "$ROOT/scripts/quality/export_openapi.py"
+
+(
+  cd "$ROOT/frontend"
+  npm run generate:api
+  npm test -- --run
+  npm run build
+)
 
 python3 - "$ROOT" <<'PY'
 import json
@@ -61,39 +59,26 @@ import sys
 
 root = pathlib.Path(sys.argv[1])
 schema = json.loads((root / "docs/contracts/social-media-v2-openapi.json").read_text())
-assert set(schema["paths"]["/api/settings/tiktok/activation-readiness"]) == {"get"}
-assert set(schema["paths"]["/api/settings/tiktok/oauth/account/start"]) == {"post"}
-assert set(schema["paths"]["/api/social/tiktok/oauth/callback"]) == {"get"}
+assert "/internal/provisioning/events" not in schema["paths"]
+assert "/api/media/{platform}/{content_id}" in schema["paths"]
 
-env = (root / "deploy/env/social-media-v2.dormant.env").read_text().splitlines()
-required = {
-    "SOCIAL_RUNTIME_MODE=dormant",
-    "SOCIAL_WRITES_ENABLED=false",
-    "SOCIAL_TIKTOK_ACCOUNT_ENABLED=false",
-    "SOCIAL_TIKTOK_ACCOUNT_OAUTH_MODE=disabled",
+env = (root / "deploy/env/social-media-v2.production.env.example").read_text()
+for line in (
+    "SOCIAL_RUNTIME_MODE=active",
+    "SOCIAL_META_COLLECTION_ENABLED=false",
     "SOCIAL_TIKTOK_COLLECTION_ENABLED=false",
-    "SOCIAL_TIKTOK_ADVERTISER_ENABLED=false",
-}
-assert required.issubset(env)
+    "SOCIAL_WORKER_SCHEDULE_ENABLED=false",
+):
+    assert line in env.splitlines()
 
-for unit in (root / "deploy/systemd").glob("*.service"):
-    lines = unit.read_text().splitlines()
-    assert not any(line.strip() == "[Install]" for line in lines)
-assert not list((root / "deploy").rglob("*.timer"))
-assert not list((root / "deploy").rglob("*cron*"))
-
-nginx = (root / "deploy/nginx/social-media-v2-dark.conf").read_text()
-assert "listen 127.0.0.1:8089" in nginx
-assert "location /" in nginx and "return 404" in nginx
-
-provider = (
-    root
-    / "backend/app/infrastructure/providers/tiktok/accounts/activation.py"
-).read_text()
-assert "httpx" not in provider and "requests" not in provider
+assert (root / "deploy/systemd/social-media-v2-api.service").is_file()
+assert (root / "deploy/systemd/social-media-v2-collection.service").is_file()
+assert (root / "deploy/systemd/social-media-v2-collection.timer").is_file()
+nginx = (root / "deploy/nginx/social-media-v2.conf").read_text()
+assert "127.0.0.1:8026" in nginx
+assert "root /opt/social-media-v2/frontend/dist" in nginx
 PY
 
 python3 "$ROOT/scripts/quality/check_secret_leaks.py"
 python3 "$ROOT/scripts/quality/check_canonical_vocabulary.py"
-"$ROOT/scripts/source_write_guard.sh"
-echo "OK: Faz 9 offline release rehearsal certification passed."
+echo "OK: standalone release verification passed."

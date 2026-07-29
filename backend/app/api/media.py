@@ -1,4 +1,4 @@
-"""Authorized local-only Instagram media proxy."""
+"""Authorized local-only social media proxy."""
 
 from __future__ import annotations
 
@@ -22,9 +22,10 @@ def create_media_router(
 ) -> APIRouter:
     router = APIRouter()
 
-    @router.get("/api/media/instagram/{content_id}")
+    @router.get("/api/media/{platform}/{content_id}")
     @mark_boundary(Boundary.QUERY)
-    async def instagram_media(
+    async def social_media(
+        platform: PlatformId,
         content_id: str,
         brand_id: str | None = Query(default=None),
         rollup: bool = Query(default=False),
@@ -43,7 +44,7 @@ def create_media_router(
         )
         media = reporting_store.find_media(
             brand_ids=scope.workspace.scope.resolved_brand_ids,
-            platform=PlatformId.INSTAGRAM,
+            platform=platform,
             external_content_id=content_id,
             account_id=account_id,
         )

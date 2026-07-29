@@ -13,8 +13,8 @@ from app.application.ports import AuthorityStore, ReportingStore
 from app.application.services.meta_activation import MetaActivationCoordinator
 from app.application.services.tiktok_activation import TikTokActivationCoordinator
 from app.core import WritePolicy, load_settings
-from app.infrastructure.persistence.legacy_socialmedia import LegacyReportingStore
 from app.infrastructure.persistence.projection_state import ProjectionStateStore
+from app.infrastructure.persistence.social_v2 import SocialReportingStore
 from app.infrastructure.providers.meta.runtime import create_meta_activation_runtime
 from app.infrastructure.providers.tiktok.runtime import create_tiktok_activation_runtime
 
@@ -66,7 +66,7 @@ def create_app(
         if store is None:
             store = ProjectionStateStore(engine=engine)
         if reporting_store is None:
-            reporting_store = LegacyReportingStore(engine)
+            reporting_store = SocialReportingStore(engine)
     if tiktok_activation is None and settings.tiktok.account_enabled:
         if engine is None or store is None:
             raise RuntimeError("tiktok_activation_runtime_unavailable")

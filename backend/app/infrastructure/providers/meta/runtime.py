@@ -12,12 +12,12 @@ from app.application.ports.credentials import CredentialError
 from app.application.services.meta_activation import MetaActivationCoordinator
 from app.application.services.tiktok_activation import (
     ActivationGate,
-    ProjectionActivationAuthority,
+    SessionActivationAuthority,
 )
 from app.core import AppSettings, ConfigurationError, WritePolicy
 from app.infrastructure.checkpoints import ProjectionCheckpointStore
 from app.infrastructure.credentials import AesGcmTokenVault, ProjectionCredentialStore
-from app.infrastructure.persistence.legacy_socialmedia import ProjectionMetaConnectionStore
+from app.infrastructure.persistence.social_v2 import ProjectionMetaConnectionStore
 
 from .oauth import MetaAccountsActivationProvider, MetaOAuthTransport
 from .oauth_state import MetaActivationStateAdapter, MetaStateCodec
@@ -75,7 +75,7 @@ def create_meta_activation_runtime(
         provider=provider,
         credential_store=ProjectionCredentialStore(engine, policy, vault),
         connection_store=connection_store,
-        authority=ProjectionActivationAuthority(authority_store),
+        authority=SessionActivationAuthority(authority_store),
     )
 
 

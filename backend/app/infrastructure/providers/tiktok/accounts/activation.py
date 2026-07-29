@@ -18,7 +18,6 @@ from app.application.ports import (
 from app.core.config import (
     TIKTOK_APP_ID,
     TIKTOK_PROVIDER_PROFILE,
-    TIKTOK_REDIRECT_URI,
     TikTokConfig,
 )
 
@@ -109,7 +108,6 @@ class TikTokAccountsActivationProvider:
             and bool(self._config.app_secret)
             and self._config.provider_profile == TIKTOK_PROVIDER_PROFILE
             and self._config.app_id == TIKTOK_APP_ID
-            and self._config.redirect_uri == TIKTOK_REDIRECT_URI
         )
 
     @property

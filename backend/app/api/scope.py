@@ -35,8 +35,7 @@ def resolve_request_scope(
     launch_brand_id = str(payload.get("brand_id") or "")
     try:
         workspace = build_brand_workspace(
-            store=store,
-            user_id=str(payload.get("user_id") or ""),
+            session=payload,
             selected_brand_id=selected_brand_id or launch_brand_id,
             rollup=rollup,
             require_write=require_write,

@@ -6,27 +6,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 AccessMode = Literal["read", "write"]
-AuthoritySource = Literal["full_snapshot", "membership"]
 BrandVisibility = Literal["active", "hidden_parent"]
-
-
-@dataclass(frozen=True)
-class BrandShell:
-    brand_id: str
-    name: str | None
-    parent_brand_id: str | None
-    active: bool
-    placeholder: bool
-
-
-@dataclass(frozen=True)
-class BrandAccess:
-    user_id: str
-    brand_id: str
-    role: str
-    access_mode: AccessMode
-    active: bool
-    authority_source: AuthoritySource
 
 
 @dataclass(frozen=True)

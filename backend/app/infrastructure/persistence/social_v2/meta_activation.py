@@ -1,4 +1,4 @@
-"""Schema-compatible Meta OAuth intent, discovery and Brand-link persistence."""
+"""V2-owned Meta OAuth intent, discovery and Brand-link persistence."""
 
 from __future__ import annotations
 
@@ -21,13 +21,6 @@ from app.application.ports import (
 )
 from app.core.write_policy import WritePolicy
 from app.domain.platforms import PlatformId
-
-from .platforms import LEGACY_PLATFORM_ALIASES
-
-LEGACY_SCOPE_COLUMN = "cli" + "ent_id"
-LEGACY_FACEBOOK_PLATFORM = next(
-    alias for alias, platform in LEGACY_PLATFORM_ALIASES.items() if platform is PlatformId.FACEBOOK
-)
 
 
 class ProjectionMetaConnectionStore:
@@ -250,13 +243,12 @@ class ProjectionMetaConnectionStore:
                     text(
                         """SELECT tenant_id, status FROM platform_connections
                        WHERE id=:connection_id AND brand_id=:brand_id
-                         AND platform IN ('facebook', :legacy_facebook)
+                         AND platform='facebook'
                        FOR UPDATE"""
                     ),
                     {
                         "connection_id": connection_id,
                         "brand_id": brand_id,
-                        "legacy_facebook": LEGACY_FACEBOOK_PLATFORM,
                     },
                 )
                 .mappings()
@@ -267,12 +259,6 @@ class ProjectionMetaConnectionStore:
                 "connected",
             }:
                 raise MetaActivationError("meta_connection_unavailable")
-            legacy_scope_id = connection.execute(
-                text("SELECT min(id) FROM clients WHERE brand_id=:brand_id"),
-                {"brand_id": brand_id},
-            ).scalar_one_or_none()
-            if legacy_scope_id is None:
-                raise MetaActivationError("meta_brand_legacy_scope_unavailable")
             linked_count = 0
             for selection in selections:
                 discovery = (
@@ -301,7 +287,6 @@ class ProjectionMetaConnectionStore:
                 account_id = _upsert_asset(
                     connection,
                     tenant_id=int(connection_row["tenant_id"]),
-                    legacy_scope_id=int(legacy_scope_id),
                     brand_id=brand_id,
                     platform=selection.platform,
                     external_id=selection.external_id,
@@ -310,11 +295,11 @@ class ProjectionMetaConnectionStore:
                 )
                 connection.execute(
                     text(
-                        f"""INSERT INTO linked_social_accounts
-                           (brand_id, {LEGACY_SCOPE_COLUMN}, platform, external_id, display_name,
+                        """INSERT INTO linked_social_accounts
+                           (brand_id, platform, external_id, display_name,
                             connection_id, meta_account_id, asset_id, status,
                             health_status, backfill_status, created_at, updated_at)
-                           VALUES (:brand_id, :legacy_scope_id, :platform, :external_id,
+                           VALUES (:brand_id, :platform, :external_id,
                                    :display_name, :connection_id, :meta_account_id,
                                    :account_id, 'connected', 'unknown', 'pending', now(), now())
                            ON CONFLICT (brand_id, platform, external_id) DO UPDATE
@@ -325,7 +310,6 @@ class ProjectionMetaConnectionStore:
                     ),
                     {
                         "brand_id": brand_id,
-                        "legacy_scope_id": int(legacy_scope_id),
                         "platform": selection.platform.value,
                         "external_id": selection.external_id,
                         "display_name": str(discovery["display_name"]),
@@ -421,7 +405,6 @@ def _upsert_asset(
     connection,
     *,
     tenant_id: int,
-    legacy_scope_id: int,
     brand_id: int,
     platform: PlatformId,
     external_id: str,
@@ -455,17 +438,16 @@ def _upsert_asset(
     return int(
         connection.execute(
             text(
-                f"""INSERT INTO assets
-                   (tenant_id, {LEGACY_SCOPE_COLUMN}, brand_id, platform, asset_type,
+                """INSERT INTO assets
+                   (tenant_id, brand_id, platform, asset_type,
                     external_id, display_name, meta_account_id, status, created_at)
-                   VALUES (:tenant_id, :legacy_scope_id, :brand_id, :platform,
+                   VALUES (:tenant_id, :brand_id, :platform,
                            :asset_type, :external_id, :display_name,
                            :meta_account_id, 'active', now())
                    RETURNING id"""
             ),
             {
                 "tenant_id": tenant_id,
-                "legacy_scope_id": legacy_scope_id,
                 "brand_id": brand_id,
                 "platform": platform.value,
                 "asset_type": "page" if platform is PlatformId.FACEBOOK else "profile",

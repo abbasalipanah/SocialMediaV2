@@ -37,11 +37,13 @@ CONFIG_KEYS = (
     "SOCIAL_META_APP_SECRET",
     "SOCIAL_META_ACCOUNT_ENABLED",
     "SOCIAL_META_ACCOUNT_OAUTH_MODE",
+    "SOCIAL_META_COLLECTION_ENABLED",
     "SOCIAL_META_ACTIVATION_GATE_ENABLED",
     "SOCIAL_META_ACTIVATION_ENABLED_AT",
     "SOCIAL_META_ACTIVATION_EXPIRES_AT",
     "SOCIAL_META_OAUTH_STATE_SECRET",
     "SOCIAL_VAULT_ENABLED",
+    "SOCIAL_WORKER_SCHEDULE_ENABLED",
 )
 
 
@@ -62,14 +64,22 @@ def test_default_bootstrap_is_fail_closed() -> None:
         policy.assert_allows_mutation("sync")
 
 
-def test_production_like_environment_rejects_database_config(
+def test_active_production_accepts_only_a_dedicated_secure_v2_database(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("APP_ENV", "production")
-    monkeypatch.setenv("SOCIAL_RUNTIME_MODE", "dormant")
-    monkeypatch.setenv("SOCIAL_DB_HOST", "127.0.0.1")
-    with pytest.raises(ConfigurationError, match="cannot receive a database"):
+    monkeypatch.setenv("SOCIAL_RUNTIME_MODE", "active")
+    monkeypatch.setenv("SOCIAL_WRITES_ENABLED", "true")
+    monkeypatch.setenv("SOCIAL_DB_URL", "postgresql://v2:secret@db.example/social_media_v2")
+    monkeypatch.setenv("SOCIAL_SSO_HS256_SECRET", "s" * 32)
+    monkeypatch.setenv("SOCIAL_SESSION_COOKIE_SECURE", "true")
+    with pytest.raises(ConfigurationError, match="require TLS"):
         load_settings()
+
+    monkeypatch.setenv("SOCIAL_DB_REQUIRE_TLS", "true")
+    settings = load_settings()
+    assert settings.runtime_mode is RuntimeMode.ACTIVE
+    assert WritePolicy.from_settings(settings).allows("sso_consume") is True
 
 
 @pytest.mark.parametrize(
@@ -99,7 +109,7 @@ def test_local_development_write_policy_requires_explicit_database(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("SOCIAL_WRITES_ENABLED", "true")
-    with pytest.raises(ConfigurationError, match="explicit disposable database"):
+    with pytest.raises(ConfigurationError, match="explicit V2 database"):
         load_settings()
 
     monkeypatch.setenv("SOCIAL_DB_HOST", "127.0.0.1")

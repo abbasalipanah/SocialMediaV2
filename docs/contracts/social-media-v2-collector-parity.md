@@ -2,8 +2,8 @@
 
 Tarih: `2026-07-14`
 
-Bu sözleşme Faz 5 collector davranışını dondurur. V2 hâlâ dormant'tır; production DB,
-provider credential, gerçek provider egress, traffic veya automated schedule kullanılmaz.
+Bu sözleşme collector davranışını tanımlar. Gerçek egress yalnız V2 provider/collection kapıları
+açıldığında ve yalnız V2-owned DB/credential/media ile yapılır.
 
 ## Oracle ve izolasyon
 
@@ -59,8 +59,8 @@ provider credential, gerçek provider egress, traffic veya automated schedule ku
 - D-1 coverage eksik account listesiyle non-zero, tam coverage ile zero exit üretir.
 - Linked-account seçimi mevcutsa transition fallback kullanılmaz; geçiş tamamlandıktan sonra boş
   linked set eski listeye geri düşmez.
-- CLI/lock/cadence contract'ları declaration olarak korunur; runtime automated schedule hâlâ
-  unavailable'dır. Yeni runtime forbidden legacy terminoloji üretmez.
+- Standalone collection 30 dakikalık timer için deklaratif systemd şablonu taşır; schedule env
+  gate kapalıyken komut fail-closed olur. TikTok pending doğrulaması manual-only ayrı lock kullanır.
 - Dirty-tree davranış eşlemesi
   `docs/fase5/v1_dirty_behavior_inventory.json` ile hash-bound tutulur.
 

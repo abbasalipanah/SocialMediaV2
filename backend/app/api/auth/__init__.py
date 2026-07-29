@@ -62,8 +62,7 @@ def create_auth_router(
         if store is None or not session or not (payload := resolve_session(session, store)):
             raise HTTPException(401, "session_invalid")
         if not session_has_current_brand_access(
-            store=store,
-            user_id=str(payload.get("user_id") or ""),
+            session=payload,
             brand_id=str(payload.get("brand_id") or ""),
         ):
             raise HTTPException(401, "session_authority_revoked")

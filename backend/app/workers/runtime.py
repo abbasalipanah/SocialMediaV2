@@ -1,4 +1,4 @@
-"""Dormant-by-default worker runtime and explicit manual-run gate."""
+"""Fail-closed worker runtime and explicit provider-egress gates."""
 
 from __future__ import annotations
 
@@ -21,12 +21,13 @@ class WorkerRuntimeConfig:
     automated_schedule_enabled: bool = False
 
     def __post_init__(self) -> None:
-        if self.automated_schedule_enabled:
-            raise ConfigurationError("worker_schedule_unavailable_before_cutover")
         if self.provider_egress_enabled and (
-            self.runtime_mode is not RuntimeMode.DEVELOPMENT or not self.writes_enabled
+            self.runtime_mode not in {RuntimeMode.DEVELOPMENT, RuntimeMode.ACTIVE}
+            or not self.writes_enabled
         ):
-            raise ConfigurationError("worker_egress_requires_disposable_development")
+            raise ConfigurationError("worker_egress_requires_writable_v2_runtime")
+        if self.automated_schedule_enabled and not self.provider_egress_enabled:
+            raise ConfigurationError("worker_schedule_requires_provider_egress")
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,18 @@ def dormant_worker_config(settings: AppSettings) -> WorkerRuntimeConfig:
         writes_enabled=settings.social_writes_enabled,
         provider_egress_enabled=False,
         automated_schedule_enabled=False,
+    )
+
+
+def settings_worker_config(settings: AppSettings) -> WorkerRuntimeConfig:
+    provider_enabled = (
+        settings.meta.collection_enabled or settings.tiktok.collection_enabled
+    )
+    return WorkerRuntimeConfig(
+        runtime_mode=settings.runtime_mode,
+        writes_enabled=settings.social_writes_enabled,
+        provider_egress_enabled=provider_enabled,
+        automated_schedule_enabled=settings.worker_schedule_enabled,
     )
 
 
@@ -78,4 +91,5 @@ __all__ = [
     "assert_manual_worker_allowed",
     "dormant_worker_config",
     "local_fixture_worker_config",
+    "settings_worker_config",
 ]

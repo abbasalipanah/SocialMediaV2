@@ -2,29 +2,64 @@
 
 | Alan | Değer |
 |---|---|
-| Tarih | `2026-07-10` |
-| Durum | Revizyon 4 — ChatGPT 5.3 için uygulamaya hazır normatif plan |
+| Tarih | `2026-07-29` |
+| Durum | Revizyon 5 — standalone V2, yalnız SSO entegrasyonu ve canlı sistemlere sıfır müdahale |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
 | Frontend development URL | `http://localhost:3010/` |
-| Ürün tanımı | Accumulate control-plane ile çalışan bağımsız Social Media V2 downstream uygulaması |
+| Ürün tanımı | Kendi runtime ve veri sahipliğine sahip, Accumulate ile yalnız SSO üzerinden bağlanan bağımsız Social Media V2 uygulaması |
 
 ## 0. ChatGPT 5.3 uygulama protokolü
 
 Bu dosya fikir listesi değil, Social Media V2 için **normatif uygulama sözleşmesidir**. ChatGPT 5.3 veya başka bir implementasyon ajanı aşağıdaki sırayı ve durma koşullarını değiştiremez.
 
+### 0.0 Revizyon 5 bağlayıcı çalışma ve entegrasyon sınırı
+
+Bu bölüm, aşağıdaki maddelerle çelişen eski webhook, outbox, V1 writer cutover veya
+Accumulate kaynak değişikliği adımlarını hükümsüz kılar. Çelişki halinde her zaman bu bölüm
+uygulanır.
+
+1. Yazılmasına izin verilen tek proje
+   `/home/api/colab_scripts/SocialMediadownstream` dizinidir.
+2. `/home/api/colab_scripts/SocialMedia`, `/home/api/colab_scripts/Accumulate` ve
+   `/home/api/colab_scripts/performance_marketing` canlı sistemlerdir; yalnız gerektiğinde
+   salt-okunur referans olarak incelenebilir.
+3. Bu canlı projelerde kod, config, `.env`, Git state, DB/schema/data, media, build artifact,
+   systemd, timer, cron, process, port, Nginx, routing veya secret değişikliği yapılamaz;
+   servis restart/stop/start/enable/disable işlemi uygulanamaz.
+4. Kaynak projelerde build, format, migration veya dosya/DB/cache üreten test çalıştırılamaz.
+   Salt-okunur kontrol dahi mevcut canlı davranışı etkileyebilecekse yapılmaz.
+5. Başka bir projeye yazma veya canlı servise müdahale gerektiren her görev otomatik stop
+   koşuludur; işlem yapılmadan kullanıcıya ihtiyaç ve hedef açıkça raporlanır.
+6. V2; kendi backend, frontend, DB/schema, DB role, session store, credential vault, media root,
+   provider adapter, worker/scheduler, log, health, deploy ve rollback artifact'lerine sahip olur.
+   V1 runtime, DB writer, timer veya media sürecini kapatmak V2 çalışma kapsamı değildir.
+7. Accumulate ile izin verilen tek runtime entegrasyonu SSO launch/token sözleşmesidir.
+   Accumulate provisioning webhook, outbox, shared runtime import, shared filesystem, shared
+   process veya V1 proxy bağımlılığı V2 final mimarisinde bulunamaz.
+8. V2 önce Accumulate değişikliği olmadan disposable/local ve ardından V2'ye ait staging
+   ortamında uçtan uca çalışır hale getirilir.
+9. `STANDALONE_RUNTIME_COMPLETE` sonrasında Accumulate ekibine yalnız dokümante edilmiş SSO
+   contract'ı, launch/callback adresleri, health kanıtı ve rollback beklentisi e-posta/handoff
+   olarak iletilir. Accumulate tarafındaki kod, config, routing ve deploy işlemlerini yalnız
+   Accumulate/Operations ekibi uygular.
+10. E-posta/handoff hazırlamak bu repository'nin kapsamındadır; kullanıcı ayrıca istemeden
+    mesaj gönderilmez ve dış sistemde değişiklik yapılmaz.
+
 ### 0.1 Zorunlu çalışma sırası
 
 1. Bu planın tamamını okumadan kod değişikliğine başlama.
-2. Yalnız `/home/api/colab_scripts/SocialMediadownstream` içinde write yap; SocialMedia, Accumulate ve performance_marketing kaynaklarını salt-okunur tut.
+2. Yalnız `/home/api/colab_scripts/SocialMediadownstream` içinde write yap; §0.0 kapsamındaki canlı projeleri ve operasyonel yüzeyleri salt-okunur tut.
 3. Fazları §14 sırasıyla uygula; bir fazın çıkış kapısı yeşil olmadan sonraki faza geçme.
-4. Production DB, production secret, provider authorization, service/timer veya Accumulate routing üzerinde bu planın açık final gate'i olmadan işlem yapma.
+4. V2'ye ait production DB, secret, provider authorization veya service/timer üzerinde bu planın açık final gate'i olmadan işlem yapma; kaynak projelerin production yüzeylerine hiçbir gate altında doğrudan müdahale etme.
 5. Provider/schema/runtime gerçeği planla uyuşmazsa fallback uydurma, kapsam genişletme veya legacy yolu sessizce kullanma; dur ve kanıtla birlikte kullanıcı kararı iste.
 6. Secret, OAuth code, access/refresh token veya signed activation intent'i Markdown'a, source code'a, Git'e, test fixture'a, komut çıktısına veya log'a yazma.
-7. Her faz sonunda source-project snapshot, architecture boundary, vocabulary guard ve ilgili testleri yeniden çalıştır.
+7. Her faz sonunda aynı çalışma oturumunun salt-okunur kaynak başlangıç/bitiş snapshot'ını, architecture boundary, vocabulary guard ve ilgili V2 testlerini yeniden çalıştır.
 8. Son durum `READY_FOR_OWNER_TIKTOK_ACTIVATION` olana kadar production TikTok bağlantısı başlatma.
 9. Bu duruma gelince kullanıcı adına OAuth'u açma veya linki takip etme; yalnız §3.7'de tanımlanan sabit, secretsız owner activation URL'sini kullanıcıya ver ve dur.
+10. Accumulate veya SocialMedia repository'sinde patch hazırlama, uygulama, commit, push veya deploy yapma; gerekli entegrasyonu yalnız handoff sözleşmesi olarak tarif et.
+11. V2 bağımsız çalışmadan Accumulate ekibinden SSO veya canlı routing değişikliği isteme.
 
 ### 0.2 Ajanın değiştiremeyeceği ürün kararları
 
@@ -32,21 +67,27 @@ Bu dosya fikir listesi değil, Social Media V2 için **normatif uygulama sözle�
 - Platform label'ları tam olarak `Facebook | Instagram | TikTok`.
 - TikTok production bağlantısı yalnız hesap sahibi tarafından, son aşamada verilen manual activation linkiyle yapılır.
 - TikTok advertiser flow kapalıdır; ayrı kullanıcı onayı olmadan açılamaz.
-- Cronjob/orchestrator/data writer sahipliği cutover'a kadar V1'dedir.
-- İlk cutover schema-compatible'dır; `/api/v2`, dedicated read DB, event bus veya onaysız yeni tablo eklenmez.
+- V1 cronjob/orchestrator/data writer sahipliği V2 çalışma kapsamı dışında ve değişmeden kalır.
+- V1 canlı runtime'ı V2 çalışması boyunca değişmeden çalışır; V2 kendi runtime ve veri sahipliğini kurar.
+- Accumulate runtime entegrasyonu yalnız SSO'dur; provisioning webhook/outbox bağımlılığı final üründe yasaktır.
+- İlk standalone runtime V2-owned DB/schema kullanır; `/api/v2`, event bus veya gereksiz microservice eklenmez.
 - Eksik/unsupported provider verisi `0` olarak uydurulmaz.
 - Bu planda açıkça ertelenen hiçbir karar “uygulamayı tamamlamak için gerekli” gerekçesiyle otomatik kapsam içine alınmaz.
 
 ### 0.3 Tamamlandı iddiasının biçimi
 
-ChatGPT 5.3 işi tamamladığını söylemeden önce şu dört sonucu ayrı ayrı raporlar:
+ChatGPT 5.3 işi tamamladığını söylemeden önce şu sonuçları ayrı ayrı raporlar:
 
-1. `RELEASE_CANDIDATE_COMPLETE`
-2. `WRITER_OWNERSHIP_CUTOVER_COMPLETE`
-3. `READY_FOR_OWNER_TIKTOK_ACTIVATION`
-4. Owner aktivasyonu sonrasında `TIKTOK_CONNECTION_VERIFIED`
+1. `STANDALONE_PRODUCT_COMPLETE`
+2. `STANDALONE_RUNTIME_COMPLETE`
+3. `READY_FOR_ACCUMULATE_SSO_HANDOFF`
+4. Accumulate/Operations uygulaması sonrasında `SSO_LIVE_VERIFIED`
+5. Owner aktivasyonu sonrasında `TIKTOK_CONNECTION_VERIFIED`
 
-İlk üç sonuç aynı şey değildir. Üçüncü sonuçta ajan yalnız sabit owner URL'sini paylaşır; dördüncü sonuç ancak kullanıcı TikTok consent akışını kendisi tamamladıktan ve callback/readiness doğrulaması yeşil olduktan sonra verilebilir.
+Bu sonuçlar aynı şey değildir. SSO handoff yalnız standalone runtime kanıtlandıktan sonra
+hazırlanır; canlı SSO doğrulaması Accumulate/Operations ekibinin kendi tarafındaki değişikliği
+uygulamasından sonra yapılır. TikTok doğrulaması ise ancak hesap sahibi consent akışını kendisi
+tamamladıktan ve callback/readiness kanıtı yeşil olduktan sonra verilebilir.
 
 ## 1. Yönetici kararı
 
@@ -57,22 +98,23 @@ V2'nin kaynakları ve görevleri şöyledir:
 | Kaynak | V2'deki rolü |
 |---|---|
 | `/home/api/colab_scripts/SocialMedia` | Kanıtlanmış backend, veri modeli, collector, worker ve operasyon davranışının kaynağı |
-| `/home/api/colab_scripts/Accumulate` | Mevcut canlı Social Media sayfalarının UX/ürün sözleşmesi ve Accumulate SSO/webhook authority sözleşmesinin kaynağı |
-| `/home/api/colab_scripts/performance_marketing` | Yeni sidebar, topbar, parent/child brand seçimi, settings kabuğu, local session ve provisioning yaklaşımının görsel/davranışsal referansı |
+| `/home/api/colab_scripts/Accumulate` | Salt-okunur UX ve SSO contract referansı; V2 tarafından değiştirilmez ve provisioning runtime bağımlılığı oluşturmaz |
+| `/home/api/colab_scripts/performance_marketing` | Salt-okunur sidebar, topbar, parent/child brand seçimi, settings kabuğu ve local session görsel/davranış referansı |
 | `/home/api/colab_scripts/SocialMediadownstream` | Yazılmasına izin verilen tek proje; V2'nin bütün runtime sahipliği burada olacaktır |
 
 Temel ürün kararı:
 
-- Accumulate; user, brand, parent/child hierarchy, membership, entitlement ve app-access authority olmaya devam eder.
-- Social Media V2; kendi session'ını, authority projection'ını, Social Media domain verisini, dashboard API'lerini ve frontend'ini sahiplenir.
+- Accumulate yalnız SSO tokenı üzerinden user, seçili Brand, rol ve app-access authority sağlar.
+- Social Media V2; kendi session'ını, SSO claim snapshot'ını, Social Media domain verisini, dashboard API'lerini, frontend'ini ve bütün runtime'ını sahiplenir.
 - V2 tamamlanana kadar production cronjob, orchestrator, scheduler veya data-collection işi V2'de çalışmaz.
 - Social Media V1 bütün mevcut production cronjob/orchestrator/data-collection işlerinin tek sahibi ve tek writer'ı olarak kesintisiz devam eder.
-- Facebook/Instagram collector ve worker davranışının V2 kod karşılığı yalnız offline/diferansiyel testlerle hazırlanır; final cutover onayına kadar aktive edilmez.
+- V2'nin çalışır hale getirilmesi V1 writer freeze, V1 timer değişikliği veya V1 routing değişikliği gerektirmez.
+- Facebook/Instagram collector ve worker davranışının V2 kod karşılığı yalnız offline/diferansiyel testlerle hazırlanır; standalone runtime onayına kadar aktive edilmez.
 - TikTok, V2'nin üçüncü canonical platformudur ve yeni platform olarak uçtan uca geliştirilecektir.
 - V2 frontend, Settings ve public API sözlüğünde yalnız `Brand` kullanılır; `client` eski terimi kullanılmaz.
 - V2 yeni kod, env, route, header, log ve ürün metinlerinde `ARS` terimi kullanılmaz.
-- Production social data için mevcut `socialmedia_adv` DB kullanılmaya devam eder.
-- Final cutover onayından önce production DB'ye **bağlantı dahil hiçbir temas yapılmaz**.
+- V2 production verisi V2'ye ait ayrı PostgreSQL DB/role/schema üzerinde tutulur; V1 `socialmedia_adv` runtime DB'si kullanılmaz.
+- Standalone production onayından önce V2 production DB'ye **bağlantı dahil hiçbir temas yapılmaz**.
 - Mevcut ve yıllardır çalışan veri toplama davranışı, karakterizasyon ve diferansiyel testler yeşil olmadan değiştirilmez.
 
 Repository kararı:
@@ -95,6 +137,11 @@ Aşağıdaki klasörlerde dosya oluşturulmayacak, düzenlenmeyecek, silinmeyece
 - `/home/api/colab_scripts/Accumulate`
 - `/home/api/colab_scripts/performance_marketing`
 
+Bu yasak yalnız repository dosyalarını değil, bu projelere ait canlı DB, media, secret,
+servis, timer, cron, process, port, Nginx ve routing yüzeylerini de kapsar. V2 doğrulaması için
+bu sistemler restart edilmez, durdurulmaz, yeniden build edilmez veya farklı bir kaynağa
+yönlendirilmez.
+
 Her V2 milestone'u öncesinde ve sonrasında bu üç projenin aşağıdaki bilgileri karşılaştırılacaktır:
 
 - branch ve HEAD
@@ -106,13 +153,13 @@ Kaynak projelerin başlangıçta zaten dirty olması, yeni değişiklik yapıld�
 
 ### 2.2 Production DB ve servis güvenliği
 
-Final cutover penceresine kadar:
+V2 standalone production aktivasyon penceresine kadar:
 
 - production DB URL'si V2 geliştirme/CI ortamına verilmeyecek;
 - V2, SocialMedia veya Accumulate `.env` dosyalarını fallback olarak okumayacak;
 - production Meta token dosyaları kopyalanmayacak;
 - Alembic, `create_all`, autogenerate veya schema inspection production'da çalıştırılmayacak;
-- V2 servis/timer unit'leri production secret olmadan, disabled/masked ve cutover sentinel'i olmadan başlatılamayacak;
+- V2 servis/timer unit'leri production secret olmadan, disabled/masked ve V2 standalone activation sentinel'i olmadan başlatılamayacak;
 - `SOCIAL_WRITES_ENABLED` varsayılan olarak `false` olacak;
 - mutation endpoint'leri ve worker entrypoint'leri write flag'i yoksa fail-closed davranacak.
 
@@ -139,7 +186,7 @@ V2 tamamen bitene kadar çalışır bir production alternatifi olarak konumland�
 - V2 frontend/API geliştirmesi fixture ve disposable PostgreSQL ile yapılır.
 - Production DB üzerinde shadow read, shadow write veya dual write yapılmaz.
 - V2 mutation/sync/backfill kontrolleri production-dark modda backend capability ile kapalıdır; UI bu aksiyonları aktifmiş gibi göstermez.
-- Aktivasyon yalnız bütün Definition of Done maddeleri tamamlandıktan ve ayrı final cutover onayı verildikten sonra mümkündür.
+- Aktivasyon yalnız bütün Definition of Done maddeleri, standalone deploy provası ve Accumulate ekibine SSO handoff onayı tamamlandıktan sonra mümkündür.
 
 Önerilen runtime state modeli:
 
@@ -147,14 +194,14 @@ V2 tamamen bitene kadar çalışır bir production alternatifi olarak konumland�
 |---|---|---|---|---|
 | `development` | disposable local DB | local-only | manual/local-only | geliştirme ve test |
 | `dormant` | production bağlantısı yok | kapalı | kapalı/masked | production'a karanlık deploy |
-| `cutover_read_only` | final pencerede read-only | kapalı | kapalı | ilk production smoke |
-| `cutover_credential_migration` | production | yalnız `credential_mirror/verify` command'ları | kapalı/masked | global writer fence sonrasında TokenVault hazırlığı |
-| `cutover_canary` | production | allowlist edilmiş `social_data_canary` ve izole `control_plane_canary` command'ları | kapalı/masked | writer freeze sonrasında kontrollü manual doğrulama |
-| `cutover_control_plane_drain` | production | yalnız signed provisioning receive/requeue/snapshot/drain command'ları | kapalı/masked | gerçek Accumulate outbox projection hazırlığı |
-| `cutover_activation` | production | yalnız signed provisioning receive, `credential_scrub`, active-sentinel handoff ve launch barrier command'ları | kapalı/masked | final authority freeze altında atomik aktivasyon |
-| `active` | production | capability + write guard | onaylı worker aileleri | final V2 runtime |
+| `staging` | yalnız V2'ye ait staging DB | canary/allowlist | manual ve kontrollü | standalone SSO/provider/browser E2E |
+| `standalone_ready` | yalnız V2'ye ait production DB | varsayılan kapalı | kapalı/masked | SSO handoff öncesi deploy/readiness |
+| `active` | yalnız V2'ye ait production DB | capability + write guard | onaylı V2 worker aileleri | Accumulate SSO sonrası bağımsız V2 runtime |
 
-Cutover mode geçişleri tek yönlü ve auditlidir: `cutover_read_only → cutover_credential_migration → cutover_canary → cutover_control_plane_drain → cutover_activation → active`. Her mode merkezi `WritePolicy` içinde yalnız tabloda yazan command family'lerini açar; farklı bir command veya sıra fail-closed olur. Rollback bunun tersine gitmez; §16.3'teki explicit restore state machine'ini kullanır.
+Runtime geçişleri tek yönlü ve auditlidir: `development → dormant → staging → standalone_ready → active`.
+Her mode merkezi `WritePolicy` içinde yalnız tabloda yazan command family'lerini açar; farklı
+bir command veya sıra fail-closed olur. Bu model V1 writer state'ini değiştirmez ve Accumulate
+provisioning/outbox aşaması içermez.
 
 ### 2.5 Canonical terminoloji ve vocabulary guard
 
@@ -465,7 +512,7 @@ SOCIAL_TIKTOK_COLLECTION_ENABLED=false
 SOCIAL_TIKTOK_ADVERTISER_ENABLED=false
 ```
 
-Production için izin verilen tek account OAuth mode'u `manual_intent_only`'dir; genel/public connect modu yoktur. `dormant`, bütün `cutover_*` modları ve `Activated V2` sonrasındaki owner onayı öncesinde mode kesinlikle `disabled` kalır. Disabled durumda start/callback; state üretmeden, provider egress yapmadan ve persistence çalıştırmadan fail-closed döner.
+Production için izin verilen tek account OAuth mode'u `manual_intent_only`'dir; genel/public connect modu yoktur. `development`, `dormant`, `staging` ve `standalone_ready` modlarında owner onayı öncesinde mode kesinlikle `disabled` kalır. Disabled durumda start/callback; state üretmeden, provider egress yapmadan ve persistence çalıştırmadan fail-closed döner.
 
 Effective enable yalnız şu conjunction ile oluşur:
 
@@ -522,7 +569,7 @@ Activation intent browser linkinde bulunmaz. Yalnız owner'ın same-origin + CSR
 
 Owner aktivasyon sırası:
 
-1. `RELEASE_CANDIDATE_COMPLETE` ve `WRITER_OWNERSHIP_CUTOVER_COMPLETE` yeşil.
+1. `STANDALONE_RUNTIME_COMPLETE` ve `SSO_LIVE_VERIFIED` yeşil; kaynak canlı projelerin başlangıç/bitiş snapshot'ları değişmemiş.
 2. TikTok hâlâ disabled; production provider call/token yok.
 3. Provider app approval, display name `Accumulate TikTok`, logo, exact callback, required scopes ve rotated secret doğrulanır.
 4. Business Accounts Sandbox/staging auth → token → refresh → revoke ve capability testleri yeşil.
@@ -556,20 +603,19 @@ Start ile callback arasında access kaldırılırsa token/link persist edilmez; 
 
 ```mermaid
 flowchart LR
-    A[Accumulate Control Plane] -->|app_sso JWT v1| B[Social Media V2 SSO Consume]
-    A -->|HMAC signed provisioning events| C[V2 Projection Inbox]
+    A[Accumulate SSO] -->|signed app_sso token| B[Social Media V2 SSO Consume]
     B --> D[HttpOnly Local Session]
-    C --> E[Brand / User / Access Projection]
     D --> F[V2 FastAPI]
-    E --> F
-    F --> G[(socialmedia_adv)]
+    F --> G[(V2-owned PostgreSQL)]
     F --> H[React V2 Frontend]
     I[Meta Graph API / TikTok API] --> J[V2 Collectors and Workers]
     J --> G
     G --> F
 ```
 
-Development boyunca yukarıdaki collector/worker hattı yalnız disposable local ortamda bulunur. Production'da V1 tek writer olmaya devam eder; V2 hattı final cutover'a kadar dormant kalır.
+Development boyunca collector/worker hattı yalnız disposable local veya V2'ye ait staging
+ortamında bulunur. V1 canlı runtime'ı değişmeden çalışır. V2 hattı kendi DB/media/lock
+namespace'iyle doğrulanmadan production'da açılmaz.
 
 Authority sınırı:
 
@@ -578,15 +624,15 @@ Authority sınırı:
 | User kimliği ve durumu | Accumulate |
 | Brand ve parent/child hierarchy | Accumulate |
 | Membership, role, entitlement, access window | Accumulate |
-| SSO assertion ve provisioning event üretimi | Accumulate |
+| SSO assertion üretimi | Accumulate |
 | Local session ve replay koruması | Social Media V2 |
-| Authority projection/cache | Social Media V2 |
+| SSO claim snapshot ve Brand scope enforcement | Social Media V2 |
 | Linked social accounts ve sync selection | Social Media V2 |
 | Metrics, content, comments, media, health ve backfill | Social Media V2 |
 | Dashboard aggregation ve API DTO'ları | Social Media V2 |
 | Frontend shell ve Social Media sayfaları | Social Media V2 |
-| V1 production cron/orchestrator/collector işleri — cutover öncesi | Social Media V1 |
-| V2 collector/worker işleri — yalnız final cutover sonrası | Social Media V2 |
+| V1 production cron/orchestrator/collector işleri — değişmeden | Social Media V1 |
+| V2 collector/worker işleri — yalnız V2 DB/runtime üzerinde | Social Media V2 |
 
 ## 5. Hedef repository yapısı
 
@@ -988,7 +1034,7 @@ Active Brand ve write-capable canonical role için `access_mode=write`; diğer d
 
 ### 7.4 Entegrasyon rehberinin kullanım sınırı
 
-`accumulate-alt-uygulama-teknik-entegrasyon-rehberi.md` V2 planlama aşamasında yalnız generic SSO, HMAC webhook, brand scope, access window ve provisioning ilkeleri için local migration girdisidir. Rehberin tamamı V2 ürün sözleşmesi değildir; canonical V2 repository'sine/runtime artifact'ine dahil edilmez. Social Media'ya özel normatif contract tamamlanınca bu local kopya target repository'den çıkarılır; audit için gerekiyorsa repository dışındaki salt-okunur referans konumunda tutulur.
+`accumulate-alt-uygulama-teknik-entegrasyon-rehberi.md` V2 planlama aşamasında yalnız generic SSO, Brand scope ve access-window ilkeleri için salt-okunur migration girdisidir. HMAC webhook ve provisioning bölümleri Revizyon 5 gereği ürün sözleşmesine alınmaz. Rehberin tamamı canonical V2 repository'sine/runtime artifact'ine dahil edilmez.
 
 V2'ye **alınmayacak** rehber bölümleri/örnekleri:
 
@@ -1006,102 +1052,64 @@ V2 authorization kararı:
 - `role` yalnız contract doğrulaması/audit/display bağlamında tutulur; V2 içinde legacy isim mapping'i yapılmaz.
 - `platform_role` compatibility business rule kaynağı değildir.
 - `app_role` Social Media'ya özel ayrı bir contract açıkça onaylanmadıkça authorization için kullanılmaz.
-- Accumulate cutover testleri V2'ye deprecated/legacy role değeri gelmediğini doğrular; gelirse sessiz normalize etmek yerine contract/cutover hatası üretilir.
-- V2'ye özel normatif sözleşme `docs/contracts/social-media-v2-sso-provisioning.md` olarak ayrıca yazılır; generic entegrasyon rehberi bu belgenin yerine geçmez.
+- Accumulate SSO handoff testleri V2'ye deprecated/legacy role değeri gelmediğini doğrular; gelirse sessiz normalize etmek yerine contract hatası üretilir.
+- V2'ye özel normatif SSO-only sözleşme `docs/contracts/social-media-v2-sso-only.md` olarak yazılır; generic entegrasyon rehberi bu belgenin yerine geçmez.
 - Zorunlu `iss` kontrolü istenirse mevcut SSO v1'e sessizce eklenmez; Accumulate ve V2'nin birlikte geçeceği versioned contract değişikliği olarak ayrıca onaylanır.
 
-## 8. Webhook ve authority projection tasarımı
+## 8. SSO-only authority tasarımı
 
-### 8.1 Endpoint
+### 8.1 Tek entegrasyon endpoint'i
 
-Canonical endpoint:
-
-```text
-POST /internal/provisioning/events
-```
-
-Reverse proxy uyumluluğu gerekiyorsa `/api/internal/provisioning/events` aynı handler'a alias olabilir; tek business implementation bulunur.
-
-### 8.2 HMAC sözleşmesi
-
-Headers:
-
-- `X-Accumulate-Timestamp`
-- `X-Accumulate-Nonce`
-- `X-Accumulate-Signature`
-
-Canonical payload:
+Canonical authority girişi yalnız şudur:
 
 ```text
-METHOD
-/canonical/path?sorted=query
-unix_timestamp
-nonce
-sha256(raw_body)
+GET /sso/consume?token=<signed-app-sso>
 ```
 
-Kurallar:
+V2 final runtime'ında `/internal/provisioning/events`, provisioning alias'ı, HMAC header/secret,
+event inbox, outbox consumer veya background authority sync bulunamaz. Mevcut implementasyondaki
+bu yüzeyler Revizyon 5 kapsamında kaldırılacak migration borcudur; canlıya alınamaz.
 
-- timestamp toleransı 300 saniye;
-- nonce TTL 600 saniye;
-- constant-time signature comparison;
-- body parse edilmeden önce signature doğrulaması;
-- aynı nonce ikinci kez kullanılamaz;
-- her `event_id` atomik olarak claim edilir;
-- duplicate event `200 duplicate_ignored` döner;
-- entity version/sequence eski event'in yeni state'i ezmesini engeller;
-- unknown event `ignored/rejected` olarak ölçülür, sessizce processed sayılmaz;
-- payload ve failure reason secretsız audit kaydında tutulur.
+### 8.2 SSO claim ve local session kuralları
 
-### 8.3 Desteklenen event'ler
+- Token signature, issuer, audience=`social_media`, expiry, JTI ve app entitlement doğrulanır.
+- User, seçili Brand, rol, access mode ve gerekli app izinleri yalnız imzalı claim'den alınır.
+- Raw SSO token kalıcı saklanmaz; JTI hash/replay kaydı ve hash-only local session üretilir.
+- Local session kısa ömürlüdür; süresi dolunca fresh Accumulate SSO zorunludur.
+- Browser query, header veya local storage Brand/rol/izin authority'si değildir.
+- Mevcut SSO contract yalnız launch Brand'ini taşıyorsa V2 güvenli tek-Brand modunda çalışır;
+  parent/child selector ve rollup capability kapalı kalır.
+- Parent/child deneyimi isteniyorsa versioned SSO contract, kullanıcının açıkça erişebildiği Brand
+  ID'lerini ve parent ilişkilerini imzalı bir scope claim'i olarak taşır. Claim yoksa V2 bu
+  bilgiyi tahmin etmez, Accumulate API'sine çağrı veya webhook fallback'i yapmaz.
+- Access revoke, kısa token/session süresi ve yeniden SSO doğrulaması sınırında uygulanır.
 
-| Event | V2 davranışı |
-|---|---|
-| `brand.upserted` | Brand shell ve parent ilişkisini projection'a alır |
-| `brand.deleted` | Brand ailesini inactive/archive yapar ve session'ları revoke eder |
-| `entitlement.updated` | `social_media` erişimini active/inactive yapar |
-| `brand.app_access.changed` | App access durumunu günceller |
-| `membership.upserted` | User-brand role/access projection'ını günceller |
-| `brand_access.sync` | User için full brand-access snapshot uygular |
-| `user.deleted` | User'ı inactive yapar ve bütün session'ları revoke eder |
+### 8.3 Accumulate ekibine final SSO handoff'u
 
-Payload parser, status'u yalnız top-level alandan değil `before/after`, `entitlement`, `app_access` ve snapshot şekillerinden açık contract ile okur. `brand_access.sync` içinde boş liste bütün eski erişimleri kapatan geçerli bir snapshot'tır.
+V2 `STANDALONE_RUNTIME_COMPLETE` olmadan Accumulate tarafında değişiklik istenmez. Sonrasında
+Accumulate/Operations ekibine yalnız şu sözleşme teslim edilir:
 
-Membership webhook role alanı da aynı canonical role allowlist'iyle doğrulanır. `user.product_role.updated` ve Media Planner `app_role` semantiği Social Media V2'nin zorunlu event/authorization contract'ına dahil değildir.
+- Social Media launch profile ve V2 public base URL;
+- `launch_app_id=social_media`, exact issuer/audience ve versioned claim şeması;
+- seçili Brand ve gerekiyorsa açık Brand-scope claim'i;
+- sabit `tiktok_owner_activation` target'ının yalnız `/settings/tiktok/connect` yoluna map'i;
+- arbitrary `return_to`, absolute URL ve browser-provided Brand override yasağı;
+- health/readiness URL'leri, cookie/domain beklentisi ve rollback adresi.
 
-### 8.4 Accumulate tarafındaki zorunlu final cutover değişikliği
-
-SSO tokenı yalnız launch brand'ini taşır; bütün parent/child family snapshot'ını taşımaz. Bu nedenle parent/child ve membership lifecycle yalnız SSO'dan üretilemez.
-
-Final go-live için, ayrı ve açık onaylı Accumulate cutover paketinde aşağıdakiler zorunludur:
-
-- Social Media launch profile: `downstream_sso`
-- `launch_app_id`: `social_media`
-- `shell_owner`: `downstream`
-- `login_mode`: `accumulate_contract_only`
-- Social Media base URL'nin V2'ye yönlenmesi
-- Social Media HMAC secret hedefinin tanımlanması
-- generic lifecycle outbox'ın `social_media` için gerekli event'leri üretmesi
-- login/cutover başlangıcında full `brand_access.sync` snapshot'ı
-- sidebar ve Settings linklerinin launch profile'ı izleyerek downstream'e gitmesi
-- server allowlist'inde `tiktok_owner_activation` launch target'ı; yalnız `/settings/tiktok/connect` return route'una map edilir
-- bu target için mevcut downstream local session'a güvenmeyen yeni SSO assertion/JTI issuance ve signed fixed-target handoff
-- arbitrary `return_to`, absolute URL veya browser-provided Brand override reddi
-
-Bu değişiklikler V2 geliştirme sırasında yapılmaz. Final cutover onayına kadar Accumulate salt-okunur kalır. Bu paket veya eşdeğer gateway/config değişikliği olmadan canlı kullanıcı trafiğinin downstream'e otomatik geçmesi teknik olarak mümkün değildir.
+V2 ekibi Accumulate kodu/config'i/routing'i üzerinde işlem yapmaz. Accumulate/Operations ekibi
+kendi değişikliğini uyguladıktan sonra iki ekip browser SSO E2E yapar ve ancak bundan sonra
+`SSO_LIVE_VERIFIED` verilir.
 
 ## 9. Parent/child brand projection ve authorization
 
 ### 9.1 Projection kuralları
 
-- `brand_id`, Accumulate authority kimliği olarak saklanır.
-- `parent_brand_id`, Accumulate ilişkisinin projection'ıdır.
-- Full brand tree önce hidden shell olarak kabul edilir.
-- Yalnız `social_media` app access'i olan brand'ler active olur.
-- Active child'ın hidden parent'ı navigation/rollup shell olarak gösterilebilir.
-- Parent entitlement, child'ı otomatik active yapmaz.
-- SSO yalnız initial launch brand'ini seçer; family erişimi webhook snapshot/projection'dan gelir.
-- Brand/user access kapanınca session revoke edilir.
+- `brand_id`, doğrulanmış SSO authority kimliği olarak local session snapshot'ında saklanır.
+- Seçili Brand her zaman claim içinde bulunmalıdır; browser değeri kabul edilmez.
+- Parent/child ilişkisi yalnız versioned, imzalı SSO scope claim'i içindeyse kullanılır.
+- Scope claim'i yoksa yalnız launch Brand aktiftir; parent selector ve rollup gizlenir.
+- Parent entitlement, child'ı otomatik active yapmaz; her child ID claim'de açıkça bulunmalıdır.
+- Brand/user access değişikliği kısa session süresi sonunda fresh SSO ile uygulanır.
 
 ### 9.2 Query scope kuralları
 
@@ -1144,7 +1152,6 @@ Bu değişiklikler V2 geliştirme sırasında yapılmaz. Final cutover onayına 
 /api/operations/backfill
 /api/operations/readiness
 /sso/consume
-/internal/provisioning/events
 ```
 
 TikTok connection route semantics:
@@ -1209,24 +1216,24 @@ Production'a bağlanmadan, yetkili ekip tarafından sağlanan offline snapshot/c
 
 doğrulanır.
 
-### 11.4 İlk canlı sürümün schema kararı
+### 11.4 İlk canlı sürümün bağımsız DB kararı
 
-İlk production cutover **schema-compatible binary cutover** olacaktır:
+V2 yalnız kendisine ait PostgreSQL database/role/schema üzerinde çalışacaktır:
 
-- `0001–0009` korunur;
-- production'da Alembic upgrade/autogenerate/create-all çalışmaz;
-- metrics, content, comments, media, linked accounts, health veya backfill tablolarında DDL yapılmaz;
-- legacy tablo/kolon temizliği yapılmaz.
+- V1 `socialmedia_adv` production DB'sine runtime bağlantısı kurulmaz;
+- V1 DB üzerinde migration, DDL, write, cleanup, token scrub veya schema değişikliği yapılmaz;
+- V2 migration head'i yalnız V2 repository'sinde tanımlanır ve yalnız V2 DB'ye uygulanır;
+- mevcut `legacy_socialmedia` persistence adapter'ları migration/parity borcudur; standalone
+  runtime gate'inden önce V2-owned schema adapter'larına dönüştürülür veya runtime graph'ından çıkarılır;
+- tarihsel veri gerekiyorsa ayrı kullanıcı onayıyla salt-okunur export alınır ve V2 DB'ye import
+  edilir; kaynak DB ve canlı süreçler değişmeden kalır.
 
-V2 auth/provisioning persistence bir repository interface arkasında tasarlanacaktır. İlk sürümde mevcut `social_projection_state` tablosu namespace edilmiş key'lerle schema-compatible durable store olarak kullanılabilir:
+V2 auth/session/credential persistence repository interface'leri arkasında ve V2-owned DB'de
+namespace edilmiş key'lerle başlayabilir:
 
 ```text
 v2:sso-jti:<hash>
 v2:session:<hash>
-v2:hmac-nonce:<hash>
-v2:event:<event_id>
-v2:brand-access:<user_id>:<brand_id>
-v2:brand-shell:<brand_id>
 v2:credential:<platform>:<connection_id>:<token_kind>
 v2:credential-nonce:<key_id>:<sha256_nonce>
 v2:tiktok:activation-gate
@@ -1240,12 +1247,14 @@ Bu adapter'ın şartları:
 - typed payload schema;
 - unique projection key ile atomik claim;
 - expiry/cleanup worker;
-- status ve event version kontrolü;
-- brand/user access kontrolünün her session request'inde güncel projection üzerinden yapılması.
+- session ve credential version kontrolü;
+- Brand/user access kontrolünün her request'te doğrulanmış local SSO session snapshot'ı üzerinden yapılması.
 
-Dedicated auth/provisioning tablolarına geçiş ancak V2 stabilize olduktan sonra, ayrı migration ve ayrı onay ile yapılır.
+Dedicated auth/session tablolarına geçiş ancak V2 stabilize olduktan sonra, yalnız V2 DB migration'ı ve ayrı onay ile yapılır.
 
-V2 tamamen bitene kadar bu projection/session adapter'ı production DB üzerinde çalıştırılmaz. Development cleanup/idempotency işleri yalnız local disposable DB'de manual test komutlarıdır; production cronjob değildir.
+V2 tamamen bitene kadar bu adapter V2 production DB üzerinde çalıştırılmaz. Development
+cleanup/idempotency işleri yalnız local disposable DB'de manual test komutlarıdır; production
+cronjob değildir.
 
 ## 12. Kanıtlanmış collector ve worker davranışını koruma planı
 
@@ -1309,23 +1318,23 @@ Fixture senaryoları:
 
 ### 12.3 Production writer sahipliği
 
-- V2 geliştirme ve release-candidate döneminde production writer değildir; V1 bütün cronjob/orchestrator/data-collection işlerini tek başına sürdürür.
-- V2 içinde production schedule kurulmaz veya enable edilmez; yalnız final cutover paketinde hazırlanmış unit/timer tanımları aktive edilebilir.
-- Eski ve yeni worker aynı anda production writer olamaz.
-- Mevcut güvenlik filesystem `flock`'a bağlı olduğundan ilk sürümde lock path/semantics korunur.
+- V2 geliştirme ve standalone-candidate döneminde production writer değildir; V1 canlı süreçleri değişmeden sürer.
+- V2 production schedule yalnız V2-owned DB/media/lock namespace'i ve standalone runtime gate'iyle açılabilir.
+- V1 ve V2 aynı DB, media root, credential veya lock namespace'ini paylaşamaz.
+- V2 lock path/semantics yalnız V2 dizinleri ve servis kullanıcısı altında tanımlanır.
 - V2 worker'lar deploy edildiğinde disabled/masked ve writes-disabled olacaktır.
-- Final cutover'da old timers stop+mask edilmeden V2 writer credential verilmez.
+- V1 timer'ları durdurulmaz veya maskelenmez; V2 credential yalnız V2-owned secret/DB için verilir.
 - Worker aileleri tek tek manual canary sonrası açılır.
 - `Persistent=true` timer'ların enable anında tetiklenebileceği hesaba katılır.
 - Backfill job `running` durumundayken süreç rastgele öldürülmez; gerekiyorsa açık reconciliation yapılır.
-- Final cutover'a kadar V2'nin manual sync UI aksiyonları dahil hiçbir yolu V1 worker'ını uzaktan tetiklemez.
+- V2'nin manual sync UI aksiyonları dahil hiçbir yolu V1 worker'ını uzaktan tetiklemez.
 
 ### 12.4 Connection pool ve transaction güvenliği
 
 - `read_models` içindeki ikinci global engine kaldırılır; injected session/repository kullanılır.
 - API ve worker pool'ları ayrı ve sınırlı olur; worker için küçük pool/NullPool değerlendirilir.
 - DB connection'larında application name, statement timeout ve lock timeout bulunur.
-- İlk cutover'da observable commit davranışı değiştirilmez; Unit of Work sadeleştirmesi ayrı parity-tested paket olur.
+- İlk standalone sürümde observable commit davranışı parity testleri olmadan değiştirilmez; Unit of Work sadeleştirmesi ayrı paket olur.
 - Media volume DB dışındaki ikinci state store olarak backup/rollback planına dahildir.
 
 ## 13. Legacy temizleme kararı
@@ -1347,15 +1356,17 @@ Fixture senaryoları:
 | V1 `backend/app/api/routes/tiktok_oauth.py` callback stub'ı | Kopyalama; optional/unverified state, `code` fallback'i, eski env adları ve HTML-only callback davranışı V2'de yasaktır |
 | V1 `0009_tiktok_organic_oauth_config.py` payload'ı | Yalnız immutable migration lineage; runtime provider config authority değildir, V2 seed/config olarak okunmaz veya yeniden üretilmez |
 | V1 `SOCIAL_TIKTOK_ORGANIC_*` / `TIKTOK_ORGANIC_*` env adları | Alias verme ve fallback okuma; yalnız §3.6 canonical env contract'ı kullanılır |
-| `whitelist_entries` mirror | İlk cutover'da koru; linked-account parity sonrası ayrı kaldırma paketi |
-| Historical migrations `0001–0009` | Asla yeniden yazma veya squash etme; historical payload runtime/domain output'u olamaz |
+| V1 `whitelist_entries` mirror | Runtime'da kullanma; V2-owned linked-account selection modeli kur |
+| Historical migrations `0001–0009` | Yalnız salt-okunur parity referansı; V2 DB'ye uygulanmaz, yeniden yazılmaz veya squash edilmez |
 | One-off repair/seed araçları | Operator kullanım audit'i sonrası `tools/legacy_migrations` veya kaldırma |
 
-Eski runtime kodunun kaldırılması ile eski production şemasının hemen düşürülmesi aynı iş değildir. İlk V2 cutover'da destructive DB cleanup yoktur.
+Eski runtime kodunun kaldırılması V1 production şemasını değiştirme yetkisi vermez. V1 DB'de
+destructive cleanup yapılmaz; V2 yalnız kendi DB migration'larını yönetir.
 
 TikTok legacy temizleme değildir; V2'nin açıkça onaylanmış yeni platform kapsamıdır.
 
-Migration-built disposable DB'de historical `0009` projection satırı oluşursa V2 startup/readiness bu satırı provider config olarak kullanmadığını ve hiçbir canonical output'a taşımadığını test eder. Production'da satırı silmek/değiştirmek ilk cutover kapsamında değildir; yalnız inert legacy data olarak adapter sınırında kalır.
+Historical `0009` payload'ı yalnız fixture/parity testinde kullanılabilir; V2 production DB'ye
+seed edilmez ve V1 production satırı okunmaz, silinmez veya değiştirilmez.
 
 ## 14. Uygulama fazları ve çıkış kapıları
 
@@ -1390,32 +1401,33 @@ Teslimatlar:
 
 Çıkış kapısı: downstream, kaynak env veya code path olmadan import/build olabilir; production DB'ye bağlanamaz.
 
-### Faz 2 — SSO ve webhook contract
+### Faz 2 — Yalnız SSO contract ve local session
 
 Teslimatlar:
 
 - SSO verification/consume/local session;
-- HMAC verification;
-- nonce/JTI/event idempotency;
-- provisioning parser ve projection repository;
-- `SessionStore` ve `ProvisioningStore` portları;
-- normatif `docs/contracts/social-media-v2-sso-provisioning.md`; legacy role/Media Planner rehberi final repository artifact'i değildir;
+- JTI replay/idempotency ve kısa ömürlü session;
+- seçili Brand, rol, entitlement ve izinlerin SSO claim snapshot'ından doğrulanması;
+- `SessionStore` portu;
+- normatif SSO-only contract; provisioning webhook/outbox alanları final contract'tan çıkarılır;
 - session revocation;
 - contract ve replay testleri.
 
-Çıkış kapısı: bütün SSO/webhook testleri disposable PostgreSQL üzerinde yeşil.
+Çıkış kapısı: bütün SSO/session testleri disposable PostgreSQL üzerinde yeşil; V2 runtime'ında
+Accumulate provisioning endpoint'i, HMAC secret'ı veya outbox bağımlılığı yok.
 
 ### Faz 3 — Parent/child authority projection
 
 Teslimatlar:
 
-- brand shell ve access projection;
-- full snapshot semantiği;
+- brand shell ve SSO claim tabanlı local access snapshot;
+- seçili Brand ve token içinde açıkça verilen erişim kapsamı;
 - parent/child/hidden-parent model;
 - backend brand-family API;
 - cross-brand authorization testleri.
 
-Çıkış kapısı: parent rollup yalnız izinli child'ları içerir; access revoke session'ı anında düşürür.
+Çıkış kapısı: parent rollup yalnız SSO claim'inde izin verilen child'ları içerir; access değişikliği
+en geç kısa session süresi/fresh SSO sınırında uygulanır ve webhook gerektirmez.
 
 ### Faz 4 — Backend bağımsızlaştırma
 
@@ -1496,39 +1508,40 @@ Teslimatlar:
 
 - full backend/frontend test turu;
 - production-schema clone rehearsal;
-- Nginx ve dormant/disabled systemd unit taslakları; aktif cronjob/orchestrator yok;
+- yalnız V2 yollarını kullanan Nginx, frontend, API ve worker systemd unit taslakları;
 - dark deployment/runbook;
-- cutover ve rollback checklist'i;
-- fixture Accumulate outbox ile emitted/applied watermark, full `brand_access.sync`, drain/replay ve launch-order rehearsal;
+- standalone deploy ve rollback checklist'i;
+- fake SSO issuer ile launch → consume → local session → Brand scope rehearsal;
 - fake provider ile stable owner link → forced fresh SSO → explicit POST intent/start → callback → scope gate → encrypted token → Brand link rehearsal;
 - production TikTok gate'lerinin `disabled` kaldığını ve gerçek provider egress olmadığını kanıtlayan test;
-- Accumulate final cutover patch taslağı, uygulanmamış halde.
+- Accumulate ekibine verilecek SSO-only handoff dokümanı; Accumulate patch'i veya kaynak değişikliği yok.
 
-Çıkış kapısı: production DB teması, production traffic'i veya production data-collection işi olmadan release candidate tamamen hazır.
+Çıkış kapısı: kaynak canlı projelere veya servislerine dokunmadan, V2'ye ait disposable/staging
+ortamında standalone ürün ve runtime tamamen hazır.
 
-### V2 Release Candidate Complete gate
+### Standalone Product Complete gate
 
-Bu gate, V2'nin kod/ürün olarak tamamlandığını fakat henüz canlı çalışmadığını ifade eder. Production aktivasyonu bu gate'in parçası değildir.
+Bu gate, V2'nin kod/ürün olarak tamamlandığını fakat henüz Accumulate canlı SSO bağlantısına
+alınmadığını ifade eder. Production aktivasyonu bu gate'in parçası değildir.
 
 > **Durum düzeltmesi — 2026-07-17:** Bu bölüm bir gate tanımıdır; mevcut repository için
-> verilmiş geçerli bir `RELEASE_CANDIDATE_COMPLETE` beyanı değildir. 2026-07-14 Faz 7 ve Faz 8
+> verilmiş geçerli bir `STANDALONE_PRODUCT_COMPLETE` beyanı değildir. 2026-07-14 Faz 7 ve Faz 8
 > raporlarındaki frontend parity kapanışı, gerçek Performance Marketing shell'i ve Accumulate
 > aktif Social render zinciriyle eşleşmediği için supersede edilmiştir. Local parity düzeltmesi
 > uygulanmıştır; global gate ancak güncel source baseline/immutability kontrolü ve tüm canonical
 > kalite turu yeniden yeşil olduğunda ayrıca verilebilir.
 
 - Faz 0–9 tamamdır.
-- V1; production social DB/media için cronjob, timer, orchestrator, API mutation, manual CLI, backfill ve bütün data write işlerinin tek sahibidir.
-- V1 service/timer state'ine dokunulmamıştır.
+- V1 production DB/media, cronjob, timer, orchestrator ve servis state'i değişmeden çalışır.
 - V2 production DB credential veya write secret'a sahip değildir.
 - V2 production üzerinde API process, mutation, OAuth persistence, AI generation, audit repair, manual sync, shadow read/write veya dual write çalıştırmaz.
 - V2 worker/timer'ları yoktur ya da deployment artifact'i olarak disabled/masked durumdadır.
-- Final cutover/runbook ve rollback paketi review'e hazırdır fakat uygulanmamıştır.
-- Bu gate imzalanmadan Writer Ownership Cutover talep edilemez.
+- Standalone deploy/rollback ve SSO-only handoff paketi review'e hazırdır fakat uygulanmamıştır.
+- Bu gate imzalanmadan Accumulate ekibinden SSO launch değişikliği talep edilemez.
 
 Sert invariant:
 
-> V2 Release Candidate Complete onayı verilene kadar V1 servis/timer state'ine dokunulmaz ve V2 production üzerinde hiçbir bağlantı veya mutation yapmaz.
+> `STANDALONE_PRODUCT_COMPLETE` onayı verilene kadar kaynak canlı servis/timer state'ine dokunulmaz ve V2 production üzerinde hiçbir bağlantı veya mutation yapmaz.
 
 ## 15. Test ve doğrulama matrisi
 
@@ -1536,13 +1549,13 @@ Sert invariant:
 |---|---|
 | SSO | signature, conditional-v1 issuer, audience, app, canonical role, expiry, JTI replay, access window, signed launch-target allowlist ve resolved 303 route |
 | Session | secure cookie, hash-only storage, revoke, expiry, logout, CSRF |
-| Webhook | HMAC, timestamp, nonce replay, duplicate/out-of-order event, gerçek-sender fixture, outbox emitted/applied watermark ve drain/replay |
-| Projection | parent-child, hidden parent, empty snapshot, entitlement disable, delete |
+| SSO-only sınır | provisioning endpoint/HMAC/outbox/runtime import yokluğu; fake issuer ile launch/consume/session kanıtı |
+| Projection | SSO claim tabanlı parent-child, hidden parent, empty scope, entitlement disable ve session expiry |
 | Authorization | child isolation, parent rollup, arbitrary brand mutation denial |
 | DB compatibility | PostgreSQL migration-built schema fingerprint |
 | Collectors | old-vs-new request/DB/file differential parity |
 | TikTok | exact Business Accounts provider profile, 19-digit opaque-string App ID, account-vs-advertiser wire isolation, callback exact-match, required/optional/forbidden scopes, auth/refresh/revoke/token-info, manual intent, Brand link ve honest-unavailable states |
-| Credentials | env/secret injection, no Git/plaintext/log leakage, AEAD/AAD isolation, nonce-reuse rejection, wrong-key fail-closed, rotation/revoke ve cutover scrub/restore |
+| Credentials | V2-owned secret injection, no Git/plaintext/log leakage, AEAD/AAD isolation, nonce-reuse rejection, wrong-key fail-closed ve rotation/revoke |
 | Metric catalog | snapshot/flow/cumulative/ratio aggregation, derived operator/version/window, first-sample, gap/reset, zero-denominator ve Brand rollup semantics |
 | Backfill | window, transition, retry, stale job ve crash recovery |
 | Media | proxy, fallback, persistence ve volume path compatibility |
@@ -1557,7 +1570,7 @@ Sert invariant:
 
 | Senaryo | Zorunlu sonuç |
 |---|---|
-| `disabled`, dormant veya herhangi bir `cutover_*` mode'da direct start | Fail-closed; state, DB write ve provider egress sıfır |
+| `disabled`, `development`, `dormant`, `staging` veya `standalone_ready` mode'da onaysız direct start | Fail-closed; state, DB write ve provider egress sıfır |
 | Sahte `auth_code`/state ile direct callback | Token endpoint çağrısı ve persistence sıfır |
 | Stable owner URL'yi mail/link scanner veya unauthenticated prefetch açar | Intent/state/write/provider egress sıfır; owner akışı etkilenmez |
 | Doğru owner/Brand'e ait fakat activation gate'ten eski local session | Connect POST reddedilir; fresh Accumulate SSO zorlanır |
@@ -1583,9 +1596,15 @@ Sert invariant:
 
 Test harness raw internal activation reference, state, auth code veya tokenı failure output'una yazamaz; assertion'lar presence/hash/redacted metadata üzerinden yapılır.
 
-## 16. Writer Ownership Cutover planı
+## 16. Tarihsel Writer Ownership Cutover taslağı — UYGULANMAZ
 
-Final cutover ayrıca açıkça onaylanmadan uygulanmaz.
+> **Revizyon 5 hükmü:** Bu bölüm eski paylaşımlı-writer/cutover tasarımının tarihsel kaydıdır ve
+> uygulanmayacaktır. V1 writer freeze, V1 timer/service değişikliği, Accumulate webhook/outbox
+> routing değişikliği ve kaynak projelerde herhangi bir operasyon §0.0 uyarınca yasaktır.
+> Güncel canlıya alma modeli V2'nin kendi DB/runtime/worker'larını bağımsız kurması ve ardından
+> Accumulate ekibinin yalnız SSO launch sözleşmesini kendi tarafında uygulamasıdır.
+
+Bu bölümdeki komut/adımlar yürütme talimatı değildir.
 
 ### 16.1 Ön koşullar
 
@@ -1659,8 +1678,8 @@ V2 log/metric alanları:
 - request/correlation ID;
 - user/brand/account ID — PII minimize edilmiş;
 - SSO consume result ve failure code;
-- webhook event ID/type/version/status;
-- projection lag ve failed event count;
+- SSO consume/JTI replay/session-expiry status;
+- SSO claim scope/version ve fresh-login gereksinimi;
 - session revoke reason;
 - dashboard freshness/coverage;
 - Meta request count, retry, rate tier ve token-invalid state;
@@ -1671,12 +1690,13 @@ V2 log/metric alanları:
 
 Token, secret ve raw credential hiçbir log'a yazılmaz.
 
-## 18. Definition of V2 Release Candidate Complete
+## 18. Definition of Standalone Product Complete
 
-Social Media V2 aşağıdakilerin tamamı sağlanınca **ürün/kod olarak tamamlanmış fakat production'da dormant** sayılır:
+Social Media V2 aşağıdakilerin tamamı sağlanınca `STANDALONE_PRODUCT_COMPLETE`, yani
+**ürün/kod olarak tamamlanmış fakat production'da dormant** sayılır:
 
 - yalnız `SocialMediadownstream` değiştirilmiştir;
-- kaynak projeler başlangıç snapshot'ıyla aynıdır;
+- kaynak projeler ilgili V2 çalışma oturumunun salt-okunur başlangıç/bitiş snapshot'ında değişmemiştir;
 - V2 runtime'ında Accumulate/SocialMedia/performance_marketing filesystem importu yoktur;
 - generic legacy-role/Media Planner rehberi canonical repository artifact'i değildir; normatif Social V2 contract ile değiştirilmiştir;
 - backend yalnız §5 canonical package sınırını kullanır; ikinci paralel mimari veya giant platform adapter yoktur;
@@ -1689,8 +1709,8 @@ Social Media V2 aşağıdakilerin tamamı sağlanınca **ürün/kod olarak tamam
 - V2 public/domain/UI sözlüğünde `client`, `ARS`, legacy role listesi veya Media Planner semantiği yoktur;
 - Git root tam olarak `/home/api/colab_scripts/SocialMediadownstream` olur; `origin` canonical V2 remote'dur, V1 source remote fetch-only'dir ve kaynak projelere push target yoktur;
 - SSO `social_media` contract'ını güvenli consume eder ve local session kurar;
-- HMAC webhook idempotent, replay-safe ve version-aware çalışır;
-- parent/child hierarchy ve full access snapshot doğru projection edilir;
+- V2 runtime'ında provisioning endpoint'i, HMAC secret'ı veya outbox bağımlılığı yoktur;
+- parent/child hierarchy yalnız doğrulanmış SSO claim kapsamından local snapshot olarak çözülür;
 - parent rollup backend'de ve authorization-safe çalışır;
 - production DB'ye hiç temas edilmemiştir;
 - V2 production credential, traffic, API process, mutation, OAuth persistence, AI generation, audit repair, cronjob, timer, orchestrator veya manual sync çalıştırmaz;
@@ -1703,30 +1723,33 @@ Social Media V2 aşağıdakilerin tamamı sağlanınca **ürün/kod olarak tamam
 - legacy consume adapter raw aliası hiçbir output/log/DTO'ya publish etmez;
 - bütün metric'ler versioned semantic catalog'da kayıtlıdır ve snapshot/flow/cumulative/ratio testleri yeşildir;
 - TokenVault/CredentialStore interface'i uygulanmış, production plaintext OAuth token ve repository secret taraması sıfır bulgu vermiştir;
-- V1 production cronjob/orchestrator/data-collection ve bütün write işlerinin tek sahibidir;
-- eski ve yeni production writer aynı anda çalışamaz;
+- V1 production cronjob/orchestrator/data-collection süreçleri değiştirilmeden çalışmaya devam eder;
+- V2 kendi DB, media, credential ve worker namespace'lerini kullanır; V1 writer'ını durdurmaz veya paylaşmaz;
 - dashboard/worker/media parity ve rollback provası tamamdır;
-- Accumulate final routing/webhook cutover paketi hazır ve review edilmiş, fakat uygulanmamıştır;
-- Writer Ownership Cutover runbook'u hazırdır ve ayrıca açık aktivasyon onayı bekler.
+- Accumulate ekibine daha sonra verilecek SSO-only contract taslağı hazırdır;
+- V2-owned staging/deploy/rollback artifact'leri `STANDALONE_RUNTIME_COMPLETE` doğrulamasına hazırdır.
 
-### 18.1 Activated V2 ayrı bir durumdur
+### 18.1 Standalone Runtime Complete ve SSO Live Verified ayrı durumlardır
 
-`V2 Release Candidate Complete`, production aktivasyonu değildir. `Activated V2` ancak ayrı Writer Ownership Cutover onayından sonra şu koşullarla oluşur:
+`STANDALONE_PRODUCT_COMPLETE`, production aktivasyonu değildir.
+`STANDALONE_RUNTIME_COMPLETE` yalnız şu koşullarla oluşur:
 
-- Accumulate routing/SSO/webhook switch'i uygulanmış;
-- V1 writer trigger'ları kontrollü şekilde dondurulmuş;
-- V2 read-only smoke ve tek-Brand writer canary yeşil;
-- writer ownership V2'ye tekil olarak devredilmiş;
-- eski unit'ler rollback için masked tutulmuş;
-- observation window tamamlanmış.
+- V2 frontend, API, DB, media, credential vault ve worker'ları V2'ye ait staging runtime'da çalışır;
+- fake/approved staging SSO ile launch, consume, local session ve Brand scope E2E yeşildir;
+- Meta/TikTok provider akışları onaylı sandbox/canary kapsamıyla doğrulanmıştır;
+- kaynak canlı projelerin Git, DB, service/timer ve routing başlangıç/bitiş snapshot'ları değişmemiştir;
+- standalone deploy ve rollback provası tamamlanmıştır.
 
-`Activated V2`, TikTok owner bağlantısını otomatik etkinleştirmez. Bu durumda account OAuth mode hâlâ `disabled`, advertiser disabled ve TikTok connection yoktur.
+`READY_FOR_ACCUMULATE_SSO_HANDOFF` bundan sonra verilir. Accumulate/Operations ekibi kendi
+tarafında yalnız SSO launch/token bağlantısını uygulayıp V2 deploy'unu onayladıktan ve browser E2E
+geçtikten sonra `SSO_LIVE_VERIFIED` verilir. Bu süreçte V1 veya Accumulate kaynaklarına V2 ekibi
+tarafından müdahale edilmez.
 
 ### 18.2 READY_FOR_OWNER_TIKTOK_ACTIVATION ayrı bir durumdur
 
 Bu status yalnız §3.7'nin 1–7. adımları tamamlanınca verilir:
 
-- V2 global cutover ve observation window tamam;
+- V2 standalone runtime ve SSO observation window tamam;
 - rotated TikTok secret secret-manager'da mevcut fakat hiçbir output'ta görünmüyor;
 - provider app display name/logo/approval ve callback byte-for-byte doğrulandı;
 - required scope seti provider portalında approved;
@@ -1774,7 +1797,10 @@ Bu portların contract'ı ve aşağıdaki ilk schema-compatible adapter'ları on
 | `TokenVault` / `CredentialStore` | Interface, encrypted-at-rest contract, rotation/revoke API ve production plaintext token yasağı | Namespaced `social_projection_state` AEAD credential adapter'ı; app credential'ları secret-injected env | KMS/envelope encryption veya dedicated credential table — ayrıca onay |
 | `CheckpointStore` | Provider cursor/checkpoint/idempotency interface'i ve typed payload | Mevcut schema-compatible `social_projection_state` adapter'ı | Dedicated checkpoint/cursor tabloları — ihtiyaç kanıtlanırsa |
 | `SessionStore` | Opaque token hash, TTL, revoke ve atomic JTI claim contract'ı | `social_projection_state` namespace adapter'ı testleri geçerse | Dedicated auth/session tabloları — stabilizasyon sonrası |
-| `ProvisioningStore` | Atomic event claim, entity version, nonce TTL ve failure state contract'ı | `social_projection_state` namespace adapter'ı testleri geçerse | Dedicated provisioning/inbox tabloları — stabilizasyon sonrası |
+
+Bu tablodaki ilk adapter'ların tamamı yalnız V2-owned PostgreSQL üzerinde kullanılabilir.
+`ProvisioningStore` final mimarinin parçası değildir; mevcut koddan ve runtime assembly'den
+kaldırılması Revizyon 5 migration işidir.
 
 `TokenVault`/`CredentialStore` için ayrım nettir:
 
@@ -1789,15 +1815,17 @@ Bu portların contract'ı ve aşağıdaki ilk schema-compatible adapter'ları on
 - `SOCIAL_CREDENTIAL_ACTIVE_KEY_ID` ve `SOCIAL_CREDENTIAL_KEYRING_JSON` yalnız secret-manager/environment injection ile sağlanır; `.env.example` değerleri boştur. Yeni write yalnız active key ile, read ise kontrollü rotation window'unda tanınan key ID'leriyle yapılır.
 - Missing/unknown key, yanlış key, bozuk nonce/ciphertext veya authentication-tag hatası fail-closed olur; provider isteği yapılmaz, token değeri loglanmaz ve connection health secretsız hata kodu üretir.
 - Key rotation eski key ile decrypt + active key ile re-encrypt command'ıdır; atomik update, dry-run count ve rollback testi olmadan production'da çalışmaz.
-- V1'in mevcut raw tokenları final cutover writer fence'ine kadar aynen bırakılır; V2 release-candidate kodu onları yazmaz. §16.2'de önce şifreli namespace'e secretsız kontrollü kopya alınır, V2 yalnız bu store'u kullanır ve active geçişte legacy plaintext alanlar scrub edilir. Rollback aracı güncel ciphertext'i V1 formatına kontrollü restore etmeden V1 writer'ı açamaz.
+- V1'in mevcut tokenları değiştirilmez, scrub edilmez veya V2 runtime tarafından okunmaz. Tarihsel
+  connection migration'ı ayrıca onaylanırsa kaynak sistemden salt-okunur, secretsız manifestli
+  export hazırlanır; credential taşıma yalnız yetkili secret sahibi/Operations prosedürüyle V2
+  vault'a yapılır ve V1 runtime'ına dokunulmaz.
 
-Schema-compatible adapter'lar şu testleri geçmeden ilk cutover'da kullanılamaz:
+V2-owned adapter'lar şu testleri geçmeden ilk standalone runtime'da kullanılamaz:
 
 - concurrent atomic claim;
 - unique key/idempotency;
 - TTL expiry ve deterministic cleanup;
 - crash/retry recovery;
-- event version ordering;
 - revoke sonrası access denial;
 - bounded payload ve index/query maliyeti;
 - credential cipher round-trip, AAD isolation ve nondeterministic ciphertext;
@@ -1805,18 +1833,19 @@ Schema-compatible adapter'lar şu testleri geçmeden ilk cutover'da kullanılama
 - missing/wrong/retired key ile fail-closed davranış;
 - key rotation ve legacy-token scrub/rollback restore provası.
 
-Bu adapter'lardan biri test kapısını geçemezse otomatik olarak dedicated tabloya veya farklı lock/KMS altyapısına geçilmez; Writer Ownership Cutover bloklanır ve yeni altyapı için ayrı plan/onay gerekir.
+Bu adapter'lardan biri test kapısını geçemezse otomatik olarak farklı lock/KMS altyapısına
+geçilmez; `STANDALONE_RUNTIME_COMPLETE` bloklanır ve yeni altyapı için ayrı plan/onay gerekir.
 
 ### 19.3 V2 stabilizasyonundan sonraya bırakılan kararlar
 
 | Karar | Şimdiki hüküm |
 |---|---|
-| Dedicated auth/session/provisioning tabloları | **Şimdilik hayır**; mevcut schema-compatible adapter testleri geçerse ilk cutover'da kullanılabilir |
-| Dedicated credential/vault tablosu | **Şimdilik hayır**; namespaced AEAD adapter testleri geçerse ilk cutover'da kullanılır, dedicated tablo ayrıca migration/onay ister |
+| Dedicated auth/session tabloları | **Şimdilik hayır**; V2-owned DB içindeki namespace adapter testleri geçerse ilk standalone sürümde kullanılabilir |
+| Dedicated credential/vault tablosu | **Şimdilik hayır**; V2-owned namespaced AEAD adapter testleri geçerse ilk standalone sürümde kullanılır, dedicated tablo ayrıca migration/onay ister |
 | Gerçek KMS/envelope altyapısı | **Ayrıca onaylanacak**; interface, direct AEAD adapter ve plaintext yasağı şimdi mevcut |
 | Dedicated provider cursor/checkpoint tabloları | **Şimdilik hayır**; ihtiyaç ve query/load verisi kanıtlanırsa değerlendirilir |
-| Signed provider webhook inbox | **Ertelendi**; gerçek TikTok provider product/event ihtiyacı ve onayı doğarsa eklenir. Bu karar, zorunlu Accumulate provisioning event store/outbox akışını kapsamaz |
-| DB advisory lock / execution lease | **Şimdilik yapılmaz**; ilk cutover'da kanıtlanmış filesystem `flock` semantiği korunur |
+| Signed provider webhook inbox | **Ertelendi**; gerçek provider product/event ihtiyacı ve onayı doğarsa yalnız V2-owned runtime'a eklenir; Accumulate provisioning akışı yoktur |
+| DB advisory lock / execution lease | **Şimdilik yapılmaz**; ilk standalone sürümde V2-owned filesystem `flock` semantiği kanıtlanır |
 | `/api/v2` URL prefix | **Yapılmaz**; uygulamanın kendisi ayrı Social Media V2 ürünüdür, gereksiz URL versioning eklenmez |
 | PWA/service worker | **Ertelendi**; auth ve dashboard cache contract'ı stabilize olmadan açılmaz |
 
@@ -1825,7 +1854,7 @@ Bu adapter'lardan biri test kapısını geçemezse otomatik olarak dedicated tab
 - Production DB'de legacy tablo/kolon drop işlemleri
 - Migration history squash/rewrite
 - `whitelist_entries` kaldırılması
-- Dedicated credential/session/provisioning tablolarına migration
+- Dedicated credential/session tablolarına migration
 - TikTok dışındaki yeni sosyal network ekleme
 - Mevcut metrik tanımlarını ürün kararı olmadan değiştirme
 - Canlı service restart, DNS veya reverse-proxy değişikliği

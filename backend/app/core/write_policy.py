@@ -21,7 +21,10 @@ class WritePolicy:
 
     def allows(self, command: str) -> bool:
         del command
-        return self.runtime_mode is RuntimeMode.DEVELOPMENT and self.writes_enabled
+        return (
+            self.runtime_mode in {RuntimeMode.DEVELOPMENT, RuntimeMode.ACTIVE}
+            and self.writes_enabled
+        )
 
     def assert_allows_mutation(self, command: str) -> None:
         if not self.allows(command):

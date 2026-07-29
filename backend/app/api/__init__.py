@@ -10,7 +10,6 @@ from app.api.auth import COOKIE_NAME, create_auth_router
 from app.api.contracts import OperationsReadinessResponse, ReadinessPlatform
 from app.api.dashboards import create_dashboard_router
 from app.api.insights import create_insights_router
-from app.api.internal import create_internal_router
 from app.api.media import create_media_router
 from app.api.operations import create_operations_router
 from app.api.platforms import create_platform_router
@@ -37,7 +36,7 @@ def create_api_router(
     meta_activation: MetaActivationCoordinator | None = None,
 ) -> APIRouter:
     router = APIRouter()
-    capabilities = bootstrap_registry()
+    capabilities = bootstrap_registry(settings)
     metric_catalog = bootstrap_metric_catalog()
 
     @router.get("/api/health", tags=["health"], summary="Health probe")
@@ -112,10 +111,14 @@ def create_api_router(
         )
 
     router.include_router(create_auth_router(settings, policy, store))
-    router.include_router(create_internal_router(settings, policy, store))
     router.include_router(
         create_workspace_router(
-            store, reporting_store, capabilities, policy, settings.runtime_mode
+            store,
+            reporting_store,
+            capabilities,
+            policy,
+            settings.runtime_mode,
+            automated_schedule_available=settings.worker_schedule_enabled,
         )
     )
     router.include_router(create_dashboard_router(store, reporting_store, metric_catalog))

@@ -40,18 +40,6 @@ class MemorySessionStore:
         if session_hash in self.sessions:
             self.sessions[session_hash]["revoked"] = True
 
-    def revoke_authority_sessions(self, *, user_id: str | None, brand_id: str | None) -> int:
-        count = 0
-        for payload in self.sessions.values():
-            if user_id and payload["user_id"] != user_id:
-                continue
-            if brand_id and payload["brand_id"] != brand_id:
-                continue
-            payload["revoked"] = True
-            count += 1
-        return count
-
-
 def token(
     *, contract_overrides: Mapping[str, Any] | None = None, **top_overrides: Any
 ) -> str:
@@ -97,6 +85,7 @@ def test_valid_upstream_contract_creates_hash_only_session_and_blocks_jti_replay
     assert raw_session not in repr(store.sessions)
     assert resolve_session(raw_session, store) == next(iter(store.sessions.values()))
     assert resolve_session(raw_session, store)["settings_visible"] is True
+    assert resolve_session(raw_session, store)["brand_scope"]["default_brand_id"] == "10"
     with pytest.raises(SsoError, match="jti_replayed"):
         consume_sso(token(), SECRET, store)
 
@@ -185,6 +174,36 @@ def test_contract_shape_and_subject_match_are_required() -> None:
         verify_sso(token(contract_overrides={"email": None}), SECRET)
     with pytest.raises(SsoError, match="missing_authority"):
         verify_sso(token(sub="2"), SECRET)
+
+
+def test_optional_multi_brand_scope_is_signed_and_validated() -> None:
+    brand_scope = {
+        "version": "v1",
+        "default_brand_id": "10",
+        "brands": [
+            {
+                "brand_id": "9",
+                "name": "Parent",
+                "parent_brand_id": None,
+                "role": None,
+                "access_mode": None,
+            },
+            {
+                "brand_id": "10",
+                "name": "Child",
+                "parent_brand_id": "9",
+                "role": "agency_admin",
+                "access_mode": "write",
+            },
+        ],
+    }
+    verified = verify_sso(token(contract_overrides={"brand_scope": brand_scope}), SECRET)
+    assert verified.brand_scope["brands"][0]["visibility"] == "hidden_parent"
+    assert verified.brand_scope["brands"][1]["visibility"] == "active"
+
+    invalid = {**brand_scope, "default_brand_id": "9"}
+    with pytest.raises(SsoError, match="brand_scope_default_mismatch"):
+        verify_sso(token(contract_overrides={"brand_scope": invalid}), SECRET)
 
 
 def test_revoked_session_is_not_resolved() -> None:

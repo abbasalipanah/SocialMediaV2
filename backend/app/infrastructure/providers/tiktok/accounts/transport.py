@@ -45,7 +45,13 @@ class TikTokHttpTransport:
             raise TikTokTransportError("provider_transport_failed") from exc
         return self._payload(response)
 
-    def get(self, url: str, *, headers: Mapping[str, str]) -> Mapping[str, object]:
+    def get(
+        self,
+        url: str,
+        *,
+        headers: Mapping[str, str],
+        params: Mapping[str, str] | None = None,
+    ) -> Mapping[str, object]:
         if url not in self._get_urls:
             raise TikTokTransportError("provider_url_rejected")
         try:
@@ -53,6 +59,7 @@ class TikTokHttpTransport:
                 "GET",
                 url,
                 headers=headers,
+                params=params,
                 timeout=self._timeout,
                 follow_redirects=False,
             )

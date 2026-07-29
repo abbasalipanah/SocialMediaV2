@@ -11,7 +11,7 @@ from app.application.queries import DashboardQuery, build_platform_dashboard
 from app.domain.metrics import MetricId, bootstrap_metric_catalog
 from app.domain.platforms import PlatformId
 from app.domain.reporting import ReportingRange
-from app.infrastructure.persistence.legacy_socialmedia import LegacyReportingStore
+from app.infrastructure.persistence.social_v2 import SocialReportingStore
 
 DATABASE_URL = os.getenv("TEST_POSTGRES_URL")
 pytestmark = pytest.mark.skipif(not DATABASE_URL, reason="TEST_POSTGRES_URL is not configured")
@@ -32,7 +32,7 @@ TABLES = (
 
 
 @pytest.fixture()
-def reporting_store() -> Iterator[LegacyReportingStore]:
+def reporting_store() -> Iterator[SocialReportingStore]:
     assert DATABASE_URL
     engine = create_engine(DATABASE_URL)
     _drop(engine)
@@ -40,13 +40,13 @@ def reporting_store() -> Iterator[LegacyReportingStore]:
         for statement in _schema():
             connection.execute(text(statement))
         _seed(connection)
-    yield LegacyReportingStore(engine)
+    yield SocialReportingStore(engine)
     _drop(engine)
     engine.dispose()
 
 
 def test_reporting_adapter_is_scope_safe_and_side_effect_free(
-    reporting_store: LegacyReportingStore,
+    reporting_store: SocialReportingStore,
 ) -> None:
     before = _counts(reporting_store.engine)
     accounts = reporting_store.list_accounts(
@@ -58,9 +58,11 @@ def test_reporting_adapter_is_scope_safe_and_side_effect_free(
         account_ids=(11, 12), start_on=date(2026, 7, 1), end_on=date(2026, 7, 2)
     )
     assert {row.metric_id for row in metrics} == {MetricId.FOLLOWERS, MetricId.REACH}
-    assert reporting_store.list_content(
+    content = reporting_store.list_content(
         account_ids=(11,), start_on=date(2026, 7, 1), end_on=date(2026, 7, 2)
-    )[0].external_content_id == "post-1"
+    )[0]
+    assert content.external_content_id == "post-1"
+    assert content.media_url == "/api/media/facebook/post-1?brand_id=101&account_id=11"
     assert reporting_store.list_comments(
         account_ids=(11,), start_on=date(2026, 7, 1), end_on=date(2026, 7, 2)
     )[0].external_comment_id == "comment-1"
@@ -81,7 +83,7 @@ def test_reporting_adapter_is_scope_safe_and_side_effect_free(
 
 
 def test_postgres_parent_rollup_uses_catalog_semantics(
-    reporting_store: LegacyReportingStore,
+    reporting_store: SocialReportingStore,
 ) -> None:
     dashboard = build_platform_dashboard(
         store=reporting_store,

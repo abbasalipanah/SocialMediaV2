@@ -7,6 +7,7 @@ from .runtime import (
     assert_manual_worker_allowed,
     dormant_worker_config,
     local_fixture_worker_config,
+    settings_worker_config,
 )
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "assert_manual_worker_allowed",
     "dormant_worker_config",
     "local_fixture_worker_config",
+    "settings_worker_config",
 ]

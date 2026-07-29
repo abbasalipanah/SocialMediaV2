@@ -17,7 +17,7 @@ from app.application.ports import (
     ActivationResult,
     ActivationStart,
     ActivationStatePort,
-    ProvisioningStore,
+    SessionStore,
     TikTokActivationError,
     TikTokActivationProvider,
 )
@@ -59,17 +59,24 @@ class ActivationGate:
         return context.sso_consumed_at >= self.enabled_at
 
 
-class ProjectionActivationAuthority:
-    """Re-check current projected authority before and after provider exchange."""
+class SessionActivationAuthority:
+    """Re-check the V2-owned SSO session before and after provider exchange."""
 
-    def __init__(self, store: ProvisioningStore) -> None:
+    def __init__(self, store: SessionStore) -> None:
         self._store = store
 
     def allows(self, context: ActivationContext) -> bool:
+        session = self._store.get_session(context.session_binding)
+        if (
+            session is None
+            or session.get("revoked") is True
+            or str(session.get("user_id") or "") != context.user_id
+            or str(session.get("brand_id") or "") != str(context.brand_id)
+        ):
+            return False
         try:
             workspace = build_brand_workspace(
-                store=self._store,
-                user_id=context.user_id,
+                session=session,
                 selected_brand_id=str(context.brand_id),
                 rollup=False,
                 require_write=True,
@@ -330,6 +337,6 @@ class TikTokActivationCoordinator:
 __all__ = [
     "ActivationGate",
     "INTENT_TTL",
-    "ProjectionActivationAuthority",
+    "SessionActivationAuthority",
     "TikTokActivationCoordinator",
 ]
