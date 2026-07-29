@@ -13,7 +13,7 @@ from app.api.contracts import (
 )
 from app.application.ports import AuthorityStore, ReportingStore
 from app.application.services.authority import AuthorityError, build_brand_workspace
-from app.application.services.sso import resolve_session
+from app.application.services.sso import TIKTOK_CONNECTION_MANAGE_PERMISSION, resolve_session
 from app.capabilities import PlatformCapabilityRegistry
 from app.core import Boundary, RuntimeMode, WritePolicy, mark_boundary
 from app.domain.authority import BrandWorkspace
@@ -82,6 +82,18 @@ def create_workspace_router(
             else ()
         )
         response.headers["Cache-Control"] = "no-store"
+        session_permissions = payload.get("permissions")
+        selected_brand_is_session_brand = (
+            workspace.scope.rollup is False
+            and workspace.scope.requested_brand_id == str(payload.get("brand_id") or "")
+            and workspace.scope.resolved_brand_ids
+            == (str(payload.get("brand_id") or ""),)
+        )
+        selected_brand_is_writeable = any(
+            brand.brand_id == workspace.scope.requested_brand_id
+            and brand.access_mode == "write"
+            for brand in workspace.brands
+        )
         return WorkspaceCapabilitiesResponse(
             scope=workspace.scope,
             platforms=tuple(
@@ -111,6 +123,17 @@ def create_workspace_router(
                 internal_audit_visible=payload.get("is_internal_staff") is True,
                 rollup_available=True,
                 operation_mutation_available=False,
+                tiktok_connection_manage=(
+                    selected_brand_is_session_brand
+                    and selected_brand_is_writeable
+                    and isinstance(session_permissions, (list, tuple))
+                    and TIKTOK_CONNECTION_MANAGE_PERMISSION in session_permissions
+                ),
+                meta_connection_manage=(
+                    selected_brand_is_session_brand
+                    and selected_brand_is_writeable
+                    and not workspace.scope.rollup
+                ),
             ),
             runtime=RuntimeCapabilities(
                 mode=runtime_mode,

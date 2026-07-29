@@ -36,6 +36,11 @@ def activation_config_version(config: TikTokConfig) -> str:
         "redirect_uri": config.redirect_uri,
         "required_scopes": config.required_scopes,
         "revoke_url": config.revoke_url,
+        "secret_rotated_at": (
+            config.secret_rotated_at.isoformat()
+            if config.secret_rotated_at is not None
+            else None
+        ),
         "token_info_url": config.token_info_url,
         "token_url": config.token_url,
     }

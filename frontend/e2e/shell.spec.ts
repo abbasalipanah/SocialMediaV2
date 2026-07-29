@@ -79,6 +79,8 @@ const capabilities = {
     internal_audit_visible: true,
     rollup_available: true,
     operation_mutation_available: false,
+    tiktok_connection_manage: true,
+    meta_connection_manage: true,
   },
   runtime: { mode: "dormant", writes_enabled: false, automated_schedule_available: false },
 };

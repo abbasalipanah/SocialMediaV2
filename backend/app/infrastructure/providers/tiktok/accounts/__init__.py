@@ -22,6 +22,7 @@ from .responses import (
     parse_token_info,
 )
 from .scopes import ScopeDecision, evaluate_scopes
+from .transport import TikTokHttpTransport, TikTokTransportError
 from .wire import TikTokAccountsWireMapper, TikTokWireError
 
 __all__ = [
@@ -32,12 +33,14 @@ __all__ = [
     "TikTokAccountsWireMapper",
     "TikTokContentReader",
     "TikTokProfileReader",
+    "TikTokHttpTransport",
     "TikTokResponseError",
     "TikTokStateBinding",
     "TikTokStateCodec",
     "TikTokStateError",
     "TikTokTokenGrant",
     "TikTokTokenInfo",
+    "TikTokTransportError",
     "TikTokWireError",
     "evaluate_scopes",
     "parse_revoke",

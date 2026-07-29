@@ -18,6 +18,7 @@ from app.api.scope import resolve_request_scope
 from app.api.settings import create_settings_router
 from app.api.workspace import create_workspace_router
 from app.application.ports import AuthorityStore, ReportingStore
+from app.application.services.meta_activation import MetaActivationCoordinator
 from app.application.services.tiktok_activation import TikTokActivationCoordinator
 from app.capabilities import bootstrap_registry
 from app.core import AppSettings, Boundary, WritePolicy, mark_boundary
@@ -33,6 +34,7 @@ def create_api_router(
     reporting_store: ReportingStore | None = None,
     media_root: Path | None = None,
     tiktok_activation: TikTokActivationCoordinator | None = None,
+    meta_activation: MetaActivationCoordinator | None = None,
 ) -> APIRouter:
     router = APIRouter()
     capabilities = bootstrap_registry()
@@ -125,6 +127,7 @@ def create_api_router(
             capabilities,
             policy,
             activation=tiktok_activation,
+            meta_activation=meta_activation,
         )
     )
     router.include_router(create_insights_router(store, reporting_store))

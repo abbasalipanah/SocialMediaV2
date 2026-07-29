@@ -123,6 +123,62 @@ class TikTokActivationReadinessResponse:
 
 
 @dataclass(frozen=True)
+class TikTokSelfServiceReadinessResponse:
+    brand_id: str
+    can_manage: bool
+    connection_state: str
+    linked_account_count: int
+    oauth_start_available: bool
+    reason: str
+    runtime_mode: RuntimeMode
+    writes_enabled: bool
+    checked_at: datetime
+
+
+@dataclass(frozen=True)
+class TikTokSelfServiceStartResponse:
+    authorization_url: str
+    expires_at: datetime
+
+
+@dataclass(frozen=True)
+class MetaDiscoveryItem:
+    connection_id: int
+    platform: PlatformId
+    external_id: str
+    display_name: str
+    status: str
+
+
+@dataclass(frozen=True)
+class MetaSelfServiceReadinessResponse:
+    brand_id: str
+    can_manage: bool
+    connection_state: str
+    facebook_linked_count: int
+    instagram_linked_count: int
+    discoveries: tuple[MetaDiscoveryItem, ...]
+    oauth_start_available: bool
+    reason: str
+    runtime_mode: RuntimeMode
+    writes_enabled: bool
+    checked_at: datetime
+
+
+@dataclass(frozen=True)
+class MetaSelfServiceStartResponse:
+    authorization_url: str
+    expires_at: datetime
+
+
+@dataclass(frozen=True)
+class MetaLinkResponse:
+    connection_id: int
+    linked_count: int
+    connection_state: str
+
+
+@dataclass(frozen=True)
 class InsightsResponse:
     meta: BrandScope
     items: tuple[ReportingInsight, ...]
@@ -142,6 +198,8 @@ class WorkspacePermissions:
     internal_audit_visible: bool
     rollup_available: bool
     operation_mutation_available: bool
+    tiktok_connection_manage: bool
+    meta_connection_manage: bool
 
 
 @dataclass(frozen=True)
@@ -185,6 +243,10 @@ __all__ = [
     "CapabilityPlatform",
     "ConnectionsResponse",
     "InsightsResponse",
+    "MetaDiscoveryItem",
+    "MetaLinkResponse",
+    "MetaSelfServiceReadinessResponse",
+    "MetaSelfServiceStartResponse",
     "OperationsReadinessResponse",
     "PlatformAccountsResponse",
     "RuntimeCapabilities",
@@ -195,6 +257,8 @@ __all__ = [
     "SyncJobsResponse",
     "TikTokConnectionResponse",
     "TikTokActivationReadinessResponse",
+    "TikTokSelfServiceReadinessResponse",
+    "TikTokSelfServiceStartResponse",
     "WorkspaceCapabilitiesResponse",
     "WorkspacePermissions",
 ]

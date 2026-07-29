@@ -11,8 +11,14 @@ export default defineConfig(({ mode }) => {
       port: 3010,
       strictPort: true,
       proxy: {
-        "/api": proxyTarget,
-        "/sso": proxyTarget,
+        "/api": {
+          target: proxyTarget,
+          changeOrigin: false,
+        },
+        "/sso": {
+          target: proxyTarget,
+          changeOrigin: false,
+        },
       },
     },
     preview: {

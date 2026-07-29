@@ -232,6 +232,7 @@ def _config() -> TikTokConfig:
         provider_profile=TIKTOK_PROVIDER_PROFILE,
         app_id=TIKTOK_APP_ID,
         app_secret=secrets.token_urlsafe(40),
+        secret_rotated_at=datetime(2026, 7, 20, tzinfo=UTC),
         account_enabled=True,
         oauth_mode="manual_intent_only",
         collection_enabled=False,

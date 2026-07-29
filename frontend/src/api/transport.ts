@@ -53,6 +53,20 @@ export async function apiCommand(path: string, init: RequestInit): Promise<void>
   if (!response.ok) throw await responseError(response);
 }
 
+export async function apiMutation<T>(
+  path: string,
+  schema: ZodType<T>,
+  init: RequestInit,
+): Promise<T> {
+  const response = await fetch(apiUrl(path), {
+    ...init,
+    credentials: "include",
+    headers: { Accept: "application/json", ...init.headers },
+  });
+  if (!response.ok) throw await responseError(response);
+  return schema.parse(await response.json());
+}
+
 export function queryString(
   values: Record<string, boolean | number | string | undefined>,
 ): string {

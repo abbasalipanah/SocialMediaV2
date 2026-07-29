@@ -118,19 +118,29 @@ class TikTokActivationCoordinator:
         self._clock = clock
         self._random_bytes = random_bytes
 
-    def ready_for_start(self, context: ActivationContext) -> bool:
+    def ready_for_start(
+        self,
+        context: ActivationContext,
+        *,
+        require_gate_context: bool = True,
+    ) -> bool:
         now = self._now()
         return (
             self._write_policy.allows("tiktok_activation_start")
             and self._gate.allows(now)
-            and self._gate.allows_context(context)
+            and (not require_gate_context or self._gate.allows_context(context))
             and self._provider.activation_enabled
             and self._authority.allows(context)
         )
 
-    def start(self, context: ActivationContext) -> ActivationStart:
+    def start(
+        self,
+        context: ActivationContext,
+        *,
+        require_gate_context: bool = True,
+    ) -> ActivationStart:
         now = self._assert_enabled("tiktok_activation_start")
-        self._assert_authorized(context)
+        self._assert_authorized(context, require_gate_context=require_gate_context)
         raw_reference = self._random_bytes(32)
         if len(raw_reference) != 32:
             raise TikTokActivationError("activation_entropy_invalid")
@@ -166,6 +176,7 @@ class TikTokActivationCoordinator:
         *,
         query: Mapping[str, str],
         context: ActivationContext,
+        require_gate_context: bool = True,
     ) -> ActivationResult:
         now = self._assert_enabled("tiktok_activation_callback")
         if set(query) != {"auth_code", "state"}:
@@ -174,7 +185,7 @@ class TikTokActivationCoordinator:
         state = query.get("state", "")
         if not auth_code or len(auth_code.encode("utf-8")) > 2048 or not state:
             raise TikTokActivationError("activation_callback_rejected")
-        self._assert_authorized(context)
+        self._assert_authorized(context, require_gate_context=require_gate_context)
         try:
             claims = self._state_port.consume(state, expected_context=context)
         except Exception as exc:
@@ -199,7 +210,7 @@ class TikTokActivationCoordinator:
             access_token = token.access_token
             account = self._provider.inspect(access_token=token.access_token)
             optional = self._validated_optional_scopes(token.scopes, account.scopes)
-            self._assert_authorized(context)
+            self._assert_authorized(context, require_gate_context=require_gate_context)
             credential_reference = self._credential_reference(
                 brand_id=context.brand_id,
                 business_id=account.business_id,
@@ -260,8 +271,16 @@ class TikTokActivationCoordinator:
             raise TikTokActivationError("activation_disabled")
         return now
 
-    def _assert_authorized(self, context: ActivationContext) -> None:
-        if not self._gate.allows_context(context) or not self._authority.allows(context):
+    def _assert_authorized(
+        self,
+        context: ActivationContext,
+        *,
+        require_gate_context: bool,
+    ) -> None:
+        if (
+            (require_gate_context and not self._gate.allows_context(context))
+            or not self._authority.allows(context)
+        ):
             raise TikTokActivationError("activation_authority_denied")
 
     def _validated_optional_scopes(

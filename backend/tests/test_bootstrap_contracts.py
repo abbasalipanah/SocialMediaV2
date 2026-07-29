@@ -36,8 +36,18 @@ def test_safe_environment_contract_is_complete() -> None:
         "SOCIAL_TIKTOK_ADVERTISER_ENABLED=false",
         "SOCIAL_TIKTOK_BUSINESS_APP_SECRET=",
         "SOCIAL_TIKTOK_OAUTH_STATE_SECRET=",
+        "SOCIAL_TIKTOK_ACTIVATION_GATE_ENABLED=false",
+        "SOCIAL_TIKTOK_ACTIVATION_ENABLED_AT=",
+        "SOCIAL_TIKTOK_ACTIVATION_EXPIRES_AT=",
         "SOCIAL_CREDENTIAL_ACTIVE_KEY_ID=",
         "SOCIAL_CREDENTIAL_KEYRING_JSON=",
+        "SOCIAL_META_APP_ID=1133669534788144",
+        "SOCIAL_META_APP_SECRET=",
+        "SOCIAL_META_ACCOUNT_ENABLED=false",
+        "SOCIAL_META_ACCOUNT_OAUTH_MODE=disabled",
+        "SOCIAL_META_REDIRECT_URI=https://social.theaccumulate.com/api/social/meta/oauth/callback",
+        "SOCIAL_META_OAUTH_STATE_SECRET=",
+        "SOCIAL_META_ACTIVATION_GATE_ENABLED=false",
     }
     assert required_lines.issubset(set(env.splitlines()))
 

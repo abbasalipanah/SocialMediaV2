@@ -35,6 +35,7 @@ def tiktok_config() -> TikTokConfig:
         provider_profile=TIKTOK_PROVIDER_PROFILE,
         app_id=TIKTOK_APP_ID,
         app_secret="disposable-test-value",
+        secret_rotated_at=None,
         account_enabled=False,
         oauth_mode="disabled",
         collection_enabled=False,

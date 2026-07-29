@@ -11,8 +11,21 @@ developed under the safety and migration rules in
   Phase 7/8 reports.
 - On 2026-07-17 the frontend shell was realigned to the Performance Marketing reference and the
   Social overview/platform surfaces were rebuilt from Accumulate's active Social render chain.
-- The local frontend candidate passes strict TypeScript, production build and `17` Vitest tests;
+- The local frontend candidate passes strict TypeScript, production build and `19` Vitest tests;
   desktop, full-page and mobile browser smoke checks are green.
+- The authenticated shell includes a Social-only Integrations catalog for Facebook, Instagram and
+  TikTok, backed by the existing account, connection, capability, readiness and sync status APIs.
+- TikTok now has a Brand-scoped self-service OAuth surface in Integrations. It is independent of
+  the fresh owner-SSO handoff, remains fail-closed when provider activation is not configured, and
+  never exposes provider tokens to the frontend.
+- Facebook and Instagram now share a Brand-scoped Meta self-service flow: one explicit Meta login
+  discovers Facebook Pages and linked Instagram Business profiles, then a separate explicit
+  selection command attaches only the chosen accounts to the Brand.
+- Meta OAuth state is session/Brand-bound and one-time, while provider credentials remain encrypted
+  behind the backend vault. The default and local demo environments keep real Meta activation off.
+- The real TikTok OAuth runtime is composed automatically behind explicit database, vault,
+  provider-secret and time-boxed activation gates; the default and local demo environments keep
+  those gates off.
 - The full canonical release gate still requires a refreshed immutable-source baseline check and
   complete quality rerun.
 - Production DB access, provider activation, workers and schedules remain disabled.

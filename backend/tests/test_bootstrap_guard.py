@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import base64
+import json
+
 import pytest
+from sqlalchemy import create_engine
 
 from app.core import ConfigurationError, RuntimeMode, WritePolicy, load_settings
+from app.infrastructure.providers.meta.runtime import create_meta_activation_runtime
+from app.infrastructure.providers.tiktok.runtime import create_tiktok_activation_runtime
+from tests.test_phase6_dashboard_api import MemoryAuthority
 
 CONFIG_KEYS = (
     "APP_ENV",
@@ -16,10 +23,25 @@ CONFIG_KEYS = (
     "SOCIAL_DB_USER",
     "SOCIAL_DB_REQUIRE_TLS",
     "SOCIAL_TIKTOK_BUSINESS_APP_SECRET",
+    "SOCIAL_TIKTOK_SECRET_ROTATED_AT",
     "SOCIAL_TIKTOK_ACCOUNT_ENABLED",
     "SOCIAL_TIKTOK_ACCOUNT_OAUTH_MODE",
     "SOCIAL_TIKTOK_COLLECTION_ENABLED",
     "SOCIAL_TIKTOK_ADVERTISER_ENABLED",
+    "SOCIAL_TIKTOK_ACTIVATION_GATE_ENABLED",
+    "SOCIAL_TIKTOK_ACTIVATION_ENABLED_AT",
+    "SOCIAL_TIKTOK_ACTIVATION_EXPIRES_AT",
+    "SOCIAL_TIKTOK_OAUTH_STATE_SECRET",
+    "SOCIAL_CREDENTIAL_ACTIVE_KEY_ID",
+    "SOCIAL_CREDENTIAL_KEYRING_JSON",
+    "SOCIAL_META_APP_SECRET",
+    "SOCIAL_META_ACCOUNT_ENABLED",
+    "SOCIAL_META_ACCOUNT_OAUTH_MODE",
+    "SOCIAL_META_ACTIVATION_GATE_ENABLED",
+    "SOCIAL_META_ACTIVATION_ENABLED_AT",
+    "SOCIAL_META_ACTIVATION_EXPIRES_AT",
+    "SOCIAL_META_OAUTH_STATE_SECRET",
+    "SOCIAL_VAULT_ENABLED",
 )
 
 
@@ -86,14 +108,101 @@ def test_local_development_write_policy_requires_explicit_database(
     assert policy.allows("fixture_seed") is True
 
 
-def test_tiktok_gates_and_secret_are_blocked_during_bootstrap(
+def test_tiktok_activation_requires_every_runtime_prerequisite(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("SOCIAL_TIKTOK_ACCOUNT_ENABLED", "true")
-    with pytest.raises(ConfigurationError, match="runtime gates"):
+    monkeypatch.setenv("SOCIAL_TIKTOK_ACCOUNT_OAUTH_MODE", "manual_intent_only")
+    with pytest.raises(ConfigurationError, match="writable database URL"):
         load_settings()
 
     monkeypatch.setenv("SOCIAL_TIKTOK_ACCOUNT_ENABLED", "false")
-    monkeypatch.setenv("SOCIAL_TIKTOK_BUSINESS_APP_SECRET", "must-not-load")
-    with pytest.raises(ConfigurationError, match="must not be loaded"):
+    monkeypatch.setenv("SOCIAL_TIKTOK_ACCOUNT_OAUTH_MODE", "disabled")
+    dormant = load_settings()
+    assert dormant.tiktok.account_enabled is False
+
+
+def test_complete_local_tiktok_activation_configuration_is_accepted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    keyring = {
+        "local-key": base64.b64encode(b"a" * 32).decode("ascii"),
+    }
+    values = {
+        "SOCIAL_WRITES_ENABLED": "true",
+        "SOCIAL_DB_URL": "postgresql+psycopg://local:local@127.0.0.1/social_media_v2_local",
+        "SOCIAL_VAULT_ENABLED": "true",
+        "SOCIAL_TIKTOK_ACCOUNT_ENABLED": "true",
+        "SOCIAL_TIKTOK_ACCOUNT_OAUTH_MODE": "manual_intent_only",
+        "SOCIAL_TIKTOK_BUSINESS_APP_SECRET": "social-app-secret",
+        "SOCIAL_TIKTOK_SECRET_ROTATED_AT": "2026-07-20T12:00:00Z",
+        "SOCIAL_TIKTOK_ACTIVATION_GATE_ENABLED": "true",
+        "SOCIAL_TIKTOK_ACTIVATION_ENABLED_AT": "2026-07-18T10:00:00Z",
+        "SOCIAL_TIKTOK_ACTIVATION_EXPIRES_AT": "2026-07-18T12:00:00Z",
+        "SOCIAL_TIKTOK_OAUTH_STATE_SECRET": "s" * 32,
+        "SOCIAL_CREDENTIAL_ACTIVE_KEY_ID": "local-key",
+        "SOCIAL_CREDENTIAL_KEYRING_JSON": json.dumps(keyring),
+    }
+    rotated_at = values.pop("SOCIAL_TIKTOK_SECRET_ROTATED_AT")
+    for key, value in values.items():
+        monkeypatch.setenv(key, value)
+
+    with pytest.raises(ConfigurationError, match="rotated-secret attestation"):
         load_settings()
+
+    monkeypatch.setenv("SOCIAL_TIKTOK_SECRET_ROTATED_AT", rotated_at)
+
+    settings = load_settings()
+    assert settings.tiktok.account_enabled is True
+    assert settings.tiktok_activation.gate_enabled is True
+    assert settings.tiktok_activation.credential_active_key_id == "local-key"
+    engine = create_engine(settings.db.url)
+    try:
+        coordinator = create_tiktok_activation_runtime(
+            settings=settings,
+            policy=WritePolicy.from_settings(settings),
+            engine=engine,
+            authority_store=MemoryAuthority(),
+        )
+    finally:
+        engine.dispose()
+    assert coordinator is not None
+
+
+def test_complete_local_meta_activation_configuration_is_accepted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    keyring = {
+        "local-key": base64.b64encode(b"m" * 32).decode("ascii"),
+    }
+    values = {
+        "SOCIAL_WRITES_ENABLED": "true",
+        "SOCIAL_DB_URL": "postgresql+psycopg://local:local@127.0.0.1/social_media_v2_local",
+        "SOCIAL_VAULT_ENABLED": "true",
+        "SOCIAL_META_ACCOUNT_ENABLED": "true",
+        "SOCIAL_META_ACCOUNT_OAUTH_MODE": "manual_intent_only",
+        "SOCIAL_META_APP_SECRET": "meta-app-value",
+        "SOCIAL_META_ACTIVATION_GATE_ENABLED": "true",
+        "SOCIAL_META_ACTIVATION_ENABLED_AT": "2026-07-18T10:00:00Z",
+        "SOCIAL_META_ACTIVATION_EXPIRES_AT": "2026-07-18T12:00:00Z",
+        "SOCIAL_META_OAUTH_STATE_SECRET": "m" * 32,
+        "SOCIAL_CREDENTIAL_ACTIVE_KEY_ID": "local-key",
+        "SOCIAL_CREDENTIAL_KEYRING_JSON": json.dumps(keyring),
+    }
+    for key, value in values.items():
+        monkeypatch.setenv(key, value)
+
+    settings = load_settings()
+    assert settings.meta.account_enabled is True
+    assert settings.meta_activation.gate_enabled is True
+    engine = create_engine(settings.db.url)
+    try:
+        coordinator = create_meta_activation_runtime(
+            settings=settings,
+            policy=WritePolicy.from_settings(settings),
+            engine=engine,
+            authority_store=MemoryAuthority(),
+        )
+    finally:
+        engine.dispose()
+    assert coordinator is not None

@@ -18,7 +18,14 @@ const capabilities = {
     { platform: "instagram", linked_account_count: 0, navigation_available: false, capabilities: [{ platform: "instagram", capability: "profile", status: "not_configured", reason: "not_configured" }] },
     { platform: "tiktok", linked_account_count: 0, navigation_available: false, capabilities: [{ platform: "tiktok", capability: "profile", status: "manual_activation_required", reason: "owner_activation_required" }] },
   ],
-  permissions: { settings_visible: true, internal_audit_visible: true, rollup_available: true, operation_mutation_available: false },
+  permissions: {
+    settings_visible: true,
+    internal_audit_visible: true,
+    rollup_available: true,
+    operation_mutation_available: false,
+    tiktok_connection_manage: true,
+    meta_connection_manage: true,
+  },
   runtime: { mode: "dormant", writes_enabled: false, automated_schedule_available: false },
 };
 const account = { account_id: 31, brand_id: "hotel-1", platform: "facebook", external_id: "page-31", display_name: "Coastal Facebook", status: "active", connection_state: "connected", health_status: "healthy", backfill_status: "complete", nightly_enabled: true, last_synced_at: "2026-07-14T11:00:00Z" };
@@ -64,31 +71,34 @@ test("dashboard tabs, honest values and PNG export work on desktop", async ({ pa
   test.skip(!testInfo.project.name.startsWith("desktop"), "desktop product assertion");
   await mockProductApi(page);
   await page.goto("/facebook");
-  await expect(page.getByRole("heading", { name: "Facebook", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Facebook Dashboard", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Cover" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Page" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Content" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Audience" })).toBeVisible();
   await page.getByRole("tab", { name: "Page" }).click();
-  const indicators = page.getByLabel("Key performance indicators");
-  await expect(indicators.getByText("1.2K")).toBeVisible();
-  await expect(indicators.getByText("Unavailable", { exact: true })).toBeVisible();
+  const followersCard = page.locator("article").filter({ hasText: "Followers" }).first();
+  const interactionsCard = page.locator("article").filter({ hasText: "Interactions" }).first();
+  await expect(followersCard.getByText("1.2K", { exact: true })).toBeVisible();
+  await expect(interactionsCard.locator("strong")).toHaveText("—");
 
   const pendingDownload = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export PNG" }).click();
   const report = await pendingDownload;
-  expect(report.suggestedFilename()).toBe("facebook-report.png");
+  expect(report.suggestedFilename()).toBe("facebook-dashboard-report.png");
 });
 
 test("Settings is table-first and the setup drawer stays social-only", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.startsWith("desktop"), "desktop product assertion");
   await mockProductApi(page);
   await page.goto("/settings");
-  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Brand Setup and Account Mapping" })).toBeVisible();
   await expect(page.getByRole("cell", { name: /Coastal One/ })).toBeVisible();
-  await page.getByRole("tab", { name: "Social Accounts" }).click();
+  await page.getByRole("tab", { name: /Platform Accounts/ }).click();
   await expect(page.getByText("Coastal Facebook")).toBeVisible();
-  await page.getByRole("button", { name: "Brand Setup" }).click();
+  await page.getByRole("tab", { name: /Brands:/ }).click();
+  const brandRow = page.getByRole("row", { name: /Coastal One/ });
+  await brandRow.getByRole("button", { name: "Edit" }).click();
   const drawer = page.getByRole("dialog", { name: "Brand Setup" });
   await expect(drawer).toBeVisible();
   await drawer.getByRole("button", { name: /Social Accounts/ }).click();
@@ -98,7 +108,7 @@ test("Settings is table-first and the setup drawer stays social-only", async ({ 
   await expect(drawer.getByText("Google Ads")).toHaveCount(0);
   await page.keyboard.press("Escape");
   await expect(drawer).toBeHidden();
-  await expect(page.getByRole("button", { name: "Brand Setup" })).toBeFocused();
+  await expect(brandRow.getByRole("button", { name: "Edit" })).toBeFocused();
 });
 
 test("direct TikTok activation is denied without a fresh signed owner launch", async ({ page }) => {

@@ -9,6 +9,7 @@ import {
   LockKeyhole,
   LogOut,
   PieChart,
+  PlugZap,
   Settings,
   X,
 } from "lucide-react";
@@ -143,6 +144,7 @@ export function Sidebar({ open, onClose, onLogout, loggingOut }: SidebarProps) {
           {settingsVisible && (
             <NavigationLink icon={Settings} label="Settings" onClick={onClose} path="/settings" />
           )}
+          <NavigationLink icon={PlugZap} label="Integrations" onClick={onClose} path="/integrations" />
           <a className="sidebar-link" href="mailto:support@theaccumulate.com">
             <HelpCircle size={20} />
             <span>Support</span>

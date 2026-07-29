@@ -754,6 +754,189 @@
         "title": "InsightsResponse",
         "type": "object"
       },
+      "MetaAccountSelectionPayload": {
+        "properties": {
+          "external_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "External Id",
+            "type": "string"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/PlatformId"
+          }
+        },
+        "required": [
+          "platform",
+          "external_id"
+        ],
+        "title": "MetaAccountSelectionPayload",
+        "type": "object"
+      },
+      "MetaDiscoveryItem": {
+        "properties": {
+          "connection_id": {
+            "title": "Connection Id",
+            "type": "integer"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/PlatformId"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "connection_id",
+          "platform",
+          "external_id",
+          "display_name",
+          "status"
+        ],
+        "title": "MetaDiscoveryItem",
+        "type": "object"
+      },
+      "MetaLinkPayload": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/MetaAccountSelectionPayload"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Accounts",
+            "type": "array"
+          },
+          "connection_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Connection Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "connection_id",
+          "accounts"
+        ],
+        "title": "MetaLinkPayload",
+        "type": "object"
+      },
+      "MetaLinkResponse": {
+        "properties": {
+          "connection_id": {
+            "title": "Connection Id",
+            "type": "integer"
+          },
+          "connection_state": {
+            "title": "Connection State",
+            "type": "string"
+          },
+          "linked_count": {
+            "title": "Linked Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "connection_id",
+          "linked_count",
+          "connection_state"
+        ],
+        "title": "MetaLinkResponse",
+        "type": "object"
+      },
+      "MetaSelfServiceReadinessResponse": {
+        "properties": {
+          "brand_id": {
+            "title": "Brand Id",
+            "type": "string"
+          },
+          "can_manage": {
+            "title": "Can Manage",
+            "type": "boolean"
+          },
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "connection_state": {
+            "title": "Connection State",
+            "type": "string"
+          },
+          "discoveries": {
+            "items": {
+              "$ref": "#/components/schemas/MetaDiscoveryItem"
+            },
+            "title": "Discoveries",
+            "type": "array"
+          },
+          "facebook_linked_count": {
+            "title": "Facebook Linked Count",
+            "type": "integer"
+          },
+          "instagram_linked_count": {
+            "title": "Instagram Linked Count",
+            "type": "integer"
+          },
+          "oauth_start_available": {
+            "title": "Oauth Start Available",
+            "type": "boolean"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "runtime_mode": {
+            "$ref": "#/components/schemas/RuntimeMode"
+          },
+          "writes_enabled": {
+            "title": "Writes Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "brand_id",
+          "can_manage",
+          "connection_state",
+          "facebook_linked_count",
+          "instagram_linked_count",
+          "discoveries",
+          "oauth_start_available",
+          "reason",
+          "runtime_mode",
+          "writes_enabled",
+          "checked_at"
+        ],
+        "title": "MetaSelfServiceReadinessResponse",
+        "type": "object"
+      },
+      "MetaSelfServiceStartResponse": {
+        "properties": {
+          "authorization_url": {
+            "title": "Authorization Url",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authorization_url",
+          "expires_at"
+        ],
+        "title": "MetaSelfServiceStartResponse",
+        "type": "object"
+      },
       "MetricId": {
         "enum": [
           "followers",
@@ -1603,6 +1786,78 @@
         "title": "TikTokConnectionResponse",
         "type": "object"
       },
+      "TikTokSelfServiceReadinessResponse": {
+        "properties": {
+          "brand_id": {
+            "title": "Brand Id",
+            "type": "string"
+          },
+          "can_manage": {
+            "title": "Can Manage",
+            "type": "boolean"
+          },
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "connection_state": {
+            "title": "Connection State",
+            "type": "string"
+          },
+          "linked_account_count": {
+            "title": "Linked Account Count",
+            "type": "integer"
+          },
+          "oauth_start_available": {
+            "title": "Oauth Start Available",
+            "type": "boolean"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "runtime_mode": {
+            "$ref": "#/components/schemas/RuntimeMode"
+          },
+          "writes_enabled": {
+            "title": "Writes Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "brand_id",
+          "can_manage",
+          "connection_state",
+          "linked_account_count",
+          "oauth_start_available",
+          "reason",
+          "runtime_mode",
+          "writes_enabled",
+          "checked_at"
+        ],
+        "title": "TikTokSelfServiceReadinessResponse",
+        "type": "object"
+      },
+      "TikTokSelfServiceStartResponse": {
+        "properties": {
+          "authorization_url": {
+            "title": "Authorization Url",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authorization_url",
+          "expires_at"
+        ],
+        "title": "TikTokSelfServiceStartResponse",
+        "type": "object"
+      },
       "Unit": {
         "enum": [
           "count",
@@ -1759,6 +2014,10 @@
             "title": "Internal Audit Visible",
             "type": "boolean"
           },
+          "meta_connection_manage": {
+            "title": "Meta Connection Manage",
+            "type": "boolean"
+          },
           "operation_mutation_available": {
             "title": "Operation Mutation Available",
             "type": "boolean"
@@ -1770,13 +2029,19 @@
           "settings_visible": {
             "title": "Settings Visible",
             "type": "boolean"
+          },
+          "tiktok_connection_manage": {
+            "title": "Tiktok Connection Manage",
+            "type": "boolean"
           }
         },
         "required": [
           "settings_visible",
           "internal_audit_visible",
           "rollup_available",
-          "operation_mutation_available"
+          "operation_mutation_available",
+          "tiktok_connection_manage",
+          "meta_connection_manage"
         ],
         "title": "WorkspacePermissions",
         "type": "object"
@@ -2630,6 +2895,296 @@
           }
         },
         "summary": "Insights"
+      }
+    },
+    "/api/integrations/meta/accounts/link": {
+      "post": {
+        "operationId": "meta_link_accounts_api_integrations_meta_accounts_link_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Brand Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetaLinkPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaLinkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Meta Link Accounts"
+      }
+    },
+    "/api/integrations/meta/oauth/start": {
+      "post": {
+        "operationId": "meta_self_service_start_api_integrations_meta_oauth_start_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Brand Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaSelfServiceStartResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Meta Self Service Start"
+      }
+    },
+    "/api/integrations/meta/self-service/readiness": {
+      "get": {
+        "operationId": "meta_self_service_readiness_api_integrations_meta_self_service_readiness_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Brand Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetaSelfServiceReadinessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Meta Self Service Readiness"
+      }
+    },
+    "/api/integrations/tiktok/oauth/start": {
+      "post": {
+        "operationId": "tiktok_self_service_start_api_integrations_tiktok_oauth_start_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Brand Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TikTokSelfServiceStartResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tiktok Self Service Start"
+      }
+    },
+    "/api/integrations/tiktok/self-service/readiness": {
+      "get": {
+        "operationId": "tiktok_self_service_readiness_api_integrations_tiktok_self_service_readiness_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Brand Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TikTokSelfServiceReadinessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tiktok Self Service Readiness"
       }
     },
     "/api/media/instagram/{content_id}": {
@@ -3847,6 +4402,50 @@
           }
         },
         "summary": "Tiktok Activation Start"
+      }
+    },
+    "/api/social/meta/oauth/callback": {
+      "get": {
+        "operationId": "meta_activation_callback_api_social_meta_oauth_callback_get",
+        "parameters": [
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Meta Activation Callback"
       }
     },
     "/api/social/tiktok/oauth/callback": {

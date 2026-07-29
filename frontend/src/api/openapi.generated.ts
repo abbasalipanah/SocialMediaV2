@@ -140,6 +140,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/integrations/meta/accounts/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Meta Link Accounts */
+        post: operations["meta_link_accounts_api_integrations_meta_accounts_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/meta/oauth/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Meta Self Service Start */
+        post: operations["meta_self_service_start_api_integrations_meta_oauth_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/meta/self-service/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Meta Self Service Readiness */
+        get: operations["meta_self_service_readiness_api_integrations_meta_self_service_readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/tiktok/oauth/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Tiktok Self Service Start */
+        post: operations["tiktok_self_service_start_api_integrations_tiktok_oauth_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/tiktok/self-service/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tiktok Self Service Readiness */
+        get: operations["tiktok_self_service_readiness_api_integrations_tiktok_self_service_readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/media/instagram/{content_id}": {
         parameters: {
             query?: never;
@@ -407,6 +492,23 @@ export interface paths {
         put?: never;
         /** Tiktok Activation Start */
         post: operations["tiktok_activation_start_api_settings_tiktok_oauth_account_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/social/meta/oauth/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Meta Activation Callback */
+        get: operations["meta_activation_callback_api_social_meta_oauth_callback_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -738,6 +840,77 @@ export interface components {
             items: components["schemas"]["ReportingInsight"][];
             meta: components["schemas"]["BrandScope"];
         };
+        /** MetaAccountSelectionPayload */
+        MetaAccountSelectionPayload: {
+            /** External Id */
+            external_id: string;
+            platform: components["schemas"]["PlatformId"];
+        };
+        /** MetaDiscoveryItem */
+        MetaDiscoveryItem: {
+            /** Connection Id */
+            connection_id: number;
+            /** Display Name */
+            display_name: string;
+            /** External Id */
+            external_id: string;
+            platform: components["schemas"]["PlatformId"];
+            /** Status */
+            status: string;
+        };
+        /** MetaLinkPayload */
+        MetaLinkPayload: {
+            /** Accounts */
+            accounts: components["schemas"]["MetaAccountSelectionPayload"][];
+            /** Connection Id */
+            connection_id: number;
+        };
+        /** MetaLinkResponse */
+        MetaLinkResponse: {
+            /** Connection Id */
+            connection_id: number;
+            /** Connection State */
+            connection_state: string;
+            /** Linked Count */
+            linked_count: number;
+        };
+        /** MetaSelfServiceReadinessResponse */
+        MetaSelfServiceReadinessResponse: {
+            /** Brand Id */
+            brand_id: string;
+            /** Can Manage */
+            can_manage: boolean;
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            /** Connection State */
+            connection_state: string;
+            /** Discoveries */
+            discoveries: components["schemas"]["MetaDiscoveryItem"][];
+            /** Facebook Linked Count */
+            facebook_linked_count: number;
+            /** Instagram Linked Count */
+            instagram_linked_count: number;
+            /** Oauth Start Available */
+            oauth_start_available: boolean;
+            /** Reason */
+            reason: string;
+            runtime_mode: components["schemas"]["RuntimeMode"];
+            /** Writes Enabled */
+            writes_enabled: boolean;
+        };
+        /** MetaSelfServiceStartResponse */
+        MetaSelfServiceStartResponse: {
+            /** Authorization Url */
+            authorization_url: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
         /**
          * MetricId
          * @enum {string}
@@ -1004,6 +1177,39 @@ export interface components {
             /** State */
             state: string;
         };
+        /** TikTokSelfServiceReadinessResponse */
+        TikTokSelfServiceReadinessResponse: {
+            /** Brand Id */
+            brand_id: string;
+            /** Can Manage */
+            can_manage: boolean;
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            /** Connection State */
+            connection_state: string;
+            /** Linked Account Count */
+            linked_account_count: number;
+            /** Oauth Start Available */
+            oauth_start_available: boolean;
+            /** Reason */
+            reason: string;
+            runtime_mode: components["schemas"]["RuntimeMode"];
+            /** Writes Enabled */
+            writes_enabled: boolean;
+        };
+        /** TikTokSelfServiceStartResponse */
+        TikTokSelfServiceStartResponse: {
+            /** Authorization Url */
+            authorization_url: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
         /**
          * Unit
          * @enum {string}
@@ -1052,12 +1258,16 @@ export interface components {
         WorkspacePermissions: {
             /** Internal Audit Visible */
             internal_audit_visible: boolean;
+            /** Meta Connection Manage */
+            meta_connection_manage: boolean;
             /** Operation Mutation Available */
             operation_mutation_available: boolean;
             /** Rollup Available */
             rollup_available: boolean;
             /** Settings Visible */
             settings_visible: boolean;
+            /** Tiktok Connection Manage */
+            tiktok_connection_manage: boolean;
         };
     };
     responses: never;
@@ -1331,6 +1541,175 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InsightsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    meta_link_accounts_api_integrations_meta_accounts_link_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetaLinkPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetaLinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    meta_self_service_start_api_integrations_meta_oauth_start_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetaSelfServiceStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    meta_self_service_readiness_api_integrations_meta_self_service_readiness_get: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetaSelfServiceReadinessResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tiktok_self_service_start_api_integrations_tiktok_oauth_start_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TikTokSelfServiceStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tiktok_self_service_readiness_api_integrations_tiktok_self_service_readiness_get: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TikTokSelfServiceReadinessResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1904,6 +2283,37 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    meta_activation_callback_api_social_meta_oauth_callback_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -3,6 +3,7 @@
 from .comments import LegacyCommentStore
 from .content import LegacyContentStore
 from .media import LegacyMediaStore
+from .meta_activation import ProjectionMetaConnectionStore
 from .metrics import LegacyMetricStore
 from .reporting import LegacyReportingStore
 
@@ -12,4 +13,5 @@ __all__ = [
     "LegacyMediaStore",
     "LegacyMetricStore",
     "LegacyReportingStore",
+    "ProjectionMetaConnectionStore",
 ]

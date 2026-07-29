@@ -12,6 +12,7 @@ const OverviewPage = lazy(() => import("../features/overview"));
 const FacebookPage = lazy(() => import("../features/facebook"));
 const InstagramPage = lazy(() => import("../features/instagram"));
 const TikTokPage = lazy(() => import("../features/tiktok"));
+const IntegrationsPage = lazy(() => import("../features/integrations"));
 const SettingsPage = lazy(() => import("../features/settings"));
 const TikTokConnectPage = lazy(() =>
   import("../features/settings").then((module) => ({ default: module.TikTokConnectPage })),
@@ -76,6 +77,7 @@ export function AppRoutes() {
             <Route path="facebook" element={<FacebookPage />} />
             <Route path="instagram" element={<InstagramPage />} />
             <Route path="tiktok" element={<TikTokPage />} />
+            <Route path="integrations" element={<IntegrationsPage />} />
             <Route
               path="settings"
               element={<SettingsGuard><SettingsPage /></SettingsGuard>}

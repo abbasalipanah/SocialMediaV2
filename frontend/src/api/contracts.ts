@@ -83,6 +83,8 @@ export const workspaceCapabilitiesSchema = z.object({
     internal_audit_visible: z.boolean(),
     rollup_available: z.boolean(),
     operation_mutation_available: z.boolean(),
+    tiktok_connection_manage: z.boolean(),
+    meta_connection_manage: z.boolean(),
   }),
   runtime: z.object({
     mode: z.enum([
@@ -401,6 +403,60 @@ export const tiktokActivationReadinessSchema = z.object({
 });
 export type TikTokActivationReadiness = z.infer<typeof tiktokActivationReadinessSchema> &
   components["schemas"]["TikTokActivationReadinessResponse"];
+
+export const tiktokSelfServiceReadinessSchema = z.object({
+  brand_id: z.string(),
+  can_manage: z.boolean(),
+  connection_state: z.string(),
+  linked_account_count: z.number().int().nonnegative(),
+  oauth_start_available: z.boolean(),
+  reason: z.string(),
+  runtime_mode: z.string(),
+  writes_enabled: z.boolean(),
+  checked_at: z.string(),
+});
+export type TikTokSelfServiceReadiness = z.infer<typeof tiktokSelfServiceReadinessSchema>;
+
+export const tiktokSelfServiceStartSchema = z.object({
+  authorization_url: z.string().url(),
+  expires_at: z.string(),
+});
+export type TikTokSelfServiceStart = z.infer<typeof tiktokSelfServiceStartSchema>;
+
+export const metaDiscoverySchema = z.object({
+  connection_id: z.number().int().positive(),
+  platform: z.enum(["facebook", "instagram"]),
+  external_id: z.string(),
+  display_name: z.string(),
+  status: z.string(),
+});
+export type MetaDiscovery = z.infer<typeof metaDiscoverySchema>;
+
+export const metaSelfServiceReadinessSchema = z.object({
+  brand_id: z.string(),
+  can_manage: z.boolean(),
+  connection_state: z.string(),
+  facebook_linked_count: z.number().int().nonnegative(),
+  instagram_linked_count: z.number().int().nonnegative(),
+  discoveries: z.array(metaDiscoverySchema),
+  oauth_start_available: z.boolean(),
+  reason: z.string(),
+  runtime_mode: z.string(),
+  writes_enabled: z.boolean(),
+  checked_at: z.string(),
+});
+export type MetaSelfServiceReadiness = z.infer<typeof metaSelfServiceReadinessSchema>;
+
+export const metaSelfServiceStartSchema = z.object({
+  authorization_url: z.string().url(),
+  expires_at: z.string(),
+});
+
+export const metaLinkResponseSchema = z.object({
+  connection_id: z.number().int().positive(),
+  linked_count: z.number().int().positive(),
+  connection_state: z.literal("connected"),
+});
 
 export const apiProblemSchema = z.object({
   detail: z.unknown().optional(),

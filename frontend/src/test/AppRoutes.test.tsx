@@ -99,6 +99,8 @@ function capabilities(settingsVisible = true) {
       internal_audit_visible: settingsVisible,
       rollup_available: true,
       operation_mutation_available: false,
+      tiktok_connection_manage: true,
+      meta_connection_manage: true,
     },
     runtime: {
       mode: "dormant",
@@ -128,6 +130,90 @@ const accounts = {
   ],
 };
 
+const settingsMeta = {
+  requested_brand_id: "child-1",
+  rollup: false,
+  resolved_brand_ids: ["child-1"],
+};
+
+const settingsBrands = {
+  meta: settingsMeta,
+  items: [{
+    brand_id: "child-1",
+    name: "Hotel One",
+    parent_brand_id: "parent",
+    visibility: "active",
+    access_mode: "write",
+    role: "agency_admin",
+    linked_account_count: 1,
+    last_sync_at: "2026-07-14T12:00:00Z",
+  }],
+};
+
+const socialAccounts = { meta: settingsMeta, items: accounts.accounts };
+const brandLinks = {
+  meta: settingsMeta,
+  items: [{
+    brand_id: "child-1",
+    platform: "facebook",
+    account_id: 17,
+    external_id: "page-17",
+    display_name: "Facebook Main",
+    link_status: "active",
+  }],
+};
+const connections = {
+  meta: settingsMeta,
+  items: [{
+    connection_id: 1,
+    brand_id: "child-1",
+    platform: "facebook",
+    state: "connected",
+    expires_at: null,
+    projected_at: "2026-07-14T12:00:00Z",
+  }],
+};
+const syncJobs = { meta: settingsMeta, items: [] };
+const readiness = {
+  status: "ready",
+  runtime_mode: "dormant",
+  writes_enabled: false,
+  database_configured: true,
+  scope: settingsMeta,
+  platforms: [{
+    platform: "facebook",
+    account_count: 1,
+    last_sync_at: "2026-07-14T12:00:00Z",
+    pending_job_count: 0,
+  }],
+};
+
+const tiktokSelfServiceReadiness = {
+  brand_id: "child-1",
+  can_manage: true,
+  connection_state: "disconnected",
+  linked_account_count: 0,
+  oauth_start_available: false,
+  reason: "provider_activation_not_configured",
+  runtime_mode: "dormant",
+  writes_enabled: false,
+  checked_at: "2026-07-14T12:00:00Z",
+};
+
+const metaSelfServiceReadiness = {
+  brand_id: "child-1",
+  can_manage: true,
+  connection_state: "disconnected",
+  facebook_linked_count: 1,
+  instagram_linked_count: 0,
+  oauth_start_available: false,
+  reason: "provider_activation_not_configured",
+  runtime_mode: "dormant",
+  writes_enabled: false,
+  checked_at: "2026-07-14T12:00:00Z",
+  discoveries: [],
+};
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -145,6 +231,14 @@ function mockApi(options: { authenticated?: boolean; settingsVisible?: boolean }
     if (url.includes("/api/workspace/brands")) return json(workspace);
     if (url.includes("/api/workspace/capabilities")) return json(capabilities(options.settingsVisible));
     if (url.includes("/api/platforms/facebook/accounts")) return json(accounts);
+    if (url.includes("/api/settings/social-accounts")) return json(socialAccounts);
+    if (url.includes("/api/settings/brand-links")) return json(brandLinks);
+    if (url.includes("/api/settings/connections")) return json(connections);
+    if (url.includes("/api/settings/sync-jobs")) return json(syncJobs);
+    if (url.includes("/api/settings/brands")) return json(settingsBrands);
+    if (url.includes("/api/operations/readiness")) return json(readiness);
+    if (url.includes("/api/integrations/tiktok/self-service/readiness")) return json(tiktokSelfServiceReadiness);
+    if (url.includes("/api/integrations/meta/self-service/readiness")) return json(metaSelfServiceReadiness);
     throw new Error(`Unexpected request: ${url}`);
   });
 }
@@ -202,7 +296,46 @@ describe("Phase 7 application shell", () => {
     expect(within(primary).getByText("Instagram").closest("div")).toHaveAttribute("aria-disabled", "true");
     expect(within(primary).getByText("TikTok").closest("div")).toHaveAttribute("aria-disabled", "true");
     expect(within(primary).getByRole("link", { name: "Settings" })).toBeInTheDocument();
+    expect(within(primary).getByRole("link", { name: "Integrations" })).toHaveAttribute("href", "/integrations");
     expect(within(primary).queryByText("Google Ads")).not.toBeInTheDocument();
+  });
+
+  it("renders the Social integrations catalog with honest platform status", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = renderApp("/integrations");
+
+    expect(await screen.findByRole("heading", { name: "Integrations" })).toBeInTheDocument();
+    expect(await screen.findByText("Facebook Main")).toBeInTheDocument();
+    expect(await screen.findByText("Instagram Business profiles, posts, reels, stories and audience reporting linked to the selected Brand.")).toBeInTheDocument();
+    expect(screen.getAllByText("Connected").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("No account linked")).toHaveLength(2);
+    expect(screen.getByText("Managed through the Accumulate Meta connection")).toBeInTheDocument();
+
+    await user.type(screen.getByPlaceholderText("Search platforms or accounts"), "TikTok");
+    expect(screen.getByText("TikTok Business account, video performance and audience capabilities with Brand-scoped self-service connection.")).toBeInTheDocument();
+    expect(screen.queryByText("Instagram Business profiles, posts, reels, stories and audience reporting linked to the selected Brand.")).not.toBeInTheDocument();
+
+    await user.click(screen.getAllByRole("button", { name: /Connect TikTok/ })[0]!);
+    expect(await screen.findByRole("dialog", { name: "Connect TikTok" })).toBeInTheDocument();
+    expect(await screen.findByText("TikTok provider activation is not configured in this runtime yet.")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url, init]) => String(url).includes("/oauth/start") && init?.method === "POST")).toBe(false);
+  });
+
+  it("opens Meta self-service without contacting the provider", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = renderApp("/integrations");
+
+    expect(await screen.findByRole("heading", { name: "Integrations" })).toBeInTheDocument();
+    const metaButtons = await screen.findAllByRole("button", { name: /Connect( another)? Meta( account)?/ });
+    await user.click(metaButtons[0]!);
+
+    expect(await screen.findByRole("dialog", { name: "Connect Meta" })).toBeInTheDocument();
+    expect(
+      await screen.findByText("Meta provider activation is not configured in this runtime yet."),
+    ).toBeInTheDocument();
+    expect(fetchMock.mock.calls.some(([url, init]) =>
+      String(url).includes("/api/integrations/meta/oauth/start") && init?.method === "POST",
+    )).toBe(false);
   });
 
   it("opens the mobile drawer, closes on backdrop and signs out to the SSO-first login", async () => {
