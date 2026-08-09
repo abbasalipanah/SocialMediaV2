@@ -9,8 +9,7 @@ User=social-media-v2
 Group=social-media-v2
 WorkingDirectory=/opt/social-media-v2/backend
 EnvironmentFile=/etc/social-media-v2/production.env
-ExecStartPre=/opt/social-media-v2/backend/.venv/bin/python scripts/apply_migrations.py
-ExecStart=/opt/social-media-v2/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8026 --proxy-headers --forwarded-allow-ips=127.0.0.1
+ExecStart=/opt/social-media-v2/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8026 --proxy-headers --forwarded-allow-ips=127.0.0.1 --no-access-log
 Restart=on-failure
 RestartSec=5
 TimeoutStartSec=120
@@ -21,6 +20,8 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/var/lib/social-media-v2
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

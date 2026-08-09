@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, cast
 
 from sqlalchemy import Engine, text
 
@@ -86,7 +87,7 @@ class SocialCollectionTargetStore:
                 ),
                 parameters,
             ).mappings()
-            return tuple(_connected_target(row) for row in rows)
+            return tuple(_connected_target(cast(Mapping[str, Any], row)) for row in rows)
 
     def pending_tiktok(self, connection_id: int) -> PendingTikTokTarget | None:
         if connection_id < 1:
@@ -250,7 +251,7 @@ class SocialCollectionTargetStore:
         )
 
 
-def _connected_target(row: Mapping[str, object]) -> CollectionTargetRow:
+def _connected_target(row: Mapping[str, Any]) -> CollectionTargetRow:
     platform = PlatformId(str(row["platform"]))
     payload = _payload(row["payload_json"])
     if platform is PlatformId.TIKTOK:
@@ -270,10 +271,10 @@ def _connected_target(row: Mapping[str, object]) -> CollectionTargetRow:
             raise ValueError("meta_connection_payload_invalid")
         reference = _credential_reference(matches[0])
     return CollectionTargetRow(
-        link_id=int(row["link_id"]),
-        connection_id=int(row["connection_id"]),
-        asset_id=int(row["asset_id"]),
-        brand_id=int(row["brand_id"]),
+        link_id=int(cast(Any, row["link_id"])),
+        connection_id=int(cast(Any, row["connection_id"])),
+        asset_id=int(cast(Any, row["asset_id"])),
+        brand_id=int(cast(Any, row["brand_id"])),
         platform=platform,
         external_id=str(row["external_id"]),
         display_name=str(row["display_name"]),

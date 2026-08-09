@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "decision_id": "revision6-instagram-stories-main-2026-08-07",
+  "approved": true,
+  "approved_at": "2026-08-07",
+  "authority": "explicit_user_request_in_current_workspace_session",
+  "scope": {
+    "route": "/instagram?tab=stories",
+    "included": [
+      "Instagram Stories page header content",
+      "Stories main-content cards",
+      "Stories responsive layout"
+    ],
+    "excluded": [
+      "Sidebar",
+      "Topbar",
+      "Footer",
+      "Facebook",
+      "TikTok",
+      "Settings",
+      "backend and database contracts"
+    ]
+  },
+  "preserves": {
+    "r1_source_inventory": "frozen_historical_oracle",
+    "stories_api_contract": [
+      "stories.summary",
+      "stories.previous_summary",
+      "stories.trend",
+      "stories.navigation",
+      "stories.actions",
+      "stories.items[]"
+    ],
+    "interaction": "manual explicit story selection; no automatic carousel"
+  },
+  "replaces_visible_story_cards": [
+    "Story Performance Trends",
+    "Last Story",
+    "Story Navigation Split",
+    "Story Actions",
+    "Story Sliders",
+    "Stories"
+  ],
+  "approved_visible_story_cards": [
+    "Latest Story",
+    "Story gallery",
+    "Story Live Status",
+    "Evolution",
+    "Story Health",
+    "Behaviour",
+    "History"
+  ],
+  "truthfulness_rules": [
+    "Live and expiry state is calculated against API generated_at, never the browser clock.",
+    "Sticker Taps and Saves remain explicitly unavailable because the API contract does not provide them.",
+    "No hourly delta is fabricated; comparisons use the previous collected story.",
+    "A missing stories object renders an explicit unavailable state."
+  ],
+  "visual_evidence": [
+    "frontend/e2e/instagram-stories.spec.ts-snapshots/instagram-stories-desktop-chromium-linux.png",
+    "frontend/e2e/instagram-stories.spec.ts-snapshots/instagram-stories-mobile-chromium-linux.png"
+  ]
+}

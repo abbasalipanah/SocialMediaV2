@@ -1,5 +1,5 @@
 import { Building2, Check, LogOut, Menu, UserRound } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "../routing";
 
 import type { Platform } from "../api";
 import { useBrandScope } from "../app/BrandScopeProvider";

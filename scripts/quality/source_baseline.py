@@ -19,8 +19,11 @@ from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[2]
-REPORT_DIR = ROOT / "docs" / "fase0"
-BASELINE_FILE = REPORT_DIR / "source_baseline_v2.json"
+REPORT_DIR = ROOT / "docs" / "revision6" / "r0"
+BASELINE_FILE = REPORT_DIR / "source_baseline_revision6.json"
+HISTORICAL_BASELINE_FILE = ROOT / "docs" / "fase0" / "source_baseline_v2.json"
+SCHEMA_VERSION = 3
+BASELINE_REVISION = 6
 SOURCE_PROJECTS = {
     "SocialMedia": Path("/home/api/colab_scripts/SocialMedia"),
     "Accumulate": Path("/home/api/colab_scripts/Accumulate"),
@@ -33,8 +36,14 @@ EXCLUDED_PARTS = {
     "node_modules",
     "__pycache__",
     ".pytest_cache",
+    ".ruff_cache",
+    ".mypy_cache",
+    "build",
     "dist",
     "logs",
+    "playwright-report",
+    "test-results",
+    "tmp",
 }
 
 
@@ -73,6 +82,15 @@ def _git_paths(project: Path) -> list[str]:
     return sorted({path for path in [*tracked, *untracked] if path and _included(path)})
 
 
+def _untracked_paths(project: Path) -> list[str]:
+    untracked = str(
+        _run(project, "ls-files", "--others", "--exclude-standard", "-z")
+    ).split("\0")
+    # The untracked inventory is exact, including runtime artifacts. Only the
+    # content manifest applies EXCLUDED_PARTS, so no artifact content is hashed.
+    return sorted(path for path in untracked if path)
+
+
 def _content_manifest(project: Path, paths: Iterable[str]) -> bytes:
     records: list[bytes] = []
     for relative_path in paths:
@@ -99,9 +117,10 @@ def _snapshot(label: str, project: Path, write_manifest: bool) -> dict[str, obje
     status = str(_run(project, "status", "--short", "--untracked-files=normal"))
     origin = str(_run(project, "remote", "get-url", "origin")).strip()
     diff = bytes(_run(project, "diff", "--binary", "HEAD", "--", binary=True))
+    untracked_paths = _untracked_paths(project)
     paths = _git_paths(project)
     manifest = _content_manifest(project, paths)
-    manifest_name = f"baseline_{label}_content.sha256"
+    manifest_name = f"baseline_revision6_{label}_content.sha256"
 
     if write_manifest:
         (REPORT_DIR / manifest_name).write_bytes(manifest)
@@ -114,6 +133,10 @@ def _snapshot(label: str, project: Path, write_manifest: bool) -> dict[str, obje
         "status": status.splitlines(),
         "status_sha256": _sha256(status.encode("utf-8", errors="surrogateescape")),
         "tracked_diff_sha256": _sha256(diff),
+        "untracked_files": untracked_paths,
+        "untracked_files_sha256": _sha256(
+            "\0".join(untracked_paths).encode("utf-8", errors="surrogateescape")
+        ),
         "content_manifest": manifest_name,
         "content_manifest_sha256": _sha256(manifest),
         "content_file_count": len(paths),
@@ -126,11 +149,25 @@ def capture() -> None:
         label: _snapshot(label, project, write_manifest=True)
         for label, project in SOURCE_PROJECTS.items()
     }
+    historical_baseline = {
+        "path": str(HISTORICAL_BASELINE_FILE.relative_to(ROOT)),
+        "relationship": "superseded_by_revision_6",
+        "sha256": (
+            _sha256(HISTORICAL_BASELINE_FILE.read_bytes())
+            if HISTORICAL_BASELINE_FILE.is_file()
+            else None
+        ),
+    }
     document = {
-        "schema_version": 2,
+        "schema_version": SCHEMA_VERSION,
+        "revision": BASELINE_REVISION,
         "captured_at": datetime.now(timezone.utc).isoformat(),
-        "policy": "branch+head+status+tracked-diff+content-manifest",
+        "policy": (
+            "branch+head+origin+status+tracked-binary-diff+exact-untracked-list+"
+            "artifact-excluded-content-manifest"
+        ),
         "excluded_path_parts": sorted(EXCLUDED_PARTS),
+        "historical_baseline": historical_baseline,
         "projects": projects,
     }
     BASELINE_FILE.write_text(
@@ -143,8 +180,10 @@ def verify() -> None:
     if not BASELINE_FILE.is_file():
         raise BaselineError(f"baseline missing: {BASELINE_FILE}")
     baseline = json.loads(BASELINE_FILE.read_text(encoding="utf-8"))
-    if baseline.get("schema_version") != 2:
+    if baseline.get("schema_version") != SCHEMA_VERSION:
         raise BaselineError("unsupported source baseline schema")
+    if baseline.get("revision") != BASELINE_REVISION:
+        raise BaselineError("source baseline revision mismatch")
 
     violations: list[str] = []
     for label, project in SOURCE_PROJECTS.items():
@@ -161,6 +200,8 @@ def verify() -> None:
             "status",
             "status_sha256",
             "tracked_diff_sha256",
+            "untracked_files",
+            "untracked_files_sha256",
             "content_manifest_sha256",
             "content_file_count",
         ):
@@ -169,6 +210,17 @@ def verify() -> None:
                     f"{label}: {field} changed "
                     f"(expected={expected.get(field)!r}, actual={actual[field]!r})"
                 )
+        manifest_name = expected.get("content_manifest")
+        if not isinstance(manifest_name, str):
+            violations.append(f"{label}: content manifest name missing")
+            continue
+        manifest_path = REPORT_DIR / manifest_name
+        if not manifest_path.is_file():
+            violations.append(f"{label}: stored content manifest missing")
+            continue
+        stored_manifest_sha256 = _sha256(manifest_path.read_bytes())
+        if stored_manifest_sha256 != expected.get("content_manifest_sha256"):
+            violations.append(f"{label}: stored content manifest hash mismatch")
 
     if violations:
         raise BaselineError("SOURCE IMMUTABILITY VIOLATION:\n- " + "\n- ".join(violations))

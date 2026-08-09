@@ -10,14 +10,15 @@ DB write veya timer müdahalesi yapılmaz.
 
 ## Güncel durum
 
-- Accumulate provisioning/webhook bağımlılığı kaldırıldı; tek entegrasyon imzalı SSO’dur.
+- Accumulate webhook/authority-sync bağımlılığı yoktur; tek entegrasyon imzalı SSO’dur.
 - SSO Brand kapsamı local session içinde doğrulanır ve V2’nin kendi DB’sine alınır.
 - V2’ye ait ilk PostgreSQL migration ve idempotent migration komutu hazırdır.
 - Facebook, Instagram ve TikTok dashboard/API/frontend yüzeyleri mevcuttur.
 - Meta ve TikTok self-service OAuth credential’ları V2 vault’unda şifreli tutulur.
 - V2’ye ait Meta/TikTok collector, media persistence, sync health ve schedule komutu hazırdır.
 - TikTok ilk bağlantı doğrulaması normal schedule’dan ayrıdır.
-- Production env, systemd API/collector/timer ve Nginx şablonları hazırdır.
+- Güvenli `standalone_ready` production env, ayrı migration/API/collector/timer ve Nginx
+  şablonları repository artifact'i olarak hazırdır; kurulmamış veya etkinleştirilmemiştir.
 - Kaynak canlı projelerde hiçbir servis işlemi yapılmamıştır.
 
 ## Henüz yapılmayan dış işler

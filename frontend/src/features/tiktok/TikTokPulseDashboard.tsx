@@ -7,28 +7,39 @@ import {
   Play,
   Share2,
   TrendingUp,
-  UserPlus,
   Users,
 } from "lucide-react";
 
-import type { DashboardBreakdown, DashboardContent, DashboardMetric, MetricId, PlatformDashboard } from "../../api";
+import type {
+  DashboardBreakdown,
+  DashboardContent,
+  DashboardMetric,
+  MetricId,
+  PlatformDashboard,
+} from "../../api";
+import { AudienceDemographicsCard } from "../dashboard/AudienceDemographicsCard";
 import {
-  ContentWinners,
+  CommunityTables,
   KpiGrid,
-  PulseEmpty,
+  PerformingContentTable,
+  PulseHeatmapCard,
   PulsePieCard,
   PulseTrendCard,
+  SectionTitle,
   SimplePulseTable,
+  UnavailableInsightCard,
   breakdownRows,
   derivedContentTotals,
+  hashtagRows,
+  summaryPieRows,
   type PulseKpi,
 } from "../facebook/FacebookPulseDashboard";
-import { formatDate, formatNumber, humanize } from "../dashboard/format";
+import { WorldMapWidget } from "../instagram/InstagramPulseDashboard";
 
-type TikTokTab = "overview" | "videos" | "audience";
+type TikTokTab = "account" | "audience" | "content" | "cover";
 type PieRow = { label: string; value: number; color: string };
 
-const TIKTOK_COLORS = ["#111827", "#25f4ee", "#fe2c55", "#8b5cf6", "#f59e0b", "#14b8a6"];
+const TIKTOK_COLORS = ["#25f4ee", "#fe2c55", "#8b5cf6", "#f59e0b", "#14b8a6", "#3b82f6"];
 
 function metric(data: PlatformDashboard, id: MetricId): DashboardMetric | undefined {
   return data.metrics.find((item) => item.metric_id === id);
@@ -53,48 +64,58 @@ function metricKpi(
   };
 }
 
-function overviewKpis(data: PlatformDashboard): PulseKpi[] {
+function followerGrowthKpi(data: PlatformDashboard): PulseKpi {
+  const current = metric(data, "new_followers");
+  return {
+    id: "new_followers",
+    label: "Follower Growth",
+    value: current?.value ?? null,
+    delta: current?.delta_pct ?? null,
+    icon: Users,
+    color: "#14b8a6",
+    unit: "count",
+  };
+}
+
+function accountKpis(data: PlatformDashboard): PulseKpi[] {
   return [
-    metricKpi(data, "followers", "Followers", Users, "#25f4ee"),
-    metricKpi(data, "video_views_total", "Video Views", Play, "#fe2c55"),
-    metricKpi(data, "video_likes_total", "Video Likes", Heart, "#ef4444"),
-    metricKpi(data, "video_comments_total", "Video Comments", MessageCircle, "#3b82f6"),
-    metricKpi(data, "video_shares_total", "Video Shares", Share2, "#22c55e"),
-    metricKpi(data, "video_engagement_rate", "Engagement Rate", TrendingUp, "#8b5cf6"),
+    metricKpi(data, "followers", "Followers", Users, "#8b5cf6"),
+    followerGrowthKpi(data),
+    metricKpi(data, "video_views_total", "Video Views", Play, "#ec4899"),
+    metricKpi(data, "reach", "Reach", Eye, "#8b5cf6"),
+    metricKpi(data, "video_engagements_total", "Total Interactions", Activity, "#f59e0b"),
+    metricKpi(data, "video_engagement_rate", "Engagement Rate", TrendingUp, "#6366f1"),
   ];
 }
 
-function videoKpis(data: PlatformDashboard): PulseKpi[] {
+function contentKpis(data: PlatformDashboard): PulseKpi[] {
   return [
-    { id: "videos", label: "Total Videos", value: data.content.length, delta: null, icon: Film, color: "#111827" },
-    metricKpi(data, "video_views_total", "Video Views", Eye, "#fe2c55"),
+    metricKpi(data, "video_views_total", "Video Views", Eye, "#ec4899"),
+    metricKpi(data, "reach", "Reach", Eye, "#8b5cf6"),
     metricKpi(data, "video_likes_total", "Likes", Heart, "#ef4444"),
     metricKpi(data, "video_comments_total", "Comments", MessageCircle, "#3b82f6"),
     metricKpi(data, "video_shares_total", "Shares", Share2, "#22c55e"),
-    metricKpi(data, "video_engagements_total", "Engagements", Activity, "#8b5cf6"),
+    metricKpi(data, "video_engagement_rate", "Engagement Rate", TrendingUp, "#6366f1"),
   ];
 }
 
 function audienceKpis(data: PlatformDashboard): PulseKpi[] {
   return [
-    metricKpi(data, "followers", "Followers", Users, "#25f4ee"),
-    metricKpi(data, "following", "Following", UserPlus, "#fe2c55"),
-    metricKpi(data, "new_followers", "New Followers", Users, "#14b8a6"),
-    metricKpi(data, "video_views_total", "Video Views", Eye, "#f59e0b"),
-    metricKpi(data, "video_engagements_total", "Engagements", Activity, "#3b82f6"),
-    metricKpi(data, "video_engagement_rate", "Engagement Rate", TrendingUp, "#8b5cf6"),
+    metricKpi(data, "followers", "Followers", Users, "#8b5cf6"),
+    followerGrowthKpi(data),
+    metricKpi(data, "video_views_total", "Video Views", Eye, "#ec4899"),
+    metricKpi(data, "reach", "Reach", Activity, "#f59e0b"),
+    metricKpi(data, "profile_views", "Profile Views", Eye, "#3b82f6"),
+    metricKpi(data, "video_engagement_rate", "Engagement Rate", TrendingUp, "#6366f1"),
   ];
 }
 
-function engagementRows(data: PlatformDashboard): PieRow[] {
-  const definitions: Array<{ id: MetricId; label: string; color: string }> = [
-    { id: "video_likes_total", label: "Likes", color: "#fe2c55" },
-    { id: "video_comments_total", label: "Comments", color: "#3b82f6" },
-    { id: "video_shares_total", label: "Shares", color: "#25f4ee" },
-  ];
-  return definitions.flatMap((row) => {
-    const value = metric(data, row.id)?.value;
-    return value !== null && value !== undefined && value > 0 ? [{ label: row.label, value, color: row.color }] : [];
+function metricPie(data: PlatformDashboard, definitions: Array<{ id: MetricId; label: string; color: string }>): PieRow[] {
+  return definitions.flatMap((definition) => {
+    const value = metric(data, definition.id)?.value;
+    return value !== null && value !== undefined && value > 0
+      ? [{ label: definition.label, value, color: definition.color }]
+      : [];
   });
 }
 
@@ -107,124 +128,92 @@ function contentEngagementRows(content: DashboardContent[]): PieRow[] {
   ].filter((item) => item.value > 0);
 }
 
-function contentTypeRows(content: DashboardContent[]): PieRow[] {
-  const counts = new Map<string, number>();
-  content.forEach((item) => {
-    const label = humanize(item.content_type);
-    counts.set(label, (counts.get(label) ?? 0) + 1);
-  });
-  return Array.from(counts.entries()).map(([label, value], index) => ({ label, value, color: TIKTOK_COLORS[index % TIKTOK_COLORS.length] ?? "#64748b" }));
+function findBreakdown(breakdowns: DashboardBreakdown[], hint: string): DashboardBreakdown | undefined {
+  return breakdowns.find((item) => item.dimension.toLowerCase().includes(hint));
 }
 
-function breakdownPie(breakdowns: DashboardBreakdown[], hints: string[]): PieRow[] {
-  const breakdown = breakdowns.find((item) => {
-    const key = `${item.dimension} ${item.metric_id}`.toLowerCase();
-    return hints.some((hint) => key.includes(hint));
-  });
-  return breakdown?.items.slice(0, 8).map((item, index) => ({
-    label: humanize(item.key),
-    value: item.value,
-    color: TIKTOK_COLORS[index % TIKTOK_COLORS.length] ?? "#64748b",
-  })) ?? [];
-}
-
-function EmptyMetricCard({ title, subtitle, copy }: { title: string; subtitle: string; copy: string }) {
-  return (
-    <article className="facebook-pulse-card facebook-trend-card">
-      <div className="facebook-pulse-card-heading"><h3>{title}</h3><p>{subtitle}</p></div>
-      <PulseEmpty copy={copy} />
-    </article>
-  );
-}
-
-function TikTokVideoTable({ content }: { content: DashboardContent[] }) {
-  const rows = [...content].sort((left, right) => right.interactions - left.interactions);
-  return (
-    <article className="facebook-pulse-table-card tiktok-video-table">
-      <div className="facebook-table-title"><div><h3>All Videos</h3><p>Video-level engagement from the selected date range</p></div><span>Video Performance</span></div>
-      <div className="facebook-table-scroll"><table><thead><tr><th>#</th><th>Video</th><th>Date</th><th>Type</th><th>Views</th><th>Likes</th><th>Comments</th><th>Shares</th><th>Interactions</th><th>Original</th></tr></thead><tbody>
-        {rows.length === 0 ? <tr><td colSpan={10}>No video data</td></tr> : rows.map((item, index) => (
-          <tr key={`${item.account_id}-${item.external_content_id}`}>
-            <td>{index + 1}</td>
-            <td><span className="facebook-caption" title={item.message}>{item.message || "Caption unavailable"}</span></td>
-            <td>{item.published_at ? formatDate(item.published_at) : "—"}</td>
-            <td><span className="facebook-type-chip">{humanize(item.content_type)}</span></td>
-            <td>—</td>
-            <td>{formatNumber(item.likes_count)}</td>
-            <td>{formatNumber(item.comments_count)}</td>
-            <td>{formatNumber(item.shares_count)}</td>
-            <td><strong>{formatNumber(item.interactions)}</strong></td>
-            <td>{item.permalink ? <a className="tiktok-video-link" href={item.permalink} rel="noreferrer" target="_blank">View</a> : "—"}</td>
-          </tr>
-        ))}
-      </tbody></table></div>
-      <p className="tiktok-table-note">Video-level view counts are not exposed by the current dashboard response; aggregate Video Views remain available above.</p>
-    </article>
-  );
-}
-
-function OverviewSection({ data }: { data: PlatformDashboard }) {
+function AccountSection({ data, withTitle }: { data: PlatformDashboard; withTitle: boolean }) {
   return (
     <section className="facebook-pulse-section">
-      <KpiGrid rows={overviewKpis(data)} />
+      {withTitle && <SectionTitle>Overview</SectionTitle>}
+      <KpiGrid rows={accountKpis(data)} />
       <div className="facebook-two-grid">
-        <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: "#25f4ee" }]} subtitle="Follower trajectory" title="Followers Trend" />
-        <PulseTrendCard data={data} keys={[{ id: "video_views_total", label: "Video Views", color: "#fe2c55" }]} subtitle="Cumulative video view trajectory" title="Video Views Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: "#38bdf8" }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "new_followers", label: "Net", color: "#14b8a6" }]} subtitle="Net follower movement" title="New Followers Trend" />
       </div>
-      <PulseTrendCard bar data={data} keys={[{ id: "video_views_total", label: "Video Views", color: "#111827" }, { id: "video_engagements_total", label: "Engagements", color: "#25f4ee" }]} subtitle="Video views and supported engagement totals" title="Video Performance Trends" wide />
+      <PulseTrendCard bar data={data} keys={[{ id: "reach", label: "Video Reach", color: "#ec4899" }, { id: "video_views_total", label: "Video Views", color: "#5eead4" }]} subtitle="Video Reach and Video Views trend" title="Performance Trends" wide />
       <div className="facebook-one-three-grid">
-        <PulsePieCard rows={engagementRows(data)} subtitle="Likes, comments and shares" title="Video Engagement Mix" />
-        <PulseTrendCard data={data} keys={[{ id: "video_likes_total", label: "Likes", color: "#fe2c55" }, { id: "video_comments_total", label: "Comments", color: "#3b82f6" }, { id: "video_shares_total", label: "Shares", color: "#25f4ee" }]} subtitle="Supported cumulative engagement signals" title="Engagement Trends" />
+        <PulsePieCard rows={metricPie(data, [{ id: "video_views_total", label: "Organic Views", color: "#8b5cf6" }])} subtitle="Collected video views" title="Video View Type" />
+        <PulseTrendCard data={data} keys={[{ id: "video_views_total", label: "Organic Views", color: "#3b82f6" }]} subtitle="Collected video views" title="Views Source Trend" />
+      </div>
+      <div className="facebook-one-three-grid">
+        <PulsePieCard rows={metricPie(data, [{ id: "reach", label: "Organic Reach", color: "#22c55e" }])} subtitle="Organic reach when available" title="Reach Distribution" />
+        <PulseTrendCard data={data} keys={[{ id: "reach", label: "Organic Reach", color: "#22c55e" }]} subtitle="Organic reach when available" title="Reach Source Trend" />
       </div>
     </section>
   );
 }
 
-function VideosSection({ data }: { data: PlatformDashboard }) {
+function ContentSection({ data, withTitle }: { data: PlatformDashboard; withTitle: boolean }) {
   return (
     <section className="facebook-pulse-section">
-      <KpiGrid rows={videoKpis(data)} />
+      {withTitle && <SectionTitle>Content</SectionTitle>}
+      <KpiGrid rows={contentKpis(data)} />
       <div className="facebook-one-three-grid">
-        <PulsePieCard rows={contentTypeRows(data.content)} subtitle="Published formats in this range" title="Video Type" />
-        <PulseTrendCard data={data} keys={[{ id: "video_views_total", label: "Video Views", color: "#fe2c55" }]} subtitle="Aggregate video-view movement" title="Video Views Trend" />
+        <PulsePieCard rows={summaryPieRows(data.content_summary.by_type, TIKTOK_COLORS)} subtitle="Content type breakdown" title="Content Type" />
+        <PulseTrendCard data={data} keys={[{ id: "video_views_total", label: "Video Views", color: "#ec4899" }, { id: "reach", label: "Video Reach", color: "#8b5cf6" }]} subtitle="Daily video views and reach" title="Views & Reach Trend" />
       </div>
       <div className="facebook-two-three-grid">
-        <PulseTrendCard data={data} keys={[{ id: "video_engagements_total", label: "Engagements", color: "#8b5cf6" }]} subtitle="Likes, comments and shares combined" title="Video Engagements Trend" />
-        <PulsePieCard rows={contentEngagementRows(data.content)} subtitle="Visible video-row engagement" title="Content Engagement Split" />
+        <PulseTrendCard data={data} keys={[{ id: "video_likes_total", label: "Likes", color: "#fe2c55" }, { id: "video_comments_total", label: "Comments", color: "#3b82f6" }, { id: "video_shares_total", label: "Shares", color: "#25f4ee" }]} subtitle="Likes, comments and shares over time" title="Interaction Trend" />
+        <PulsePieCard legendColumns={3} rows={contentEngagementRows(data.content)} subtitle="Interaction mix" title="Engagement Split" />
       </div>
-      <TikTokVideoTable content={data.content} />
-      <ContentWinners content={data.content} />
+      <div className="facebook-three-grid">
+        <PulsePieCard rows={summaryPieRows(data.content_summary.reach_by_type, TIKTOK_COLORS)} subtitle="Reach distribution by content type" title="Content Type Reach" />
+        <UnavailableInsightCard copy="Sentiment is not inferred without a configured analysis model." subtitle="Not provided by TikTok Organic API" title="Comment Sentiment" />
+        <SimplePulseTable columns={["Hashtag", "Count"]} emptyCopy="No hashtags in collected captions." rows={hashtagRows(data)} subtitle="Hashtags found in collected captions" title="Top Hashtags" />
+      </div>
+      <PerformingContentTable content={data.content} />
     </section>
   );
 }
 
-function AudienceSection({ data }: { data: PlatformDashboard }) {
-  const audienceRows = breakdownPie(data.breakdowns, ["age", "gender"]);
+function AudienceSection({ data, withTitle }: { data: PlatformDashboard; withTitle: boolean }) {
+  const countries = findBreakdown(data.breakdowns, "country");
+  const organicReachId: MetricId = data.series.some((item) => item.metric_id === "reach_organic")
+    ? "reach_organic"
+    : "reach";
   return (
     <section className="facebook-pulse-section">
+      {withTitle && <SectionTitle>Audience</SectionTitle>}
       <KpiGrid rows={audienceKpis(data)} />
       <div className="facebook-two-grid">
-        <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: "#25f4ee" }]} subtitle="Follower trajectory" title="Followers Trend" />
-        <PulseTrendCard data={data} keys={[{ id: "new_followers", label: "New Followers", color: "#fe2c55" }]} subtitle="Net new-follower movement" title="New Followers Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: "#38bdf8" }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "new_followers", label: "Net", color: "#14b8a6" }]} subtitle="Net follower movement" title="New Followers Trend" />
       </div>
       <div className="facebook-two-grid">
-        <PulsePieCard rows={audienceRows} subtitle="Supported age and gender breakdown" title="Audience Demographics" />
-        <EmptyMetricCard copy="The reporting contract does not return hourly TikTok audience activity." subtitle="Hourly audience activity" title="Best Time to Engage" />
+        <AudienceDemographicsCard breakdowns={data.breakdowns} />
+        <WorldMapWidget breakdown={countries} />
+      </div>
+      <div className="facebook-two-grid">
+        <PulseHeatmapCard breakdowns={data.breakdowns} />
+        <PulseTrendCard data={data} keys={[{ id: organicReachId, label: "Organic Reach", color: "#22c55e" }]} subtitle="Organic delivery trend" title="Organic Reach Trend" />
       </div>
       <div className="facebook-two-grid">
         <SimplePulseTable columns={["#", "Country", "Value"]} rows={breakdownRows(data.breakdowns, "country")} subtitle="Country ranking" title="Top Countries" />
-        <SimplePulseTable columns={["#", "City", "Value"]} rows={breakdownRows(data.breakdowns, "city")} subtitle="City ranking" title="Top Cities" />
+        <SimplePulseTable columns={["#", "Age group", "Value"]} rows={breakdownRows(data.breakdowns, "age")} subtitle="TikTok audience age ranking" title="Age Groups" />
       </div>
+      <CommunityTables data={data} platform="tiktok" />
     </section>
   );
 }
 
 export function TikTokPulseDashboard({ data, tab }: { data: PlatformDashboard; tab: TikTokTab }) {
+  const cover = tab === "cover";
   return (
     <div className="facebook-pulse-dashboard tiktok-pulse-dashboard">
-      {tab === "overview" && <OverviewSection data={data} />}
-      {tab === "videos" && <VideosSection data={data} />}
-      {tab === "audience" && <AudienceSection data={data} />}
+      {(tab === "account" || cover) && <AccountSection data={data} withTitle={cover} />}
+      {(tab === "content" || cover) && <ContentSection data={data} withTitle={cover} />}
+      {(tab === "audience" || cover) && <AudienceSection data={data} withTitle={cover} />}
     </div>
   );
 }

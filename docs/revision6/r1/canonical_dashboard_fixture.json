@@ -1,0 +1,367 @@
+{
+  "schema_version": 1,
+  "fixture_id": "socialmedia-revision6-r1-dashboard-oracle",
+  "contract": "SocialMedia frontend PlatformDashboardResponse",
+  "contains_secrets": false,
+  "materialization": {
+    "algorithm": "RFC 7396-style recursive object merge with arrays replaced atomically",
+    "base": "base_payload",
+    "case_patch": "cases[].patch",
+    "null_rule": "null removes an optional property; required nullable properties remain null when named in required_nullable_paths",
+    "required_nullable_paths": ["account.cover_url", "account.avatar_url", "top_content[].created_time"]
+  },
+  "consumers": [
+    {
+      "id": "source_adapter_oracle",
+      "use": "Materialize the selected case as PlatformDashboardResponse and assert the visible expectations frozen in canonical_frontend_inventory.json.",
+      "source_component": "/home/api/colab_scripts/SocialMedia/frontend/src/pages/PlatformDashboardPage.tsx",
+      "source_build_required": false
+    },
+    {
+      "id": "v2_render_test",
+      "use": "Pass the same materialized case through the V1-to-V2 canonical fixture adapter, then assert the same visible IDs/text/order against V2 rendering.",
+      "source_build_required": false
+    }
+  ],
+  "base_payload": {
+    "platform": "tiktok",
+    "platform_label": "TikTok",
+    "brand_id": 20,
+    "brand_name": "Canonical Fixture Brand",
+    "generated_at": "2026-07-28T06:00:00Z",
+    "window": {
+      "since": "2026-07-26",
+      "until": "2026-07-28",
+      "days": 30
+    },
+    "accounts_count": 1,
+    "has_data": true,
+    "account": {
+      "external_id": "fixture-account",
+      "display_name": "Canonical Fixture Account",
+      "followers": 6340,
+      "status": "active",
+      "data_access": "available",
+      "cover_url": null,
+      "avatar_url": null
+    },
+    "kpis": [
+      { "key": "followers", "label": "Followers", "unit": "count", "value": 6340, "previous": 6200, "delta_pct": 2.3, "spark": [6200, 6250, 6340] },
+      { "key": "new_followers", "label": "New Followers", "unit": "count", "value": 140, "previous": 100, "delta_pct": 40.0, "spark": [30, 50, 60] },
+      { "key": "views", "label": "Views", "unit": "count", "value": 11100, "previous": 9800, "delta_pct": 13.3, "spark": [3300, 3600, 4200] },
+      { "key": "reach", "label": "Reach", "unit": "count", "value": 8900, "previous": 8100, "delta_pct": 9.9, "spark": [2700, 2900, 3300] },
+      { "key": "likes", "label": "Likes", "unit": "count", "value": 820, "previous": 700, "delta_pct": 17.1, "spark": [240, 270, 310] },
+      { "key": "comments", "label": "Comments", "unit": "count", "value": 90, "previous": 80, "delta_pct": 12.5, "spark": [20, 30, 40] },
+      { "key": "shares", "label": "Shares", "unit": "count", "value": 55, "previous": 45, "delta_pct": 22.2, "spark": [15, 18, 22] },
+      { "key": "profile_views", "label": "Profile Views", "unit": "count", "value": 1200, "previous": 1100, "delta_pct": 9.1, "spark": [360, 390, 450] },
+      { "key": "engagement_rate", "label": "Engagement Rate", "unit": "percent", "value": 8.69, "previous": 8.42, "delta_pct": 3.2, "spark": [] }
+    ],
+    "trend": {
+      "labels": ["2026-07-26", "2026-07-27", "2026-07-28"],
+      "series": [
+        { "key": "followers", "label": "Followers", "points": [6200, 6250, 6340] },
+        { "key": "follows", "label": "Follows", "points": [18, 22, 25] },
+        { "key": "unfollows", "label": "Unfollows", "points": [3, 5, 4] },
+        { "key": "followers_net", "label": "Net follower change", "points": [15, 17, 21] },
+        { "key": "views", "label": "Views", "points": [3300, 3600, 4200] },
+        { "key": "reach", "label": "Reach", "points": [2700, 2900, 3300] },
+        { "key": "views_organic", "label": "Organic Views", "points": [2800, 3100, 3600] },
+        { "key": "views_paid", "label": "Paid Views", "points": [500, 500, 600] },
+        { "key": "reach_organic", "label": "Organic Reach", "points": [2300, 2500, 2800] },
+        { "key": "reach_paid", "label": "Paid Reach", "points": [400, 400, 500] },
+        { "key": "likes", "label": "Likes", "points": [240, 270, 310] },
+        { "key": "comments", "label": "Comments", "points": [20, 30, 40] },
+        { "key": "shares", "label": "Shares", "points": [15, 18, 22] }
+      ]
+    },
+    "top_content": [
+      {
+        "content_id": "fixture-video-1",
+        "caption": "Canonical summer story #travel",
+        "permalink": "https://example.invalid/content/fixture-video-1",
+        "media_url": "",
+        "cover_url": "/api/social/dashboard/media/cover-fallback",
+        "thumbnail_url": "",
+        "cover_candidates": ["/api/social/dashboard/media/cover-fallback"],
+        "thumbnail_candidates": [],
+        "media_url_candidates": [],
+        "likes": 420,
+        "comments": 38,
+        "shares": 21,
+        "views": 4600,
+        "reach": 3900,
+        "full_video_watched_rate": 38.5,
+        "total_time_watched": 7200,
+        "average_time_watched": 8.4,
+        "created_time": "2026-07-24T12:00:00Z"
+      },
+      {
+        "content_id": "fixture-video-2",
+        "caption": "Canonical evening #hotel",
+        "permalink": "",
+        "media_url": "",
+        "cover_url": null,
+        "thumbnail_url": "",
+        "cover_candidates": [],
+        "thumbnail_candidates": [],
+        "media_url_candidates": [],
+        "likes": 280,
+        "comments": 31,
+        "shares": 18,
+        "views": 3700,
+        "reach": 2950,
+        "full_video_watched_rate": 34.0,
+        "total_time_watched": 6100,
+        "average_time_watched": 7.9,
+        "created_time": "2026-07-23T12:00:00Z"
+      }
+    ],
+    "top_hashtags": [
+      { "name": "#travel", "count": 4 },
+      { "name": "#hotel", "count": 2 }
+    ],
+    "content_summary": {
+      "total": 2,
+      "by_type": [
+        { "name": "Video", "value": 2 }
+      ],
+      "reach_by_type": [
+        { "name": "Video", "value": 6850 }
+      ],
+      "views_by_type": [
+        { "name": "Video", "value": 8300 }
+      ]
+    },
+    "source_breakdown": {
+      "organic_only": false,
+      "paid_available": true,
+      "views": { "organic": 9500, "paid": 1600 },
+      "reach": { "organic": 7600, "paid": 1300 }
+    },
+    "metric_methodology": {
+      "follower_flow": "provider_flow",
+      "engagement_rate": "interactions_divided_by_views",
+      "reach": "provider_reported"
+    },
+    "audience": [
+      {
+        "key": "audience_countries",
+        "label": "Top countries",
+        "items": [
+          { "name": "TR", "value": 720, "pct": 72.0 },
+          { "name": "DE", "value": 180, "pct": 18.0 },
+          { "name": "GB", "value": 100, "pct": 10.0 }
+        ]
+      },
+      {
+        "key": "audience_cities",
+        "label": "Top cities",
+        "items": [
+          { "name": "Istanbul", "value": 420, "pct": 42.0 },
+          { "name": "Antalya", "value": 210, "pct": 21.0 }
+        ]
+      },
+      {
+        "key": "audience_genders",
+        "label": "Gender split",
+        "items": [
+          { "name": "female", "value": 600, "pct": 60.0 },
+          { "name": "male", "value": 400, "pct": 40.0 }
+        ]
+      },
+      {
+        "key": "audience_ages",
+        "label": "Age groups",
+        "items": [
+          { "name": "18-24", "value": 365, "pct": 36.5 },
+          { "name": "25-34", "value": 413, "pct": 41.3 },
+          { "name": "35-44", "value": 222, "pct": 22.2 }
+        ]
+      },
+      {
+        "key": "audience_activity",
+        "label": "Best time to engage",
+        "items": [
+          { "name": "Fri|14", "value": 128, "pct": 64.0 },
+          { "name": "Sat|20", "value": 72, "pct": 36.0 }
+        ]
+      }
+    ],
+    "community": {
+      "top_commenters": [
+        { "name": "Fixture User", "comments": 3, "likes": 68 }
+      ],
+      "top_liked_comments": [
+        { "name": "Fixture User", "comment": "Canonical fixture comment", "likes": 42, "replies": 4 }
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "facebook_full",
+      "platform": "facebook",
+      "patch": {
+        "platform": "facebook",
+        "platform_label": "Facebook",
+        "account": {
+          "external_id": "fixture-facebook-page",
+          "display_name": "Canonical Facebook Page"
+        }
+      },
+      "expected_tabs": ["Cover", "Page", "Content", "Audience"],
+      "expected_cover_sections": ["account", "content", "audience"],
+      "expected_audience_ids": [
+        "audience.kpis",
+        "audience.followers_trend",
+        "audience.new_followers_trend",
+        "facebook.page_like_types",
+        "facebook.best_time_to_engage",
+        "facebook.top_countries",
+        "facebook.top_cities",
+        "facebook.paid_reach_trend",
+        "facebook.organic_reach_trend"
+      ]
+    },
+    {
+      "id": "instagram_full_with_stories",
+      "platform": "instagram",
+      "patch": {
+        "platform": "instagram",
+        "platform_label": "Instagram",
+        "account": {
+          "external_id": "fixture-instagram-profile",
+          "display_name": "Canonical Instagram Profile"
+        },
+        "stories": {
+          "summary": { "count": 2, "views": 846, "reach": 696, "interactions": 187, "replies": 5, "completion_rate": 68.4 },
+          "previous_summary": { "count": 1, "views": 390, "reach": 320, "interactions": 92, "replies": 1, "completion_rate": 64.2 },
+          "trend": { "labels": ["2026-07-26", "2026-07-27", "2026-07-28"], "views": [0, 400, 446], "reach": [0, 340, 356] },
+          "navigation": { "taps_forward": 121, "taps_back": 9, "swipe_forward": 22, "exits": 35 },
+          "actions": { "replies": 5, "shares": 9, "profile_visits": 16, "follows": 3 },
+          "items": [
+            {
+              "content_id": "fixture-story-1",
+              "title": "Canonical story one",
+              "cover_url": "/fixtures/instagram-story-01.webp",
+              "permalink": "https://example.invalid/story/fixture-story-1",
+              "created_time": "2026-07-28T12:00:00Z",
+              "views": 446,
+              "reach": 356,
+              "interactions": 107,
+              "replies": 2,
+              "shares": 4,
+              "profile_visits": 8,
+              "follows": 1,
+              "taps_forward": 71,
+              "taps_back": 4,
+              "swipe_forward": 12,
+              "exits": 20,
+              "navigation": 107,
+              "completion_rate": 68.4
+            },
+            {
+              "content_id": "fixture-story-2",
+              "title": "Canonical story two",
+              "cover_url": "/fixtures/instagram-story-02.webp",
+              "permalink": "https://example.invalid/story/fixture-story-2",
+              "created_time": "2026-07-27T12:00:00Z",
+              "views": 400,
+              "reach": 340,
+              "interactions": 80,
+              "replies": 3,
+              "shares": 5,
+              "profile_visits": 8,
+              "follows": 2,
+              "taps_forward": 50,
+              "taps_back": 5,
+              "swipe_forward": 10,
+              "exits": 15,
+              "navigation": 80,
+              "completion_rate": 65.0
+            }
+          ]
+        }
+      },
+      "expected_tabs": ["Cover", "Page", "Content", "Stories", "Audience"],
+      "expected_cover_sections": ["account", "content", "audience"],
+      "expected_cover_excludes": ["stories"],
+      "expected_stories_ids": [
+        "stories.kpis",
+        "stories.performance_trends",
+        "stories.last_story",
+        "stories.navigation_split",
+        "stories.actions",
+        "stories.sliders",
+        "stories.table"
+      ]
+    },
+    {
+      "id": "tiktok_full",
+      "platform": "tiktok",
+      "patch": {},
+      "expected_tabs": ["Cover", "Account", "Content", "Audience"],
+      "expected_cover_sections": ["account", "content", "audience"],
+      "expected_label_overrides": {
+        "new_followers": "Follower Growth",
+        "views": "Video Views"
+      }
+    },
+    {
+      "id": "zero_data",
+      "platform": "tiktok",
+      "patch": {
+        "has_data": false,
+        "kpis": [],
+        "trend": { "labels": [], "series": [] },
+        "top_content": [],
+        "top_hashtags": [],
+        "content_summary": { "total": 0, "by_type": [], "reach_by_type": [], "views_by_type": [] },
+        "source_breakdown": null,
+        "metric_methodology": null,
+        "audience": [],
+        "community": { "top_commenters": [], "top_liked_comments": [] }
+      },
+      "expected_state": "No TikTok data yet"
+    },
+    {
+      "id": "organic_only",
+      "platform": "tiktok",
+      "patch": {
+        "source_breakdown": {
+          "organic_only": true,
+          "paid_available": false,
+          "views": { "organic": 11100, "paid": 0 },
+          "reach": { "organic": 8900, "paid": 0 }
+        }
+      },
+      "expected_hidden_legends": ["Paid Views", "Paid Reach", "Paid view pie item", "Paid reach pie item"]
+    },
+    {
+      "id": "limited_non_business_tiktok",
+      "platform": "tiktok",
+      "patch": {
+        "account": { "data_access": "limited_non_business" }
+      },
+      "expected_state": "Limited TikTok analytics"
+    },
+    {
+      "id": "partial_metrics",
+      "platform": "tiktok",
+      "patch": {
+        "kpis": [
+          { "key": "followers", "label": "Followers", "unit": "count", "value": 6340, "previous": 6200, "delta_pct": 2.3, "spark": [6200, 6250, 6340] }
+        ]
+      },
+      "expected_behavior": "Only available KPI cards render; absent KPI cards are omitted."
+    },
+    {
+      "id": "instagram_missing_stories_contract",
+      "platform": "instagram",
+      "patch": {
+        "platform": "instagram",
+        "platform_label": "Instagram"
+      },
+      "expected_behavior": "Stories tab exists, but selecting it renders no section because stories is absent."
+    }
+  ]
+}

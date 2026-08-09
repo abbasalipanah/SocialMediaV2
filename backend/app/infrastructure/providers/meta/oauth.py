@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable, Mapping
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlencode
 
 import httpx
@@ -54,7 +54,14 @@ class MetaOAuthTransport:
             headers={"Authorization": f"Bearer {access_token}"},
         )
 
-    def _request(self, method: str, url: str, **kwargs: object) -> Mapping[str, object]:
+    def _request(
+        self,
+        method: str,
+        url: str,
+        *,
+        params: Mapping[str, str] | None = None,
+        headers: Mapping[str, str] | None = None,
+    ) -> Mapping[str, object]:
         if url not in {self._token_url, self._revoke_url}:
             raise MetaActivationError("meta_oauth_url_rejected")
         try:
@@ -63,7 +70,8 @@ class MetaOAuthTransport:
                 url,
                 timeout=self._timeout,
                 follow_redirects=False,
-                **kwargs,
+                params=params,
+                headers=headers,
             )
         except httpx.HTTPError as exc:
             raise MetaActivationError("meta_oauth_transport_failed") from exc
@@ -231,7 +239,7 @@ def _required_identifier(payload: Mapping[str, object], field: str) -> str:
 
 def _positive_int(payload: Mapping[str, object], field: str) -> int:
     try:
-        value = int(payload[field])
+        value = int(cast(Any, payload[field]))
     except (KeyError, TypeError, ValueError) as exc:
         raise MetaActivationError("meta_oauth_response_invalid") from exc
     if value < 1 or value > 10 * 365 * 24 * 60 * 60:

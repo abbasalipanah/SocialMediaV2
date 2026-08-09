@@ -8,7 +8,11 @@ import httpx
 
 from app.application.ports.persistence import MetricPoint
 from app.application.ports.platforms import ProviderAccount, ProviderCredential
-from app.application.services.collection import CollectionStatus, CollectionTarget
+from app.application.services.collection import (
+    CollectionStatus,
+    CollectionTarget,
+    collect_audience,
+)
 from app.application.services.collection.daily_metrics import collect_daily_metrics
 from app.domain.metrics import MetricId
 from app.domain.platforms import PlatformId
@@ -31,6 +35,41 @@ class MemoryMetricStore:
 
     def read(self, **kwargs: object) -> tuple[MetricPoint, ...]:
         return tuple(self.rows)
+
+    def replace_breakdown(
+        self,
+        *,
+        platform: PlatformId,
+        account_id: int,
+        brand_id: int,
+        observed_on: date,
+        metric_id: MetricId,
+        breakdown_key: str,
+        values: dict[str, float | int],
+    ) -> None:
+        self.rows = [
+            row
+            for row in self.rows
+            if not (
+                row.account_id == account_id
+                and row.observed_on == observed_on
+                and row.metric_id is metric_id
+                and row.breakdown_key == breakdown_key
+            )
+        ]
+        self.rows.extend(
+            MetricPoint(
+                platform=platform,
+                account_id=account_id,
+                brand_id=brand_id,
+                observed_on=observed_on,
+                metric_id=metric_id,
+                value=value,
+                breakdown_key=breakdown_key,
+                breakdown_value=breakdown_value,
+            )
+            for breakdown_value, value in values.items()
+        )
 
 
 def _account(platform: PlatformId, account_id: str) -> ProviderAccount:
@@ -194,7 +233,36 @@ def test_facebook_and_instagram_audience_breakdowns_are_normalized() -> None:
         platform=PlatformId.INSTAGRAM,
         clock=lambda: NOW,
     ).fetch_audience(_account(PlatformId.INSTAGRAM, "ig-1"))
-    assert ig.breakdowns["follower_demographics"] == {"TR": 75, "DE": 15}
+    assert ig.breakdowns["follower_demographics_country"] == {"TR": 75, "DE": 15}
+
+
+def test_audience_collection_atomically_projects_only_provider_rows() -> None:
+    payload = {
+        "data": [
+            {
+                "name": "page_fans_country",
+                "values": [{"value": {"TR": 70, "DE": 20}}],
+            }
+        ]
+    }
+    account = _account(PlatformId.FACEBOOK, "page-1")
+    store = MemoryMetricStore()
+    outcome = collect_audience(
+        target=CollectionTarget(account=account, local_account_id=11, brand_id=7),
+        reader=MetaAudienceReader(
+            _transport(lambda request: httpx.Response(200, json=payload, request=request)),
+            platform=PlatformId.FACEBOOK,
+            clock=lambda: NOW,
+        ),
+        metric_store=store,
+    )
+
+    assert outcome.status is CollectionStatus.SUCCESS
+    assert {(row.breakdown_value, row.value) for row in store.rows} == {
+        ("TR", 70),
+        ("DE", 20),
+    }
+    assert all(row.breakdown_key == "page_fans_country" for row in store.rows)
 
 
 def test_malformed_audience_payload_fails_without_synthetic_breakdown() -> None:

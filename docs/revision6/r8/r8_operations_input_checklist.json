@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "phase": "R8",
+  "contains_secrets": false,
+  "status": "local_staging_sso_verified_waiting_for_public_origin_provider_input",
+  "local_evidence": {
+    "disposable_staging_rehearsal": "pass",
+    "migration_idempotency": "pass",
+    "packaged_api_health_readiness": "pass",
+    "schedule_fail_closed": "pass",
+    "rollback_port_close": "pass",
+    "local_signed_sso_browser_e2e": "pass",
+    "local_authenticated_instagram_stories_e2e": "pass",
+    "local_sso_test_data_cleanup": "pass",
+    "access_log_secret_scan": "pass",
+    "external_mutations": 0
+  },
+  "required_inputs": [
+    {
+      "id": "staging_runtime_target",
+      "required": true,
+      "provided": true,
+      "description": "V2-owned staging host or container target and change owner"
+    },
+    {
+      "id": "staging_database",
+      "required": true,
+      "provided": true,
+      "description": "V2 PostgreSQL endpoint/name/role/TLS policy; secret reference only"
+    },
+    {
+      "id": "staging_public_origin",
+      "required": true,
+      "provided": false,
+      "description": "Approved HTTPS origin plus DNS, TLS and Nginx owner"
+    },
+    {
+      "id": "staging_media_ownership",
+      "required": true,
+      "provided": true,
+      "description": "V2 media path and service user/group ownership"
+    },
+    {
+      "id": "staging_sso_authority",
+      "required": true,
+      "provided": false,
+      "description": "Approved Accumulate staging issuer/consumer coordination and secret reference; local synthetic verification is complete"
+    },
+    {
+      "id": "provider_owners",
+      "required": true,
+      "provided": false,
+      "description": "Meta/TikTok app owners, callback approval and rotated-secret references"
+    },
+    {
+      "id": "canary_scope",
+      "required": true,
+      "provided": false,
+      "description": "One approved staging Brand/account scope"
+    },
+    {
+      "id": "change_window",
+      "required": true,
+      "provided": false,
+      "description": "Deploy/rollback window, on-call owner and evidence destination"
+    }
+  ],
+  "forbidden_values": [
+    "passwords",
+    "private keys",
+    "OAuth codes",
+    "access tokens",
+    "refresh tokens",
+    "raw shared secrets"
+  ]
+}

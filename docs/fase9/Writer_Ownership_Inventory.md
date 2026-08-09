@@ -1,5 +1,8 @@
 # Writer Ownership Inventory — Review Template
 
+> **ARCHIVED / SUPERSEDED:** V1 writer ownership V2 tarafından devralınmaz. Bu tarihsel envanter
+> yalnız geçmiş tasarım bağlamıdır ve operasyon talimatı değildir.
+
 Status: offline template only. The real production inventory must be re-captured immediately before any approved cutover.
 
 | Family | RC owner/state | Required cutover evidence |

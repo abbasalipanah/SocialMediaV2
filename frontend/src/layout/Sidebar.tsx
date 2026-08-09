@@ -1,20 +1,13 @@
 import {
-  ArrowLeft,
-  ChevronDown,
-  ChevronRight,
   Facebook,
-  HelpCircle,
   Home,
   Instagram,
-  LockKeyhole,
-  LogOut,
   PieChart,
-  PlugZap,
   Settings,
   X,
 } from "lucide-react";
-import { useState, type ComponentType } from "react";
-import { NavLink } from "react-router-dom";
+import type { ComponentType } from "react";
+import { NavLink } from "../routing";
 
 import type { Platform } from "../api";
 import { useBrandScope } from "../app/BrandScopeProvider";
@@ -42,8 +35,11 @@ const platformNavigation: Array<{
 ];
 
 export const SOCIAL_NAVIGATION_LABELS = [
-  "Overview",
+  "Home",
+  "Analytics",
+  "Social Media",
   ...platformNavigation.map((item) => item.label),
+  "Settings",
 ] as const;
 
 function platformAvailable(platform: Platform, capabilities: ReturnType<typeof useBrandScope>["capabilities"]) {
@@ -76,10 +72,14 @@ function NavigationLink({
   );
 }
 
-export function Sidebar({ open, onClose, onLogout, loggingOut }: SidebarProps) {
-  const [analyticsExpanded, setAnalyticsExpanded] = useState(true);
-  const { capabilities, isLoading } = useBrandScope();
+export function Sidebar({ open, onClose }: SidebarProps) {
+  const { capabilities } = useBrandScope();
   const settingsVisible = capabilities?.permissions.settings_visible === true;
+  const tiktokVisible = platformAvailable("tiktok", capabilities);
+  const homePath = tiktokVisible ? "/tiktok" : "/facebook";
+  const visiblePlatforms = platformNavigation.filter(
+    (item) => item.platform !== "tiktok" || tiktokVisible,
+  );
 
   return (
     <>
@@ -92,7 +92,7 @@ export function Sidebar({ open, onClose, onLogout, loggingOut }: SidebarProps) {
       />
       <aside aria-label="Primary navigation" className={`app-sidebar${open ? " open" : ""}`}>
         <div className="sidebar-brand">
-          <NavLink aria-label="Social Media overview" onClick={onClose} to="/overview">
+          <NavLink aria-label="Accumulate Social Media" onClick={onClose} to={homePath}>
             <img alt="" className="accumulate-sidebar-logo" src="/accumulate-logo.svg" />
           </NavLink>
           <button aria-label="Close navigation" className="sidebar-close" onClick={onClose} type="button">
@@ -101,62 +101,34 @@ export function Sidebar({ open, onClose, onLogout, loggingOut }: SidebarProps) {
         </div>
 
         <nav className="sidebar-nav">
-          <NavigationLink icon={Home} label="Overview" onClick={onClose} path="/overview" />
-          <button
-            aria-expanded={analyticsExpanded}
-            className="sidebar-link analytics-toggle"
-            onClick={() => setAnalyticsExpanded((current) => !current)}
-            type="button"
-          >
+          <NavigationLink icon={Home} label="Home" onClick={onClose} path={homePath} />
+          <div className="sidebar-link analytics-toggle active-parent">
             <PieChart size={18} />
             <span>Analytics</span>
-            {analyticsExpanded ? <ChevronDown className="link-chevron" size={14} /> : <ChevronRight className="link-chevron" size={14} />}
-          </button>
-          {analyticsExpanded && (
-            <div className="sidebar-channel-tree">
-              {platformNavigation.map(({ icon: Icon, label, path, platform }) => {
-                const available = platformAvailable(platform, capabilities);
-                return (
-                  <div className="sidebar-channel-row" key={platform}>
-                    <span aria-hidden="true" className="channel-connector" />
-                    {available ? (
-                      <NavigationLink icon={Icon} label={label} onClick={onClose} path={path} />
-                    ) : (
-                      <div
-                        aria-disabled="true"
-                        className="sidebar-link locked"
-                        data-loading={isLoading || undefined}
-                        title={isLoading ? "Checking availability" : `Connect ${label} in Settings`}
-                      >
-                        <Icon size={17} />
-                        <span>{label}</span>
-                        <LockKeyhole className="link-lock" size={13} />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+            <span className="link-chevron">⌄</span>
+          </div>
+          <div className="sidebar-channel-tree">
+            <div className="sidebar-channel-title">Social Media</div>
+            {visiblePlatforms.map(({ icon: Icon, label, path, platform }) => (
+              <div className="sidebar-channel-row" key={platform}>
+                <span aria-hidden="true" className="channel-connector" />
+                <NavigationLink icon={Icon} label={label} onClick={onClose} path={path} />
+              </div>
+            ))}
+            {settingsVisible && (
+              <div className="sidebar-channel-row">
+                <span aria-hidden="true" className="channel-connector" />
+                <NavigationLink icon={Settings} label="Settings" onClick={onClose} path="/settings" />
+              </div>
+            )}
+          </div>
         </nav>
 
         <nav aria-label="Account navigation" className="sidebar-footer">
           {settingsVisible && (
             <NavigationLink icon={Settings} label="Settings" onClick={onClose} path="/settings" />
           )}
-          <NavigationLink icon={PlugZap} label="Integrations" onClick={onClose} path="/integrations" />
-          <a className="sidebar-link" href="mailto:support@theaccumulate.com">
-            <HelpCircle size={20} />
-            <span>Support</span>
-          </a>
-          <a className="sidebar-return-link" href="https://app.theaccumulate.com">
-            <ArrowLeft size={20} />
-            <span>Back to Accumulate</span>
-          </a>
-          <button className="sidebar-link sidebar-action" disabled={loggingOut} onClick={onLogout} type="button">
-            <LogOut size={20} />
-            <span>{loggingOut ? "Signing out…" : "Sign out"}</span>
-          </button>
+          <div className="sidebar-product-note"><span />SocialMedia standalone</div>
         </nav>
       </aside>
     </>

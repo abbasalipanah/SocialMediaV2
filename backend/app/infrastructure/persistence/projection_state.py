@@ -16,7 +16,10 @@ class ProjectionStateStore:
     def __init__(self, database_url: str | None = None, *, engine: Engine | None = None) -> None:
         if engine is None and not database_url:
             raise ValueError("session_database_required")
-        self.engine = engine or create_engine(database_url, pool_pre_ping=True)
+        if engine is None:
+            assert database_url is not None
+            engine = create_engine(database_url, pool_pre_ping=True)
+        self.engine = engine
 
     def create_from_jti(
         self,

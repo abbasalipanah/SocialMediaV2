@@ -1,0 +1,27 @@
+[Unit]
+Description=Social Media V2 loopback staging web
+After=network-online.target social-media-v2-api.service
+Requires=social-media-v2-api.service
+
+[Service]
+Type=simple
+User=social-media-v2
+Group=social-media-v2
+WorkingDirectory=/var/lib/social-media-v2
+ExecStartPre=/usr/sbin/nginx -t -c /etc/social-media-v2/nginx-staging.conf
+ExecStart=/usr/sbin/nginx -c /etc/social-media-v2/nginx-staging.conf -g "daemon off;"
+ExecReload=/bin/kill -HUP $MAINPID
+KillSignal=SIGQUIT
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/social-media-v2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

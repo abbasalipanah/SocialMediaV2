@@ -7,8 +7,8 @@ from sqlalchemy import Engine, text
 from app.application.ports.persistence import CommentRecord
 from app.core.write_policy import WritePolicy
 
+from ..legacy_socialmedia.platforms import normalize_platform
 from .base import SocialStoreBase
-from .platforms import normalize_platform
 
 
 class SocialCommentStore(SocialStoreBase):

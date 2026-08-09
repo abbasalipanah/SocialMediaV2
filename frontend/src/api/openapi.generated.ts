@@ -608,6 +608,11 @@ export interface components {
             /** User Id */
             user_id: string;
         };
+        /**
+         * AvailabilityStatus
+         * @enum {string}
+         */
+        AvailabilityStatus: "available" | "partial" | "pending" | "provider_unavailable" | "unavailable";
         /** BrandFamilyProjection */
         BrandFamilyProjection: {
             /** Brand Ids */
@@ -689,6 +694,10 @@ export interface components {
             /** Comment Likes */
             comment_likes: number;
             data_status: components["schemas"]["DataStatus"];
+            /** Top Commenters */
+            top_commenters: components["schemas"]["DashboardTopCommenter"][];
+            /** Top Liked Comments */
+            top_liked_comments: components["schemas"]["DashboardTopLikedComment"][];
             /** Total Comments */
             total_comments: number;
             /** Unanswered Comments */
@@ -699,6 +708,14 @@ export interface components {
             /** Items */
             items: components["schemas"]["ReportingConnection"][];
             meta: components["schemas"]["BrandScope"];
+        };
+        /** DashboardAudienceCapabilities */
+        DashboardAudienceCapabilities: {
+            activity: components["schemas"]["AvailabilityStatus"];
+            age_gender: components["schemas"]["AvailabilityStatus"];
+            geo: components["schemas"]["AvailabilityStatus"];
+            /** Source */
+            source: string | null;
         };
         /** DashboardBreakdown */
         DashboardBreakdown: {
@@ -721,26 +738,66 @@ export interface components {
         DashboardContent: {
             /** Account Id */
             account_id: number;
+            /** Average Time Watched */
+            average_time_watched: number | null;
             /** Comments Count */
             comments_count: number;
             /** Content Type */
             content_type: string;
+            /** Cover Candidates */
+            cover_candidates: string[];
+            /** Cover Url */
+            cover_url: string | null;
+            data_status: components["schemas"]["DataStatus"];
             /** External Content Id */
             external_content_id: string;
+            /** Full Video Watched Rate */
+            full_video_watched_rate: number | null;
             /** Interactions */
             interactions: number;
             /** Likes Count */
             likes_count: number;
             /** Media Url */
             media_url: string;
+            /** Media Url Candidates */
+            media_url_candidates: string[];
             /** Message */
             message: string;
             /** Permalink */
             permalink: string;
             /** Published At */
             published_at: string | null;
+            /** Reach */
+            reach: number | null;
             /** Shares Count */
             shares_count: number;
+            /** Thumbnail Candidates */
+            thumbnail_candidates: string[];
+            /** Thumbnail Url */
+            thumbnail_url: string | null;
+            /** Total Time Watched */
+            total_time_watched: number | null;
+            /** Views */
+            views: number | null;
+        };
+        /** DashboardContentSummary */
+        DashboardContentSummary: {
+            /** By Type */
+            by_type: components["schemas"]["DashboardNamedValue"][];
+            data_status: components["schemas"]["DataStatus"];
+            /** Reach By Type */
+            reach_by_type: components["schemas"]["DashboardNamedValue"][];
+            /** Total */
+            total: number;
+            /** Views By Type */
+            views_by_type: components["schemas"]["DashboardNamedValue"][];
+        };
+        /** DashboardHashtag */
+        DashboardHashtag: {
+            /** Count */
+            count: number;
+            /** Name */
+            name: string;
         };
         /** DashboardMeta */
         DashboardMeta: {
@@ -774,9 +831,13 @@ export interface components {
         };
         /** DashboardMetric */
         DashboardMetric: {
+            /** Availability Reason */
+            availability_reason: string | null;
             data_status: components["schemas"]["DataStatus"];
             /** Delta Pct */
             delta_pct: number | null;
+            /** Methodology */
+            methodology: string;
             metric_id: components["schemas"]["MetricId"];
             /** Previous Value */
             previous_value: number | null;
@@ -784,6 +845,22 @@ export interface components {
             unit: components["schemas"]["Unit"];
             /** Value */
             value: number | null;
+        };
+        /** DashboardMetricMethodology */
+        DashboardMetricMethodology: {
+            /** Engagement Rate */
+            engagement_rate: string;
+            /** Follower Flow */
+            follower_flow: string;
+            /** Reach */
+            reach: string;
+        };
+        /** DashboardNamedValue */
+        DashboardNamedValue: {
+            /** Name */
+            name: string;
+            /** Value */
+            value: number;
         };
         /** DashboardPoint */
         DashboardPoint: {
@@ -797,10 +874,151 @@ export interface components {
         };
         /** DashboardSeries */
         DashboardSeries: {
+            /** Methodology */
+            methodology: string;
             metric_id: components["schemas"]["MetricId"];
             /** Points */
             points: components["schemas"]["DashboardPoint"][];
             semantic_type: components["schemas"]["SemanticType"];
+        };
+        /** DashboardSourceBreakdown */
+        DashboardSourceBreakdown: {
+            data_status: components["schemas"]["DataStatus"];
+            /** Organic Only */
+            organic_only: boolean;
+            /** Paid Available */
+            paid_available: boolean;
+            reach: components["schemas"]["DashboardSourceValues"] | null;
+            views: components["schemas"]["DashboardSourceValues"] | null;
+        };
+        /** DashboardSourceValues */
+        DashboardSourceValues: {
+            data_status: components["schemas"]["DataStatus"];
+            /** Organic */
+            organic: number | null;
+            /** Paid */
+            paid: number | null;
+        };
+        /** DashboardStories */
+        DashboardStories: {
+            actions: components["schemas"]["DashboardStoryActions"];
+            data_status: components["schemas"]["DataStatus"];
+            /** Items */
+            items: components["schemas"]["DashboardStoryItem"][];
+            navigation: components["schemas"]["DashboardStoryNavigation"];
+            previous_summary: components["schemas"]["DashboardStorySummary"];
+            summary: components["schemas"]["DashboardStorySummary"];
+            trend: components["schemas"]["DashboardStoryTrend"];
+        };
+        /** DashboardStoryActions */
+        DashboardStoryActions: {
+            data_status: components["schemas"]["DataStatus"];
+            /** Follows */
+            follows: number | null;
+            /** Profile Visits */
+            profile_visits: number | null;
+            /** Replies */
+            replies: number | null;
+            /** Shares */
+            shares: number | null;
+        };
+        /** DashboardStoryItem */
+        DashboardStoryItem: {
+            /** Completion Rate */
+            completion_rate: number | null;
+            /** Content Id */
+            content_id: string;
+            /** Cover Url */
+            cover_url: string;
+            /** Created Time */
+            created_time: string | null;
+            data_status: components["schemas"]["DataStatus"];
+            /** Exits */
+            exits: number | null;
+            /** Follows */
+            follows: number | null;
+            /** Interactions */
+            interactions: number | null;
+            /** Navigation */
+            navigation: number | null;
+            /** Permalink */
+            permalink: string;
+            /** Profile Visits */
+            profile_visits: number | null;
+            /** Reach */
+            reach: number | null;
+            /** Replies */
+            replies: number | null;
+            /** Shares */
+            shares: number | null;
+            /** Swipe Forward */
+            swipe_forward: number | null;
+            /** Taps Back */
+            taps_back: number | null;
+            /** Taps Forward */
+            taps_forward: number | null;
+            /** Title */
+            title: string;
+            /** Views */
+            views: number | null;
+        };
+        /** DashboardStoryNavigation */
+        DashboardStoryNavigation: {
+            data_status: components["schemas"]["DataStatus"];
+            /** Exits */
+            exits: number | null;
+            /** Swipe Forward */
+            swipe_forward: number | null;
+            /** Taps Back */
+            taps_back: number | null;
+            /** Taps Forward */
+            taps_forward: number | null;
+        };
+        /** DashboardStorySummary */
+        DashboardStorySummary: {
+            /** Completion Rate */
+            completion_rate: number | null;
+            /** Count */
+            count: number;
+            data_status: components["schemas"]["DataStatus"];
+            /** Interactions */
+            interactions: number | null;
+            /** Reach */
+            reach: number | null;
+            /** Replies */
+            replies: number | null;
+            /** Views */
+            views: number | null;
+        };
+        /** DashboardStoryTrend */
+        DashboardStoryTrend: {
+            data_status: components["schemas"]["DataStatus"];
+            /** Labels */
+            labels: string[];
+            /** Reach */
+            reach: (number | null)[];
+            /** Views */
+            views: (number | null)[];
+        };
+        /** DashboardTopCommenter */
+        DashboardTopCommenter: {
+            /** Comments */
+            comments: number;
+            /** Likes */
+            likes: number;
+            /** Name */
+            name: string;
+        };
+        /** DashboardTopLikedComment */
+        DashboardTopLikedComment: {
+            /** Comment */
+            comment: string;
+            /** Likes */
+            likes: number;
+            /** Name */
+            name: string;
+            /** Replies */
+            replies: number;
         };
         /**
          * DataStatus
@@ -935,16 +1153,23 @@ export interface components {
         };
         /** PlatformDashboard */
         PlatformDashboard: {
+            audience_capabilities: components["schemas"]["DashboardAudienceCapabilities"];
             /** Breakdowns */
             breakdowns: components["schemas"]["DashboardBreakdown"][];
             community: components["schemas"]["CommunitySummary"];
             /** Content */
             content: components["schemas"]["DashboardContent"][];
+            content_summary: components["schemas"]["DashboardContentSummary"];
             meta: components["schemas"]["DashboardMeta"];
+            metric_methodology: components["schemas"]["DashboardMetricMethodology"];
             /** Metrics */
             metrics: components["schemas"]["DashboardMetric"][];
             /** Series */
             series: components["schemas"]["DashboardSeries"][];
+            source_breakdown: components["schemas"]["DashboardSourceBreakdown"] | null;
+            stories: components["schemas"]["DashboardStories"] | null;
+            /** Top Hashtags */
+            top_hashtags: components["schemas"]["DashboardHashtag"][];
         };
         /**
          * PlatformId
@@ -1075,7 +1300,7 @@ export interface components {
          * RuntimeMode
          * @enum {string}
          */
-        RuntimeMode: "development" | "dormant" | "cutover_read_only" | "cutover_credential_migration" | "cutover_canary" | "cutover_control_plane_drain" | "cutover_activation" | "active";
+        RuntimeMode: "development" | "dormant" | "staging" | "standalone_ready" | "active";
         /**
          * SemanticType
          * @enum {string}

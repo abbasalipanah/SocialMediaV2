@@ -86,4 +86,4 @@ echo
 cd "$FRONTEND"
 export VITE_API_PROXY_TARGET=http://127.0.0.1:8000
 export VITE_LOCAL_DEMO=true
-npm run dev
+npm run dev:frontend

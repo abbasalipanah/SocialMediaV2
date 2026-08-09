@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
+from typing import Any, cast
 from urllib.parse import quote
 
 from sqlalchemy import Engine, bindparam, text
@@ -21,7 +22,7 @@ from app.application.ports.reporting import (
 from app.domain.metrics import MetricId
 from app.domain.platforms import PlatformId
 
-from .platforms import normalize_platform
+from ..legacy_socialmedia.platforms import normalize_platform
 
 
 def _expanded(statement: str, parameter: str):
@@ -138,6 +139,12 @@ class SocialReportingStore:
             f"""SELECT i.asset_id, CAST(i.brand_id AS text) AS brand_id, a.platform,
                        i.content_id, i.content_type, i.permalink, i.message, i.media_url,
                        i.created_time, i.likes_count, i.comments_count, i.shares_count,
+                       i.views_count, i.reach_count, i.cover_url, i.thumbnail_url,
+                       i.cover_candidates, i.thumbnail_candidates, i.media_url_candidates,
+                       i.full_video_watched_rate, i.total_time_watched,
+                       i.average_time_watched, i.interactions_count, i.replies_count,
+                       i.profile_visits, i.follows_count, i.taps_forward, i.taps_back,
+                       i.swipe_forward, i.exits, i.navigation_count, i.completion_rate,
                        EXISTS (
                            SELECT 1 FROM media_assets AS m
                            WHERE m.asset_id=i.asset_id AND m.content_id=i.content_id
@@ -184,6 +191,26 @@ class SocialReportingStore:
                     likes_count=int(row["likes_count"]),
                     comments_count=int(row["comments_count"]),
                     shares_count=int(row["shares_count"]),
+                    views_count=_optional_float(row["views_count"]),
+                    reach_count=_optional_float(row["reach_count"]),
+                    cover_url=row["cover_url"],
+                    thumbnail_url=row["thumbnail_url"],
+                    cover_candidates=_string_tuple(row["cover_candidates"]),
+                    thumbnail_candidates=_string_tuple(row["thumbnail_candidates"]),
+                    media_url_candidates=_string_tuple(row["media_url_candidates"]),
+                    full_video_watched_rate=_optional_float(row["full_video_watched_rate"]),
+                    total_time_watched=_optional_float(row["total_time_watched"]),
+                    average_time_watched=_optional_float(row["average_time_watched"]),
+                    interactions_count=_optional_float(row["interactions_count"]),
+                    replies_count=_optional_float(row["replies_count"]),
+                    profile_visits=_optional_float(row["profile_visits"]),
+                    follows_count=_optional_float(row["follows_count"]),
+                    taps_forward=_optional_float(row["taps_forward"]),
+                    taps_back=_optional_float(row["taps_back"]),
+                    swipe_forward=_optional_float(row["swipe_forward"]),
+                    exits=_optional_float(row["exits"]),
+                    navigation_count=_optional_float(row["navigation_count"]),
+                    completion_rate=_optional_float(row["completion_rate"]),
                 )
                 for row in rows
             )
@@ -384,6 +411,16 @@ class SocialReportingStore:
 def _validate_range(start_on: date, end_on: date) -> None:
     if end_on < start_on or (end_on - start_on).days > 365:
         raise ValueError("reporting_range_invalid")
+
+
+def _optional_float(value: object) -> float | None:
+    return float(cast(Any, value)) if value is not None else None
+
+
+def _string_tuple(value: object) -> tuple[str, ...]:
+    if not isinstance(value, list):
+        return ()
+    return tuple(str(item) for item in value if isinstance(item, str) and item)
 
 
 def _local_media_url(

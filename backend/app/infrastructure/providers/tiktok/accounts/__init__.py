@@ -5,6 +5,8 @@ from .activation import (
     TikTokActivationStateAdapter,
     activation_config_version,
 )
+from .audience import AUDIENCE_FIELDS, TikTokAudienceReader
+from .comments import TikTokCommentsReader
 from .content import TikTokContentReader
 from .oauth_state import (
     TikTokStateBinding,
@@ -29,9 +31,12 @@ __all__ = [
     "TikTokAccountsActivationProvider",
     "TikTokActivationStateAdapter",
     "activation_config_version",
+    "AUDIENCE_FIELDS",
     "ScopeDecision",
     "TikTokAccountsWireMapper",
+    "TikTokAudienceReader",
     "TikTokContentReader",
+    "TikTokCommentsReader",
     "TikTokProfileReader",
     "TikTokHttpTransport",
     "TikTokResponseError",

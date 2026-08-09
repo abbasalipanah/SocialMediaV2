@@ -253,7 +253,11 @@ class MetricCatalog:
 
 
 def _profile_snapshot(
-    platform: PlatformId, metric_id: MetricId, source_field: str
+    platform: PlatformId,
+    metric_id: MetricId,
+    source_field: str,
+    *,
+    allowed_breakdowns: tuple[str, ...] = (),
 ) -> MetricDefinition:
     return MetricDefinition(
         metric_id=metric_id,
@@ -275,7 +279,7 @@ def _profile_snapshot(
         numerator_metric_id=None,
         denominator_metric_id=None,
         zero_denominator_policy=ZeroDenominatorPolicy.NOT_APPLICABLE,
-        allowed_breakdowns=(),
+        allowed_breakdowns=allowed_breakdowns,
         required_capability=CapabilityId.PROFILE,
         version=1,
     )
@@ -301,6 +305,37 @@ def _profile_flow(
         derivation_version=None,
         derivation_window=None,
         first_sample_policy=FirstSamplePolicy.NOT_APPLICABLE,
+        numerator_metric_id=None,
+        denominator_metric_id=None,
+        zero_denominator_policy=ZeroDenominatorPolicy.NOT_APPLICABLE,
+        allowed_breakdowns=(),
+        required_capability=CapabilityId.PROFILE,
+        version=1,
+    )
+
+
+def _profile_cumulative_delta(
+    platform: PlatformId,
+    metric_id: MetricId,
+    source_metric_id: MetricId,
+) -> MetricDefinition:
+    return MetricDefinition(
+        metric_id=metric_id,
+        platform=platform,
+        entity_scope=EntityScope.PROFILE,
+        semantic_type=SemanticType.FLOW,
+        unit=Unit.COUNT,
+        source_field=None,
+        collection_granularity=CollectionGranularity.DAY,
+        period_aggregation=AggregationPolicy.SUM,
+        brand_rollup_aggregation=AggregationPolicy.SUM,
+        null_policy=NullPolicy.NOT_AVAILABLE,
+        reset_policy=ResetPolicy.FLAG_AND_WAIT_FOR_NEXT_SAMPLE,
+        derived_from_metric_ids=(source_metric_id,),
+        derivation_operator=DerivationOperator.CUMULATIVE_DELTA,
+        derivation_version=1,
+        derivation_window="utc_day",
+        first_sample_policy=FirstSamplePolicy.NOT_AVAILABLE,
         numerator_metric_id=None,
         denominator_metric_id=None,
         zero_denominator_policy=ZeroDenominatorPolicy.NOT_APPLICABLE,
@@ -465,7 +500,15 @@ def bootstrap_metric_catalog() -> MetricCatalog:
     return MetricCatalog(
         (
             _profile_snapshot(
-                PlatformId.FACEBOOK, MetricId.FOLLOWERS, "followers_count"
+                PlatformId.FACEBOOK,
+                MetricId.FOLLOWERS,
+                "followers_count",
+                allowed_breakdowns=("page_fans_country", "page_fans_city"),
+            ),
+            _profile_cumulative_delta(
+                PlatformId.FACEBOOK,
+                MetricId.NEW_FOLLOWERS,
+                MetricId.FOLLOWERS,
             ),
             *(
                 _profile_flow(PlatformId.FACEBOOK, metric_id, source_field)
@@ -475,7 +518,26 @@ def bootstrap_metric_catalog() -> MetricCatalog:
                 }.items()
             ),
             _profile_snapshot(
-                PlatformId.INSTAGRAM, MetricId.FOLLOWERS, "followers_count"
+                PlatformId.INSTAGRAM,
+                MetricId.FOLLOWERS,
+                "followers_count",
+                allowed_breakdowns=(
+                    "follower_demographics_country",
+                    "follower_demographics_city",
+                    "follower_demographics_age",
+                    "follower_demographics_gender",
+                    "follower_demographics_age_gender",
+                    "engaged_audience_demographics_country",
+                    "engaged_audience_demographics_city",
+                    "engaged_audience_demographics_age",
+                    "engaged_audience_demographics_gender",
+                    "engaged_audience_demographics_age_gender",
+                    "reached_audience_demographics_country",
+                    "reached_audience_demographics_city",
+                    "reached_audience_demographics_age",
+                    "reached_audience_demographics_gender",
+                    "reached_audience_demographics_age_gender",
+                ),
             ),
             _profile_snapshot(
                 PlatformId.INSTAGRAM, MetricId.FOLLOWING, "follows_count"
@@ -491,7 +553,20 @@ def bootstrap_metric_catalog() -> MetricCatalog:
                 for source_field, metric_id in INSTAGRAM_DAILY_SOURCE_METRICS
             ),
             _profile_snapshot(
-                PlatformId.TIKTOK, MetricId.FOLLOWERS, "followers_count"
+                PlatformId.TIKTOK,
+                MetricId.FOLLOWERS,
+                "followers_count",
+                allowed_breakdowns=(
+                    "audience_countries",
+                    "audience_genders",
+                    "audience_ages",
+                    "audience_activity",
+                ),
+            ),
+            _profile_cumulative_delta(
+                PlatformId.TIKTOK,
+                MetricId.NEW_FOLLOWERS,
+                MetricId.FOLLOWERS,
             ),
             views_total,
             views_change,

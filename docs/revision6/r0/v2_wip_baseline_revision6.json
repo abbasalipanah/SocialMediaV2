@@ -1,0 +1,184 @@
+{
+  "captured_at": "2026-08-07T10:43:33.392207+00:00",
+  "purpose": "approved_pre_existing_v2_wip_at_r0_entry",
+  "r0_owned_exact_paths_excluded": [
+    "scripts/quality/source_baseline.py",
+    "scripts/quality/v2_wip_baseline.py",
+    "scripts/source_write_guard.sh"
+  ],
+  "r0_owned_prefixes_excluded": [
+    "docs/revision6/r0/"
+  ],
+  "revision": 6,
+  "schema_version": 1,
+  "snapshot": {
+    "branch": "main",
+    "dirty_file_count": 14,
+    "files": [
+      {
+        "behavior": "Dashboard API router registration changed for the in-progress parity work.",
+        "content_sha256": "4de89e8c1249837ce0602de2cca89c5cff86900974f41638490b8615eaccd122",
+        "diff": {
+          "additions": 1,
+          "deletions": 0
+        },
+        "path": "backend/app/api/dashboards/__init__.py",
+        "state": "tracked-diff"
+      },
+      {
+        "behavior": "Local demo payload generation expanded, including audience/dashboard data.",
+        "content_sha256": "1f00d3eeda8bbc8804944c57257f5ead4a9bd430503f8bf15779fe8ce28b3f69",
+        "diff": {
+          "additions": 380,
+          "deletions": 23
+        },
+        "path": "backend/app/local_demo.py",
+        "state": "tracked-diff"
+      },
+      {
+        "behavior": "Local demo expectations adjusted for the expanded payload.",
+        "content_sha256": "e68011d35ada8b43912c1223c6063ed84de2a8a2c3cc3bf55981d7bc4bc924ad",
+        "diff": {
+          "additions": 1,
+          "deletions": 1
+        },
+        "path": "backend/tests/test_local_demo.py",
+        "state": "tracked-diff"
+      },
+      {
+        "behavior": "Approved Revision 6 execution plan and read-only source rules.",
+        "content_sha256": "0e060ae3a765851951243cd27d9bc95c80105464afcf6f28a3b84fda50305f16",
+        "diff": {
+          "additions": 413,
+          "deletions": 77
+        },
+        "path": "docs/SOCIAL_MEDIA_V2_MASTER_PLAN.md",
+        "state": "tracked-diff"
+      },
+      {
+        "behavior": "Frontend dependency lock updated by the pre-existing UI work.",
+        "content_sha256": "f46c4399388d2e2ec2adacba7140da110fa8ab592dae206e1a9b3f39bb3c22d8",
+        "diff": {
+          "additions": 475,
+          "deletions": 3
+        },
+        "path": "frontend/package-lock.json",
+        "state": "tracked-diff"
+      },
+      {
+        "behavior": "Frontend dependency declarations updated by the pre-existing UI work.",
+        "content_sha256": "4ee217455fc92c3b011649a75e2eb5a4087f3ed47ead3bd833c7c2e9ec002a8c",
+        "diff": {
+          "additions": 10,
+          "deletions": 0
+        },
+        "path": "frontend/package.json",
+        "state": "tracked-diff"
+      },
+      {
+        "behavior": "New shared audience-demographics card implementation.",
+        "content_sha256": "bbffdb0f437427fc46d615a90f48cc19fc5e09cdd66055f29da6261b24505a78",
+        "diff": null,
+        "path": "frontend/src/features/dashboard/AudienceDemographicsCard.tsx",
+        "state": "untracked"
+      },
+      {
+        "behavior": "Platform-page composition adjusted for the in-progress dashboards.",
+        "content_sha256": "17c5fdd6153a0c1bc267dc343b72c3af571d0c70225837e516998489969e2fcb",
+        "diff": {
+          "additions": 1,
+          "deletions": 1
+        },
+        "path": "frontend/src/features/dashboard/PlatformPage.tsx",
+        "state": "tracked-diff"
+      },
+      {
+        "behavior": "Dashboard catalog metadata adjusted for the in-progress dashboards.",
+        "content_sha256": "dc31f9c5a12771a14b3bf7e14dc6e50b59e6355a2dfc4d5194d7e0cb7c01e57f",
+        "diff": {
+          "additions": 5,
+          "deletions": 4
+        },
+        "path": "frontend/src/features/dashboard/catalog.ts",
+        "state": "tracked-diff"
+      },
+      {
+        "behavior": "Facebook dashboard expanded with the in-progress pulse/audience UI.",
+        "content_sha256": "411ade5636d885a6b3fee11b5ff977c0c63f7ac04fa3450a215e64b06cd1f5d8",
+        "diff": {
+          "additions": 291,
+          "deletions": 67
+        },
+        "path": "frontend/src/features/facebook/FacebookPulseDashboard.tsx",
+        "state": "tracked-diff"
+      },
+      {
+        "behavior": "Instagram dashboard expanded with the in-progress pulse/audience UI.",
+        "content_sha256": "1a5145b8c9943ebe370db3bfffb9a142f38e853bb9b051bf5c38693583ec10cf",
+        "diff": {
+          "additions": 166,
+          "deletions": 62
+        },
+        "path": "frontend/src/features/instagram/InstagramPulseDashboard.tsx",
+        "state": "tracked-diff"
+      },
+      {
+        "behavior": "TikTok dashboard expanded with the in-progress pulse/audience UI.",
+        "content_sha256": "33d5b2dec8f0930d483f1295dd15586ab54dccdf3da2a1ffe23cd0027f3f78ec",
+        "diff": {
+          "additions": 140,
+          "deletions": 92
+        },
+        "path": "frontend/src/features/tiktok/TikTokPulseDashboard.tsx",
+        "state": "tracked-diff"
+      },
+      {
+        "behavior": "Shared dashboard styling expanded for the in-progress UI.",
+        "content_sha256": "f580d7d46c4a0e9d24bb85317fbedf8db196a2bff4473abf7ad5c203c0317771",
+        "diff": {
+          "additions": 72,
+          "deletions": 4
+        },
+        "path": "frontend/src/styles.css",
+        "state": "tracked-diff"
+      },
+      {
+        "behavior": "Frontend product test coverage adjusted for the in-progress UI.",
+        "content_sha256": "bed72e3252bc60363df231e02c614073652cf1486f5f03188e28d74ff74ae1ec",
+        "diff": {
+          "additions": 21,
+          "deletions": 12
+        },
+        "path": "frontend/src/test/Phase8Products.test.tsx",
+        "state": "tracked-diff"
+      }
+    ],
+    "head": "11e73bd86e41b5ad6f93d32e768486f857879e05",
+    "manifest": "v2_wip_baseline_revision6.sha256",
+    "manifest_sha256": "823be17aa81a782d5b84bd7754321ce128a78ee3898e1b8c356df5377280692c",
+    "origin": "https://github.com/abbasalipanah/SocialMediaV2.git",
+    "root": "/home/api/colab_scripts/SocialMediadownstream",
+    "status": [
+      " M backend/app/api/dashboards/__init__.py",
+      " M backend/app/local_demo.py",
+      " M backend/tests/test_local_demo.py",
+      " M docs/SOCIAL_MEDIA_V2_MASTER_PLAN.md",
+      " M frontend/package-lock.json",
+      " M frontend/package.json",
+      " M frontend/src/features/dashboard/PlatformPage.tsx",
+      " M frontend/src/features/dashboard/catalog.ts",
+      " M frontend/src/features/facebook/FacebookPulseDashboard.tsx",
+      " M frontend/src/features/instagram/InstagramPulseDashboard.tsx",
+      " M frontend/src/features/tiktok/TikTokPulseDashboard.tsx",
+      " M frontend/src/styles.css",
+      " M frontend/src/test/Phase8Products.test.tsx",
+      "?? frontend/src/features/dashboard/AudienceDemographicsCard.tsx"
+    ],
+    "status_sha256": "ee4b13ea89d4489a936411acdaf55ec6b8b5bdd858fbae7c25b86fa20d4d7b6d",
+    "tracked_binary_diff_sha256": "3a09b4a815cc2e7b186a69a5cf7b4979de2dad783757ed8bd6429c03e92155ed",
+    "untracked_files": [
+      "frontend/src/features/dashboard/AudienceDemographicsCard.tsx"
+    ],
+    "untracked_files_sha256": "7168b597128cf142704bd9d5c315dcec0a41e576ffc243554a685823feb98d05"
+  }
+}

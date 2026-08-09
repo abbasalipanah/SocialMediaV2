@@ -146,6 +146,7 @@ def main() -> int:
         content_store=SocialContentStore(engine, policy),
         checkpoint_store=ProjectionCheckpointStore(engine, policy, clock=lambda: FIXED_NOW),
         record_sink=ig_media_writer.persist,
+        checkpoint_account_id=f"{ig_account.account_id}.stories",
     )
     ig_comments = collect_comments(
         target=ig_target,

@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "../routing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "../auth";
@@ -130,6 +130,44 @@ const accounts = {
   ],
 };
 
+const dashboard = {
+  meta: {
+    dashboard_id: "facebook",
+    platform: "facebook",
+    requested_brand_id: "child-1",
+    rollup: false,
+    resolved_brand_ids: ["child-1"],
+    resolved_account_ids: [17],
+    date_range: { start_on: "2026-06-15", end_on: "2026-07-14", key: "last_30_days" },
+    generated_at: "2026-07-14T12:00:00Z",
+    last_sync_at: "2026-07-14T12:00:00Z",
+    freshness: "fresh",
+    observed_days: 30,
+    expected_days: 30,
+    data_status: "available",
+    warnings: [],
+  },
+  metrics: [],
+  series: [],
+  breakdowns: [],
+  content: [],
+  community: {
+    total_comments: 0,
+    answered_comments: 0,
+    unanswered_comments: 0,
+    comment_likes: 0,
+    data_status: "unavailable",
+    top_commenters: [],
+    top_liked_comments: [],
+  },
+  top_hashtags: [],
+  content_summary: { total: 0, by_type: [], reach_by_type: [], views_by_type: [], data_status: "unavailable" },
+  source_breakdown: null,
+  metric_methodology: { follower_flow: "unavailable", engagement_rate: "unavailable", reach: "unavailable" },
+  audience_capabilities: { source: null, geo: "unavailable", age_gender: "unavailable", activity: "unavailable" },
+  stories: null,
+};
+
 const settingsMeta = {
   requested_brand_id: "child-1",
   rollup: false,
@@ -230,6 +268,11 @@ function mockApi(options: { authenticated?: boolean; settingsVisible?: boolean }
     if (url.includes("/api/auth/logout") && init?.method === "POST") return new Response(null, { status: 204 });
     if (url.includes("/api/workspace/brands")) return json(workspace);
     if (url.includes("/api/workspace/capabilities")) return json(capabilities(options.settingsVisible));
+    if (url.includes("/api/dashboards/")) {
+      const platform = (["facebook", "instagram", "tiktok"] as const)
+        .find((item) => url.includes(`/api/dashboards/${item}`)) ?? "facebook";
+      return json({ ...dashboard, meta: { ...dashboard.meta, dashboard_id: platform, platform } });
+    }
     if (url.includes("/api/platforms/facebook/accounts")) return json(accounts);
     if (url.includes("/api/settings/social-accounts")) return json(socialAccounts);
     if (url.includes("/api/settings/brand-links")) return json(brandLinks);
@@ -274,94 +317,55 @@ describe("Phase 7 application shell", () => {
 
   it("keeps the canonical page catalog limited to the three social channels", () => {
     expect(SOCIAL_NAVIGATION_LABELS).toEqual([
-      "Overview",
+      "Home",
+      "Analytics",
+      "Social Media",
       "Facebook",
       "Instagram",
       "TikTok",
+      "Settings",
     ]);
   });
 
   it("restores a real route and renders only capability-driven navigation", async () => {
     renderApp("/facebook");
 
-    expect(await screen.findByRole("heading", { name: "Facebook" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Facebook Dashboard" }, { timeout: 3_000 })).toBeInTheDocument();
     const primary = screen.getByRole("complementary", { name: "Primary navigation" });
-    expect(within(primary).getByRole("link", { name: "Overview" })).toHaveAttribute("href", "/overview");
+    expect(within(primary).getByRole("link", { name: "Home" })).toHaveAttribute("href", "/facebook");
+    expect(within(primary).getByText("Analytics")).toBeInTheDocument();
+    expect(within(primary).getByText("Social Media")).toBeInTheDocument();
     await waitFor(() =>
       expect(within(primary).getByRole("link", { name: "Facebook" })).toHaveAttribute(
         "href",
         "/facebook",
       ),
     );
-    expect(within(primary).getByText("Instagram").closest("div")).toHaveAttribute("aria-disabled", "true");
-    expect(within(primary).getByText("TikTok").closest("div")).toHaveAttribute("aria-disabled", "true");
-    expect(within(primary).getByRole("link", { name: "Settings" })).toBeInTheDocument();
-    expect(within(primary).getByRole("link", { name: "Integrations" })).toHaveAttribute("href", "/integrations");
-    expect(within(primary).queryByText("Google Ads")).not.toBeInTheDocument();
+    expect(within(primary).getByRole("link", { name: "Instagram" })).toHaveAttribute("href", "/instagram");
+    expect(within(primary).queryByRole("link", { name: "TikTok" })).not.toBeInTheDocument();
+    expect(within(primary).getAllByRole("link", { name: "Settings" })).toHaveLength(2);
+    expect(within(primary).queryByText("Integrations")).not.toBeInTheDocument();
+    expect(within(primary).queryByText("Support")).not.toBeInTheDocument();
+    expect(within(primary).queryByText("Back to Accumulate")).not.toBeInTheDocument();
+    expect(within(primary).queryByText("Sign out")).not.toBeInTheDocument();
   });
 
-  it("renders the Social integrations catalog with honest platform status", async () => {
+  it("opens the mobile drawer and closes it from the backdrop", async () => {
     const user = userEvent.setup();
-    const { fetchMock } = renderApp("/integrations");
-
-    expect(await screen.findByRole("heading", { name: "Integrations" })).toBeInTheDocument();
-    expect(await screen.findByText("Facebook Main")).toBeInTheDocument();
-    expect(await screen.findByText("Instagram Business profiles, posts, reels, stories and audience reporting linked to the selected Brand.")).toBeInTheDocument();
-    expect(screen.getAllByText("Connected").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("No account linked")).toHaveLength(2);
-    expect(screen.getAllByText("Brand-scoped Meta self-service").length).toBeGreaterThan(0);
-
-    await user.type(screen.getByPlaceholderText("Search platforms or accounts"), "TikTok");
-    expect(screen.getByText("TikTok Business account, video performance and audience capabilities with Brand-scoped self-service connection.")).toBeInTheDocument();
-    expect(screen.queryByText("Instagram Business profiles, posts, reels, stories and audience reporting linked to the selected Brand.")).not.toBeInTheDocument();
-
-    await user.click(screen.getAllByRole("button", { name: /Connect TikTok/ })[0]!);
-    expect(await screen.findByRole("dialog", { name: "Connect TikTok" })).toBeInTheDocument();
-    expect(await screen.findByText("TikTok provider activation is not configured in this runtime yet.")).toBeInTheDocument();
-    expect(fetchMock.mock.calls.some(([url, init]) => String(url).includes("/oauth/start") && init?.method === "POST")).toBe(false);
-  });
-
-  it("opens Meta self-service without contacting the provider", async () => {
-    const user = userEvent.setup();
-    const { fetchMock } = renderApp("/integrations");
-
-    expect(await screen.findByRole("heading", { name: "Integrations" })).toBeInTheDocument();
-    const metaButtons = await screen.findAllByRole("button", { name: /Connect( another)? Meta( account)?/ });
-    await user.click(metaButtons[0]!);
-
-    expect(await screen.findByRole("dialog", { name: "Connect Meta" })).toBeInTheDocument();
-    expect(
-      await screen.findByText("Meta provider activation is not configured in this runtime yet."),
-    ).toBeInTheDocument();
-    expect(fetchMock.mock.calls.some(([url, init]) =>
-      String(url).includes("/api/integrations/meta/oauth/start") && init?.method === "POST",
-    )).toBe(false);
-  });
-
-  it("opens the mobile drawer, closes on backdrop and signs out to the SSO-first login", async () => {
-    const user = userEvent.setup();
-    const { fetchMock } = renderApp("/overview");
-    await screen.findByRole("heading", { name: "Social Media Overview" });
+    renderApp("/facebook");
+    await screen.findByRole("heading", { name: "Facebook Dashboard" });
 
     await user.click(screen.getByRole("button", { name: "Open navigation" }));
     const sidebar = screen.getByRole("complementary", { name: "Primary navigation" });
     expect(sidebar).toHaveClass("open");
     await user.click(screen.getAllByRole("button", { name: "Close navigation" })[0]!);
     expect(sidebar).not.toHaveClass("open");
-
-    await user.click(within(sidebar).getByRole("button", { name: "Sign out" }));
-    expect(await screen.findByRole("heading", { name: "Social Media" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Continue with Accumulate/ })).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/auth/logout",
-      expect.objectContaining({ method: "POST", credentials: "include" }),
-    );
   });
 
   it("persists child scope, remembers an account, then resets it on Brand change", async () => {
     const user = userEvent.setup();
     renderApp("/facebook");
-    await screen.findByRole("heading", { name: "Facebook" });
+    await screen.findByRole("heading", { name: "Facebook Dashboard" });
 
     await user.click(buttonContaining("Facebook Page"));
     await user.click(screen.getByRole("option", { name: /Facebook Main/ }));
@@ -376,7 +380,7 @@ describe("Phase 7 application shell", () => {
   it("keeps a valid per-platform account selection while its account query is loading", async () => {
     window.localStorage.setItem("social-media-v2:selected-account:user-1:facebook", "17");
     renderApp("/facebook");
-    await screen.findByRole("heading", { name: "Facebook" });
+    await screen.findByRole("heading", { name: "Facebook Dashboard" });
     await waitFor(() =>
       expect(buttonContaining("Facebook Page")).toHaveTextContent("Facebook Main"),
     );
@@ -385,12 +389,34 @@ describe("Phase 7 application shell", () => {
 
   it("redirects a direct Settings route when the backend permission is absent", async () => {
     renderApp("/settings", mockApi({ settingsVisible: false }));
-    expect(await screen.findByRole("heading", { name: "Social Media Overview" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Facebook Dashboard" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Settings" })).not.toBeInTheDocument();
   });
 
+  it("renders root and unknown authenticated routes as the standalone Settings surface", async () => {
+    const { unmount } = renderApp("/");
+    expect(await screen.findByRole("heading", { name: "Social media setup" })).toBeInTheDocument();
+    expect(screen.queryByRole("complementary", { name: "Primary navigation" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("columnheader").map((item) => item.textContent)).toEqual([
+      "Brand", "Meta Access", "Discovery", "Accounts", "Data", "Backfill", "Collector", "Last Sync", "Nightly", "Action",
+    ]);
+    unmount();
+
+    renderApp("/not-a-dashboard-route");
+    expect(await screen.findByRole("heading", { name: "Social media setup" })).toBeInTheDocument();
+    expect(screen.queryByRole("complementary", { name: "Primary navigation" })).not.toBeInTheDocument();
+  });
+
+  it("accepts both canonical SSO consume aliases", async () => {
+    const { unmount } = renderApp("/auth/sso/consume");
+    expect(await screen.findByRole("heading", { name: "The sign-in link is incomplete" })).toBeInTheDocument();
+    unmount();
+    renderApp("/sso/consume");
+    expect(await screen.findByRole("heading", { name: "The sign-in link is incomplete" })).toBeInTheDocument();
+  });
+
   it("shows the SSO-first login after an unauthenticated session check", async () => {
-    renderApp("/overview", mockApi({ authenticated: false }));
+    renderApp("/facebook", mockApi({ authenticated: false }));
     expect(await screen.findByRole("heading", { name: "Social Media" })).toBeInTheDocument();
     expect(screen.getByText(/No local password/)).toBeInTheDocument();
   });

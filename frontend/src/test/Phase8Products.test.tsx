@@ -20,6 +20,8 @@ const metric = (value: number | null, status: "available" | "partial" | "unavail
   semantic_type: "snapshot",
   unit: "count",
   data_status: status,
+  methodology: "provider_reported",
+  availability_reason: status === "unavailable" ? "fixture_unavailable" : null,
 });
 
 const tiktokMetric = (metricId: MetricId, value: number, unit: "count" | "ratio" = "count"): DashboardMetric => ({
@@ -30,6 +32,8 @@ const tiktokMetric = (metricId: MetricId, value: number, unit: "count" | "ratio"
   semantic_type: unit === "ratio" ? "ratio" : metricId === "followers" ? "snapshot" : "cumulative",
   unit,
   data_status: "available",
+  methodology: "provider_reported",
+  availability_reason: null,
 });
 
 const baseDashboard = {
@@ -58,7 +62,15 @@ const baseDashboard = {
     unanswered_comments: 0,
     comment_likes: 0,
     data_status: "unavailable" as const,
+    top_commenters: [],
+    top_liked_comments: [],
   },
+  top_hashtags: [],
+  content_summary: { total: 0, by_type: [], reach_by_type: [], views_by_type: [], data_status: "unavailable" as const },
+  source_breakdown: null,
+  metric_methodology: { follower_flow: "unavailable", engagement_rate: "unavailable", reach: "unavailable" },
+  audience_capabilities: { source: null, geo: "unavailable" as const, age_gender: "unavailable" as const, activity: "unavailable" as const },
+  stories: null,
 };
 
 const account: ReportingAccount = {
@@ -83,12 +95,16 @@ describe("Phase 8 product surfaces", () => {
     expect(screen.getByText("Comparison unavailable")).toBeInTheDocument();
   });
 
-  it("keeps Stories inside Instagram and gates TikTok Audience by capability", () => {
+  it("keeps the current Social Media tab structure for Instagram and TikTok", () => {
     expect(platformTabs("instagram", true).map((tab) => tab.label)).toEqual([
       "Cover", "Page", "Content", "Stories", "Audience",
     ]);
-    expect(platformTabs("tiktok", false).map((tab) => tab.label)).toEqual(["Overview", "Videos"]);
-    expect(platformTabs("tiktok", true).map((tab) => tab.label)).toEqual(["Overview", "Videos", "Audience"]);
+    expect(platformTabs("tiktok", false).map((tab) => tab.label)).toEqual([
+      "Cover", "Account", "Content", "Audience",
+    ]);
+    expect(platformTabs("tiktok", true).map((tab) => tab.label)).toEqual([
+      "Cover", "Account", "Content", "Audience",
+    ]);
   });
 
   it("keeps the active Accumulate Social overview information architecture", () => {
@@ -96,7 +112,7 @@ describe("Phase 8 product surfaces", () => {
       ...baseDashboard,
       meta: { ...baseDashboard.meta, data_status: "available" as const, freshness: "fresh" as const },
       metrics: [metric(1200, "available")],
-      series: [{ metric_id: "followers" as const, semantic_type: "snapshot" as const, points: [{ observed_on: "2026-07-14", value: 1200 }] }],
+      series: [{ metric_id: "followers" as const, semantic_type: "snapshot" as const, points: [{ observed_on: "2026-07-14", value: 1200 }], methodology: "provider_reported" }],
     };
     const data = {
       meta: { ...baseDashboard.meta, platform: null, data_status: "available" as const, freshness: "fresh" as const },
@@ -137,6 +153,7 @@ describe("Phase 8 product surfaces", () => {
         metric_id: "followers" as const,
         semantic_type: "snapshot" as const,
         points: [{ observed_on: "2026-07-14", value: 1200 }],
+        methodology: "provider_reported",
       }],
       content: [{
         account_id: 1,
@@ -150,6 +167,17 @@ describe("Phase 8 product surfaces", () => {
         comments_count: 4,
         shares_count: 2,
         interactions: 24,
+        views: null,
+        reach: null,
+        cover_url: null,
+        thumbnail_url: null,
+        cover_candidates: [],
+        thumbnail_candidates: [],
+        media_url_candidates: [],
+        full_video_watched_rate: null,
+        total_time_watched: null,
+        average_time_watched: null,
+        data_status: "partial" as const,
       }],
     } as unknown as PlatformDashboard;
 
@@ -161,11 +189,15 @@ describe("Phase 8 product surfaces", () => {
     expect(screen.getByRole("heading", { name: "Performance Trends" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "All Performing Content" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Top Countries" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Page Like Types (Organic vs Paid)" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Age & Gender" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("heading", { name: "Followers Trend" })).toHaveLength(2);
-    expect(screen.getAllByText("A quiet morning by the pool.")).toHaveLength(4);
+    expect(screen.getAllByText("A quiet morning by the pool.")).toHaveLength(1);
+    expect(screen.queryByRole("heading", { name: "Content Winners by Objective" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Unanswered Comments Queue" })).not.toBeInTheDocument();
   });
 
-  it("keeps the Accumulate Instagram Cover as the combined Page, Content, Stories and Audience view", () => {
+  it("keeps the Accumulate Instagram Cover as the combined Page, Content and Audience view", () => {
     const data = {
       ...baseDashboard,
       meta: {
@@ -179,6 +211,7 @@ describe("Phase 8 product surfaces", () => {
         metric_id: "followers" as const,
         semantic_type: "snapshot" as const,
         points: [{ observed_on: "2026-07-14", value: 8560 }],
+        methodology: "provider_reported",
       }],
       content: [{
         account_id: 21,
@@ -192,6 +225,17 @@ describe("Phase 8 product surfaces", () => {
         comments_count: 6,
         shares_count: 11,
         interactions: 109,
+        views: null,
+        reach: null,
+        cover_url: null,
+        thumbnail_url: null,
+        cover_candidates: [],
+        thumbnail_candidates: [],
+        media_url_candidates: [],
+        full_video_watched_rate: null,
+        total_time_watched: null,
+        average_time_watched: null,
+        data_status: "partial" as const,
       }],
     } as unknown as PlatformDashboard;
 
@@ -200,11 +244,12 @@ describe("Phase 8 product surfaces", () => {
     expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Content" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Audience" })).toBeInTheDocument();
-    expect(screen.getAllByRole("heading", { name: "Stories" })).toHaveLength(2);
-    expect(screen.getByRole("heading", { name: "Story Performance Trends" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Stories" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Story Performance Trends" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Age & Gender" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Audience by Country" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Content Type" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Content Type" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Content Winners by Objective" })).not.toBeInTheDocument();
   });
 
   it("uses the shared pulse structure with TikTok-specific metrics and honest video rows", () => {
@@ -221,9 +266,9 @@ describe("Phase 8 product surfaces", () => {
         tiktokMetric("video_engagement_rate", 0.089, "ratio"),
       ],
       series: [
-        { metric_id: "followers", semantic_type: "snapshot", points: [{ observed_on: "2026-06-15", value: 3400 }, { observed_on: "2026-07-14", value: 3890 }] },
-        { metric_id: "video_views_total", semantic_type: "cumulative", points: [{ observed_on: "2026-06-15", value: 98000 }, { observed_on: "2026-07-14", value: 126000 }] },
-        { metric_id: "video_engagements_total", semantic_type: "cumulative", points: [{ observed_on: "2026-06-15", value: 8600 }, { observed_on: "2026-07-14", value: 11200 }] },
+        { metric_id: "followers", semantic_type: "snapshot", points: [{ observed_on: "2026-06-15", value: 3400 }, { observed_on: "2026-07-14", value: 3890 }], methodology: "provider_reported" },
+        { metric_id: "video_views_total", semantic_type: "cumulative", points: [{ observed_on: "2026-06-15", value: 98000 }, { observed_on: "2026-07-14", value: 126000 }], methodology: "provider_reported" },
+        { metric_id: "video_engagements_total", semantic_type: "cumulative", points: [{ observed_on: "2026-06-15", value: 8600 }, { observed_on: "2026-07-14", value: 11200 }], methodology: "derived:sum_components:v1:same_sample" },
       ],
       breakdowns: [{ metric_id: "followers", dimension: "country", items: [{ key: "tr", value: 2100, percentage: 54 }] }],
       content: [{
@@ -238,25 +283,44 @@ describe("Phase 8 product surfaces", () => {
         comments_count: 143,
         shares_count: 305,
         interactions: 2688,
+        views: null,
+        reach: null,
+        cover_url: null,
+        thumbnail_url: null,
+        cover_candidates: [],
+        thumbnail_candidates: [],
+        media_url_candidates: [],
+        full_video_watched_rate: null,
+        total_time_watched: null,
+        average_time_watched: null,
+        data_status: "partial",
       }],
     };
 
-    const { rerender } = render(<TikTokPulseDashboard data={data} tab="overview" />);
-    expect(screen.getByText("Engagement Rate")).toBeInTheDocument();
-    expect(screen.getByText("8.9%")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Video Performance Trends" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Video Engagement Mix" })).toBeInTheDocument();
+    const { rerender } = render(<TikTokPulseDashboard data={data} tab="cover" />);
+    expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Content" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Audience" })).toBeInTheDocument();
+    expect(screen.getAllByText("Engagement Rate").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("8.9%").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Follower Growth")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Performance Trends" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Video View Type" })).toBeInTheDocument();
 
-    rerender(<TikTokPulseDashboard data={data} tab="videos" />);
-    expect(screen.getByRole("heading", { name: "All Videos" })).toBeInTheDocument();
-    expect(screen.getAllByText("A day at the resort.").length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText(/Video-level view counts are not exposed/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "View" })).toHaveAttribute("href", "https://example.test/video-1");
+    rerender(<TikTokPulseDashboard data={data} tab="content" />);
+    expect(screen.getByRole("heading", { name: "All Performing Content" })).toBeInTheDocument();
+    expect(screen.getAllByText("A day at the resort.").length).toBe(1);
+    expect(screen.queryByRole("heading", { name: "Content Winners by Objective" })).not.toBeInTheDocument();
 
     rerender(<TikTokPulseDashboard data={data} tab="audience" />);
+    expect(screen.getByRole("heading", { name: "Age & Gender" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Audience by Country" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Best Time to Engage" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Top Countries" })).toBeInTheDocument();
-    expect(screen.getByText(/does not return hourly TikTok audience activity/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Age Groups" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Most Active Commenters" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Most Liked Comments" })).toBeInTheDocument();
+    expect(screen.getByText("No heatmap data in selected range.")).toBeInTheDocument();
   });
 
   it("filters the table and leaves manual sync disabled when backend mutation is unavailable", async () => {

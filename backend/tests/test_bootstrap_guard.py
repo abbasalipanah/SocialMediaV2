@@ -6,7 +6,13 @@ import json
 import pytest
 from sqlalchemy import create_engine
 
-from app.core import ConfigurationError, RuntimeMode, WritePolicy, load_settings
+from app.core import (
+    RUNTIME_MODE_SEQUENCE,
+    ConfigurationError,
+    RuntimeMode,
+    WritePolicy,
+    load_settings,
+)
 from app.infrastructure.providers.meta.runtime import create_meta_activation_runtime
 from app.infrastructure.providers.tiktok.runtime import create_tiktok_activation_runtime
 from tests.test_phase6_dashboard_api import MemoryAuthority
@@ -22,6 +28,8 @@ CONFIG_KEYS = (
     "SOCIAL_DB_NAME",
     "SOCIAL_DB_USER",
     "SOCIAL_DB_REQUIRE_TLS",
+    "SOCIAL_SSO_HS256_SECRET",
+    "SOCIAL_SESSION_COOKIE_SECURE",
     "SOCIAL_TIKTOK_BUSINESS_APP_SECRET",
     "SOCIAL_TIKTOK_SECRET_ROTATED_AT",
     "SOCIAL_TIKTOK_ACCOUNT_ENABLED",
@@ -62,6 +70,78 @@ def test_default_bootstrap_is_fail_closed() -> None:
     assert policy.allows("sync") is False
     with pytest.raises(PermissionError):
         policy.assert_allows_mutation("sync")
+
+
+def test_runtime_contract_has_only_the_standalone_state_sequence() -> None:
+    assert tuple(mode.value for mode in RUNTIME_MODE_SEQUENCE) == (
+        "development",
+        "dormant",
+        "staging",
+        "standalone_ready",
+        "active",
+    )
+    assert tuple(RuntimeMode) == RUNTIME_MODE_SEQUENCE
+
+
+@pytest.mark.parametrize(
+    "legacy_mode",
+    (
+        "cutover_read_only",
+        "cutover_credential_migration",
+        "cutover_canary",
+        "cutover_control_plane_drain",
+        "cutover_activation",
+    ),
+)
+def test_legacy_runtime_modes_are_rejected(
+    monkeypatch: pytest.MonkeyPatch, legacy_mode: str
+) -> None:
+    monkeypatch.setenv("SOCIAL_RUNTIME_MODE", legacy_mode)
+    with pytest.raises(ConfigurationError, match="not recognized"):
+        load_settings()
+
+
+def test_production_standalone_ready_is_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("SOCIAL_RUNTIME_MODE", "standalone_ready")
+    monkeypatch.setenv("SOCIAL_WRITES_ENABLED", "false")
+    monkeypatch.setenv(
+        "SOCIAL_DB_URL",
+        "postgresql+psycopg://v2:secret@127.0.0.1/social_media_v2",
+    )
+    settings = load_settings()
+    assert settings.runtime_mode is RuntimeMode.STANDALONE_READY
+    assert WritePolicy.from_settings(settings).allows("sso_consume") is False
+    assert settings.meta.account_enabled is False
+    assert settings.tiktok.account_enabled is False
+    assert settings.worker_schedule_enabled is False
+
+    monkeypatch.setenv("SOCIAL_WRITES_ENABLED", "true")
+    with pytest.raises(ConfigurationError, match="standalone_ready runtime must remain"):
+        load_settings()
+
+
+def test_v2_owned_staging_is_the_only_writable_staging_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("APP_ENV", "staging")
+    monkeypatch.setenv("SOCIAL_RUNTIME_MODE", "staging")
+    monkeypatch.setenv("SOCIAL_WRITES_ENABLED", "true")
+    monkeypatch.setenv(
+        "SOCIAL_DB_URL",
+        "postgresql+psycopg://v2:secret@127.0.0.1/social_media_v2_staging",
+    )
+    monkeypatch.setenv("SOCIAL_SSO_HS256_SECRET", "s" * 32)
+    monkeypatch.setenv("SOCIAL_SESSION_COOKIE_SECURE", "true")
+    settings = load_settings()
+    assert settings.runtime_mode is RuntimeMode.STAGING
+    assert WritePolicy.from_settings(settings).allows("sso_consume") is True
+
+    monkeypatch.setenv("SOCIAL_RUNTIME_MODE", "active")
+    with pytest.raises(ConfigurationError, match="not valid for APP_ENV=staging"):
+        load_settings()
 
 
 def test_active_production_accepts_only_a_dedicated_secure_v2_database(

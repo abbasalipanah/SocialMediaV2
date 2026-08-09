@@ -1,5 +1,8 @@
 # Rollback Checklist — Unexecuted Draft
 
+> **ARCHIVED / SUPERSEDED:** Shared-writer/cutover varsayımları Revizyon 6'da yasaktır. Güncel
+> rollback yalnız V2 servisleri, V2 DB/media ve Accumulate ekibinin kendi SSO linkini kapsar.
+
 Rollback preserves the sole-writer invariant; it does not simply reverse mode names.
 
 - [ ] Hold new SSO launches and keep V1 mutation ingress fenced.

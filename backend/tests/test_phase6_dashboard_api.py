@@ -459,8 +459,83 @@ def test_tiktok_derived_counters_are_recomputed_without_fake_values(
     assert cards[MetricId.VIDEO_VIEWS_TOTAL].value == 1100
     assert cards[MetricId.VIDEO_VIEWS_CHANGE].value == 100
     assert cards[MetricId.VIDEO_ENGAGEMENTS_TOTAL].value == 60
+    assert cards[MetricId.VIDEO_ENGAGEMENTS_TOTAL].methodology == (
+        "derived:sum_components:v1:same_sample"
+    )
     assert cards[MetricId.VIDEO_ENGAGEMENT_RATE].value == pytest.approx(60 / 1100)
     assert cards[MetricId.VIDEO_ENGAGEMENT_RATE].data_status is DataStatus.AVAILABLE
+    series = {item.metric_id: item for item in dashboard.series}
+    assert series[MetricId.VIDEO_VIEWS_CHANGE].points[-1].value == 100
+    assert series[MetricId.VIDEO_ENGAGEMENTS_TOTAL].points[-1].value == 60
+    assert series[MetricId.VIDEO_ENGAGEMENT_RATE].points[-1].value == pytest.approx(60 / 1100)
+    assert series[MetricId.VIDEO_ENGAGEMENTS_TOTAL].methodology == (
+        "derived:sum_components:v1:same_sample"
+    )
+
+
+def test_instagram_structured_stories_preserve_content_level_metrics(
+    phase6_fixture,
+) -> None:
+    _, reporting, _ = phase6_fixture
+    current = ReportingContent(
+        21,
+        "101",
+        PlatformId.INSTAGRAM,
+        "ig-story-current",
+        "story",
+        "https://example.test/ig-story-current",
+        "Current story",
+        "/api/media/instagram/ig-story-current",
+        datetime(2026, 7, 2, 11, tzinfo=UTC),
+        3,
+        2,
+        4,
+        views_count=120,
+        reach_count=90,
+        cover_url="/api/media/instagram/ig-story-current",
+        interactions_count=25,
+        replies_count=2,
+        profile_visits=7,
+        follows_count=3,
+        taps_forward=11,
+        taps_back=2,
+        swipe_forward=4,
+        exits=3,
+        navigation_count=20,
+        completion_rate=76.5,
+    )
+    previous = replace(
+        current,
+        external_content_id="ig-story-previous",
+        permalink="https://example.test/ig-story-previous",
+        published_at=datetime(2026, 6, 30, 11, tzinfo=UTC),
+        views_count=100,
+        reach_count=80,
+        completion_rate=70.0,
+    )
+    reporting.content += (current, previous)
+    dashboard = build_platform_dashboard(
+        store=reporting,
+        catalog=bootstrap_metric_catalog(),
+        platform=PlatformId.INSTAGRAM,
+        query=DashboardQuery(
+            requested_brand_id="101",
+            resolved_brand_ids=("101",),
+            rollup=False,
+            date_range=ReportingRange(date(2026, 7, 1), date(2026, 7, 2), "custom"),
+        ),
+        now=NOW,
+    )
+
+    assert dashboard.stories is not None
+    assert dashboard.stories.data_status is DataStatus.AVAILABLE
+    assert dashboard.stories.summary.views == 120
+    assert dashboard.stories.previous_summary.views == 100
+    assert dashboard.stories.trend.views == (0.0, 120.0)
+    assert dashboard.stories.navigation.taps_forward == 11
+    assert dashboard.stories.actions.profile_visits == 7
+    assert dashboard.stories.items[0].views == 120
+    assert dashboard.stories.items[0].data_status is DataStatus.AVAILABLE
 
 
 def test_phase6_openapi_publishes_typed_response_contracts() -> None:
@@ -494,6 +569,23 @@ def test_phase6_openapi_publishes_typed_response_contracts() -> None:
     assert {"semantic_type", "data_status"}.issubset(
         components["DashboardMetric"]["required"]
     )
+    assert {"methodology", "availability_reason"}.issubset(
+        components["DashboardMetric"]["required"]
+    )
+    assert {
+        "top_hashtags",
+        "content_summary",
+        "source_breakdown",
+        "metric_methodology",
+        "audience_capabilities",
+        "stories",
+    }.issubset(components["PlatformDashboard"]["required"])
+    assert {
+        "views",
+        "reach",
+        "cover_candidates",
+        "data_status",
+    }.issubset(components["DashboardContent"]["required"])
     assert {"requested_brand_id", "resolved_brand_ids", "resolved_account_ids"}.issubset(
         components["DashboardMeta"]["required"]
     )
@@ -521,6 +613,12 @@ async def test_phase6_routes_are_scoped_read_only_and_honest(phase6_fixture) -> 
         assert facebook.status_code == 200
         body = facebook.json()
         assert body["meta"]["resolved_brand_ids"] == ["101", "102"]
+        assert body["audience_capabilities"]["age_gender"] == "provider_unavailable"
+        assert body["audience_capabilities"]["activity"] == "provider_unavailable"
+        assert body["stories"] is None
+        assert body["content"][0]["views"] is None
+        assert body["content"][0]["data_status"] == "partial"
+        assert body["metrics"][0]["methodology"]
         assert {row["metric_id"]: row["value"] for row in body["metrics"]}[
             MetricId.FOLLOWERS.value
         ] == 330
@@ -648,7 +746,7 @@ async def test_tiktok_activation_handoff_requires_fresh_targeted_sso_and_is_read
             "writes_enabled": False,
             "connection_state": "disconnected",
             "oauth_start_available": False,
-            "reason": "oauth_start_unavailable_before_cutover",
+            "reason": "oauth_start_disabled_by_runtime_policy",
             "checked_at": "ignored",
         }
         assert ready.headers["cache-control"] == "no-store"

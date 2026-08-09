@@ -18,6 +18,8 @@ from app.infrastructure.providers.meta.fields import (
 )
 from app.infrastructure.providers.meta.transport import MetaTransport
 
+from .content_insights import fetch_content_insights, map_content_insights
+
 MEDIA_FIELDS = ",".join(
     (
         "id",
@@ -35,18 +37,18 @@ MEDIA_FIELDS = ",".join(
 STORY_FIELDS = ",".join(
     ("id", "media_type", "media_url", "thumbnail_url", "permalink", "timestamp")
 )
-
-
 class InstagramContentReader:
     def __init__(
         self,
         transport: MetaTransport,
         *,
         stories: bool = False,
+        insights: bool = False,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._transport = transport
         self._stories = stories
+        self._insights = insights
         self._clock = clock
 
     def list_content(
@@ -64,10 +66,30 @@ class InstagramContentReader:
             {"fields": STORY_FIELDS if self._stories else MEDIA_FIELDS, "limit": 100},
             cursor=cursor,
         )
+        items = tuple(_record(row, observed_at, story=self._stories) for row in page.items)
+        if self._insights:
+            items = tuple(self._with_insights(item, story=self._stories) for item in items)
         return ContentPage(
-            items=tuple(_record(row, observed_at, story=self._stories) for row in page.items),
+            items=items,
             next_cursor=page.next_cursor,
             observed_at=observed_at,
+        )
+
+    def _with_insights(self, item: ProviderRecord, *, story: bool) -> ProviderRecord:
+        metrics = fetch_content_insights(self._transport, item.external_id, story=story)
+        mapped = map_content_insights(metrics, story=story)
+        fields = {**item.fields, **mapped}
+        for count_field, metric_field in (
+            ("likes_count", "likes"),
+            ("comments_count", "comments"),
+            ("shares_count", "shares"),
+        ):
+            if metric_field in metrics:
+                fields[count_field] = int(metrics[metric_field])
+        return ProviderRecord(
+            external_id=item.external_id,
+            observed_at=item.observed_at,
+            fields=fields,
         )
 
 
@@ -75,6 +97,14 @@ def _record(
     payload: Mapping[str, Any], observed_at: datetime, *, story: bool
 ) -> ProviderRecord:
     media_url = optional_text(payload, "media_url") or optional_text(payload, "thumbnail_url")
+    thumbnail_url = optional_text(payload, "thumbnail_url")
+    direct_media_url = optional_text(payload, "media_url")
+    media_type = (optional_text(payload, "media_type") or "post").lower()
+    cover_candidates = _unique_texts(
+        thumbnail_url if media_type == "video" else direct_media_url,
+        direct_media_url,
+        thumbnail_url,
+    )
     return ProviderRecord(
         external_id=required_text(payload, "id"),
         observed_at=observed_at,
@@ -82,17 +112,26 @@ def _record(
             "content_type": (
                 "story"
                 if story
-                else (optional_text(payload, "media_type") or "post").lower()
+                else media_type
             ),
             "permalink": optional_text(payload, "permalink") or "",
             "message": optional_text(payload, "caption") or "",
             "media_url": media_url or "",
+            "cover_url": cover_candidates[0] if cover_candidates else None,
+            "thumbnail_url": thumbnail_url,
+            "cover_candidates": cover_candidates,
+            "thumbnail_candidates": _unique_texts(thumbnail_url),
+            "media_url_candidates": _unique_texts(direct_media_url, thumbnail_url),
             "published_at": timestamp(payload, "timestamp"),
             "likes_count": nonnegative_int(payload, "like_count") or 0,
             "comments_count": nonnegative_int(payload, "comments_count") or 0,
             "shares_count": 0,
         },
     )
+
+
+def _unique_texts(*values: str | None) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(value for value in values if value))
 
 
 __all__ = ["InstagramContentReader"]

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Date, DateTime, Float, Integer, String
+from sqlalchemy import JSON, Date, DateTime, Float, Integer, String
 
 from app.infrastructure.persistence.model_registry import (
     registered_metadata,
@@ -51,6 +51,11 @@ def test_content_comment_and_media_registry_types_are_explicit() -> None:
     assert isinstance(content.c.created_time.type, DateTime)
     assert content.c.created_time.type.timezone is True
     assert isinstance(content.c.likes_count.type, Integer)
+    assert content.c.media_url.type.length == 2048
+    assert isinstance(content.c.views_count.type, Float)
+    assert content.c.views_count.nullable is True
+    assert isinstance(content.c.cover_candidates.type, JSON)
+    assert content.c.cover_candidates.nullable is False
     assert comments.c.attachment_url.type.length == 1024
     assert media.c.source_url.type.length == 2048
     assert media.c.last_verified_at.nullable is True

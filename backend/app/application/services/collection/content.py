@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from datetime import datetime
 from typing import Any
@@ -27,6 +28,7 @@ def collect_content(
     checkpoint_store: CheckpointStore,
     record_sink: Callable[[ProviderRecord], int] | None = None,
     after_record: Callable[[int], None] | None = None,
+    checkpoint_account_id: str | None = None,
     max_pages: int = 100,
 ) -> CollectionOutcome:
     if max_pages < 1 or max_pages > 1000:
@@ -34,7 +36,7 @@ def collect_content(
     key = CheckpointKey(
         platform=target.account.platform,
         capability=CapabilityId.CONTENT,
-        account_id=target.account.account_id,
+        account_id=checkpoint_account_id or target.account.account_id,
     )
     checkpoint = checkpoint_store.get(key)
     cursor = checkpoint.cursor if checkpoint is not None else None
@@ -96,6 +98,26 @@ def _content_record(target: CollectionTarget, item: ProviderRecord) -> ContentRe
         likes_count=_count(fields, "likes_count"),
         comments_count=_count(fields, "comments_count"),
         shares_count=_count(fields, "shares_count"),
+        views_count=_optional_number(fields, "views_count"),
+        reach_count=_optional_number(fields, "reach_count"),
+        cover_url=_optional_text(fields, "cover_url"),
+        thumbnail_url=_optional_text(fields, "thumbnail_url"),
+        cover_candidates=_candidates(fields, "cover_candidates"),
+        thumbnail_candidates=_candidates(fields, "thumbnail_candidates"),
+        media_url_candidates=_candidates(fields, "media_url_candidates"),
+        full_video_watched_rate=_optional_number(fields, "full_video_watched_rate"),
+        total_time_watched=_optional_number(fields, "total_time_watched"),
+        average_time_watched=_optional_number(fields, "average_time_watched"),
+        interactions_count=_optional_number(fields, "interactions_count"),
+        replies_count=_optional_number(fields, "replies_count"),
+        profile_visits=_optional_number(fields, "profile_visits"),
+        follows_count=_optional_number(fields, "follows_count"),
+        taps_forward=_optional_number(fields, "taps_forward"),
+        taps_back=_optional_number(fields, "taps_back"),
+        swipe_forward=_optional_number(fields, "swipe_forward"),
+        exits=_optional_number(fields, "exits"),
+        navigation_count=_optional_number(fields, "navigation_count"),
+        completion_rate=_optional_number(fields, "completion_rate"),
     )
 
 
@@ -111,6 +133,40 @@ def _count(fields: dict[str, Any], key: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError("provider_content_field_invalid")
     return value
+
+
+def _optional_text(fields: dict[str, Any], key: str) -> str | None:
+    value = fields.get(key)
+    if value is not None and not isinstance(value, str):
+        raise ValueError("provider_content_field_invalid")
+    return value or None
+
+
+def _optional_number(fields: dict[str, Any], key: str) -> float | None:
+    value = fields.get(key)
+    if value is None:
+        return None
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int | float)
+        or not math.isfinite(float(value))
+        or float(value) < 0
+    ):
+        raise ValueError("provider_content_field_invalid")
+    return float(value)
+
+
+def _candidates(fields: dict[str, Any], key: str) -> tuple[str, ...]:
+    value = fields.get(key, ())
+    if not isinstance(value, tuple | list):
+        raise ValueError("provider_content_field_invalid")
+    normalized: list[str] = []
+    for candidate in value:
+        if not isinstance(candidate, str) or not candidate.strip():
+            raise ValueError("provider_content_field_invalid")
+        if candidate not in normalized:
+            normalized.append(candidate)
+    return tuple(normalized)
 
 
 def _datetime(fields: dict[str, Any], key: str) -> datetime | None:

@@ -20,8 +20,13 @@ from app.application.ports.platforms import (
     ProviderCredential,
     ProviderRecord,
 )
+from app.application.ports.platforms.comments import CommentsReader
+from app.application.ports.platforms.content import ContentReader
+from app.application.ports.platforms.profile import DailyMetricsReader, ProfileReader
 from app.application.services.collection import (
+    CollectionStatus,
     CollectionTarget,
+    collect_audience,
     collect_comments,
     collect_content,
     collect_daily_metrics,
@@ -44,6 +49,7 @@ from app.infrastructure.persistence.social_v2 import (
 from app.infrastructure.persistence.social_v2.collection_targets import (
     CollectionTargetRow,
 )
+from app.infrastructure.providers.meta.audience import MetaAudienceReader
 from app.infrastructure.providers.meta.facebook.comments import FacebookCommentsReader
 from app.infrastructure.providers.meta.facebook.content import FacebookContentReader
 from app.infrastructure.providers.meta.facebook.daily_metrics import (
@@ -60,6 +66,8 @@ from app.infrastructure.providers.meta.rate_guard import MetaRateGuard
 from app.infrastructure.providers.meta.transport import MetaTransport
 from app.infrastructure.providers.tiktok.accounts import (
     TikTokAccountsWireMapper,
+    TikTokAudienceReader,
+    TikTokCommentsReader,
     TikTokContentReader,
     TikTokHttpTransport,
     TikTokProfileReader,
@@ -81,6 +89,12 @@ class WorkerAccountResult:
     comment_count: int = 0
     media_count: int = 0
     error_code: str | None = None
+
+
+@dataclass(frozen=True)
+class TikTokAccessContext:
+    access_token: str
+    scopes: frozenset[str]
 
 
 class StandaloneCollector:
@@ -163,15 +177,17 @@ class StandaloneCollector:
         pending = self.targets.pending_tiktok(connection_id)
         if pending is None:
             raise ValueError("pending_tiktok_connection_not_found")
-        token = self._tiktok_access_token(
+        context = self._tiktok_access_context(
             pending.credential_reference, pending.external_id
         )
         provider_account = ProviderAccount(
             platform=PlatformId.TIKTOK,
             account_id=pending.external_id,
-            credential=ProviderCredential(access_token=token),
+            credential=ProviderCredential(access_token=context.access_token),
         )
-        profile_reader, _ = self._tiktok_readers(provider_account)
+        profile_reader, _, _, _ = self._tiktok_readers(
+            provider_account, scopes=context.scopes
+        )
         snapshot = profile_reader.fetch_profile(provider_account)
         asset_id = self.targets.create_tiktok_asset(pending, snapshot.display_name)
         row = CollectionTargetRow(
@@ -185,7 +201,11 @@ class StandaloneCollector:
             credential_reference=pending.credential_reference,
             backfill_status="pending",
         )
-        result = self._collect_tiktok(row, provider_account=provider_account)
+        result = self._collect_tiktok(
+            row,
+            provider_account=provider_account,
+            granted_scopes=context.scopes,
+        )
         completed_at = datetime.now(UTC)
         self.targets.complete_tiktok_canary(
             pending,
@@ -220,6 +240,11 @@ class StandaloneCollector:
             brand_id=row.brand_id,
         )
         try:
+            partial_errors: set[str] = set()
+            profile_reader: ProfileReader
+            daily_reader: DailyMetricsReader
+            content_reader: ContentReader
+            comments_reader: CommentsReader
             if row.platform is PlatformId.FACEBOOK:
                 profile_reader = FacebookProfileReader(transport)
                 daily_reader = FacebookDailyMetricsReader(transport)
@@ -228,8 +253,9 @@ class StandaloneCollector:
             else:
                 profile_reader = InstagramProfileReader(transport)
                 daily_reader = InstagramDailyMetricsReader(transport)
-                content_reader = InstagramContentReader(transport)
+                content_reader = InstagramContentReader(transport, insights=True)
                 comments_reader = InstagramCommentsReader(transport)
+            audience_reader = MetaAudienceReader(transport, platform=row.platform)
             profile = collect_profile(
                 target=target,
                 reader=profile_reader,
@@ -248,19 +274,39 @@ class StandaloneCollector:
                 since=since,
                 until=today,
             )
+            try:
+                audience = collect_audience(
+                    target=target,
+                    reader=audience_reader,
+                    metric_store=self.metrics,
+                )
+                if audience.status is not CollectionStatus.SUCCESS:
+                    partial_errors.add("audience_partial_or_unavailable")
+            except Exception:
+                audience = None
+                partial_errors.add("audience_unavailable")
             comment_count = 0
 
             def persist_related(item: ProviderRecord) -> int:
                 nonlocal comment_count
-                comments = collect_comments(
-                    target=target,
-                    content_id=item.external_id,
-                    reader=comments_reader,
-                    comment_store=self.comments,
-                    max_pages=20,
-                )
-                comment_count += comments.comment_count
-                return self._persist_media(target, item)
+                try:
+                    comments = collect_comments(
+                        target=target,
+                        content_id=item.external_id,
+                        reader=comments_reader,
+                        comment_store=self.comments,
+                        max_pages=20,
+                    )
+                    comment_count += comments.comment_count
+                    if comments.status is not CollectionStatus.SUCCESS:
+                        partial_errors.add("comments_partial")
+                except Exception:
+                    partial_errors.add("comments_unavailable")
+                try:
+                    return self._persist_media(target, item)
+                except Exception:
+                    partial_errors.add("media_unavailable")
+                    return 0
 
             content = collect_content(
                 target=target,
@@ -270,15 +316,52 @@ class StandaloneCollector:
                 record_sink=persist_related,
                 max_pages=100,
             )
+            story_content_count = 0
+            story_media_count = 0
+            if row.platform is PlatformId.INSTAGRAM:
+                story_reader = InstagramContentReader(
+                    transport,
+                    stories=True,
+                    insights=True,
+                )
+
+                def persist_story_media(item: ProviderRecord) -> int:
+                    try:
+                        return self._persist_media(target, item)
+                    except Exception:
+                        partial_errors.add("story_media_unavailable")
+                        return 0
+
+                try:
+                    stories = collect_content(
+                        target=target,
+                        reader=story_reader,
+                        content_store=self.content,
+                        checkpoint_store=self.checkpoints,
+                        record_sink=persist_story_media,
+                        checkpoint_account_id=f"{account.account_id}.stories",
+                        max_pages=20,
+                    )
+                    story_content_count = stories.content_count
+                    story_media_count = stories.media_count
+                    if stories.status is not CollectionStatus.SUCCESS:
+                        partial_errors.add("stories_partial")
+                except Exception:
+                    partial_errors.add("stories_unavailable")
             return WorkerAccountResult(
                 platform=row.platform.value,
                 brand_id=row.brand_id,
                 asset_id=row.asset_id,
-                status="success",
-                metric_count=profile.metric_count + daily.metric_count,
-                content_count=content.content_count,
+                status="partial" if partial_errors else "success",
+                metric_count=(
+                    profile.metric_count
+                    + daily.metric_count
+                    + (audience.metric_count if audience is not None else 0)
+                ),
+                content_count=content.content_count + story_content_count,
                 comment_count=comment_count,
-                media_count=content.media_count,
+                media_count=content.media_count + story_media_count,
+                error_code=_partial_error_code(partial_errors),
             )
         finally:
             transport.close()
@@ -288,18 +371,25 @@ class StandaloneCollector:
         row: CollectionTargetRow,
         *,
         provider_account: ProviderAccount | None = None,
+        granted_scopes: frozenset[str] | None = None,
     ) -> WorkerAccountResult:
         if provider_account is None:
+            context = self._tiktok_access_context(
+                row.credential_reference, row.external_id
+            )
             provider_account = ProviderAccount(
                 platform=PlatformId.TIKTOK,
                 account_id=row.external_id,
                 credential=ProviderCredential(
-                    access_token=self._tiktok_access_token(
-                        row.credential_reference, row.external_id
-                    )
+                    access_token=context.access_token
                 ),
             )
-        profile_reader, content_reader = self._tiktok_readers(provider_account)
+            granted_scopes = context.scopes
+        if granted_scopes is None:
+            raise PermissionError("provider_scope_context_unavailable")
+        profile_reader, content_reader, audience_reader, comments_reader = (
+            self._tiktok_readers(provider_account, scopes=granted_scopes)
+        )
         target = CollectionTarget(
             account=provider_account,
             local_account_id=row.asset_id,
@@ -310,15 +400,49 @@ class StandaloneCollector:
             reader=profile_reader,
             metric_store=self.metrics,
         )
+        partial_errors: set[str] = set()
+        try:
+            audience = collect_audience(
+                target=target,
+                reader=audience_reader,
+                metric_store=self.metrics,
+            )
+            if audience.status is not CollectionStatus.SUCCESS:
+                partial_errors.add("audience_partial_or_unavailable")
+        except Exception:
+            audience = None
+            partial_errors.add("audience_unavailable")
         totals: dict[MetricId, int] = {}
+        comment_count = 0
+        commented_videos = 0
 
         def persist_related(item: ProviderRecord) -> int:
+            nonlocal comment_count, commented_videos
             raw_metrics = item.fields.get("metric_values")
             if isinstance(raw_metrics, dict):
                 for metric_id, value in raw_metrics.items():
                     if isinstance(metric_id, MetricId) and isinstance(value, int):
                         totals[metric_id] = totals.get(metric_id, 0) + value
-            return self._persist_media(target, item)
+            if comments_reader is not None and commented_videos < 10:
+                commented_videos += 1
+                try:
+                    comments = collect_comments(
+                        target=target,
+                        content_id=item.external_id,
+                        reader=comments_reader,
+                        comment_store=self.comments,
+                        max_pages=5,
+                    )
+                    comment_count += comments.comment_count
+                    if comments.status is not CollectionStatus.SUCCESS:
+                        partial_errors.add("comments_partial")
+                except Exception:
+                    partial_errors.add("comments_unavailable")
+            try:
+                return self._persist_media(target, item)
+            except Exception:
+                partial_errors.add("media_unavailable")
+                return 0
 
         content = collect_content(
             target=target,
@@ -345,18 +469,35 @@ class StandaloneCollector:
             platform=row.platform.value,
             brand_id=row.brand_id,
             asset_id=row.asset_id,
-            status="success",
-            metric_count=profile.metric_count + len(totals),
+            status="partial" if partial_errors else "success",
+            metric_count=(
+                profile.metric_count
+                + len(totals)
+                + (audience.metric_count if audience is not None else 0)
+            ),
             content_count=content.content_count,
+            comment_count=comment_count,
             media_count=content.media_count,
+            error_code=_partial_error_code(partial_errors),
         )
 
-    def _tiktok_readers(self, account: ProviderAccount):
+    def _tiktok_readers(
+        self,
+        account: ProviderAccount,
+        *,
+        scopes: frozenset[str],
+    ):
         config = self.settings.tiktok
+        comment_enabled = "comment.list" in scopes
+        get_urls = [config.profile_url, config.video_list_url]
+        if comment_enabled:
+            get_urls.append(config.comment_list_url)
         transport = TikTokHttpTransport(
             post_urls=(config.refresh_url,),
-            get_urls=(config.profile_url, config.video_list_url),
+            get_urls=tuple(get_urls),
             timeout_seconds=self.settings.tiktok_activation.provider_timeout_seconds,
+            max_retries=3,
+            request_budget=500,
         )
         wire = TikTokAccountsWireMapper(config)
         headers = {"Access-Token": account.credential.access_token}
@@ -374,7 +515,34 @@ class StandaloneCollector:
                 params=wire.video_fields(business_id=business_id, cursor=cursor),
             )
         )
-        return profile, content
+        observed_on = date.today() - timedelta(days=1)
+        audience = TikTokAudienceReader(
+            lambda business_id, day: transport.get(
+                config.profile_url,
+                headers=headers,
+                params=wire.audience_fields(
+                    business_id=business_id,
+                    observed_on=day,
+                ),
+            ),
+            observed_on=observed_on,
+        )
+        comments = (
+            TikTokCommentsReader(
+                lambda business_id, video_id, cursor: transport.get(
+                    config.comment_list_url,
+                    headers=headers,
+                    params=wire.comment_fields(
+                        business_id=business_id,
+                        video_id=video_id,
+                        cursor=cursor,
+                    ),
+                )
+            )
+            if comment_enabled
+            else None
+        )
+        return profile, content, audience, comments
 
     def _access_token(self, platform: PlatformId, reference: str) -> str:
         token = self.credentials.get(
@@ -388,26 +556,32 @@ class StandaloneCollector:
             raise PermissionError("provider_access_token_unavailable")
         return token.value
 
-    def _tiktok_access_token(self, reference: str, business_id: str) -> str:
+    def _tiktok_access_context(
+        self, reference: str, business_id: str
+    ) -> TikTokAccessContext:
         access_reference = CredentialRef(
             platform=PlatformId.TIKTOK,
             connection_id=reference,
             token_kind=TokenKind.ACCESS,
         )
         current = self.credentials.get(access_reference)
+        grant = None
+        refresh: SecretToken | None = None
         if current is not None and (
             current.expires_at is None
             or current.expires_at > datetime.now(UTC) + timedelta(minutes=5)
         ):
-            return current.value
-        refresh_reference = CredentialRef(
-            platform=PlatformId.TIKTOK,
-            connection_id=reference,
-            token_kind=TokenKind.REFRESH,
-        )
-        refresh = self.credentials.get(refresh_reference)
-        if refresh is None:
-            raise PermissionError("provider_refresh_token_unavailable")
+            access_token = current.value
+        else:
+            refresh_reference = CredentialRef(
+                platform=PlatformId.TIKTOK,
+                connection_id=reference,
+                token_kind=TokenKind.REFRESH,
+            )
+            refresh = self.credentials.get(refresh_reference)
+            if refresh is None:
+                raise PermissionError("provider_refresh_token_unavailable")
+            access_token = ""
         config = self.settings.tiktok
         transport = TikTokHttpTransport(
             post_urls=(config.refresh_url,),
@@ -415,41 +589,50 @@ class StandaloneCollector:
             timeout_seconds=self.settings.tiktok_activation.provider_timeout_seconds,
         )
         wire = TikTokAccountsWireMapper(config)
-        grant = parse_token(
-            transport.post(
-                config.refresh_url,
-                data=wire.refresh_fields(refresh_token=refresh.value),
+        if not access_token:
+            if refresh is None:
+                raise PermissionError("provider_refresh_token_unavailable")
+            grant = parse_token(
+                transport.post(
+                    config.refresh_url,
+                    data=wire.refresh_fields(refresh_token=refresh.value),
+                )
             )
-        )
+            access_token = grant.access_token
         allowed = set(config.required_scopes) | set(config.optional_scopes)
-        if not set(config.required_scopes).issubset(grant.scopes) or not set(
-            grant.scopes
-        ).issubset(allowed):
-            raise PermissionError("provider_refresh_scope_rejected")
         info = parse_token_info(
             transport.get(
                 config.token_info_url,
-                headers=wire.token_info_headers(access_token=grant.access_token),
+                headers=wire.token_info_headers(access_token=access_token),
             )
         )
-        if info.business_id != business_id or set(info.scopes) != set(grant.scopes):
+        if (
+            info.business_id != business_id
+            or not set(config.required_scopes).issubset(info.scopes)
+            or not set(info.scopes).issubset(allowed)
+            or (grant is not None and set(info.scopes) != set(grant.scopes))
+        ):
             raise PermissionError("provider_refresh_identity_rejected")
-        now = datetime.now(UTC)
-        self.credentials.put(
-            access_reference,
-            SecretToken(
-                value=grant.access_token,
-                expires_at=now + timedelta(seconds=grant.expires_in),
-            ),
+        if grant is not None:
+            now = datetime.now(UTC)
+            self.credentials.put(
+                access_reference,
+                SecretToken(
+                    value=grant.access_token,
+                    expires_at=now + timedelta(seconds=grant.expires_in),
+                ),
+            )
+            self.credentials.put(
+                refresh_reference,
+                SecretToken(
+                    value=grant.refresh_token,
+                    expires_at=now + timedelta(seconds=grant.refresh_expires_in),
+                ),
+            )
+        return TikTokAccessContext(
+            access_token=access_token,
+            scopes=frozenset(info.scopes),
         )
-        self.credentials.put(
-            refresh_reference,
-            SecretToken(
-                value=grant.refresh_token,
-                expires_at=now + timedelta(seconds=grant.refresh_expires_in),
-            ),
-        )
-        return grant.access_token
 
     def _persist_media(self, target: CollectionTarget, item: ProviderRecord) -> int:
         if self.media_files is None or self.media_fetcher is None:
@@ -512,6 +695,12 @@ def _error_code(exc: Exception) -> str:
     return value[:64] or "collection_failed"
 
 
+def _partial_error_code(errors: set[str]) -> str | None:
+    if not errors:
+        return None
+    return ",".join(sorted(errors))[:256]
+
+
 def _lock(engine: Engine, name: str):
     connection = engine.connect()
     acquired = bool(
@@ -546,10 +735,10 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     settings = load_settings()
-    if not settings.db.url:
-        raise ConfigurationError("Worker requires SOCIAL_DB_URL")
     if args.command == "collect" and args.scheduled and not settings.worker_schedule_enabled:
         raise ConfigurationError("Scheduled collection is disabled")
+    if not settings.db.url:
+        raise ConfigurationError("Worker requires SOCIAL_DB_URL")
     engine = create_engine(settings.db.url, pool_pre_ping=True, pool_size=2, max_overflow=0)
     lock_name = (
         f"social_media_v2:tiktok_canary:{args.connection_id}"
@@ -563,6 +752,7 @@ def main(argv: list[str] | None = None) -> int:
     collector: StandaloneCollector | None = None
     try:
         collector = StandaloneCollector(settings, engine)
+        results: tuple[WorkerAccountResult, ...]
         if args.command == "verify-tiktok":
             results = (collector.verify_pending_tiktok(args.connection_id),)
         else:

@@ -6,7 +6,7 @@ import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from app.core.time import utc_now
 
@@ -188,7 +188,7 @@ def _header(headers: Mapping[str, str], name: str) -> str | None:
 
 def _number(value: object) -> float:
     try:
-        return max(0.0, float(value or 0.0))
+        return max(0.0, float(cast(Any, value or 0.0)))
     except (TypeError, ValueError):
         return 0.0
 

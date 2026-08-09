@@ -1,5 +1,8 @@
 # Faz 9 — Offline Release Rehearsal Report
 
+> **ARCHIVED / SUPERSEDED:** Bu rapor tarihsel kanıttır ve güncel R7 sertifikasyonu değildir.
+> Revizyon 6 R0-R8 kapıları ayrıca tamamlanmadan completion status'u üretmez.
+
 ## Scope and safety
 
 Faz 9 uses only local files, fake provider responses and ephemeral PostgreSQL 16 containers. No production database credential, production database connection, provider network call, traffic route, service state, timer, scheduler or source-project write is permitted.

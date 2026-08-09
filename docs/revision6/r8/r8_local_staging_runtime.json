@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "phase": "R8",
+  "contains_secrets": false,
+  "status": "local_staging_sso_verified",
+  "installed_at": "2026-08-07T15:26:19Z",
+  "target": "current_host_loopback_only",
+  "release": {
+    "root": "/opt/social-media-v2/releases/20260807T152619Z",
+    "backend_link": "/opt/social-media-v2/backend",
+    "frontend_link": "/opt/social-media-v2/frontend",
+    "frontend_index_sha256": "6e8bd2822efbe77997604a7e601bb4ad11a6734f33ad4f5bbf0a75cc40edddbb"
+  },
+  "ownership": {
+    "service_user": "social-media-v2",
+    "config_root": "/etc/social-media-v2",
+    "data_root": "/var/lib/social-media-v2",
+    "media_root": "/var/lib/social-media-v2/media"
+  },
+  "database": {
+    "engine": "PostgreSQL 15",
+    "database": "social_media_v2_staging",
+    "role": "social_media_v2_staging",
+    "credential_storage": "root-owned environment file; value omitted",
+    "migrations": ["0001_v2_initial.sql", "0002_content_story_parity.sql"]
+  },
+  "services": {
+    "api": {
+      "unit": "social-media-v2-api.service",
+      "listen": "127.0.0.1:8026",
+      "enabled": true,
+      "active": true
+    },
+    "web": {
+      "unit": "social-media-v2-web.service",
+      "listen": "127.0.0.1:3026",
+      "enabled": true,
+      "active": true,
+      "api_proxy": "same-origin to 127.0.0.1:8026"
+    },
+    "collection": {
+      "unit": "social-media-v2-collection.service",
+      "enabled": false,
+      "active": false
+    },
+    "timer": {
+      "unit": "social-media-v2-collection.timer",
+      "enabled": false,
+      "active": false
+    }
+  },
+  "runtime": {
+    "mode": "staging",
+    "writes_enabled": true,
+    "meta_account_enabled": false,
+    "meta_collection_enabled": false,
+    "tiktok_account_enabled": false,
+    "tiktok_collection_enabled": false,
+    "schedule_enabled": false
+  },
+  "evidence": {
+    "health": "pass",
+    "readiness": "pass",
+    "unauthenticated_browser_entry": "pass:/login",
+    "local_sso_browser_e2e": "pass:/sso/consume->/settings",
+    "local_sso_authority_and_brand_scope": "pass",
+    "authenticated_instagram_stories": "pass:api_200_tab_selected_no_browser_errors",
+    "session_cookie": "pass:secure_httponly_samesite_lax",
+    "sso_jti_replay_rejected": "pass:401",
+    "logout_and_revocation": "pass:204_then_auth_401",
+    "test_identity_cleanup": "pass:no_test_session_or_brand_retained",
+    "access_log_secret_scan": "pass:no_token_or_jwt",
+    "api_web_stop_start_rollback": "pass",
+    "source_write_guard": "pass",
+    "live_v1_nginx_route_changed": false,
+    "other_project_changes": 0
+  }
+}

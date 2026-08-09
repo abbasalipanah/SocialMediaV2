@@ -89,7 +89,7 @@ async def test_sso_session_logout_and_sso_only_boundary(monkeypatch: pytest.Monk
     ) as client:
         consumed = await client.get("/sso/consume", params={"token": sso_token(sso_secret)})
         assert consumed.status_code == 303
-        assert consumed.headers["location"] == "/overview"
+        assert consumed.headers["location"] == "/settings"
         assert consumed.headers["cache-control"] == "no-store"
         assert "HttpOnly" in consumed.headers["set-cookie"]
         assert "SameSite=lax" in consumed.headers["set-cookie"]

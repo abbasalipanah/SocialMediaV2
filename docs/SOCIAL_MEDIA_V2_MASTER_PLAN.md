@@ -2,8 +2,8 @@
 
 | Alan | Değer |
 |---|---|
-| Tarih | `2026-07-29` |
-| Durum | Revizyon 5 — standalone V2, yalnız SSO entegrasyonu ve canlı sistemlere sıfır müdahale |
+| Tarih | `2026-08-07` |
+| Durum | Revizyon 6 — R0-R7 sertifikalı; R8 current-host local staging ve sentetik SSO E2E hazır, public-origin/onaylı issuer/provider girdileri bekleniyor |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -14,7 +14,7 @@
 
 Bu dosya fikir listesi değil, Social Media V2 için **normatif uygulama sözleşmesidir**. ChatGPT 5.3 veya başka bir implementasyon ajanı aşağıdaki sırayı ve durma koşullarını değiştiremez.
 
-### 0.0 Revizyon 5 bağlayıcı çalışma ve entegrasyon sınırı
+### 0.0 Revizyon 6 bağlayıcı çalışma ve entegrasyon sınırı
 
 Bu bölüm, aşağıdaki maddelerle çelişen eski webhook, outbox, V1 writer cutover veya
 Accumulate kaynak değişikliği adımlarını hükümsüz kılar. Çelişki halinde her zaman bu bölüm
@@ -47,11 +47,43 @@ uygulanır.
 10. E-posta/handoff hazırlamak bu repository'nin kapsamındadır; kullanıcı ayrıca istemeden
     mesaj gönderilmez ve dış sistemde değişiklik yapılmaz.
 
+Revizyon 6 aşağıdaki ek kuralları bağlayıcı hale getirir ve bunlarla çelişen önceki frontend,
+TikTok, baseline veya faz-kapanış ifadelerini hükümsüz kılar:
+
+11. Uygulama başlangıcında salt-okunur olarak yakalanacak güncel
+    `/home/api/colab_scripts/SocialMedia` çalışma ağacı, V2 backend davranışı ve frontend ürün
+    parity'sinin canonical kaynağıdır. Eski `2026-07-14` baseline'ı güncel kabul kanıtı değildir.
+12. Canonical frontend referansı güncel `/home/api/colab_scripts/SocialMedia/frontend` çalışma
+    ağacıdır. Görünür kartlar, sekmeler, başlıklar, alt başlıklar, KPI'lar, grafikler, tablolar,
+    sıralama, empty/partial/unavailable durumları ve responsive yerleşim ürün kararı olmadan
+    eklenemez, kaldırılamaz, yeniden adlandırılamaz veya yeniden sıralanamaz.
+13. V2 frontend kodunun bağımsız mimarisi korunabilir; ancak yalnız SSO, route, Brand scope,
+    same-origin V2 API transportu, capability güvenliği ve erişilebilirlik için görünmez iç
+    uyarlamalar yapılabilir. Bu uyarlamalar canonical render çıktısını değiştiremez.
+14. Güncel kaynak davranışı körlemesine kopyalanmaz veya runtime'da import edilmez. Her davranış
+    V2-owned model, API, collector, persistence ve testlerle bağımsız olarak uygulanır.
+15. TikTok artık yalnız net-new tasarım değildir. Güncel SocialMedia çalışma ağacındaki TikTok
+    OAuth, dashboard, collector, comment, audience, history ve runtime-guard davranışları
+    salt-okunur parity girdisidir; provider gerçeği ve fail-closed kurallar yine otoritedir.
+16. YouTube veya başka bir dördüncü platform Revizyon 6 kapsamına girmez. Ayrı kullanıcı kararı
+    olmadan canonical platform seti genişletilemez.
+17. V2'de `2026-07-29` tarihli commitlenmemiş çalışma korunacak fakat doğrulanmış sayılmayacaktır.
+    Snapshot, diff envanteri ve V2-only test/build kanıtı olmadan bu çalışma silinemez,
+    commitlenemez veya parity tamamlandı diye raporlanamaz.
+18. `docs/fase0`–`docs/fase9` altındaki eski kapanış raporları tarihsel kanıttır. Revizyon 6'nın
+    güncel kaynak baseline'ı ve §22 kalite kapıları tamamlanmadan hiçbir eski rapor güncel
+    `STANDALONE_PRODUCT_COMPLETE` sertifikası oluşturmaz.
+19. 2026-08-07 tarihli açık kullanıcı kararı yalnız Instagram Stories ana içeriği için R1
+    görünür parity'sini geçersiz kılan dar bir product override'dır. Sidebar, topbar, footer,
+    diğer platformlar ve typed Stories API sözleşmesi korunur. Makine-okunur karar
+    `docs/revision6/overrides/instagram_stories_main_2026-08-07.json` dosyasındadır.
+
 ### 0.1 Zorunlu çalışma sırası
 
 1. Bu planın tamamını okumadan kod değişikliğine başlama.
 2. Yalnız `/home/api/colab_scripts/SocialMediadownstream` içinde write yap; §0.0 kapsamındaki canlı projeleri ve operasyonel yüzeyleri salt-okunur tut.
-3. Fazları §14 sırasıyla uygula; bir fazın çıkış kapısı yeşil olmadan sonraki faza geçme.
+3. Revizyon 6 çalışmasını §22 sırasıyla uygula; §14 eski Faz 0–9 kayıtlarını tarihsel bağlam olarak
+   korur fakat güncel uygulama sırası değildir. Bir §22 çıkış kapısı yeşil olmadan sonraki faza geçme.
 4. V2'ye ait production DB, secret, provider authorization veya service/timer üzerinde bu planın açık final gate'i olmadan işlem yapma; kaynak projelerin production yüzeylerine hiçbir gate altında doğrudan müdahale etme.
 5. Provider/schema/runtime gerçeği planla uyuşmazsa fallback uydurma, kapsam genişletme veya legacy yolu sessizce kullanma; dur ve kanıtla birlikte kullanıcı kararı iste.
 6. Secret, OAuth code, access/refresh token veya signed activation intent'i Markdown'a, source code'a, Git'e, test fixture'a, komut çıktısına veya log'a yazma.
@@ -70,8 +102,11 @@ uygulanır.
 - V1 cronjob/orchestrator/data writer sahipliği V2 çalışma kapsamı dışında ve değişmeden kalır.
 - V1 canlı runtime'ı V2 çalışması boyunca değişmeden çalışır; V2 kendi runtime ve veri sahipliğini kurar.
 - Accumulate runtime entegrasyonu yalnız SSO'dur; provisioning webhook/outbox bağımlılığı final üründe yasaktır.
+- Güncel `SocialMedia/frontend` görünür ürün sözleşmesi kart-kart korunur; parity yalnız dosya adı
+  veya yaklaşık görsel benzerlik ile değil, render envanteri ve desktop/mobile görsel kanıtla ölçülür.
 - İlk standalone runtime V2-owned DB/schema kullanır; `/api/v2`, event bus veya gereksiz microservice eklenmez.
 - Eksik/unsupported provider verisi `0` olarak uydurulmaz.
+- YouTube ve başka yeni platformlar ayrı plan/onay olmadan kapsama alınmaz.
 - Bu planda açıkça ertelenen hiçbir karar “uygulamayı tamamlamak için gerekli” gerekçesiyle otomatik kapsam içine alınmaz.
 
 ### 0.3 Tamamlandı iddiasının biçimi
@@ -91,15 +126,17 @@ tamamladıktan ve callback/readiness kanıtı yeşil olduktan sonra verilebilir.
 
 ## 1. Yönetici kararı
 
-`SocialMediadownstream`, mevcut SocialMedia uygulamasının basit bir kopyası değildir. Yeni proje **Social Media V2** olarak ele alınacaktır.
+`SocialMediadownstream`, runtime ve veri sahipliği açısından mevcut SocialMedia uygulamasının
+bir kopyası değildir; tamamen bağımsız **Social Media V2** projesidir. Buna karşılık görünür
+frontend ürün sözleşmesi güncel SocialMedia çalışma ağacıyla birebir parity gösterecektir.
 
 V2'nin kaynakları ve görevleri şöyledir:
 
 | Kaynak | V2'deki rolü |
 |---|---|
-| `/home/api/colab_scripts/SocialMedia` | Kanıtlanmış backend, veri modeli, collector, worker ve operasyon davranışının kaynağı |
-| `/home/api/colab_scripts/Accumulate` | Salt-okunur UX ve SSO contract referansı; V2 tarafından değiştirilmez ve provisioning runtime bağımlılığı oluşturmaz |
-| `/home/api/colab_scripts/performance_marketing` | Salt-okunur sidebar, topbar, parent/child brand seçimi, settings kabuğu ve local session görsel/davranış referansı |
+| `/home/api/colab_scripts/SocialMedia` | Güncel çalışma ağacı backend/collector/worker davranışının ve görünür frontend parity'sinin canonical salt-okunur kaynağı |
+| `/home/api/colab_scripts/Accumulate` | Yalnız salt-okunur SSO contract ve dış launch referansı; V2 tarafından değiştirilmez ve runtime data bağımlılığı oluşturmaz |
+| `/home/api/colab_scripts/performance_marketing` | Yalnız SocialMedia canonical frontend'inin açıkça kullanmadığı iç shell davranışında ikincil salt-okunur referans; görünür SocialMedia UI'ını override edemez |
 | `/home/api/colab_scripts/SocialMediadownstream` | Yazılmasına izin verilen tek proje; V2'nin bütün runtime sahipliği burada olacaktır |
 
 Temel ürün kararı:
@@ -109,8 +146,10 @@ Temel ürün kararı:
 - V2 tamamlanana kadar production cronjob, orchestrator, scheduler veya data-collection işi V2'de çalışmaz.
 - Social Media V1 bütün mevcut production cronjob/orchestrator/data-collection işlerinin tek sahibi ve tek writer'ı olarak kesintisiz devam eder.
 - V2'nin çalışır hale getirilmesi V1 writer freeze, V1 timer değişikliği veya V1 routing değişikliği gerektirmez.
-- Facebook/Instagram collector ve worker davranışının V2 kod karşılığı yalnız offline/diferansiyel testlerle hazırlanır; standalone runtime onayına kadar aktive edilmez.
-- TikTok, V2'nin üçüncü canonical platformudur ve yeni platform olarak uçtan uca geliştirilecektir.
+- Facebook/Instagram/TikTok collector ve worker davranışının V2 kod karşılığı yalnız
+  offline/diferansiyel testlerle hazırlanır; standalone runtime onayına kadar aktive edilmez.
+- TikTok V2'nin üçüncü canonical platformudur; güncel SocialMedia TikTok implementasyonu
+  Revizyon 6 parity girdisi olarak karakterize edilir ve V2-owned mimariye taşınır.
 - V2 frontend, Settings ve public API sözlüğünde yalnız `Brand` kullanılır; `client` eski terimi kullanılmaz.
 - V2 yeni kod, env, route, header, log ve ürün metinlerinde `ARS` terimi kullanılmaz.
 - V2 production verisi V2'ye ait ayrı PostgreSQL DB/role/schema üzerinde tutulur; V1 `socialmedia_adv` runtime DB'si kullanılmaz.
@@ -303,47 +342,76 @@ Mevcut SocialMedia route/service yüzeyi V2'ye olduğu gibi mount edilmez. Bazı
 - Registry dışındaki hiçbir GET command/mutation yapamaz; yeni `protocol-command GET` eklemek ayrı architecture review ister.
 - Bütün command/mutation yolları merkezi dormant/write policy kontrolünden geçer; side-effect audit testi bu sınırı statik ve integration testleriyle doğrular.
 
-### 3.2 Dashboard ve frontend sahipliği bölünmüştür
+### 3.2 Dashboard ve frontend parity kaynağı güncellenmiştir
 
-Canlı Social Media UX'i Accumulate'tadır. Dashboard verisi de halen Accumulate'ın büyük `/api/dashboards/{platform}` route'undan üretilir. Mevcut SocialMedia backend'i dashboard, asset listesi, connection/OAuth ve tam sync yüzeyinin tamamını sunmaz.
+Önceki revizyon canlı Social Media UX'ini Accumulate render zinciri üzerinden tanımlıyordu.
+Revizyon 6 ürün kararı farklıdır: uygulama başlangıcında salt-okunur snapshot'ı alınacak güncel
+`/home/api/colab_scripts/SocialMedia/frontend` çalışma ağacı görünür ürünün canonical kaynağıdır.
+Repository içeriği ile canlı deploy aynı kabul edilmez; bu plan repository working-tree parity'sini
+hedefler ve canlı runtime üzerinde kaynak doğrulaması yapmaz.
 
 V2'de:
 
-- Accumulate'ın 5.000+ satırlık dashboard route'u kopyalanmayacak;
-- yalnız `social_total`, Facebook, Instagram ve yeni TikTok sözleşmeleri kurulacak;
-- dashboard query, aggregation, content, audience, community ve media proxy küçük servisler olacaktır;
-- browser, SSO consume sonrasında Accumulate API'lerine runtime data çağrısı yapmayacaktır.
+- SocialMedia veya Accumulate frontend/backend modülü runtime'da import edilmez, proxy edilmez
+  veya shared filesystem üzerinden kullanılmaz;
+- görünür SocialMedia kart/sekmeleri yaklaşık olarak yeniden tasarlanmaz; §22'de üretilecek
+  route → tab → section → card/table envanteri birebir uygulanır;
+- V2 API; canonical frontend'in kullandığı `source_breakdown`, structured Stories,
+  `audience_capabilities`, content-level metric ve honest availability alanlarını bağımsız typed
+  contract olarak sağlar;
+- dashboard query, aggregation, content, audience, community ve media servisleri V2-owned küçük
+  modüller olarak kalır;
+- browser, SSO consume sonrasında Accumulate veya V1 SocialMedia API'sine runtime data çağrısı
+  yapmaz; yalnız same-origin V2 API'sini kullanır.
 
-### 3.3 Normal clone, aktif çalışma ağacı davranışını kaybeder
+### 3.3 Eski baseline güncel çalışma ağacı davranışını kaybeder
 
-SocialMedia'daki committed HEAD yanında cover persistence, 30 günlük ilk backfill, Instagram follower-history onarımı ve ilgili status/test davranışlarını içeren mevcut dirty değişiklikler vardır.
+Eski Faz 0 baseline'ı SocialMedia `main/e69fc5c` durumunu ve 10 dirty dosyayı kaydetmiştir.
+Revizyon 6 ön incelemesinde kaynak `feature/tiktok-integration/d871dde` durumundadır; 23 tracked
+değişiklik ve 22 untracked dosya içerir. Buna TikTok, Facebook audience, Instagram Stories,
+media/cover onarımları ve demo geliştirmeleri dahildir. Bu sayılar yalnız ön inceleme bilgisidir;
+uygulama başlangıcında yeniden salt-okunur yakalanarak otorite kazanır.
 
 Bu nedenle:
 
-1. Git geçmişi committed HEAD üzerinden clone edilir.
-2. Dirty diff'in SHA-256/binary snapshot'ı V2 migration girdisi olarak kaydedilir.
-3. Diff körlemesine uygulanmaz.
-4. Her davranış characterization test ile doğrulanarak temiz V2 modülüne aktarılır.
-5. Geçici raw patch final repo artifact'i olarak tutulmaz.
+1. Güncel branch, HEAD, remote, tracked diff hash'i, untracked liste ve artifact hariç content
+   manifesti yeni immutable kaynak baseline olarak kaydedilir.
+2. Eski baseline ve Faz 0–9 raporları silinmez; `superseded_by_revision_6` olarak tarihsel kalır.
+3. Dirty diff körlemesine uygulanmaz ve kaynak projede hiçbir normalize/cleanup yapılmaz.
+4. Her davranış characterization/differential test ile doğrulanarak temiz V2 modülüne aktarılır.
+5. Geçici raw patch final runtime artifact'i olarak tutulmaz; davranış envanteri ve hash kanıtı
+   V2 dokümantasyonunda korunur.
+6. V2'nin mevcut 12 modified + 1 untracked dosyalık çalışması ayrıca snapshot'lanır ve önce
+   doğrulanır; kullanıcı çalışması olduğu varsayılarak resetlenmez veya üzerine yazılmaz.
 
-### 3.4 TikTok yeni ürün kapsamıdır
+### 3.4 TikTok güncel parity ve bağımsızlaştırma kapsamıdır
 
-Mevcut SocialMedia V1'de TikTok tarafı tam bir platform implementasyonu değildir; callback/config başlangıcı vardır fakat production-grade token exchange, account discovery/linking, collector, normalizer, dashboard ve Settings akışı tamamlanmış değildir.
+Güncel SocialMedia çalışma ağacında TikTok OAuth, token lifecycle, account linking, dashboard,
+collector, comments, audience, history ve rollout guard davranışları bulunmaktadır. V2'de de
+Business Accounts v1.3 OAuth, vault, profile/video collector, Settings ve dashboard yüzeyleri
+mevcuttur; ancak bunlar eski baseline'a göre ve bağımsız olarak geliştirilmiştir. İki tarafın
+eşdeğer olduğu varsayılamaz.
 
-Bu nedenle TikTok için Facebook/Instagram gibi upstream differential parity iddiası kurulamaz. TikTok V2 kapsamında net-new olarak geliştirilir:
+Revizyon 6 TikTok çalışması şu parity kapsamını zorunlu kılar:
 
 - OAuth/token lifecycle;
 - TikTok account discovery ve Brand linking;
 - permission/scope health;
 - Profile/account metrics;
 - Content/video metrics;
-- audience verisi API tarafından gerçekten desteklendiği ölçüde;
+- video insights, comments ve audience verisi yalnız provider ve granted-scope capability'si
+  gerçekten desteklediği ölçüde;
+- daily history, paging, request-budget/rate-limit ve retry davranışı;
 - sync freshness, error ve backfill state;
 - Overview aggregation;
-- TikTok platform sayfası;
+- canonical SocialMedia TikTok platform sayfasının kart-kart render parity'si;
 - Settings ve Brand Setup entegrasyonu.
 
-TikTok UI, Facebook ve Instagram ile aynı kart/grid/KPI görsel sistemini kullanır; fakat desteklenmeyen metriği `0` veya sahte KPI olarak göstermez. Backend platform capability sözleşmesi hangi kartların mevcut, unavailable veya partial olduğunu açıkça döndürür.
+TikTok UI güncel SocialMedia TikTok sayfasıyla aynı kart/grid/KPI/tab yapısını kullanır; fakat
+desteklenmeyen metriği `0` veya sahte KPI olarak göstermez. Kaynak ekran honest-unavailable
+davranışıyla provider gerçeği arasında uyuşmazlık bulunursa uygulama durur ve kullanıcı kararı
+istenir. Backend platform capability sözleşmesi hangi kartların `available`, `unavailable` veya
+`partial` olduğunu açıkça döndürür.
 
 TikTok platform kuralları:
 
@@ -788,13 +856,32 @@ Bu catalog; geçmişte yaşanan follower snapshot, daily flow ve cumulative coun
 
 ### 6.1 Kaynak seçimi
 
-- **Shell referansı:** `performance_marketing/frontend`
-- **Social sayfa davranışı:** `Accumulate/frontend` içindeki aktif Social Media render zinciri
-- **Kopyalanmayacaklar:** Performance paid-media/GA4 domain'i, Accumulate genel Layout/App Hub ve her iki projedeki büyük monolitler
-- **Doğrudan alınabilecek görsel asset:** yalnız ihtiyaç varsa Performance Marketing'deki Accumulate logo asset'i
-- **Yeni platform:** TikTok; Facebook ve Instagram sayfalarının ortak görsel diline uyarlanır
+- **Canonical görünür frontend:** uygulama başlangıcında snapshot'lanan
+  `/home/api/colab_scripts/SocialMedia/frontend` çalışma ağacı
+- **Canonical backend davranışı:** aynı snapshot içindeki SocialMedia API/service/collector
+  davranışı; runtime import veya shared DB bağımlılığı olmadan V2'de yeniden uygulanır
+- **SSO/launch referansı:** yalnız salt-okunur Accumulate SSO v1 contract'ı
+- **İkincil shell referansı:** yalnız canonical SocialMedia ekranında eksik kalan bağımsız SSO
+  kabuğu/Brand-scope erişilebilirliği için `performance_marketing/frontend`; görünür SocialMedia
+  kartlarını veya navigasyonunu değiştiremez
+- **Kopyalanmayacaklar:** paid-media/GA4 domain'i, Accumulate genel App Hub, kaynak runtime
+  importları, source API proxy'si ve paylaşılan monolit state
 
-Performance Marketing kaynak kodu topluca kopyalanmaz. Sidebar, topbar ve Settings'in görsel/davranış sözleşmesi yeniden uygulanır; paid-media, GA4, campaign, currency, spend ve bunlara ait type/state/API kodları V2'ye girmez.
+Canonical frontend parity, kaynak component dosyasını körlemesine kopyalamak anlamına gelmez.
+V2 kendi source tree, API transport, SSO/session ve Brand authority modelini kullanır; ancak
+render edilen ürün aşağıdaki boyutlarda birebir korunur:
+
+- route ve görünür navigation sırası;
+- platform başına tab adları ve sırası;
+- section, kart, grafik, tablo ve KPI adları/sırası;
+- kart içi legend, kolon, açıklama ve aksiyonlar;
+- loading, empty, partial, unavailable, error ve capability-gated durumlar;
+- desktop/mobile grid, card span, responsive kırılım ve scroll davranışı;
+- gerçek veri ile `—`/unavailable gösterimi arasındaki semantik.
+
+Kaynak snapshot sonrasında bu boyutlardan herhangi birini değiştirmek yeni ürün kararı ve plan
+revizyonu gerektirir. İç refactor, component bölme, typed DTO, query cache veya erişilebilirlik
+düzeltmesi ancak görünür parity kanıtını değiştirmiyorsa uygulanabilir.
 
 Modern frontend mimarisi V2'nin onaylı temelidir:
 
@@ -821,7 +908,8 @@ Vite `server.port=3010` ve `strictPort=true` kullanır. Port doluysa sessizce ba
 
 ### 6.2 Sidebar
 
-Performance Marketing ile aynı davranış ve görsel yoğunluk korunacaktır:
+Sidebar'ın görünür yapı ve sırası canonical SocialMedia snapshot'ından alınacaktır. Aşağıdaki
+teknik davranışlar snapshot ile çelişmediği ölçüde korunur:
 
 - desktop fixed sidebar;
 - `<1024px` responsive drawer ve backdrop;
@@ -830,19 +918,17 @@ Performance Marketing ile aynı davranış ve görsel yoğunluk korunacaktır:
 - route değişiminde mobil drawer'ın kapanması;
 - beyaz/blur yüzey, slate zemin, violet/indigo active state, rounded kartlar.
 
-Social Media navigation:
-
-1. Overview
-2. Facebook
-3. Instagram
-4. TikTok
-5. Settings — yalnız backend capability izin verirse
+Social Media navigation route, label, ikon, platform görünürlüğü ve Settings konumu §22'deki
+frontend envanterinde exact olarak kaydedilir. V2 yalnız SSO consume/login ve owner activation
+gibi normal navigasyonda görünmeyen güvenlik rotalarını ekleyebilir. Görünür `Overview`, platform
+veya Settings satırı kaynak snapshot'ta yoksa eklenmez; varsa kaldırılmaz.
 
 Paid-media platformları, GA4 ve spend tabanlı kilit mantığı taşınmaz. Kanal availability backend'in linked-account/capability cevabından gelir.
 
 ### 6.3 Topbar
 
-Performance Marketing davranışı aynı tutulacaktır:
+Topbar'ın görünür içeriği canonical SocialMedia snapshot'ından alınır. Aşağıdaki Brand/account
+scope davranışları snapshot ile çelişmediği ve görünür parity'yi değiştirmediği ölçüde uygulanır:
 
 - parent/single/child brand araması;
 - parent ve child için ayrı selector;
@@ -880,10 +966,13 @@ Kurallar:
 
 ### 6.5 Gerçek rotalar
 
+Aşağıdaki tablo V2'nin güvenlik ve deep-link ihtiyaçları için izin verilen route yüzeyini gösterir;
+görünür navigation veya varsayılan landing-page kararı değildir. R1 canonical snapshot'ta olmayan
+SSO/owner/audit route'ları normal navigation'da gizli kalır.
+
 | Route | Sayfa |
 |---|---|
-| `/` | Overview redirect |
-| `/overview` | Social Media Overview |
+| `/` | Social Media Settings canonical fallback |
 | `/facebook` | Facebook workspace |
 | `/instagram` | Instagram workspace |
 | `/tiktok` | TikTok workspace |
@@ -893,9 +982,16 @@ Kurallar:
 | `/sso/consume` | SSO consume yüzeyi |
 | `/login` | SSO-first signed-out ekranı |
 
-Facebook, Instagram ve TikTok ayrı gerçek URL'lerdir; refresh sonrasında Overview'e düşmez. `/settings/audit` ve `/settings/tiktok/connect` ayrı ürün/platform sayfası veya sidebar öğesi değildir; Settings'in yalnız explicit backend capability ve fresh owner SSO ile açılan nested internal yüzeyleridir.
+Facebook, Instagram ve TikTok ayrı gerçek URL'lerdir; refresh sonrasında Settings fallback'ine
+düşmez. `/settings/audit` ve `/settings/tiktok/connect` ayrı ürün/platform sayfası veya sidebar
+öğesi değildir; Settings'in yalnız explicit backend capability ve fresh owner SSO ile açılan
+nested internal yüzeyleridir.
 
 ### 6.6 Social Media sayfaları
+
+Bu alt bölüm minimum domain kapsamını açıklar; kart veya yerleşim tasarım yetkisi vermez.
+Uygulamadaki kesin tab, section ve kart matrisi §22 Revizyon 6 envanteridir. Aşağıdaki listelerle
+envanter çelişirse canonical SocialMedia snapshot'ı ve honest provider capability kuralı uygulanır.
 
 #### Overview
 
@@ -931,13 +1027,18 @@ Facebook, Instagram ve TikTok ayrı gerçek URL'lerdir; refresh sonrasında Over
 - Content / Videos
 - Audience — yalnız API capability varsa
 
-TikTok sayfası Facebook ve Instagram ile aynı KPI card, trend card, content card, table, loading, empty, partial ve error state sistemini kullanır. KPI mapping TikTok data contract'ına göre yapılır; reklam metrikleri veya desteklenmeyen platform metrikleri taşınmaz.
+TikTok sayfası canonical SocialMedia TikTok sayfasındaki KPI card, trend card, content card,
+table, loading, empty, partial ve error state sistemini birebir kullanır. KPI mapping TikTok data
+contract'ına göre yapılır; reklam metrikleri veya desteklenmeyen platform metrikleri taşınmaz.
 
-Mevcut ürün davranışı korunur; aktif `PlatformDashboard`, `FacebookPulseDashboard` veya eski template monolitleri dosya olarak kopyalanmaz. Her bölüm küçük feature component ve hook'lara ayrılır.
+Mevcut ürün davranışı ve görünür render çıktısı korunur. Kaynak monolitlerin runtime importu veya
+V1 API proxy'si yasaktır; V2 isterse her bölümü küçük feature component ve hook'lara ayırabilir,
+fakat component mimarisi görünür parity'yi değiştiremez.
 
 ### 6.7 Settings
 
-Performance Marketing table-first settings UX'i kullanılacaktır:
+Settings'in görünür tab, tablo, drawer ve aksiyonları canonical SocialMedia snapshot'ından
+alınacaktır. Aşağıdaki domain yüzeyleri yalnız snapshot'ta bulunduğu biçim ve sırayla korunur:
 
 - Brands
 - Social Accounts
@@ -957,7 +1058,8 @@ Davranışlar:
 
 GA4, currency, campaign, spend veya paid-media kolonları taşınmaz.
 
-Brand Setup drawer/popup, Performance Marketing ile aynı layout ve interaction modelini kullanır:
+Brand Setup drawer/popup canonical SocialMedia snapshot'ındaki layout ve interaction modelini
+kullanır. Aşağıdaki adımlar snapshot envanterinde mevcutsa adları ve sıraları korunur:
 
 1. Brand Information
 2. Social Accounts
@@ -1001,7 +1103,7 @@ sequenceDiagram
 - `app_id = social_media`;
 - `allowed_apps` içinde `social_media`;
 - `jti`, `exp`, issued-at ve one-time consume;
-- optional signed `launch_target`: yoksa/default normal launch → `/overview`; exact `tiktok_owner_activation` → `/settings/tiktok/connect`;
+- optional signed `launch_target`: yoksa/default normal launch → R1 canonical `/settings`; exact `tiktok_owner_activation` → `/settings/tiktok/connect`;
 - owner activation flow'unda `launch_target=tiktok_owner_activation` zorunludur; browser query/form değeri claim'i override edemez;
 - unknown/unauthorized target fail-closed; absolute URL, arbitrary path veya open redirect yok;
 - brand status;
@@ -1034,7 +1136,7 @@ Active Brand ve write-capable canonical role için `access_mode=write`; diğer d
 
 ### 7.4 Entegrasyon rehberinin kullanım sınırı
 
-`accumulate-alt-uygulama-teknik-entegrasyon-rehberi.md` V2 planlama aşamasında yalnız generic SSO, Brand scope ve access-window ilkeleri için salt-okunur migration girdisidir. HMAC webhook ve provisioning bölümleri Revizyon 5 gereği ürün sözleşmesine alınmaz. Rehberin tamamı canonical V2 repository'sine/runtime artifact'ine dahil edilmez.
+`accumulate-alt-uygulama-teknik-entegrasyon-rehberi.md` V2 planlama aşamasında yalnız generic SSO, Brand scope ve access-window ilkeleri için salt-okunur migration girdisidir. HMAC webhook ve provisioning bölümleri Revizyon 6 gereği ürün sözleşmesine alınmaz. Rehberin tamamı canonical V2 repository'sine/runtime artifact'ine dahil edilmez.
 
 V2'ye **alınmayacak** rehber bölümleri/örnekleri:
 
@@ -1068,7 +1170,7 @@ GET /sso/consume?token=<signed-app-sso>
 
 V2 final runtime'ında `/internal/provisioning/events`, provisioning alias'ı, HMAC header/secret,
 event inbox, outbox consumer veya background authority sync bulunamaz. Mevcut implementasyondaki
-bu yüzeyler Revizyon 5 kapsamında kaldırılacak migration borcudur; canlıya alınamaz.
+bu yüzeyler Revizyon 6 kapsamında kaldırılacak migration borcudur; canlıya alınamaz.
 
 ### 8.2 SSO claim ve local session kuralları
 
@@ -1161,7 +1263,11 @@ TikTok connection route semantics:
 - `GET /api/social/tiktok/oauth/callback`: şu an provider console'da gözlenen callback candidate'ıdır. §3.6 gate `/callback/` seçerse bu satır ve backend route aynı change set'te slash'li exact path ile değiştirilir; iki alias/redirect yoktur. Handler yalnız Business Accounts `auth_code` + signed one-time state kabul eder, Login Kit `code` fallback'i yapmaz.
 - `GET /api/settings/tiktok/connection`: scope/token/health/readiness durumunu secretsız döndürür.
 - `DELETE /api/settings/tiktok/connection`: açık write capability ile revoke/disconnect command'ıdır.
-- `disabled` mode, dormant veya bütün `cutover_*` modlarında start/callback/disconnect mutationları state/write/provider egress üretmeden fail-closed olur. Safe owner-link GET yalnız secretsız disabled/readiness ekranı veya fresh-SSO redirect'i üretebilir.
+- `disabled` OAuth mode veya `development` dışında `dormant`, `staging` ve `standalone_ready`
+  runtime'larında explicit time-boxed activation gate/write policy yoksa start/callback/disconnect
+  mutationları state/write/provider egress üretmeden fail-closed olur. Safe owner-link GET yalnız
+  secretsız disabled/readiness ekranı veya fresh-SSO redirect'i üretebilir. `active` mode bile
+  provider/account/activation gate'leri açık değilse kendi başına OAuth yetkisi vermez.
 
 Dashboard request scope:
 
@@ -1277,7 +1383,9 @@ Facebook ve Instagram için ilk V2 sürümünde aşağıdaki davranışlar ürü
 - health/error/status sınıfları
 - CLI flag, exit code, lock name ve timer cadence
 
-TikTok bu listeye parity kaynağı olarak dahil değildir; net-new platform contract'ı olarak ayrı fixture, sandbox/approved test account ve capability testleriyle doğrulanır.
+TikTok da güncel Revizyon 6 SocialMedia baseline'ı üzerinden parity kaynağıdır. Kaynak davranış
+parity'sine ek olarak Business Accounts provider contract'ı ayrı fixture, sandbox/approved test
+account ve capability testleriyle doğrulanır; kaynak davranış provider gerçeğini override edemez.
 
 ### 12.2 Strangler + characterization yaklaşımı
 
@@ -1347,7 +1455,7 @@ Fixture senaryoları:
 | Accumulate venv/PYTHONPATH/systemd bağımlılığı | Downstream venv ve unit'lerle değiştir |
 | `ARS` prefix/ad/header/env/log terminolojisi | V2 yeni kod ve contract'larından tamamen kaldır; legacy alias üretme |
 | `client` public/domain terminolojisi | Brand olarak yeniden modelle; eski DB identifier'ını yalnız legacy-schema adapter'ında izole et |
-| Eski SocialMedia frontend | Tamamen değiştir |
+| Eski SocialMedia frontend | Runtime import/shared build yapma; güncel Revizyon 6 snapshot'ının görünür render sözleşmesini V2-owned frontend içinde exact koru |
 | Accumulate dead Social UI ve A/B settings | Taşıma |
 | Performance paid-media/GA4 domain kodu | Taşıma |
 | Performance binary asset'leri | Gerekirse yalnız onaylı logo asset'ini al |
@@ -1363,12 +1471,19 @@ Fixture senaryoları:
 Eski runtime kodunun kaldırılması V1 production şemasını değiştirme yetkisi vermez. V1 DB'de
 destructive cleanup yapılmaz; V2 yalnız kendi DB migration'larını yönetir.
 
-TikTok legacy temizleme değildir; V2'nin açıkça onaylanmış yeni platform kapsamıdır.
+TikTok legacy temizleme değildir; V2'nin açıkça onaylanmış üçüncü canonical platformu ve güncel
+SocialMedia davranışı için Revizyon 6 parity kapsamıdır.
 
 Historical `0009` payload'ı yalnız fixture/parity testinde kullanılabilir; V2 production DB'ye
 seed edilmez ve V1 production satırı okunmaz, silinmez veya değiştirilmez.
 
 ## 14. Uygulama fazları ve çıkış kapıları
+
+> **Revizyon 6 durumu — 2026-08-07:** Aşağıdaki Faz 0–9 tanımları ve bunlara ait raporlar
+> tarihsel geliştirme kaydıdır. Eski kaynak baseline'ı, 29 Temmuz commitinden sonraki doğrulanmamış
+> V2 çalışma ağacı ve güncel SocialMedia frontend/TikTok/Stories/audience davranışları nedeniyle
+> kapanış sertifikaları yeniden açılmıştır. Güncel uygulama ve gate sırası §22'dir. §22 tamamlanana
+> kadar “Faz 0–9 tamam” ifadesi release veya parity kanıtı olarak kullanılamaz.
 
 ### Faz 0 — Baseline ve koruma
 
@@ -1531,7 +1646,7 @@ alınmadığını ifade eder. Production aktivasyonu bu gate'in parçası değil
 > uygulanmıştır; global gate ancak güncel source baseline/immutability kontrolü ve tüm canonical
 > kalite turu yeniden yeşil olduğunda ayrıca verilebilir.
 
-- Faz 0–9 tamamdır.
+- Tarihsel Faz 0–9 raporları mevcuttur; Revizyon 6 §22 gate'leri tamamlanmamıştır.
 - V1 production DB/media, cronjob, timer, orchestrator ve servis state'i değişmeden çalışır.
 - V2 production DB credential veya write secret'a sahip değildir.
 - V2 production üzerinde API process, mutation, OAuth persistence, AI generation, audit repair, manual sync, shadow read/write veya dual write çalıştırmaz.
@@ -1598,7 +1713,7 @@ Test harness raw internal activation reference, state, auth code veya tokenı fa
 
 ## 16. Tarihsel Writer Ownership Cutover taslağı — UYGULANMAZ
 
-> **Revizyon 5 hükmü:** Bu bölüm eski paylaşımlı-writer/cutover tasarımının tarihsel kaydıdır ve
+> **Revizyon 6 hükmü:** Bu bölüm eski paylaşımlı-writer/cutover tasarımının tarihsel kaydıdır ve
 > uygulanmayacaktır. V1 writer freeze, V1 timer/service değişikliği, Accumulate webhook/outbox
 > routing değişikliği ve kaynak projelerde herhangi bir operasyon §0.0 uyarınca yasaktır.
 > Güncel canlıya alma modeli V2'nin kendi DB/runtime/worker'larını bağımsız kurması ve ardından
@@ -1701,7 +1816,10 @@ Social Media V2 aşağıdakilerin tamamı sağlanınca `STANDALONE_PRODUCT_COMPL
 - generic legacy-role/Media Planner rehberi canonical repository artifact'i değildir; normatif Social V2 contract ile değiştirilmiştir;
 - backend yalnız §5 canonical package sınırını kullanır; ikinci paralel mimari veya giant platform adapter yoktur;
 - canonical Git remote `https://github.com/abbasalipanah/SocialMediaV2.git` olarak yapılandırılmıştır;
-- frontend Performance Marketing shell davranışına sahiptir;
+- frontend, Revizyon 6 başlangıcında hash'lenen güncel `SocialMedia/frontend` snapshot'ıyla
+  route/tab/section/card/table/state/responsive boyutlarında exact parity gösterir;
+- frontend parity; makine-okunur kart envanteri, contract testleri ve aynı fixture'la alınmış
+  desktop/mobile görsel karşılaştırma kanıtıyla doğrulanmıştır;
 - frontend local development server `http://localhost:3010/` adresinde strict-port çalışır;
 - Overview, Facebook, Instagram (Stories capability'si dahil), TikTok ve Settings kapsamı tamamdır; Stories ayrı route, navigation öğesi veya platform değildir;
 - Settings/Brand Setup yalnız Facebook, Instagram ve TikTok gösterir;
@@ -1715,7 +1833,11 @@ Social Media V2 aşağıdakilerin tamamı sağlanınca `STANDALONE_PRODUCT_COMPL
 - production DB'ye hiç temas edilmemiştir;
 - V2 production credential, traffic, API process, mutation, OAuth persistence, AI generation, audit repair, cronjob, timer, orchestrator veya manual sync çalıştırmaz;
 - release candidate destructive schema migration gerektirmez;
-- kanıtlanmış collector davranışı differential testlerle eşleşir;
+- güncel SocialMedia baseline'ındaki Facebook/Instagram/TikTok collector davranışı differential
+  testlerle eşleşir; güncel baseline dışındaki eski oracle tek başına yeterli değildir;
+- structured Instagram Stories, source breakdown, Facebook audience capability ve TikTok
+  comment/audience/history/rate-limit davranışları ya parity ile uygulanmış ya da provider
+  capability gerekçesiyle canonical UI'da açıkça unavailable olarak kanıtlanmıştır;
 - TikTok provider profile tam olarak `tiktok_business_accounts_v1_3`, App ID tam olarak `7657818426198474768` ve account endpoints §3.6 ile birebir eşleşir; Login Kit/Marketing wire fallback'i yoktur;
 - TikTok auth/refresh/revoke/token-info/profile/video, callback exact-match, scope-diff, state replay ve manual activation-intent testleri fake provider/Sandbox üzerinde yeşildir;
 - `SOCIAL_TIKTOK_ACCOUNT_ENABLED=false`, `SOCIAL_TIKTOK_ACCOUNT_OAUTH_MODE=disabled`, `SOCIAL_TIKTOK_COLLECTION_ENABLED=false` ve `SOCIAL_TIKTOK_ADVERTISER_ENABLED=false`; production activation intent, provider egress veya token yoktur;
@@ -1800,7 +1922,7 @@ Bu portların contract'ı ve aşağıdaki ilk schema-compatible adapter'ları on
 
 Bu tablodaki ilk adapter'ların tamamı yalnız V2-owned PostgreSQL üzerinde kullanılabilir.
 `ProvisioningStore` final mimarinin parçası değildir; mevcut koddan ve runtime assembly'den
-kaldırılması Revizyon 5 migration işidir.
+kaldırılması Revizyon 6 migration işidir.
 
 `TokenVault`/`CredentialStore` için ayrım nettir:
 
@@ -1856,6 +1978,8 @@ geçilmez; `STANDALONE_RUNTIME_COMPLETE` bloklanır ve yeni altyapı için ayrı
 - `whitelist_entries` kaldırılması
 - Dedicated credential/session tablolarına migration
 - TikTok dışındaki yeni sosyal network ekleme
+- Mevcut `docs/YOUTUBE_IMPLEMENTATION_AND_ROLLOUT_PLAN.md` veya başka bir kaynak projedeki
+  YouTube hazırlığını V2 kapsamına alma; YouTube için ayrı ürün kararı ve plan revizyonu gerekir
 - Mevcut metrik tanımlarını ürün kararı olmadan değiştirme
 - Canlı service restart, DNS veya reverse-proxy değişikliği
 - Git push/PR/release publish işlemi
@@ -1864,18 +1988,283 @@ Bunların her biri V2 stabilizasyonundan sonra ayrı plan ve onay gerektirir.
 
 ## 21. Uygulamaya başlama sırası
 
-Bu plan onaylandıktan sonra ilk uygulama paketi yalnız şu işleri yapacaktır:
+Revizyon 6 plan güncellemesi uygulama başlatma onayı değildir. Kullanıcı ayrıca “başla” veya
+eşdeğer açık talimat vermeden kod, baseline, test artifact'i, build, DB, provider veya deploy
+işlemi yapılmaz.
 
-1. kaynak snapshot'larını kaydetmek;
-2. `SocialMediaV2.git` remote durumunu doğrulayıp target repository'yi canonical `origin` ile bootstrap etmek;
-3. SocialMedia V1 committed/dirty davranış envanterini read-only migration girdisi olarak kaydetmek;
-4. generic rehberi canonical repository dışında tutup Social V2 normatif contract hedefini oluşturmak;
-5. production `.env` fallback'ini downstream çalıştırılmadan kaldırmak;
-6. dormant/write/production DB guard'larını eklemek;
-7. §2.6 canonical vocabulary guard'ını ve exact platform enum'unu feature kodundan önce kurmak;
-8. frontend portunu `3010` olarak sabitlemek;
-9. App ID `7657818426198474768` ve §3.6 Business Accounts v1.3 endpoint'leriyle secretsız TikTok `.env.example` contract'ını eklemek;
-10. TikTok account/advertiser flags'ini default-off yapmak ve exposed secret'ın hiçbir dosyada bulunmadığını taramak;
-11. bağımlılık manifesti ile architecture guard testlerini kurmak.
+Uygulama başladığında §22/R0 tek izinli ilk fazdır. R0 tamamlanıp raporlanmadan frontend,
+backend contract, collector, runtime veya deploy değişikliği yapılamaz.
 
-Bu ilk paket tamamlanıp kaynak projelerin değişmediği doğrulanmadan SSO, frontend veya collector implementasyonuna geçilmeyecektir.
+## 22. Revizyon 6 — Güncel parity tamamlama programı
+
+Bu bölüm Revizyon 6'nın normatif uygulama sırasıdır. R0–R8 sıralı uygulanır; bir gate
+kapanmadan sonraki faza geçilmez. Her fazda yalnız V2 repository'sine write yapılır ve kaynak
+projelerin başlangıç/bitiş salt-okunur snapshot'ı karşılaştırılır.
+
+### 22.0 Başlangıçta bilinen durum
+
+2026-08-07 salt-okunur ön incelemesi aşağıdaki başlangıç risklerini göstermiştir. Bunlar R0
+snapshot'ı yerine geçmez ve uygulama başladığında yeniden doğrulanır:
+
+- V2 `main/11e73bd` üzerindedir ve `origin` canonical V2 repository'sidir.
+- V2 çalışma ağacında 12 modified ve 1 untracked dosya; yaklaşık 1.563 ekleme ve 269 silme vardır.
+- Bu çalışma Facebook/Instagram/TikTok dashboard kartları, demographics/map, Stories ve local
+  demo verilerini değiştirir; son build/test artifact'leri bu değişikliklerden daha eskidir.
+- Kayıtlı SocialMedia baseline'ı `main/e69fc5c`, 10 dirty dosya ve 215 tracked dosyadır.
+- Ön incelemedeki güncel SocialMedia durumu `feature/tiktok-integration/d871dde`, 23 modified,
+  22 untracked ve 327 tracked dosyadır.
+- Güncel kaynak; committed TikTok entegrasyonu, dirty Facebook audience, structured Instagram
+  Stories, media/cover ve demo davranışları içerir.
+- V2 dashboard contract'ı güncel kaynakta bulunan structured `stories`, `source_breakdown` ve
+  `audience_capabilities` yüzeylerini henüz doğrudan yayımlamaz.
+- V2 gerçek worker'ı Meta audience reader'ını çağırmaz; TikTok'ta profile/video toplar fakat
+  güncel kaynak comment/audience/history kapsamıyla parity kanıtı yoktur.
+- V2 config'de tarihsel `cutover_*` runtime modları kalmıştır; master runtime modeliyle
+  `staging`/`standalone_ready` geçişi birebir uygulanmamıştır.
+
+Bu maddelerin hiçbiri kaynak projede düzeltme yetkisi vermez.
+
+### R0 — Kaynak ve V2 WIP koruma baseline'ı
+
+Teslimatlar:
+
+1. `SocialMedia`, `Accumulate` ve `performance_marketing` için branch, HEAD, remote, status,
+   tracked diff hash'i, untracked liste ve artifact hariç content manifesti;
+2. V2 mevcut dirty çalışma için branch/HEAD/status, binary-safe diff hash'i, untracked liste ve
+   dosya bazlı davranış envanteri;
+3. eski baseline'a `superseded_by_revision_6` ilişkisi; eski kanıt silinmez;
+4. source-write guard'ın yalnız yeni açıkça onaylanmış baseline'ı doğrulaması;
+5. başlangıç ve bitiş kaynak snapshot'larının birebir eşleştiği rapor.
+
+Kurallar:
+
+- Kaynak repo test/build/format/migration komutu çalıştırılmaz.
+- V2 dirty çalışma resetlenmez, stash edilmez, silinmez veya otomatik formatlanmaz.
+- Baseline capture kaynak repository'lerin Git index/working tree'sini değiştiremez.
+
+Çıkış kapısı: Yeni immutable baseline ve V2 WIP snapshot'ı kullanıcıya raporlanmış; üç kaynak
+projenin başlangıç/bitiş state'i değişmemiştir.
+
+### R1 — Canonical frontend ve davranış envanteri
+
+Teslimatlar:
+
+1. Güncel `SocialMedia/frontend` için makine-okunur route → navigation → platform → tab →
+   section → card/chart/table/KPI/state envanteri;
+2. desktop ve mobile için grid/span/order, görünür metin, kolon, legend, empty/partial/unavailable
+   davranışı ve capability gate matrisi;
+3. canonical fixture sözleşmesi; aynı fixture V1 source adapter test oracle'ında ve V2 render
+   testinde kullanılır, kaynak frontend build edilmez;
+4. source component → V2 component → gerekli API alanı mapping'i;
+5. görünür parity dışında kalması onaylı tek farkların listesi: SSO consume/login, V2 Brand
+   authority, same-origin API transport, hidden owner activation ve erişilebilirlik altyapısı.
+
+Çıkış kapısı: Her görünür öğenin tek canonical karşılığı vardır; “benzer”, “yaklaşık” veya
+yoruma açık kart tanımı kalmamıştır. Kullanıcı kart matrisi değişikliğini ayrıca istemedikçe
+envanter dondurulur.
+
+### R2 — Mevcut V2 WIP doğrulama ve güvenli ara kapanış
+
+Teslimatlar:
+
+1. R0'da dondurulan mevcut 13 tracked + 1 untracked dosyalık WIP için diff review; hangi R1
+   öğesini karşıladığı ve hangi öğede yanlış varsayım yaptığı kaydedilir;
+2. yalnız V2 üzerinde dependency lock tutarlılığı, TypeScript typecheck, Vitest, backend testleri,
+   local demo contract ve production build;
+3. WIP'nin Facebook provider-unavailable, Instagram Stories ve TikTok capability davranışında
+   oluşturduğu sahte/boş/derived veri risklerinin düzeltilmesi;
+4. geçmeyen WIP silinmez; minimal patch ile doğrulanır ve kullanıcı onayı olmadan unrelated
+   refactor yapılmaz;
+5. doğrulanan WIP için ayrı commit önerisi; commit/push yalnız kullanıcı talimatıyla.
+
+Çıkış kapısı: V2 WIP korunmuş ve bütün V2-only statik/test/build kontrolleri yeşildir; eski build
+artifact'i kanıt olarak kullanılmamıştır.
+
+### R3 — Dashboard API ve veri sözleşmesi parity'si
+
+Teslimatlar:
+
+1. Güncel canonical frontend'in ihtiyaç duyduğu typed response alanları: structured Stories,
+   `source_breakdown`, `audience_capabilities`, content-level views/reach/navigation/actions ve
+   honest availability metadata;
+2. Facebook, Instagram ve TikTok için exact metric semantic mapping; snapshot/flow/cumulative/
+   ratio ayrımı ve previous-period davranışı;
+3. kart başına source-of-truth mapping; frontend toplam/seri türetmesi yalnız semantik catalog
+   açıkça izin veriyorsa yapılır;
+4. eksik provider verisi için `null`/`unavailable`/`partial`; sahte `0` yasaktır;
+5. backward compatibility gerekmiyorsa paralel legacy response üretmeden tek V2 contract;
+6. OpenAPI, generated TypeScript, runtime Zod validation ve contract tests.
+
+Çıkış kapısı: R1 envanterindeki her veri-bağımlı öğe exact typed alana veya açık honest-
+unavailable capability'sine sahiptir; frontend placeholder ile gerçek veri taklidi yapmaz.
+
+### R4 — Collector, persistence ve media parity
+
+Teslimatlar:
+
+- Facebook: güncel geo audience country/city davranışı, provider-unavailable age/gender/activity,
+  allowlist/capability ve canonical metric projection;
+- Instagram: posts/reels/stories collection, story content metrics, durable cover/media,
+  previous-period summary ve audience breakdownları;
+- TikTok: OAuth/token lifecycle yanında profile, paged videos, video insights, optional-scope
+  comments, provider-supported audience, daily history, request budget/rate-limit/cooldown,
+  retry/checkpoint ve media persistence;
+- bütün platformlarda crash/replay, idempotency, pagination, partial provider response, token
+  refresh ve secret-redaction testleri;
+- V2-owned DB/schema/role/media/vault; V1 DB, media veya token kopyası/fallback'i yok;
+- provider gerçekten desteklemiyorsa capability `unavailable/partial`; fixture uydurarak parity
+  sağlanmaz.
+
+Çıkış kapısı: Güncel source davranış envanteriyle request sequence, persisted semantic row,
+status ve dashboard projection farkı sıfırdır veya provider-gerekçeli explicit exception olarak
+kullanıcı tarafından onaylanmıştır.
+
+Durum (2026-08-07): R4 kodu ve yerel/disposable sertifikasyon tamamlandı. Canlı provider canary,
+gerçek TikTok connection doğrulaması ve dış secret/consent işlemleri R8'e bırakıldı. Kanıt:
+`docs/revision6/r4/REVISION6_R4_COLLECTOR_PERSISTENCE_REPORT.md`.
+
+### R5 — Exact frontend render parity
+
+Teslimatlar:
+
+1. R1 envanterindeki bütün route/tab/section/card/table/state'lerin V2 render karşılığı;
+2. Facebook, Instagram ve TikTok kartlarında ad, sıra, span, KPI, grafik, tablo, legend, kolon,
+   copy ve empty/unavailable davranışının exact korunması;
+3. Settings, account mapping/connect/disconnect, sync/readiness ve Brand setup yüzeylerinin
+   canonical görünür parity'si;
+4. SSO/Brand scope/same-origin V2 API uyarlamaları görünür kart sözleşmesini değiştirmeden;
+5. desktop/mobile screenshot comparison, DOM inventory comparison, keyboard/focus ve responsive
+   overflow testleri;
+6. screenshot toleransı yalnız font rasterization/anti-aliasing gibi piksel düzeyi çevresel farklar
+   içindir; öğe, ölçü, renk, sıra veya metin farkını saklayamaz.
+
+Çıkış kapısı: Makine-okunur DOM/card envanteri exact eşleşir; desktop/mobile görsel diff onaylı
+tolerans içindedir; tek bir görünür kart eklenmemiş, kaldırılmamış veya değiştirilmemiştir.
+
+Durum (2026-08-07): R5 exact frontend render parity ve yerel sertifikasyon tamamlandı. R1'deki
+51 canonical card/section ID'sinin tamamı eşleşti; 35 benzersiz görünür kart başlığı, dokuz
+platform/tab render dizisi ve altı desktop/mobile Chromium baseline'ı doğrulandı. Canlı kaynak
+projeler değişmedi. Kanıt: `docs/revision6/r5/REVISION6_R5_FRONTEND_PARITY_REPORT.md`.
+
+### R6 — Standalone runtime ve SSO-only temizlik
+
+Teslimatlar:
+
+1. runtime state modeli `development → dormant → staging → standalone_ready → active` ile
+   master plan arasında tek sözleşme; tarihsel `cutover_*` modları runtime surface'inden çıkarılır;
+2. production env örneği doğrudan aktif writer başlatmaz; `standalone_ready`/writes-off/provider-
+   off/schedule-off güvenli başlangıç sağlar;
+3. provisioning endpoint/outbox/shared DB/shared filesystem/V1 proxy/import yüzeyi sıfır;
+4. SSO v1 consume, local hash-only session, Brand scope, parent/child rollup, logout/revocation ve
+   fresh owner launch contract testleri;
+5. ayrı V2 migration, worker, timer, Nginx, health/readiness, log ve rollback artifact'leri;
+6. tarihsel cutover/provisioning belgeleri açıkça archived/superseded işaretlenir; güncel runbook
+   yalnız standalone SSO modelini anlatır.
+
+Çıkış kapısı: Runtime/import/path scan kaynak bağımlılığı bulmaz; bütün mutation/provider/schedule
+kapıları fail-closed; yalnız SSO runtime sınırı mimari testle kanıtlanmıştır.
+
+Durum (2026-08-07): R6 standalone runtime ve SSO-only temizlik yerel olarak sertifikalandı. Beş
+tarihsel `cutover_*` modu runtime surface'inden çıkarıldı; production env güvenli
+`standalone_ready` başlangıcına alındı; canonical SSO-only contract, ayrı migration/API/worker/
+timer/Nginx/rollback artifact'leri ve archive marker'ları doğrulandı. Gerçek staging runtime
+oluşturulmadığı için `STANDALONE_RUNTIME_COMPLETE` verilmedi. Kanıt:
+`docs/revision6/r6/REVISION6_R6_STANDALONE_RUNTIME_REPORT.md`.
+
+### R7 — Standalone Product Complete yeniden sertifikasyonu
+
+Tek canonical doğrulama turu:
+
+- yeni source-write guard başlangıç/bitiş;
+- Python lint/type/syntax ve bütün backend testleri;
+- disposable PostgreSQL migration iki kez/idempotency ve full integration suite;
+- fake Meta/TikTok servers, collector differential ve secret/redaction testleri;
+- OpenAPI export + generated frontend types için temiz diff;
+- temiz frontend install, typecheck, unit/component tests, desktop/mobile Playwright, visual parity,
+  production build ve dependency security audit;
+- V2 package/build artifact'inde kaynak path, source API URL, forbidden platform/terminology,
+  secret ve stale generated file taraması;
+- standalone deploy/rollback rehearsal yalnız V2-owned disposable/staging yüzeyinde.
+
+Çıkış kapısı: §18 bütün maddeler güncel kanıtla yeşildir. Ancak bundan sonra
+`STANDALONE_PRODUCT_COMPLETE` verilebilir.
+
+Durum (2026-08-07): R7 tek canonical, V2-only disposable sertifikasyon turuyla tamamlandı.
+PostgreSQL migration/idempotency, `138` backend testi (skip yok), Ruff/compile/mypy, güvenli
+`standalone_ready` başlangıç/rollback smoke, deterministic OpenAPI, temiz frontend kurulumu,
+`23` Vitest, production build, `0` dependency vulnerability ve desktop/mobile Playwright
+matrisi (`16 passed`, `4` bilinçli project skip) yeşildir. Altı canonical Cover baseline'ına
+ek olarak kullanıcı-onaylı Instagram Stories desktop/mobile baseline'ları geçmiştir. Release taraması `16` frontend
+artifact'i ile `134` wheel üyesinde source path/API, yasak runtime/terminoloji ve secret bulgusu
+bulmamıştır. Kaynak canlı projelerin başlangıç/bitiş guard'ları eşleşmiştir.
+
+Bu kanıtla `STANDALONE_PRODUCT_COMPLETE=true` verilmiştir. Bu yalnız ürün/kod ve release-candidate
+tamamlanmasıdır; staging/production aktivasyonu değildir. `STANDALONE_RUNTIME_COMPLETE`,
+`READY_FOR_ACCUMULATE_SSO_HANDOFF`, `SSO_LIVE_VERIFIED` ve `TIKTOK_CONNECTION_VERIFIED` hâlâ
+`false` durumundadır. Kanıt:
+`docs/revision6/r7/REVISION6_R7_STANDALONE_PRODUCT_CERTIFICATION_REPORT.md`.
+
+### R8 — Staging runtime, provider canary ve Accumulate SSO handoff
+
+R8 kod tamamlama fazından ayrıdır ve dış sahip/onay gerektirir:
+
+1. Operations yalnız V2'ye ait staging DB/user/TLS/secret/media/runtime oluşturur;
+2. exact Meta/TikTok callback ve rotated secret provider panellerinde sahiplerce doğrulanır;
+3. V2 standalone staging deploy + rollback provası yapılır;
+4. approved staging SSO ile browser login/logout, Brand scope ve platform dashboard E2E;
+5. Meta/TikTok sandbox/canary; TikTok owner consent'i yalnız §3.7 kapısından sonra sahibi yapar;
+6. `STANDALONE_RUNTIME_COMPLETE` kanıtından sonra Accumulate/Operations ekibine yalnız SSO link/
+   token handoff'u verilir;
+7. Accumulate tarafı kendi değişikliğini yaptıktan sonra canlı SSO browser E2E ile
+   `SSO_LIVE_VERIFIED` değerlendirilir;
+8. worker schedule platform bazında ayrı onayla ve en son açılır.
+
+Çıkış kapısı: V2 kendi runtime'ında bağımsız çalışır; Accumulate ile tek bağ SSO'dur; kaynak V1
+runtime/DB/worker/timer/media ve Accumulate runtime'ı V2 ekibi tarafından değiştirilmemiştir.
+
+Durum (2026-08-07): R8 secretsız host/repository preflight'i ve V2-only disposable staging
+deploy/health/rollback provası tamamlandı. Geçici PostgreSQL üzerinde migration/idempotency,
+temiz wheel kurulumu, `standalone_ready` health/readiness, schedule fail-closed ve `8026` port
+kapanışı geçti. Kullanıcı current hostu hedef seçtikten sonra ayrı V2 Linux user, release,
+PostgreSQL DB/role, config/media, migration, `8026` API ve shared Nginx'e dokunmayan `3026` web
+servisi kuruldu. Web+API stop/start rollback geçti; collection/timer disabled kaldı. Runtime
+`staging`, yalnız SSO session mutation'ı için writes açık olacak şekilde V2 root-owned sentetik
+secret ile doğrulandı. Browser consume → `/settings`, kullanıcı/Brand scope, secure cookie,
+JTI replay rejection ve logout/revocation E2E geçti. Authenticated
+`/instagram?tab=stories` dashboard API `200`, doğru başlık/aktif tab ve sıfır browser error ile
+geçti; test state'i V2 DB'den temizlendi. API/web access log secret taraması temizdir. Mevcut
+canlı V1 Nginx route'u ve `52120` servisi
+değiştirilmedi. Public origin/TLS, onaylı Accumulate staging issuer'ı, provider owner/callback,
+canary scope ve change window henüz sağlanmadığından `STANDALONE_RUNTIME_COMPLETE=false` kalır.
+Kanıt:
+`docs/revision6/r8/REVISION6_R8_STAGING_PREFLIGHT_REPORT.md`.
+
+### 22.1 Revizyon 6 stop koşulları
+
+Aşağıdakilerden biri oluşursa faz durur ve kullanıcı kararı istenir:
+
+- canonical kaynak working tree uygulama sırasında beklenmedik biçimde değişirse;
+- frontend exact parity ile provider'ın doğrulanmış veri gerçeği çelişirse;
+- güncel SocialMedia davranışı V1/Accumulate shared write veya canlı DB erişimi olmadan bağımsız
+  uygulanamıyorsa;
+- source project write, test/build artifact'i, service/restart, DB veya provider panel işlemi
+  gerekiyorsa;
+- TikTok scope/endpoint/provider family güncel portal gerçeğiyle uyuşmuyorsa;
+- mevcut V2 WIP'nin kullanıcı çalışmasını kaybetmeden ilerlemek mümkün değilse;
+- YouTube veya dördüncü platform talebi doğarsa;
+- production/staging secret, DB, TLS, DNS, Nginx, systemd veya dış ekip değişikliği için yeni
+  yetki gerekiyorsa.
+
+### 22.2 Revizyon 6 durum raporlama biçimi
+
+Her R fazı sonunda rapor şu alanları ayrı verir:
+
+1. değişen yalnız V2 dosyaları;
+2. kaynak başlangıç/bitiş snapshot sonucu;
+3. canonical frontend parity öğelerinin `matched / unavailable / blocked` sayıları;
+4. backend/collector/test/build sonuçları ve skip gerekçeleri;
+5. provider veya dış operasyon gerektiren açık işler;
+6. bir sonraki faza geçiş için kullanıcı onayı gerekip gerekmediği;
+7. `STANDALONE_PRODUCT_COMPLETE`, `STANDALONE_RUNTIME_COMPLETE`,
+   `READY_FOR_ACCUMULATE_SSO_HANDOFF`, `SSO_LIVE_VERIFIED` ve
+   `TIKTOK_CONNECTION_VERIFIED` durumlarının her biri.

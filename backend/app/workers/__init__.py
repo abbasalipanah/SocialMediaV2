@@ -1,4 +1,4 @@
-"""Dormant worker runtime surface."""
+"""Standalone worker runtime surface."""
 
 from .contracts import WORKER_CONTRACTS, WorkerContract
 from .runtime import (

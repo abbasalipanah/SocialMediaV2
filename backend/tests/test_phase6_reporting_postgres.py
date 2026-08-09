@@ -148,9 +148,19 @@ def _schema() -> tuple[str, ...]:
             id serial PRIMARY KEY, asset_id integer NOT NULL, brand_id integer NOT NULL,
             content_id varchar(128) NOT NULL, content_type varchar(32) NOT NULL,
             permalink varchar(512) NOT NULL, message varchar(4096) NOT NULL,
-            media_url varchar(512) NOT NULL, created_time timestamptz,
+            media_url varchar(2048) NOT NULL, created_time timestamptz,
             likes_count integer NOT NULL, comments_count integer NOT NULL,
-            shares_count integer NOT NULL
+            shares_count integer NOT NULL, views_count double precision,
+            reach_count double precision, cover_url varchar(2048), thumbnail_url varchar(2048),
+            cover_candidates jsonb NOT NULL DEFAULT '[]'::jsonb,
+            thumbnail_candidates jsonb NOT NULL DEFAULT '[]'::jsonb,
+            media_url_candidates jsonb NOT NULL DEFAULT '[]'::jsonb,
+            full_video_watched_rate double precision, total_time_watched double precision,
+            average_time_watched double precision, interactions_count double precision,
+            replies_count double precision, profile_visits double precision,
+            follows_count double precision, taps_forward double precision,
+            taps_back double precision, swipe_forward double precision, exits double precision,
+            navigation_count double precision, completion_rate double precision
         )""",
         """CREATE TABLE media_assets (
             id serial PRIMARY KEY, brand_id integer NOT NULL, asset_id integer NOT NULL,

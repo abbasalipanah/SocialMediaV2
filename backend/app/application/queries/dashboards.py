@@ -7,12 +7,18 @@ from datetime import UTC, datetime
 
 from app.application.ports.reporting import ReportingStore
 from app.application.queries.dashboard_aggregation import (
+    audience_capabilities,
     community_summary,
     content_cards,
+    content_summary,
     freshness,
     metric_breakdowns,
     metric_cards,
+    metric_methodology,
     metric_series,
+    source_breakdown,
+    stories_contract,
+    top_hashtags,
 )
 from app.application.queries.reporting_range import previous_reporting_range
 from app.domain.metrics import MetricCatalog, MetricId
@@ -21,6 +27,8 @@ from app.domain.reporting import (
     CommunitySummary,
     DashboardMeta,
     DashboardMetric,
+    DashboardTopCommenter,
+    DashboardTopLikedComment,
     DataStatus,
     FreshnessStatus,
     OverviewDashboard,
@@ -96,6 +104,16 @@ def build_platform_dashboard(
         if account_ids
         else ()
     )
+    previous_content_rows = (
+        store.list_content(
+            account_ids=account_ids,
+            start_on=previous_range.start_on,
+            end_on=previous_range.end_on,
+            content_type=query.content_type,
+        )
+        if account_ids
+        else ()
+    )
     comment_rows = (
         store.list_comments(
             account_ids=account_ids,
@@ -127,6 +145,7 @@ def build_platform_dashboard(
         warnings.append(f"freshness:{freshness_status.value}")
     observed_days = len({sample.observed_on for sample in samples})
     expected_days = (query.date_range.end_on - query.date_range.start_on).days + 1
+    breakdowns = metric_breakdowns(samples)
     return PlatformDashboard(
         meta=DashboardMeta(
             dashboard_id=platform.value,
@@ -146,9 +165,29 @@ def build_platform_dashboard(
         ),
         metrics=cards,
         series=metric_series(platform=platform, samples=samples, catalog=catalog),
-        breakdowns=metric_breakdowns(samples),
+        breakdowns=breakdowns,
         content=content_cards(content_rows),
         community=community_summary(comment_rows, accounts_available=bool(accounts)),
+        top_hashtags=top_hashtags(content_rows),
+        content_summary=content_summary(
+            content_rows,
+            breakdowns,
+            accounts_available=bool(accounts),
+        ),
+        source_breakdown=source_breakdown(breakdowns),
+        metric_methodology=metric_methodology(platform, catalog),
+        audience_capabilities=audience_capabilities(
+            platform,
+            breakdowns,
+            accounts_available=bool(accounts),
+        ),
+        stories=stories_contract(
+            platform=platform,
+            rows=content_rows,
+            previous_rows=previous_content_rows,
+            breakdowns=breakdowns,
+            date_range=query.date_range,
+        ),
     )
 
 
@@ -186,6 +225,11 @@ def build_overview_dashboard(
         )[:50]
     )
     communities = tuple(dashboard.community for dashboard in dashboards)
+    commenter_totals: dict[str, tuple[int, int]] = {}
+    for community in communities:
+        for item in community.top_commenters:
+            comments, likes = commenter_totals.get(item.name, (0, 0))
+            commenter_totals[item.name] = (comments + item.comments, likes + item.likes)
     account_ids = tuple(
         sorted({value for dashboard in dashboards for value in dashboard.meta.resolved_account_ids})
     )
@@ -234,6 +278,28 @@ def build_overview_dashboard(
             unanswered_comments=sum(item.unanswered_comments for item in communities),
             comment_likes=sum(item.comment_likes for item in communities),
             data_status=data_status,
+            top_commenters=tuple(
+                DashboardTopCommenter(name=name, comments=comments, likes=likes)
+                for name, (comments, likes) in sorted(
+                    commenter_totals.items(),
+                    key=lambda item: (-item[1][0], -item[1][1], item[0].lower()),
+                )[:8]
+            ),
+            top_liked_comments=tuple(
+                sorted(
+                    (
+                        DashboardTopLikedComment(
+                            name=item.name,
+                            comment=item.comment,
+                            likes=item.likes,
+                            replies=item.replies,
+                        )
+                        for community in communities
+                        for item in community.top_liked_comments
+                    ),
+                    key=lambda item: (-item.likes, item.comment),
+                )[:8]
+            ),
         ),
     )
 
@@ -256,7 +322,7 @@ def _overview_metric(
     value = sum(values) if values else None
     previous = sum(previous_values) if previous_values else None
     delta = None
-    if value is not None and previous not in {None, 0}:
+    if value is not None and previous is not None and previous != 0:
         delta = (value - previous) / abs(previous) * 100
     if not values:
         status = DataStatus.UNAVAILABLE
@@ -273,6 +339,14 @@ def _overview_metric(
         semantic_type=first.semantic_type,
         unit=first.unit,
         data_status=status,
+        methodology=first.methodology,
+        availability_reason=(
+            "overview_metric_unavailable"
+            if status is DataStatus.UNAVAILABLE
+            else "overview_platform_coverage_partial"
+            if status is DataStatus.PARTIAL
+            else None
+        ),
     )
 
 

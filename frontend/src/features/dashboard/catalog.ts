@@ -1,14 +1,15 @@
 import type { MetricId, Platform } from "../../api";
 
 export type DashboardTab = {
-  id: "audience" | "content" | "cover" | "overview" | "page" | "profile" | "stories" | "videos";
+  id: "account" | "audience" | "content" | "cover" | "overview" | "page" | "profile" | "stories" | "videos";
   label: string;
 };
 
 export const RANGE_OPTIONS = [
-  { id: "last_7_days", label: "7 days" },
-  { id: "last_30_days", label: "30 days" },
-  { id: "last_90_days", label: "90 days" },
+  { id: "last_7_days", label: "Last 7 Days" },
+  { id: "last_30_days", label: "Last 30 Days" },
+  { id: "last_90_days", label: "Last 90 Days" },
+  { id: "last_365_days", label: "Last 365 Days" },
 ] as const;
 
 export type RangeKey = (typeof RANGE_OPTIONS)[number]["id"];
@@ -17,6 +18,12 @@ export const PLATFORM_LABELS: Record<Platform, string> = {
   facebook: "Facebook",
   instagram: "Instagram",
   tiktok: "TikTok",
+};
+
+export const PLATFORM_DESCRIPTIONS: Record<Platform, string> = {
+  facebook: "Unified Facebook performance monitor.",
+  instagram: "Unified Instagram performance monitor.",
+  tiktok: "Organic account, video and audience performance in one view.",
 };
 
 export const METRIC_LABELS: Record<MetricId, string> = {
@@ -86,9 +93,10 @@ export function platformTabs(platform: Platform, audienceAvailable: boolean): Da
       { id: "audience", label: "Audience" },
     ],
     tiktok: [
-      { id: "overview", label: "Overview" },
-      { id: "videos", label: "Videos" },
-      ...(audienceAvailable ? [{ id: "audience", label: "Audience" } as DashboardTab] : []),
+      { id: "cover", label: "Cover" },
+      { id: "account", label: "Account" },
+      { id: "content", label: "Content" },
+      { id: "audience", label: "Audience" },
     ],
   };
   return tabs[platform];

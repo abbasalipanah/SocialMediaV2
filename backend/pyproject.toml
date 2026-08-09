@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "social-media-v2"
 version = "0.1.0"
-description = "Independent dormant Social Media V2 backend"
+description = "Independent fail-closed Social Media V2 backend"
 readme = "app/README.md"
 requires-python = ">=3.11"
 dependencies = [

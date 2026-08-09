@@ -43,10 +43,16 @@ class ContentMediaWriter:
         self._clock = clock
 
     def persist(self, item: ProviderRecord) -> int:
-        source_url = item.fields.get("media_url")
-        if not isinstance(source_url, str) or not source_url:
+        selected: tuple[str, FetchedMedia] | None = None
+        for source_url in _media_candidates(item):
+            try:
+                selected = (source_url, self._fetch(source_url))
+            except Exception:
+                continue
+            break
+        if selected is None:
             return 0
-        fetched = self._fetch(source_url)
+        source_url, fetched = selected
         suffix = _suffix(fetched.mime_type)
         safe_id = re.sub(r"[^A-Za-z0-9._-]", "_", item.external_id)
         relative_path = (
@@ -71,6 +77,24 @@ class ContentMediaWriter:
             )
         )
         return 1
+
+
+def _media_candidates(item: ProviderRecord) -> tuple[str, ...]:
+    fields = item.fields
+    candidates: list[str] = []
+    for key in (
+        "cover_candidates",
+        "thumbnail_candidates",
+        "media_url_candidates",
+    ):
+        values = fields.get(key, ())
+        if isinstance(values, tuple | list):
+            candidates.extend(value for value in values if isinstance(value, str) and value)
+    for key in ("cover_url", "thumbnail_url", "media_url"):
+        value = fields.get(key)
+        if isinstance(value, str) and value:
+            candidates.append(value)
+    return tuple(dict.fromkeys(candidates))
 
 
 def _suffix(mime_type: str) -> str:

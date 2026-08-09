@@ -6,7 +6,7 @@ import random
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlparse
 
 import httpx
@@ -222,7 +222,7 @@ def _retry_after(response: httpx.Response, payload: Mapping[str, Any]) -> float 
     for value in values:
         try:
             if value is not None:
-                parsed.append(max(0.0, float(value)))
+                parsed.append(max(0.0, float(cast(Any, value))))
         except (TypeError, ValueError):
             continue
     return max(parsed) if parsed else None

@@ -631,7 +631,7 @@ def create_settings_router(
             reason=(
                 "manual_intent_available"
                 if start_available
-                else "oauth_start_unavailable_before_cutover"
+                else "oauth_start_disabled_by_runtime_policy"
             ),
             checked_at=current,
         )
@@ -815,7 +815,7 @@ def create_settings_router(
             policy.assert_allows_mutation("tiktok_connection_delete")
         except PermissionError as exc:
             raise HTTPException(403, "writes_disabled") from exc
-        raise HTTPException(503, "connection_mutation_unavailable_before_cutover")
+        raise HTTPException(503, "connection_mutation_not_implemented")
 
     return router
 

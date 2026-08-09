@@ -17,7 +17,7 @@ CANONICAL_ROLES = {"super_admin", "agency_admin", "agency_operator", "viewer"}
 WRITE_ROLES = {"super_admin", "agency_admin", "agency_operator"}
 TIKTOK_CONNECTION_MANAGE_PERMISSION = "tiktok.connection.manage"
 BRAND_STATUSES = {"active", "suspended", "archived"}
-LAUNCH_TARGETS = {None: "/overview", "tiktok_owner_activation": "/settings/tiktok/connect"}
+LAUNCH_TARGETS = {None: "/settings", "tiktok_owner_activation": "/settings/tiktok/connect"}
 REQUIRED_CONTRACT_FIELDS = {
     "version",
     "issued_at",

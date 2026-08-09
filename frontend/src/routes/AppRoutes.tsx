@@ -1,5 +1,5 @@
 import { lazy, Suspense, type ReactNode } from "react";
-import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useLocation } from "../routing";
 
 import { BrandScopeProvider, useBrandScope } from "../app/BrandScopeProvider";
 import { useAuth } from "../auth";
@@ -8,11 +8,9 @@ import { ScreenState } from "../ui";
 import { LoginPage } from "./LoginPage";
 import { SsoConsumePage } from "./SsoConsumePage";
 
-const OverviewPage = lazy(() => import("../features/overview"));
 const FacebookPage = lazy(() => import("../features/facebook"));
 const InstagramPage = lazy(() => import("../features/instagram"));
 const TikTokPage = lazy(() => import("../features/tiktok"));
-const IntegrationsPage = lazy(() => import("../features/integrations"));
 const SettingsPage = lazy(() => import("../features/settings"));
 const TikTokConnectPage = lazy(() =>
   import("../features/settings").then((module) => ({ default: module.TikTokConnectPage })),
@@ -61,7 +59,7 @@ function SettingsGuard({ audit = false, children }: { audit?: boolean; children:
   const allowed = audit
     ? capabilities?.permissions.internal_audit_visible
     : capabilities?.permissions.settings_visible;
-  return allowed ? children : <Navigate replace to="/overview" />;
+  return allowed ? children : <Navigate replace to="/facebook" />;
 }
 
 export function AppRoutes() {
@@ -69,31 +67,27 @@ export function AppRoutes() {
     <Suspense fallback={<RouteLoading />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/sso/consume" element={<SsoConsumePage />} />
         <Route path="/sso/consume" element={<SsoConsumePage />} />
         <Route element={<AuthenticatedWorkspace />}>
           <Route element={<AppShell />}>
-            <Route index element={<Navigate replace to="/overview" />} />
-            <Route path="overview" element={<OverviewPage />} />
             <Route path="facebook" element={<FacebookPage />} />
             <Route path="instagram" element={<InstagramPage />} />
             <Route path="tiktok" element={<TikTokPage />} />
-            <Route path="integrations" element={<IntegrationsPage />} />
-            <Route
-              path="settings"
-              element={<SettingsGuard><SettingsPage /></SettingsGuard>}
-            >
-              <Route
-                path="tiktok/connect"
-                element={<SettingsGuard><TikTokConnectPage /></SettingsGuard>}
-              />
-              <Route
-                path="audit"
-                element={<SettingsGuard audit><AuditPage /></SettingsGuard>}
-              />
-            </Route>
           </Route>
+          <Route path="settings" element={<SettingsGuard><SettingsPage /></SettingsGuard>}>
+            <Route
+              path="tiktok/connect"
+              element={<TikTokConnectPage />}
+            />
+            <Route
+              path="audit"
+              element={<SettingsGuard audit><AuditPage /></SettingsGuard>}
+            />
+          </Route>
+          <Route index element={<SettingsGuard><SettingsPage /></SettingsGuard>} />
+          <Route path="*" element={<SettingsGuard><SettingsPage /></SettingsGuard>} />
         </Route>
-        <Route path="*" element={<Navigate replace to="/overview" />} />
       </Routes>
     </Suspense>
   );

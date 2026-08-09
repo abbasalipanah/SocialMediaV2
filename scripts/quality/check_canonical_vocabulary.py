@@ -65,7 +65,7 @@ LEGACY_PLATFORM_ALIAS_FILE = (
     / "app"
     / "infrastructure"
     / "persistence"
-    / "social_v2"
+    / "legacy_socialmedia"
     / "platforms.py"
 )
 LEGACY_PLATFORM_ALIASES = (
@@ -73,6 +73,7 @@ LEGACY_PLATFORM_ALIASES = (
     "instagram_organic",
     "tiktok_organic",
 )
+CANONICAL_TIKTOK_UNAVAILABLE_COPY = "Not provided by TikTok Organic API"
 
 
 def apply_narrow_source_allowlist(path: Path, text: str) -> str:
@@ -87,7 +88,7 @@ def apply_narrow_source_allowlist(path: Path, text: str) -> str:
 
 
 def apply_narrow_artifact_allowlist(member: str, text: str) -> str:
-    if member.endswith("app/infrastructure/persistence/social_v2/platforms.py"):
+    if member.endswith("app/infrastructure/persistence/legacy_socialmedia/platforms.py"):
         for alias in LEGACY_PLATFORM_ALIASES:
             text = text.replace(f'"{alias}"', '""').replace(f"'{alias}'", "''")
     return text
@@ -115,6 +116,7 @@ def main() -> int:
     findings: list[str] = []
     for path in files_to_scan():
         text = path.read_text(encoding="utf-8", errors="ignore")
+        text = text.replace(CANONICAL_TIKTOK_UNAVAILABLE_COPY, "")
         is_built_artifact = FRONTEND_DIST in path.parents
         if path.suffix in {".ts", ".tsx", ".js", ".jsx"} and not is_built_artifact:
             for exact_vendor_token in FRONTEND_VENDOR_ALLOWLIST:
@@ -130,6 +132,7 @@ def main() -> int:
                     if Path(member).suffix not in TEXT_SUFFIXES:
                         continue
                     text = archive.read(member).decode("utf-8", errors="ignore")
+                    text = text.replace(CANONICAL_TIKTOK_UNAVAILABLE_COPY, "")
                     text = apply_narrow_artifact_allowlist(member, text)
                     findings.extend(
                         scan_text(

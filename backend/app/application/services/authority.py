@@ -109,6 +109,7 @@ def build_brand_workspace(
     if require_write and rollup:
         raise AuthorityError("rollup_mutation_denied")
 
+    resolved_ids: tuple[str, ...]
     if not rollup:
         if selected.visibility == "hidden_parent":
             raise AuthorityError("hidden_parent_requires_rollup")

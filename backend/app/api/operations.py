@@ -38,7 +38,7 @@ def create_operations_router(
             policy.assert_allows_mutation(command)
         except PermissionError as exc:
             raise HTTPException(403, "writes_disabled") from exc
-        raise HTTPException(503, "operation_unavailable_before_cutover")
+        raise HTTPException(503, "operation_not_available_in_standalone_runtime")
 
     @router.post("/api/operations/sync", status_code=503)
     @mark_boundary(Boundary.COMMAND)

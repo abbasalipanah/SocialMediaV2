@@ -1,4 +1,4 @@
-"""Normalization for social platform identifiers stored by V2."""
+"""Normalize legacy SocialMedia platform identifiers at the persistence boundary."""
 
 from __future__ import annotations
 

@@ -10,10 +10,9 @@ from app.application.ports.platforms import ProviderAccount
 from app.application.ports.platforms.audience import AudienceSnapshot
 from app.core.time import utc_now
 from app.domain.platforms import PlatformId
-from app.infrastructure.providers.meta.transport import MetaTransport
+from app.infrastructure.providers.meta.transport import MetaTransport, MetaTransportError
 
 FACEBOOK_AUDIENCE_METRICS = (
-    "page_fans_gender_age",
     "page_fans_country",
     "page_fans_city",
 )
@@ -46,21 +45,25 @@ class MetaAudienceReader:
             if self._platform is PlatformId.FACEBOOK
             else INSTAGRAM_AUDIENCE_METRICS
         )
-        payload = self._transport.get(
-            f"{account.account_id}/insights",
-            {"metric": ",".join(metrics), "period": "lifetime"},
-        )
-        raw_rows = payload.get("data") or []
-        if not isinstance(raw_rows, list):
-            raise ValueError("provider_audience_shape_invalid")
         breakdowns: dict[str, dict[str, float | int | None]] = {}
-        for row in raw_rows:
-            if not isinstance(row, Mapping):
-                raise ValueError("provider_audience_shape_invalid")
-            metric_name = str(row.get("name") or "").strip()
-            if metric_name not in metrics:
+        for metric in metrics:
+            try:
+                payload = self._transport.get(
+                    f"{account.account_id}/insights",
+                    {"metric": metric, "period": "lifetime"},
+                )
+            except MetaTransportError:
                 continue
-            breakdowns[metric_name] = _values(row)
+            raw_rows = payload.get("data") or []
+            if not isinstance(raw_rows, list):
+                raise ValueError("provider_audience_shape_invalid")
+            for row in raw_rows:
+                if not isinstance(row, Mapping):
+                    raise ValueError("provider_audience_shape_invalid")
+                metric_name = str(row.get("name") or "").strip()
+                if metric_name != metric:
+                    continue
+                breakdowns.update(_breakdowns(metric_name, row))
         return AudienceSnapshot(
             account_id=account.account_id,
             observed_at=self._clock(),
@@ -68,30 +71,41 @@ class MetaAudienceReader:
         )
 
 
-def _values(row: Mapping[str, Any]) -> dict[str, float | int | None]:
+def _breakdowns(
+    metric_name: str, row: Mapping[str, Any]
+) -> dict[str, dict[str, float | int | None]]:
     values = row.get("values") or []
     if isinstance(values, list) and values:
         latest = values[-1]
         if isinstance(latest, Mapping) and isinstance(latest.get("value"), Mapping):
-            return _numeric_map(latest["value"])
+            return {metric_name: _numeric_map(latest["value"])}
     total = row.get("total_value") or {}
     if isinstance(total, Mapping) and isinstance(total.get("value"), Mapping):
-        return _numeric_map(total["value"])
+        return {metric_name: _numeric_map(total["value"])}
     if isinstance(total, Mapping):
-        flattened: dict[str, float | int | None] = {}
+        grouped: dict[str, dict[str, float | int | None]] = {}
         for breakdown in total.get("breakdowns") or []:
             if not isinstance(breakdown, Mapping):
                 continue
+            raw_dimensions = breakdown.get("dimension_keys") or []
+            dimensions = (
+                tuple(str(value).lower() for value in raw_dimensions)
+                if isinstance(raw_dimensions, list)
+                else ()
+            )
+            dimension = "_".join((metric_name, *dimensions))
             for result in breakdown.get("results") or []:
                 if not isinstance(result, Mapping):
                     continue
-                dimensions = result.get("dimension_values") or []
-                if isinstance(dimensions, list) and dimensions:
-                    flattened["|".join(str(value) for value in dimensions)] = _number(
+                dimension_values = result.get("dimension_values") or []
+                if isinstance(dimension_values, list) and dimension_values:
+                    grouped.setdefault(dimension, {})[
+                        "|".join(str(value) for value in dimension_values)
+                    ] = _number(
                         result.get("value")
                     )
-        return flattened
-    return {}
+        return grouped
+    return {metric_name: {}}
 
 
 def _numeric_map(payload: Mapping[str, Any]) -> dict[str, float | int | None]:

@@ -10,7 +10,7 @@ import pytest
 from app.application.services.sso import SsoError, consume_sso, resolve_session, verify_sso
 from app.core.security import sha256_text
 
-SECRET = "local-sso-test-secret-with-sufficient-entropy"
+SECRET = "local-sso-contract-secret-" + ("x" * 48)
 
 
 class MemorySessionStore:
@@ -81,7 +81,7 @@ def token(
 def test_valid_upstream_contract_creates_hash_only_session_and_blocks_jti_replay() -> None:
     store = MemorySessionStore()
     raw_session, verified = consume_sso(token(), SECRET, store)
-    assert verified.launch_path == "/overview"
+    assert verified.launch_path == "/settings"
     assert raw_session not in repr(store.sessions)
     assert resolve_session(raw_session, store) == next(iter(store.sessions.values()))
     assert resolve_session(raw_session, store)["settings_visible"] is True
@@ -96,6 +96,31 @@ def test_fixed_owner_launch_target_is_allowlisted() -> None:
     assert verified.launch_target == "tiktok_owner_activation"
     with pytest.raises(SsoError, match="invalid_launch_target"):
         verify_sso(token(launch_target="https://evil.example"), SECRET)
+
+
+def test_signature_issuer_audience_expiry_and_algorithm_fail_closed() -> None:
+    now = datetime.now(UTC)
+    with pytest.raises(SsoError, match="invalid_issuer"):
+        verify_sso(token(iss="unknown"), SECRET)
+    assert verify_sso(token(), SECRET).user_id == "1"
+    assert verify_sso(token(iss="accumulate"), SECRET).user_id == "1"
+
+    for invalid in (
+        token(aud="another_app"),
+        token(exp=int((now - timedelta(seconds=1)).timestamp())),
+    ):
+        with pytest.raises(SsoError, match="invalid_sso"):
+            verify_sso(invalid, SECRET)
+
+    hs384 = jwt.encode(
+        jwt.decode(token(), SECRET, algorithms=["HS256"], options={"verify_aud": False}),
+        SECRET,
+        algorithm="HS384",
+    )
+    with pytest.raises(SsoError, match="invalid_sso"):
+        verify_sso(hs384, SECRET)
+    with pytest.raises(SsoError, match="sso_not_configured"):
+        verify_sso(token(), "")
 
 
 def test_owner_launch_context_is_preserved_in_the_hash_only_session() -> None:

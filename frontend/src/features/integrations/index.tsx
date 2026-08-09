@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "../../routing";
 
 import type {
   OperationsReadiness,

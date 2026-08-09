@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "revision": 6,
+  "phase": "R2",
+  "reviewed_at": "2026-08-07",
+  "source_policy": {
+    "writable_root": "/home/api/colab_scripts/SocialMediadownstream",
+    "read_only_roots": [
+      "/home/api/colab_scripts/SocialMedia",
+      "/home/api/colab_scripts/Accumulate",
+      "/home/api/colab_scripts/performance_marketing"
+    ]
+  },
+  "oracles": {
+    "r0_wip_baseline": "docs/revision6/r0/v2_wip_baseline_revision6.json",
+    "r0_dirty_file_count": 14,
+    "r0_tracked_file_count": 13,
+    "r0_untracked_file_count": 1,
+    "r0_tracked_binary_diff_sha256": "3a09b4a815cc2e7b186a69a5cf7b4979de2dad783757ed8bd6429c03e92155ed",
+    "r1_inventory": "docs/revision6/r1/canonical_frontend_inventory.json",
+    "r1_inventory_sha256": "f3923eb690d345bb267557c1e921874b2538edb307440ff3662ebd60bd138620",
+    "r1_fixture": "docs/revision6/r1/canonical_dashboard_fixture.json",
+    "r1_fixture_sha256": "97876225c1ad8415640ed5760bd698fe3202e40c811659b39c38c60e1cb26ed5"
+  },
+  "summary": {
+    "reviewed_files": 14,
+    "pass": 7,
+    "partial_fixed": 5,
+    "partial_deferred": 2,
+    "deleted_wip_files": 0,
+    "unrelated_refactors": 0
+  },
+  "corrections": [
+    {
+      "id": "R2-FB-PROVIDER-AVAILABILITY",
+      "result": "fixed",
+      "detail": "Facebook Age & Gender was removed from the reachable V2 render path, Page Like Types was restored, and the local demo no longer emits page_fans_gender_age."
+    },
+    {
+      "id": "R2-IG-COVER-STORIES",
+      "result": "fixed",
+      "detail": "Instagram Stories now renders only on the Stories tab and is excluded from Cover."
+    },
+    {
+      "id": "R2-UNMARKED-DERIVATION",
+      "result": "fixed",
+      "detail": "Frontend-generated follower/source-split/engagement series and KPI fallbacks were removed; missing typed data remains null or empty."
+    },
+    {
+      "id": "R2-SHARED-FIXTURE-CONSUMER",
+      "result": "fixed",
+      "detail": "The R1 canonical fixture is consumed directly by a V2 render test for critical R2 contracts."
+    }
+  ],
+  "files": [
+    {
+      "path": "backend/app/api/dashboards/__init__.py",
+      "status": "pass",
+      "r1_matches": ["tiktok.tabs.account"],
+      "wrong_assumptions": [],
+      "decision": "Keep the account tab accepted by the V2 dashboard API. Legacy accepted tab values are non-visible and are deferred to contract cleanup."
+    },
+    {
+      "path": "backend/app/local_demo.py",
+      "status": "partial_fixed",
+      "r1_matches": ["date_range.history", "facebook.page_like_types", "audience.breakdowns", "content.fixtures"],
+      "wrong_assumptions": ["facebook.page_fans_gender_age_is_available", "story_breakdowns_equal_structured_stories_contract"],
+      "decision": "Remove fabricated Facebook demographic rows. Keep explicit demo data used by existing typed fields; structured Stories remains R3 work."
+    },
+    {
+      "path": "backend/tests/test_local_demo.py",
+      "status": "pass",
+      "r1_matches": ["provider_unavailable_is_not_fabricated", "facebook.page_like_types"],
+      "wrong_assumptions": [],
+      "decision": "Keep expanded demo coverage and add a regression assertion forbidding page_fans_gender_age."
+    },
+    {
+      "path": "docs/SOCIAL_MEDIA_V2_MASTER_PLAN.md",
+      "status": "pass",
+      "r1_matches": ["revision6.governance"],
+      "wrong_assumptions": ["wip_count_was_described_as_13_total"],
+      "decision": "Correct the factual count to 13 tracked plus 1 untracked without changing phase scope."
+    },
+    {
+      "path": "frontend/package-lock.json",
+      "status": "pass",
+      "r1_matches": ["chart_and_map_runtime_dependencies"],
+      "wrong_assumptions": [],
+      "decision": "Keep; npm ci completed successfully and the production build resolved the lock."
+    },
+    {
+      "path": "frontend/package.json",
+      "status": "pass",
+      "r1_matches": ["instagram.world_map", "canonical.chart_widgets"],
+      "wrong_assumptions": [],
+      "decision": "Keep d3/topology/world-atlas/recharts dependencies."
+    },
+    {
+      "path": "frontend/src/features/dashboard/AudienceDemographicsCard.tsx",
+      "status": "pass",
+      "r1_matches": ["instagram.age_and_gender", "tiktok.age_and_gender"],
+      "wrong_assumptions": ["component_was_initially_reused_for_facebook"],
+      "decision": "Keep the shared component for Instagram and TikTok only; Facebook no longer imports it."
+    },
+    {
+      "path": "frontend/src/features/dashboard/PlatformPage.tsx",
+      "status": "pass",
+      "r1_matches": ["tiktok.tabs.cover_account_content_audience"],
+      "wrong_assumptions": [],
+      "decision": "Keep the TikTok tab union update."
+    },
+    {
+      "path": "frontend/src/features/dashboard/catalog.ts",
+      "status": "pass",
+      "r1_matches": ["tiktok.tabs.cover_account_content_audience", "audience_tab_not_capability_hidden"],
+      "wrong_assumptions": [],
+      "decision": "Keep the TikTok catalog change; canonical range labels and URL tab synchronization remain R5."
+    },
+    {
+      "path": "frontend/src/features/facebook/FacebookPulseDashboard.tsx",
+      "status": "partial_fixed",
+      "r1_matches": ["facebook.cover_sections", "facebook.page_like_types", "facebook.best_time_to_engage", "facebook.geo_tables"],
+      "wrong_assumptions": ["facebook.age_and_gender_is_reachable", "aggregate_breakdown_can_be_projected_over_a_time_series", "follower_snapshot_delta_can_be_silently_presented_as_provider_flow"],
+      "decision": "Restore the canonical Page Like Types card and remove unmarked frontend derivations. Extra Content Winners/comment queues and remaining exact-card differences are R5 gaps."
+    },
+    {
+      "path": "frontend/src/features/instagram/InstagramPulseDashboard.tsx",
+      "status": "partial_fixed",
+      "r1_matches": ["instagram.cover_excludes_stories", "instagram.audience_demographics", "instagram.world_map", "instagram.stories_visible_on_stories_tab"],
+      "wrong_assumptions": ["instagram.cover_includes_stories", "aggregate_breakdown_can_be_projected_over_a_time_series", "generic_content_rows_are_a_structured_stories_contract"],
+      "decision": "Exclude Stories from Cover and remove source-split derivations. Structured story fields/trends are R3; exact content/card parity is R5."
+    },
+    {
+      "path": "frontend/src/features/tiktok/TikTokPulseDashboard.tsx",
+      "status": "partial_fixed",
+      "r1_matches": ["tiktok.cover_sections", "tiktok.account_content_audience", "tiktok.provider_unavailable_best_time"],
+      "wrong_assumptions": ["follower_growth_can_be_silently_derived_from_snapshots", "engagement_series_can_be_silently_summed_without_methodology"],
+      "decision": "Keep the new canonical tab structure and honest unavailable panel; remove unmarked derivations. Typed capability/content fields remain R3 and exact cards remain R5."
+    },
+    {
+      "path": "frontend/src/styles.css",
+      "status": "partial_deferred",
+      "r1_matches": ["responsive.dashboard_grids", "instagram.demographics_layout", "instagram.world_map_layout", "stories.layout"],
+      "wrong_assumptions": [],
+      "decision": "Keep WIP styles. Pixel-level desktop/mobile parity requires the R5 visual pass and R7 certification."
+    },
+    {
+      "path": "frontend/src/test/Phase8Products.test.tsx",
+      "status": "partial_deferred",
+      "r1_matches": ["facebook.cover_contract", "instagram.cover_excludes_stories", "tiktok.tabs", "missing_data_not_synthesized"],
+      "wrong_assumptions": ["facebook.age_and_gender_is_canonical", "instagram.cover_includes_stories", "content_winners_is_canonical"],
+      "decision": "Correct critical R2 expectations and add no-derivation coverage. Full exact card assertions move to R5; the shared R1 fixture now has a separate V2 consumer test."
+    }
+  ],
+  "r2_owned_additions": [
+    "frontend/src/test/Revision6CanonicalFixture.test.tsx",
+    "docs/revision6/r2/r2_wip_review.json",
+    "docs/revision6/r2/REVISION6_R2_WIP_VALIDATION_REPORT.md"
+  ],
+  "deferred": {
+    "R3": [
+      "structured Stories response and item-level views/reach/navigation/actions",
+      "source_breakdown and paid_available semantics",
+      "audience_capabilities and honest availability metadata",
+      "content_summary, top_hashtags, methodology and source content metric fields"
+    ],
+    "R5": [
+      "canonical route/sidebar and removal of non-canonical visible surfaces",
+      "Last 7/30/90/365 Days labels and URL tab synchronization",
+      "removal of Content Winners and comment queues",
+      "exact card, column, text, order, state and responsive visual parity"
+    ]
+  }
+}

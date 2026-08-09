@@ -107,6 +107,17 @@
         "title": "AuthMeResponse",
         "type": "object"
       },
+      "AvailabilityStatus": {
+        "enum": [
+          "available",
+          "partial",
+          "pending",
+          "provider_unavailable",
+          "unavailable"
+        ],
+        "title": "AvailabilityStatus",
+        "type": "string"
+      },
       "BrandFamilyProjection": {
         "properties": {
           "brand_ids": {
@@ -335,6 +346,20 @@
           "data_status": {
             "$ref": "#/components/schemas/DataStatus"
           },
+          "top_commenters": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardTopCommenter"
+            },
+            "title": "Top Commenters",
+            "type": "array"
+          },
+          "top_liked_comments": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardTopLikedComment"
+            },
+            "title": "Top Liked Comments",
+            "type": "array"
+          },
           "total_comments": {
             "title": "Total Comments",
             "type": "integer"
@@ -349,7 +374,9 @@
           "answered_comments",
           "unanswered_comments",
           "comment_likes",
-          "data_status"
+          "data_status",
+          "top_commenters",
+          "top_liked_comments"
         ],
         "title": "CommunitySummary",
         "type": "object"
@@ -372,6 +399,38 @@
           "items"
         ],
         "title": "ConnectionsResponse",
+        "type": "object"
+      },
+      "DashboardAudienceCapabilities": {
+        "properties": {
+          "activity": {
+            "$ref": "#/components/schemas/AvailabilityStatus"
+          },
+          "age_gender": {
+            "$ref": "#/components/schemas/AvailabilityStatus"
+          },
+          "geo": {
+            "$ref": "#/components/schemas/AvailabilityStatus"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "required": [
+          "source",
+          "geo",
+          "age_gender",
+          "activity"
+        ],
+        "title": "DashboardAudienceCapabilities",
         "type": "object"
       },
       "DashboardBreakdown": {
@@ -435,6 +494,17 @@
             "title": "Account Id",
             "type": "integer"
           },
+          "average_time_watched": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Average Time Watched"
+          },
           "comments_count": {
             "title": "Comments Count",
             "type": "integer"
@@ -443,9 +513,41 @@
             "title": "Content Type",
             "type": "string"
           },
+          "cover_candidates": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Cover Candidates",
+            "type": "array"
+          },
+          "cover_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Url"
+          },
+          "data_status": {
+            "$ref": "#/components/schemas/DataStatus"
+          },
           "external_content_id": {
             "title": "External Content Id",
             "type": "string"
+          },
+          "full_video_watched_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Full Video Watched Rate"
           },
           "interactions": {
             "title": "Interactions",
@@ -458,6 +560,13 @@
           "media_url": {
             "title": "Media Url",
             "type": "string"
+          },
+          "media_url_candidates": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Media Url Candidates",
+            "type": "array"
           },
           "message": {
             "title": "Message",
@@ -479,9 +588,60 @@
             ],
             "title": "Published At"
           },
+          "reach": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reach"
+          },
           "shares_count": {
             "title": "Shares Count",
             "type": "integer"
+          },
+          "thumbnail_candidates": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Thumbnail Candidates",
+            "type": "array"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url"
+          },
+          "total_time_watched": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Time Watched"
+          },
+          "views": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Views"
           }
         },
         "required": [
@@ -495,9 +655,79 @@
           "likes_count",
           "comments_count",
           "shares_count",
-          "interactions"
+          "interactions",
+          "views",
+          "reach",
+          "cover_url",
+          "thumbnail_url",
+          "cover_candidates",
+          "thumbnail_candidates",
+          "media_url_candidates",
+          "full_video_watched_rate",
+          "total_time_watched",
+          "average_time_watched",
+          "data_status"
         ],
         "title": "DashboardContent",
+        "type": "object"
+      },
+      "DashboardContentSummary": {
+        "properties": {
+          "by_type": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardNamedValue"
+            },
+            "title": "By Type",
+            "type": "array"
+          },
+          "data_status": {
+            "$ref": "#/components/schemas/DataStatus"
+          },
+          "reach_by_type": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardNamedValue"
+            },
+            "title": "Reach By Type",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "views_by_type": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardNamedValue"
+            },
+            "title": "Views By Type",
+            "type": "array"
+          }
+        },
+        "required": [
+          "total",
+          "by_type",
+          "reach_by_type",
+          "views_by_type",
+          "data_status"
+        ],
+        "title": "DashboardContentSummary",
+        "type": "object"
+      },
+      "DashboardHashtag": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "count"
+        ],
+        "title": "DashboardHashtag",
         "type": "object"
       },
       "DashboardMeta": {
@@ -601,6 +831,17 @@
       },
       "DashboardMetric": {
         "properties": {
+          "availability_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Availability Reason"
+          },
           "data_status": {
             "$ref": "#/components/schemas/DataStatus"
           },
@@ -614,6 +855,10 @@
               }
             ],
             "title": "Delta Pct"
+          },
+          "methodology": {
+            "title": "Methodology",
+            "type": "string"
           },
           "metric_id": {
             "$ref": "#/components/schemas/MetricId"
@@ -654,9 +899,52 @@
           "delta_pct",
           "semantic_type",
           "unit",
-          "data_status"
+          "data_status",
+          "methodology",
+          "availability_reason"
         ],
         "title": "DashboardMetric",
+        "type": "object"
+      },
+      "DashboardMetricMethodology": {
+        "properties": {
+          "engagement_rate": {
+            "title": "Engagement Rate",
+            "type": "string"
+          },
+          "follower_flow": {
+            "title": "Follower Flow",
+            "type": "string"
+          },
+          "reach": {
+            "title": "Reach",
+            "type": "string"
+          }
+        },
+        "required": [
+          "follower_flow",
+          "engagement_rate",
+          "reach"
+        ],
+        "title": "DashboardMetricMethodology",
+        "type": "object"
+      },
+      "DashboardNamedValue": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "value"
+        ],
+        "title": "DashboardNamedValue",
         "type": "object"
       },
       "DashboardPoint": {
@@ -680,6 +968,10 @@
       },
       "DashboardSeries": {
         "properties": {
+          "methodology": {
+            "title": "Methodology",
+            "type": "string"
+          },
           "metric_id": {
             "$ref": "#/components/schemas/MetricId"
           },
@@ -697,9 +989,630 @@
         "required": [
           "metric_id",
           "semantic_type",
-          "points"
+          "points",
+          "methodology"
         ],
         "title": "DashboardSeries",
+        "type": "object"
+      },
+      "DashboardSourceBreakdown": {
+        "properties": {
+          "data_status": {
+            "$ref": "#/components/schemas/DataStatus"
+          },
+          "organic_only": {
+            "title": "Organic Only",
+            "type": "boolean"
+          },
+          "paid_available": {
+            "title": "Paid Available",
+            "type": "boolean"
+          },
+          "reach": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardSourceValues"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "views": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardSourceValues"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "organic_only",
+          "paid_available",
+          "views",
+          "reach",
+          "data_status"
+        ],
+        "title": "DashboardSourceBreakdown",
+        "type": "object"
+      },
+      "DashboardSourceValues": {
+        "properties": {
+          "data_status": {
+            "$ref": "#/components/schemas/DataStatus"
+          },
+          "organic": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organic"
+          },
+          "paid": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid"
+          }
+        },
+        "required": [
+          "organic",
+          "paid",
+          "data_status"
+        ],
+        "title": "DashboardSourceValues",
+        "type": "object"
+      },
+      "DashboardStories": {
+        "properties": {
+          "actions": {
+            "$ref": "#/components/schemas/DashboardStoryActions"
+          },
+          "data_status": {
+            "$ref": "#/components/schemas/DataStatus"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardStoryItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "navigation": {
+            "$ref": "#/components/schemas/DashboardStoryNavigation"
+          },
+          "previous_summary": {
+            "$ref": "#/components/schemas/DashboardStorySummary"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/DashboardStorySummary"
+          },
+          "trend": {
+            "$ref": "#/components/schemas/DashboardStoryTrend"
+          }
+        },
+        "required": [
+          "summary",
+          "previous_summary",
+          "trend",
+          "navigation",
+          "actions",
+          "items",
+          "data_status"
+        ],
+        "title": "DashboardStories",
+        "type": "object"
+      },
+      "DashboardStoryActions": {
+        "properties": {
+          "data_status": {
+            "$ref": "#/components/schemas/DataStatus"
+          },
+          "follows": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follows"
+          },
+          "profile_visits": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Visits"
+          },
+          "replies": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replies"
+          },
+          "shares": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shares"
+          }
+        },
+        "required": [
+          "replies",
+          "shares",
+          "profile_visits",
+          "follows",
+          "data_status"
+        ],
+        "title": "DashboardStoryActions",
+        "type": "object"
+      },
+      "DashboardStoryItem": {
+        "properties": {
+          "completion_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Rate"
+          },
+          "content_id": {
+            "title": "Content Id",
+            "type": "string"
+          },
+          "cover_url": {
+            "title": "Cover Url",
+            "type": "string"
+          },
+          "created_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created Time"
+          },
+          "data_status": {
+            "$ref": "#/components/schemas/DataStatus"
+          },
+          "exits": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exits"
+          },
+          "follows": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follows"
+          },
+          "interactions": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interactions"
+          },
+          "navigation": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Navigation"
+          },
+          "permalink": {
+            "title": "Permalink",
+            "type": "string"
+          },
+          "profile_visits": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Visits"
+          },
+          "reach": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reach"
+          },
+          "replies": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replies"
+          },
+          "shares": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shares"
+          },
+          "swipe_forward": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Swipe Forward"
+          },
+          "taps_back": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taps Back"
+          },
+          "taps_forward": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taps Forward"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "views": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Views"
+          }
+        },
+        "required": [
+          "content_id",
+          "title",
+          "cover_url",
+          "permalink",
+          "created_time",
+          "views",
+          "reach",
+          "interactions",
+          "replies",
+          "shares",
+          "profile_visits",
+          "follows",
+          "taps_forward",
+          "taps_back",
+          "swipe_forward",
+          "exits",
+          "navigation",
+          "completion_rate",
+          "data_status"
+        ],
+        "title": "DashboardStoryItem",
+        "type": "object"
+      },
+      "DashboardStoryNavigation": {
+        "properties": {
+          "data_status": {
+            "$ref": "#/components/schemas/DataStatus"
+          },
+          "exits": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exits"
+          },
+          "swipe_forward": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Swipe Forward"
+          },
+          "taps_back": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taps Back"
+          },
+          "taps_forward": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taps Forward"
+          }
+        },
+        "required": [
+          "taps_forward",
+          "taps_back",
+          "swipe_forward",
+          "exits",
+          "data_status"
+        ],
+        "title": "DashboardStoryNavigation",
+        "type": "object"
+      },
+      "DashboardStorySummary": {
+        "properties": {
+          "completion_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Rate"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "data_status": {
+            "$ref": "#/components/schemas/DataStatus"
+          },
+          "interactions": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interactions"
+          },
+          "reach": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reach"
+          },
+          "replies": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replies"
+          },
+          "views": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Views"
+          }
+        },
+        "required": [
+          "count",
+          "views",
+          "reach",
+          "interactions",
+          "replies",
+          "completion_rate",
+          "data_status"
+        ],
+        "title": "DashboardStorySummary",
+        "type": "object"
+      },
+      "DashboardStoryTrend": {
+        "properties": {
+          "data_status": {
+            "$ref": "#/components/schemas/DataStatus"
+          },
+          "labels": {
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Labels",
+            "type": "array"
+          },
+          "reach": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Reach",
+            "type": "array"
+          },
+          "views": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Views",
+            "type": "array"
+          }
+        },
+        "required": [
+          "labels",
+          "views",
+          "reach",
+          "data_status"
+        ],
+        "title": "DashboardStoryTrend",
+        "type": "object"
+      },
+      "DashboardTopCommenter": {
+        "properties": {
+          "comments": {
+            "title": "Comments",
+            "type": "integer"
+          },
+          "likes": {
+            "title": "Likes",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "comments",
+          "likes"
+        ],
+        "title": "DashboardTopCommenter",
+        "type": "object"
+      },
+      "DashboardTopLikedComment": {
+        "properties": {
+          "comment": {
+            "title": "Comment",
+            "type": "string"
+          },
+          "likes": {
+            "title": "Likes",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "replies": {
+            "title": "Replies",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "comment",
+          "likes",
+          "replies"
+        ],
+        "title": "DashboardTopLikedComment",
         "type": "object"
       },
       "DataStatus": {
@@ -1077,6 +1990,9 @@
       },
       "PlatformDashboard": {
         "properties": {
+          "audience_capabilities": {
+            "$ref": "#/components/schemas/DashboardAudienceCapabilities"
+          },
           "breakdowns": {
             "items": {
               "$ref": "#/components/schemas/DashboardBreakdown"
@@ -1094,8 +2010,14 @@
             "title": "Content",
             "type": "array"
           },
+          "content_summary": {
+            "$ref": "#/components/schemas/DashboardContentSummary"
+          },
           "meta": {
             "$ref": "#/components/schemas/DashboardMeta"
+          },
+          "metric_methodology": {
+            "$ref": "#/components/schemas/DashboardMetricMethodology"
           },
           "metrics": {
             "items": {
@@ -1110,6 +2032,33 @@
             },
             "title": "Series",
             "type": "array"
+          },
+          "source_breakdown": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardSourceBreakdown"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stories": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardStories"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "top_hashtags": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardHashtag"
+            },
+            "title": "Top Hashtags",
+            "type": "array"
           }
         },
         "required": [
@@ -1118,7 +2067,13 @@
           "series",
           "breakdowns",
           "content",
-          "community"
+          "community",
+          "top_hashtags",
+          "content_summary",
+          "source_breakdown",
+          "metric_methodology",
+          "audience_capabilities",
+          "stories"
         ],
         "title": "PlatformDashboard",
         "type": "object"
@@ -1521,11 +2476,8 @@
         "enum": [
           "development",
           "dormant",
-          "cutover_read_only",
-          "cutover_credential_migration",
-          "cutover_canary",
-          "cutover_control_plane_drain",
-          "cutover_activation",
+          "staging",
+          "standalone_ready",
           "active"
         ],
         "title": "RuntimeMode",

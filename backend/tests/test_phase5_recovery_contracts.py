@@ -8,7 +8,7 @@ import httpx
 import pytest
 
 from app.application.ports.checkpoints import CheckpointKey, ProviderCheckpoint
-from app.application.ports.persistence import ContentRecord, MetricPoint
+from app.application.ports.persistence import ContentRecord, MediaRecord, MetricPoint
 from app.application.ports.platforms import ProviderAccount, ProviderCredential, ProviderRecord
 from app.application.ports.platforms.content import ContentPage
 from app.application.services.collection import (
@@ -18,6 +18,7 @@ from app.application.services.collection import (
     collect_profile,
 )
 from app.application.services.collection.contracts import classify_failure
+from app.application.services.collection.media import ContentMediaWriter, FetchedMedia
 from app.domain.platforms import PlatformId
 from app.domain.sync import (
     BackfillJobState,
@@ -63,6 +64,28 @@ class MemoryMetricStore:
 
     def read(self, **kwargs: object) -> tuple[MetricPoint, ...]:
         return tuple(self.rows)
+
+
+class MemoryMediaStore:
+    def __init__(self) -> None:
+        self.rows: list[MediaRecord] = []
+
+    def upsert(self, record: MediaRecord) -> None:
+        self.rows.append(record)
+
+    def get(
+        self, account_id: int, external_content_id: str, media_kind: str
+    ) -> MediaRecord | None:
+        return next(
+            (
+                row
+                for row in self.rows
+                if row.account_id == account_id
+                and row.external_content_id == external_content_id
+                and row.media_kind == media_kind
+            ),
+            None,
+        )
 
 
 class MemoryCheckpointStore:
@@ -161,6 +184,33 @@ def test_crash_before_checkpoint_replays_page_without_duplicate_rows() -> None:
     assert next(iter(checkpoints.rows.values())).version == 1
 
 
+def test_content_streams_keep_independent_durable_checkpoints() -> None:
+    target = _target()
+    store = MemoryContentStore()
+    checkpoints = MemoryCheckpointStore()
+    reader = FixedContentReader((_content_item("post-1"),))
+
+    collect_content(
+        target=target,
+        reader=reader,
+        content_store=store,
+        checkpoint_store=checkpoints,
+        checkpoint_account_id="page-1.feed",
+    )
+    collect_content(
+        target=target,
+        reader=reader,
+        content_store=store,
+        checkpoint_store=checkpoints,
+        checkpoint_account_id="page-1.stories",
+    )
+
+    assert {key.account_id for key in checkpoints.rows} == {
+        "page-1.feed",
+        "page-1.stories",
+    }
+
+
 def test_atomic_media_failure_leaves_no_destination_or_partial_file(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -173,6 +223,52 @@ def test_atomic_media_failure_leaves_no_destination_or_partial_file(
     with pytest.raises(OSError, match="simulated_media_failure"):
         files.persist("facebook/11/post-1.jpg", b"fixture-media")
     assert [path for path in tmp_path.rglob("*") if path.is_file()] == []
+
+
+def test_media_writer_uses_durable_candidate_fallback_without_synthetic_url(
+    tmp_path: Path,
+) -> None:
+    attempted: list[str] = []
+
+    def fetch(url: str) -> FetchedMedia:
+        attempted.append(url)
+        if url.endswith("expired.jpg"):
+            raise httpx.HTTPStatusError(
+                "expired",
+                request=httpx.Request("GET", url),
+                response=httpx.Response(403),
+            )
+        return FetchedMedia(data=b"durable-cover", mime_type="image/jpeg", status_code=200)
+
+    media_store = MemoryMediaStore()
+    item = ProviderRecord(
+        external_id="story-1",
+        observed_at=NOW,
+        fields={
+            **_content_item("story-1").fields,
+            "content_type": "story",
+            "media_url": "https://example.test/story.mp4",
+            "cover_candidates": (
+                "https://example.test/expired.jpg",
+                "https://example.test/story-cover.jpg",
+            ),
+        },
+    )
+    written = ContentMediaWriter(
+        target=_target(),
+        files=AtomicMediaFiles(tmp_path),
+        media_store=media_store,
+        fetch=fetch,
+        clock=lambda: NOW,
+    ).persist(item)
+
+    assert written == 1
+    assert attempted == [
+        "https://example.test/expired.jpg",
+        "https://example.test/story-cover.jpg",
+    ]
+    assert media_store.rows[0].source_url.endswith("story-cover.jpg")
+    assert (tmp_path / media_store.rows[0].storage_path).read_bytes() == b"durable-cover"
 
 
 def test_dirty_backfill_windows_stale_recovery_and_rate_defer() -> None:

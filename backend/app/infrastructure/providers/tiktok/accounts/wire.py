@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from datetime import date
 
 from app.core.config import TIKTOK_APP_ID, TIKTOK_PROVIDER_PROFILE, TikTokConfig
+from app.domain.metrics import MetricId
 
 
 class TikTokWireError(ValueError):
@@ -115,11 +117,17 @@ class TikTokAccountsWireMapper:
                 [
                     "item_id",
                     "thumbnail_url",
+                    "share_url",
+                    "embed_url",
                     "caption",
                     "likes",
                     "comments",
                     "shares",
                     "video_views",
+                    MetricId.REACH.value,
+                    "full_video_watched_rate",
+                    "total_time_watched",
+                    "average_time_watched",
                     "create_time",
                 ],
                 separators=(",", ":"),
@@ -128,6 +136,56 @@ class TikTokAccountsWireMapper:
         if cursor:
             fields["cursor"] = cursor
         return fields
+
+    def comment_fields(
+        self,
+        *,
+        business_id: str,
+        video_id: str,
+        cursor: str | None = None,
+    ) -> dict[str, str]:
+        self._assert_profile()
+        if not business_id or not video_id:
+            raise TikTokWireError("comment_scope_required")
+        fields = {
+            "business_id": business_id,
+            "video_id": video_id,
+            "fields": json.dumps(
+                [
+                    "comment_id",
+                    "video_id",
+                    "text",
+                    "create_time",
+                    "likes",
+                    "reply_comment_total",
+                    "username",
+                    "user_id",
+                ],
+                separators=(",", ":"),
+            ),
+        }
+        if cursor:
+            fields["cursor"] = cursor
+        return fields
+
+    def audience_fields(self, *, business_id: str, observed_on: date) -> dict[str, str]:
+        self._assert_profile()
+        if not business_id:
+            raise TikTokWireError("business_id_required")
+        return {
+            "business_id": business_id,
+            "fields": json.dumps(
+                [
+                    "audience_countries",
+                    "audience_genders",
+                    "audience_ages",
+                    "audience_activity",
+                ],
+                separators=(",", ":"),
+            ),
+            "start_date": observed_on.isoformat(),
+            "end_date": observed_on.isoformat(),
+        }
 
     def _assert_secret_request(self, value: str, missing_error: str) -> None:
         self._assert_profile()

@@ -8,7 +8,7 @@ from sqlalchemy.engine import Connection
 from app.core.write_policy import WritePolicy
 from app.domain.platforms import PlatformId
 
-from .platforms import normalize_platform
+from ..legacy_socialmedia.platforms import normalize_platform
 
 
 class SocialStoreBase:

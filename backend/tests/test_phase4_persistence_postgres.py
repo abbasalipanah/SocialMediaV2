@@ -65,12 +65,33 @@ def stores() -> Iterator[
                     content_type varchar(32) NOT NULL DEFAULT '',
                     permalink varchar(512) NOT NULL DEFAULT '',
                     message varchar(4096) NOT NULL DEFAULT '',
-                    media_url varchar(512) NOT NULL DEFAULT '',
+                    media_url varchar(2048) NOT NULL DEFAULT '',
                     created_time timestamptz NULL,
                     likes_count integer NOT NULL DEFAULT 0,
                     comments_count integer NOT NULL DEFAULT 0,
                     shares_count integer NOT NULL DEFAULT 0,
-                    created_at timestamptz NOT NULL,
+                    views_count double precision,
+                    reach_count double precision,
+                    cover_url varchar(2048),
+                    thumbnail_url varchar(2048),
+                    cover_candidates jsonb NOT NULL DEFAULT '[]'::jsonb,
+                    thumbnail_candidates jsonb NOT NULL DEFAULT '[]'::jsonb,
+                    media_url_candidates jsonb NOT NULL DEFAULT '[]'::jsonb,
+                    full_video_watched_rate double precision,
+                    total_time_watched double precision,
+                    average_time_watched double precision,
+                    interactions_count double precision,
+                    replies_count double precision,
+                    profile_visits double precision,
+                    follows_count double precision,
+                    taps_forward double precision,
+                    taps_back double precision,
+                    swipe_forward double precision,
+                    exits double precision,
+                    navigation_count double precision,
+                    completion_rate double precision,
+                    created_at timestamptz NOT NULL DEFAULT now(),
+                    updated_at timestamptz NOT NULL DEFAULT now(),
                     CONSTRAINT uq_content_items_asset_content UNIQUE (asset_id, content_id)
                 )"""
             )
@@ -210,6 +231,12 @@ def test_social_data_stores_are_idempotent_and_query_side_effect_free(
         likes_count=3,
         comments_count=1,
         shares_count=0,
+        views_count=91,
+        reach_count=73,
+        cover_url="https://example.test/cover-1",
+        cover_candidates=("https://example.test/cover-1",),
+        media_url_candidates=("https://example.test/media-1",),
+        interactions_count=4,
     )
     content_store.upsert(content)
     content_store.upsert(ContentRecord(**{**content.__dict__, "likes_count": 4}))
@@ -263,7 +290,10 @@ def test_social_data_stores_are_idempotent_and_query_side_effect_free(
         query=query,
     )
     assert metric_rows[0].value == 125
-    assert content_store.list_for_account(11)[0].likes_count == 4
+    stored_content = content_store.list_for_account(11)[0]
+    assert stored_content.likes_count == 4
+    assert stored_content.views_count == 91
+    assert stored_content.cover_candidates == ("https://example.test/cover-1",)
     assert comment_store.list_for_content(11, "post-1")[0].answered is True
     assert media_store.get(11, "post-1", "cover").size_bytes == 14  # type: ignore[union-attr]
     assert _row_counts(metric_store) == before == (1, 1, 1, 1)
@@ -308,6 +338,38 @@ def test_dormant_policy_rejects_every_social_data_mutation(
             )
         )
     assert _row_counts(metric_store) == (0, 0, 0, 0)
+
+
+def test_metric_breakdown_replacement_removes_stale_dimension_rows(
+    stores: tuple[
+        SocialMetricStore,
+        SocialContentStore,
+        SocialCommentStore,
+        SocialMediaStore,
+    ],
+) -> None:
+    metric_store = stores[0]
+    arguments = {
+        "platform": PlatformId.INSTAGRAM,
+        "account_id": 11,
+        "brand_id": 7,
+        "observed_on": date(2026, 7, 14),
+        "metric_id": MetricId.FOLLOWERS,
+        "breakdown_key": "follower_demographics_country",
+    }
+    metric_store.replace_breakdown(**arguments, values={"TR": 70, "DE": 20})
+    metric_store.replace_breakdown(**arguments, values={"TR": 75})
+
+    with metric_store.engine.connect() as connection:
+        rows = connection.execute(
+            text(
+                """SELECT breakdown_value, value_numeric
+                   FROM metrics_daily
+                   WHERE asset_id=11 AND breakdown_key='follower_demographics_country'
+                   ORDER BY breakdown_value"""
+            )
+        ).all()
+    assert rows == [("TR", 75.0)]
 
 
 def test_persistence_rejects_cross_brand_or_platform_account_scope(

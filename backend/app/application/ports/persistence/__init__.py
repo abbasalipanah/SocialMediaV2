@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Protocol
@@ -56,6 +57,26 @@ class ContentRecord:
     likes_count: int
     comments_count: int
     shares_count: int
+    views_count: float | None = None
+    reach_count: float | None = None
+    cover_url: str | None = None
+    thumbnail_url: str | None = None
+    cover_candidates: tuple[str, ...] = ()
+    thumbnail_candidates: tuple[str, ...] = ()
+    media_url_candidates: tuple[str, ...] = ()
+    full_video_watched_rate: float | None = None
+    total_time_watched: float | None = None
+    average_time_watched: float | None = None
+    interactions_count: float | None = None
+    replies_count: float | None = None
+    profile_visits: float | None = None
+    follows_count: float | None = None
+    taps_forward: float | None = None
+    taps_back: float | None = None
+    swipe_forward: float | None = None
+    exits: float | None = None
+    navigation_count: float | None = None
+    completion_rate: float | None = None
 
     def __post_init__(self) -> None:
         _positive(self.account_id, "account_id")
@@ -63,6 +84,43 @@ class ContentRecord:
         _required(self.external_content_id, "external_content_id")
         if min(self.likes_count, self.comments_count, self.shares_count) < 0:
             raise ValueError("content_count_invalid")
+        optional_values = (
+            self.views_count,
+            self.reach_count,
+            self.full_video_watched_rate,
+            self.total_time_watched,
+            self.average_time_watched,
+            self.interactions_count,
+            self.replies_count,
+            self.profile_visits,
+            self.follows_count,
+            self.taps_forward,
+            self.taps_back,
+            self.swipe_forward,
+            self.exits,
+            self.navigation_count,
+            self.completion_rate,
+        )
+        if any(
+            value is not None
+            and (
+                isinstance(value, bool)
+                or not math.isfinite(float(value))
+                or float(value) < 0
+            )
+            for value in optional_values
+        ):
+            raise ValueError("content_metric_invalid")
+        for candidates in (
+            self.cover_candidates,
+            self.thumbnail_candidates,
+            self.media_url_candidates,
+        ):
+            if (
+                len(candidates) != len(set(candidates))
+                or any(not isinstance(value, str) or not value.strip() for value in candidates)
+            ):
+                raise ValueError("content_media_candidates_invalid")
 
 
 @dataclass(frozen=True)
@@ -125,6 +183,18 @@ class MetricStore(Protocol):
         end_on: date,
         query: MetricQuery,
     ) -> tuple[MetricPoint, ...]: ...
+
+    def replace_breakdown(
+        self,
+        *,
+        platform: PlatformId,
+        account_id: int,
+        brand_id: int,
+        observed_on: date,
+        metric_id: MetricId,
+        breakdown_key: str,
+        values: Mapping[str, float | int],
+    ) -> None: ...
 
 
 class ContentStore(Protocol):

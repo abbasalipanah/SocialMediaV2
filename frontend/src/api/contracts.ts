@@ -90,11 +90,8 @@ export const workspaceCapabilitiesSchema = z.object({
     mode: z.enum([
       "development",
       "dormant",
-      "cutover_read_only",
-      "cutover_credential_migration",
-      "cutover_canary",
-      "cutover_control_plane_drain",
-      "cutover_activation",
+      "staging",
+      "standalone_ready",
       "active",
     ]),
     writes_enabled: z.boolean(),
@@ -156,6 +153,14 @@ export type MetricId = z.infer<typeof metricIdSchema>;
 export const dataStatusSchema = z.enum(["available", "partial", "unavailable"]);
 export type DataStatus = z.infer<typeof dataStatusSchema>;
 
+export const availabilityStatusSchema = z.enum([
+  "available",
+  "partial",
+  "pending",
+  "provider_unavailable",
+  "unavailable",
+]);
+
 const dashboardMetaSchema = z.object({
   dashboard_id: z.string(),
   platform: platformSchema.nullable(),
@@ -185,6 +190,8 @@ export const dashboardMetricSchema = z.object({
   semantic_type: z.enum(["snapshot", "flow", "cumulative", "ratio"]),
   unit: z.enum(["count", "ratio"]),
   data_status: dataStatusSchema,
+  methodology: z.string().min(1),
+  availability_reason: z.string().nullable(),
 });
 export type DashboardMetric = z.infer<typeof dashboardMetricSchema>;
 
@@ -192,6 +199,7 @@ const dashboardSeriesSchema = z.object({
   metric_id: metricIdSchema,
   semantic_type: z.enum(["snapshot", "flow", "cumulative", "ratio"]),
   points: z.array(z.object({ observed_on: z.string(), value: z.number() })),
+  methodology: z.string().min(1),
 });
 export type DashboardSeries = z.infer<typeof dashboardSeriesSchema>;
 
@@ -220,6 +228,17 @@ export const dashboardContentSchema = z.object({
   comments_count: z.number().int(),
   shares_count: z.number().int(),
   interactions: z.number().int(),
+  views: z.number().nullable(),
+  reach: z.number().nullable(),
+  cover_url: z.string().nullable(),
+  thumbnail_url: z.string().nullable(),
+  cover_candidates: z.array(z.string()),
+  thumbnail_candidates: z.array(z.string()),
+  media_url_candidates: z.array(z.string()),
+  full_video_watched_rate: z.number().nullable(),
+  total_time_watched: z.number().nullable(),
+  average_time_watched: z.number().nullable(),
+  data_status: dataStatusSchema,
 });
 export type DashboardContent = z.infer<typeof dashboardContentSchema>;
 
@@ -229,7 +248,125 @@ const communitySchema = z.object({
   unanswered_comments: z.number().int().nonnegative(),
   comment_likes: z.number().int().nonnegative(),
   data_status: dataStatusSchema,
+  top_commenters: z.array(z.object({
+    name: z.string(),
+    comments: z.number().int().nonnegative(),
+    likes: z.number().int().nonnegative(),
+  })),
+  top_liked_comments: z.array(z.object({
+    name: z.string(),
+    comment: z.string(),
+    likes: z.number().int().nonnegative(),
+    replies: z.number().int().nonnegative(),
+  })),
 });
+
+const dashboardNamedValueSchema = z.object({
+  name: z.string(),
+  value: z.number(),
+});
+
+export const dashboardContentSummarySchema = z.object({
+  total: z.number().int().nonnegative(),
+  by_type: z.array(dashboardNamedValueSchema),
+  reach_by_type: z.array(dashboardNamedValueSchema),
+  views_by_type: z.array(dashboardNamedValueSchema),
+  data_status: dataStatusSchema,
+});
+
+const dashboardSourceValuesSchema = z.object({
+  organic: z.number().nullable(),
+  paid: z.number().nullable(),
+  data_status: dataStatusSchema,
+});
+
+export const dashboardSourceBreakdownSchema = z.object({
+  organic_only: z.boolean(),
+  paid_available: z.boolean(),
+  views: dashboardSourceValuesSchema.nullable(),
+  reach: dashboardSourceValuesSchema.nullable(),
+  data_status: dataStatusSchema,
+}).nullable();
+
+export const dashboardMetricMethodologySchema = z.object({
+  follower_flow: z.string().min(1),
+  engagement_rate: z.string().min(1),
+  reach: z.string().min(1),
+});
+
+export const dashboardAudienceCapabilitiesSchema = z.object({
+  source: z.string().nullable(),
+  geo: availabilityStatusSchema,
+  age_gender: availabilityStatusSchema,
+  activity: availabilityStatusSchema,
+});
+
+const dashboardStorySummarySchema = z.object({
+  count: z.number().int().nonnegative(),
+  views: z.number().nullable(),
+  reach: z.number().nullable(),
+  interactions: z.number().nullable(),
+  replies: z.number().nullable(),
+  completion_rate: z.number().nullable(),
+  data_status: dataStatusSchema,
+});
+
+const dashboardStoryTrendSchema = z.object({
+  labels: z.array(z.string()),
+  views: z.array(z.number().nullable()),
+  reach: z.array(z.number().nullable()),
+  data_status: dataStatusSchema,
+});
+
+const dashboardStoryNavigationSchema = z.object({
+  taps_forward: z.number().nullable(),
+  taps_back: z.number().nullable(),
+  swipe_forward: z.number().nullable(),
+  exits: z.number().nullable(),
+  data_status: dataStatusSchema,
+});
+
+const dashboardStoryActionsSchema = z.object({
+  replies: z.number().nullable(),
+  shares: z.number().nullable(),
+  profile_visits: z.number().nullable(),
+  follows: z.number().nullable(),
+  data_status: dataStatusSchema,
+});
+
+export const dashboardStoryItemSchema = z.object({
+  content_id: z.string(),
+  title: z.string(),
+  cover_url: z.string(),
+  permalink: z.string(),
+  created_time: z.string().nullable(),
+  views: z.number().nullable(),
+  reach: z.number().nullable(),
+  interactions: z.number().nullable(),
+  replies: z.number().nullable(),
+  shares: z.number().nullable(),
+  profile_visits: z.number().nullable(),
+  follows: z.number().nullable(),
+  taps_forward: z.number().nullable(),
+  taps_back: z.number().nullable(),
+  swipe_forward: z.number().nullable(),
+  exits: z.number().nullable(),
+  navigation: z.number().nullable(),
+  completion_rate: z.number().nullable(),
+  data_status: dataStatusSchema,
+});
+export type DashboardStoryItem = z.infer<typeof dashboardStoryItemSchema>;
+
+export const dashboardStoriesSchema = z.object({
+  summary: dashboardStorySummarySchema,
+  previous_summary: dashboardStorySummarySchema,
+  trend: dashboardStoryTrendSchema,
+  navigation: dashboardStoryNavigationSchema,
+  actions: dashboardStoryActionsSchema,
+  items: z.array(dashboardStoryItemSchema),
+  data_status: dataStatusSchema,
+}).nullable();
+export type DashboardStories = Exclude<z.infer<typeof dashboardStoriesSchema>, null>;
 
 export const platformDashboardSchema = z.object({
   meta: dashboardMetaSchema,
@@ -238,6 +375,15 @@ export const platformDashboardSchema = z.object({
   breakdowns: z.array(dashboardBreakdownSchema),
   content: z.array(dashboardContentSchema),
   community: communitySchema,
+  top_hashtags: z.array(z.object({
+    name: z.string(),
+    count: z.number().int().nonnegative(),
+  })),
+  content_summary: dashboardContentSummarySchema,
+  source_breakdown: dashboardSourceBreakdownSchema,
+  metric_methodology: dashboardMetricMethodologySchema,
+  audience_capabilities: dashboardAudienceCapabilitiesSchema,
+  stories: dashboardStoriesSchema,
 });
 export type PlatformDashboard = z.infer<typeof platformDashboardSchema> &
   components["schemas"]["PlatformDashboard"];

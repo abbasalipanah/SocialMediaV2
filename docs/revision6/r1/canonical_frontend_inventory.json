@@ -1,0 +1,442 @@
+{
+  "schema_version": 1,
+  "inventory_id": "socialmedia-revision6-r1-canonical-frontend",
+  "frozen": true,
+  "source_snapshot": {
+    "root": "/home/api/colab_scripts/SocialMedia",
+    "branch": "feature/tiktok-integration",
+    "head": "d871dde08c68b335a13187e4853ded85fb869ae5",
+    "tracked_binary_diff_sha256": "db6c9b2d9c15d7242c7bf7e3ee0d29cf0258ff36f415a090706c291799b2dcde",
+    "artifact_excluded_content_manifest_sha256": "bfeafc5b28d4e41146caebd4366dffe3583c9b4bf92760bd2ef4b3ba7f01cd38",
+    "baseline": "../r0/source_baseline_revision6.json",
+    "rule": "The current source working tree, including tracked and untracked files, is the oracle. Only actually reachable/rendered components define visible parity."
+  },
+  "source_files": [
+    { "path": "frontend/src/app/App.tsx", "sha256": "8d032174d316c6c679f3f61a7f51eaaa262a3ed8bf1513961c572ec8535f4651" },
+    { "path": "frontend/src/components/dashboard/SocialAppShell.tsx", "sha256": "94dd2d906e7c84a0dd7c45f38b40b289995ba8789c30401ac909ba63c8aa2321" },
+    { "path": "frontend/src/pages/PlatformDashboardPage.tsx", "sha256": "60ba8a56c197627ca595616eba9cf685995f9e2c9a155d71d3cde94302d12af5" },
+    { "path": "frontend/src/components/dashboard/DashboardPrimitives.tsx", "sha256": "4febdb0b97ca4def362d26abd495b7f8c7de7be0b96965816b8f5b460c712fbe" },
+    { "path": "frontend/src/components/dashboard/AudienceInsightsSection.tsx", "sha256": "468fba13d526990ff7bee512a4c4afd333c7ba97412a667648320f20096196c8" },
+    { "path": "frontend/src/components/dashboard/AccumulateAudienceWidgets.tsx", "sha256": "86564b7025349dd2ea86358d75a16cd29d8df78ba78341aea3e7d236e6d2dfb6" },
+    { "path": "frontend/src/components/dashboard/InstagramStoriesSection.tsx", "sha256": "06a3c3f13a3172ea0b316cceae4eedb268ef62c5cd60310cb008a9ea4c53f14e" },
+    { "path": "frontend/src/components/dashboard/FacebookAudienceSection.tsx", "sha256": "6ee3d5c6ad24926483e3d0f741cbf1e143804bfa352930a422bc36dca866624a" },
+    { "path": "frontend/src/pages/SettingsPage.tsx", "sha256": "cbd6a364d406584ec370a6e4d2f903c8dea31dfa1e9040c54f2761feb373a8dc" },
+    { "path": "frontend/src/components/BrandSetupDrawer.tsx", "sha256": "6ec87d9d36961e11ad00a3ea8853277731ea15f315b2f2daadce47e8a4073a9c" },
+    { "path": "frontend/src/pages/AuditPage.tsx", "sha256": "324962fc5c95a600f77da15f625faca4fb31e2da0a4812b4c1922eaefc9df668" },
+    { "path": "frontend/src/pages/EntryGatePage.tsx", "sha256": "9c4aacdaa326ab686448697ceed7568ac078837bd0c4cd4b3c7c80ddca787510" },
+    { "path": "frontend/src/pages/SsoConsumePage.tsx", "sha256": "692a68ff60ea68737ef62b2b9e24c29a0bfa78ff8e8ffc54f7dbbfa510aabd88" },
+    { "path": "frontend/src/types.ts", "sha256": "ea707fc5bb7d427df8849e9a9fbad11cb2490cf5e15da7481d50d4e9a5febfe5" },
+    { "path": "frontend/src/lib/api.ts", "sha256": "6a330b152e67fb278a545394524efa10512791dbd7972b05718548555bef58a9" },
+    { "path": "frontend/src/lib/auth.ts", "sha256": "ab4db66416d277b89f4bdaeee5a432981afdb68f5d4e167ac8dee736a6a905da" },
+    { "path": "frontend/src/lib/roles.ts", "sha256": "b7f06fe82d273cc433fb746037db5f1e6f10ddd01460d4798c3c6b33d133c3c1" },
+    { "path": "frontend/src/lib/tiktokCapabilities.ts", "sha256": "3527aeca2d074687170628fd566a1600c0f007c361d2072c22bb4f1cd5e64e6e" },
+    { "path": "frontend/src/platform-dashboard.css", "sha256": "6e8ad85ad2f56c773d833aa484bd730abcf2218e3901c70486bec9a52f969b52" },
+    { "path": "frontend/src/styles.css", "sha256": "77a5525e29d56db2cd8372393ceceef52552fefd004f5dae974df9734658770d" },
+    { "path": "frontend/src/pages/PlatformDashboardPage.test.tsx", "sha256": "15f05d9e3468ab1e3293cdc03073019c16e511e668c2cb8a146f8073eb5205c7" }
+  ],
+  "routes": [
+    {
+      "paths": ["/auth/sso/consume", "/sso/consume"],
+      "priority": 1,
+      "auth": "not_required",
+      "component": "SsoConsumePage",
+      "visible_text": ["SocialMedia", "Access handoff", "Preparing access", "Access confirmed", "Missing app token"],
+      "default_next": "/settings"
+    },
+    {
+      "paths": ["/_dev/tiktok-main"],
+      "priority": 2,
+      "auth": "not_required",
+      "environment_gate": "import.meta.env.DEV",
+      "component": "TikTokMainPreviewPage",
+      "production_visible": false
+    },
+    {
+      "paths": ["*"],
+      "priority": 3,
+      "auth": "missing_token",
+      "component": "EntryGatePage",
+      "visible_text": ["Accumulate", "Launch Social Media from Accumulate", "Open in Accumulate"],
+      "external_target": "https://app.theaccumulate.com/apps/social-media"
+    },
+    {
+      "paths": ["/settings/audit"],
+      "priority": 4,
+      "auth": "required",
+      "local_role_gate": ["super_admin", "developer", "owner"],
+      "component": "AuditPage",
+      "fallback_when_denied": "normal route fallback"
+    },
+    {
+      "paths": ["/facebook", "/instagram", "/tiktok"],
+      "priority": 5,
+      "auth": "required",
+      "component": "StandalonePlatformDashboardPage > SocialAppShell + PlatformDashboardPage",
+      "deep_link": true
+    },
+    {
+      "paths": ["*"],
+      "priority": 6,
+      "auth": "required",
+      "demo_mode": true,
+      "component": "StandalonePlatformDashboardPage",
+      "platform": "facebook"
+    },
+    {
+      "paths": ["/", "/settings", "unknown authenticated path"],
+      "priority": 7,
+      "auth": "required",
+      "demo_mode": false,
+      "component": "SettingsPage"
+    }
+  ],
+  "navigation": {
+    "dashboard_shell_only": true,
+    "desktop": {
+      "sidebar": "fixed left, 236px",
+      "topbar": "sticky, 70px",
+      "order": [
+        "AccumulateAI logo",
+        "Home",
+        "Analytics",
+        "Social Media",
+        "Facebook",
+        "Instagram",
+        "TikTok when dashboard_enabled",
+        "Settings in platform tree when not demo",
+        "Settings in footer when not demo",
+        "Read-only demo or SocialMedia standalone status"
+      ],
+      "home_target": "TikTok when dashboard_enabled, otherwise Facebook"
+    },
+    "mobile": {
+      "breakpoint_max_px": 1050,
+      "sidebar": "off-canvas drawer with backdrop",
+      "open_control": "Open navigation",
+      "close_controls": ["Close navigation backdrop", "Close navigation by platform/settings route selection"]
+    },
+    "topbar": {
+      "left": ["mobile menu", "brand initials", "brand name", "SSO badge"],
+      "right": ["green live dot", "Demo data or Live data", "user initial"],
+      "brand_source": "dashboard response brand_name; initial value Social Media"
+    },
+    "settings_page": "SettingsPage is not wrapped in SocialAppShell in the canonical source."
+  },
+  "dashboard_header": {
+    "titles": {
+      "facebook": "Facebook Dashboard",
+      "instagram": "Instagram Dashboard",
+      "tiktok": "TikTok Dashboard"
+    },
+    "descriptions": {
+      "facebook": "Unified Facebook performance monitor.",
+      "instagram": "Unified Instagram performance monitor.",
+      "tiktok": "Organic account, video and audience performance in one view."
+    },
+    "controls_in_dom_order": ["tabs", "conditional TikTok connect", "date period", "download JSON"],
+    "date_options": ["Last 7 Days", "Last 30 Days", "Last 90 Days", "Last 365 Days"],
+    "default_days": 30,
+    "auto_refresh_ms": 60000,
+    "auto_refresh_condition": "Only request while document.visibilityState is visible; keep the last successful payload during refresh.",
+    "request": "GET /api/social/dashboard/<platform>?days=<7|30|90|365>",
+    "tab_location": "Standalone dashboard reads ?tab on load, changes it without reload, removes it for Cover, and reacts to popstate.",
+    "document_title": "<Platform> Dashboard · SocialMedia",
+    "download": "Raw PlatformDashboardResponse JSON named <platform>-dashboard-<until>.json"
+  },
+  "platforms": {
+    "facebook": {
+      "route": "/facebook",
+      "tabs": ["Cover", "Page", "Content", "Audience"],
+      "default_tab": "Cover",
+      "cover_sections": ["account", "content", "audience"],
+      "focused_tabs": { "Page": ["account"], "Content": ["content"], "Audience": ["audience"] },
+      "audience_sequence": [
+        "audience.kpis",
+        "audience.followers_trend",
+        "audience.new_followers_trend",
+        "facebook.page_like_types",
+        "facebook.best_time_to_engage",
+        "facebook.top_countries",
+        "facebook.top_cities",
+        "facebook.paid_reach_trend",
+        "facebook.organic_reach_trend"
+      ]
+    },
+    "instagram": {
+      "route": "/instagram",
+      "tabs": ["Cover", "Page", "Content", "Stories", "Audience"],
+      "default_tab": "Cover",
+      "cover_sections": ["account", "content", "audience"],
+      "cover_excludes": ["stories"],
+      "focused_tabs": { "Page": ["account"], "Content": ["content"], "Stories": ["stories"], "Audience": ["audience"] },
+      "audience_sequence": [
+        "audience.kpis",
+        "audience.followers_trend",
+        "audience.new_followers_trend",
+        "instagram.age_gender",
+        "instagram.audience_country_map",
+        "instagram.best_time_to_engage",
+        "instagram.organic_reach_trend",
+        "instagram.top_countries",
+        "instagram.top_cities",
+        "instagram.reach_source",
+        "instagram.paid_reach_trend",
+        "instagram.most_comments_messages",
+        "instagram.most_liked_comments"
+      ]
+    },
+    "tiktok": {
+      "route": "/tiktok",
+      "tabs": ["Cover", "Account", "Content", "Audience"],
+      "default_tab": "Cover",
+      "cover_sections": ["account", "content", "audience"],
+      "focused_tabs": { "Account": ["account"], "Content": ["content"], "Audience": ["audience"] },
+      "audience_sequence": [
+        "audience.kpis",
+        "audience.followers_trend",
+        "audience.new_followers_trend",
+        "tiktok.age_gender",
+        "tiktok.audience_country_map",
+        "tiktok.best_time_to_engage",
+        "tiktok.organic_reach_trend",
+        "tiktok.top_countries",
+        "tiktok.age_groups",
+        "tiktok.most_active_commenters",
+        "tiktok.most_liked_comments"
+      ]
+    }
+  },
+  "shared_section_sequences": {
+    "account": [
+      "account.kpis",
+      "account.followers_trend",
+      "account.new_followers_trend",
+      "account.performance_trends",
+      "account.view_type",
+      "account.views_source_trend",
+      "account.reach_distribution",
+      "account.reach_source_trend"
+    ],
+    "content": [
+      "content.kpis",
+      "content.content_type",
+      "content.views_reach_trend",
+      "content.interaction_trend",
+      "content.engagement_split",
+      "content.content_type_reach",
+      "content.comment_sentiment",
+      "content.top_hashtags",
+      "content.all_performing_content"
+    ],
+    "stories": [
+      "stories.kpis",
+      "stories.performance_trends",
+      "stories.last_story",
+      "stories.navigation_split",
+      "stories.actions",
+      "stories.sliders",
+      "stories.table"
+    ]
+  },
+  "cards": {
+    "account.kpis": {
+      "type": "six-column KPI grid",
+      "order": ["followers", "new_followers", "views", "reach", "interactions", "engagement_rate"],
+      "labels": { "tiktok.new_followers": "Follower Growth", "tiktok.views": "Video Views", "derived.interactions": "Total Interactions" },
+      "data": ["kpis[]", "likes+comments+shares derived interactions"],
+      "missing": "KPI card is omitted"
+    },
+    "account.followers_trend": { "title": "Followers Trend", "type": "line/area trend", "legend": ["Followers"], "data": ["trend.series.followers", "kpis.followers.spark"], "scale": "local_zoom", "empty": "No trend data for this period." },
+    "account.new_followers_trend": { "title": "New Followers Trend", "type": "line/area trend", "legend": ["Follows", "Unfollows", "Net"], "data": ["trend.series.follows", "trend.series.unfollows", "trend.series.followers_net", "fallback kpis.new_followers.spark"], "empty": "No trend data for this period." },
+    "account.performance_trends": { "title": "Performance Trends", "type": "full-width grouped bar trend", "legend": ["Page/Video Reach", "Page/Video Views"], "data": ["trend.series.reach", "trend.series.views"] },
+    "account.view_type": { "title": "Page View Type or Video View Type", "type": "breakdown pie", "legend": ["Organic", "Paid only when paid_available"], "data": ["source_breakdown.views", "fallback kpis.views"] },
+    "account.views_source_trend": { "title": "Views Source Trend", "type": "trend", "legend": ["Organic Views", "Paid Views only when paid_available"], "data": ["trend.series.views_organic", "trend.series.views_paid", "fallback trend.series.views"] },
+    "account.reach_distribution": { "title": "Reach Distribution", "type": "breakdown pie", "legend": ["Organic", "Paid only when paid_available"], "data": ["source_breakdown.reach", "fallback kpis.reach"] },
+    "account.reach_source_trend": { "title": "Reach Source Trend", "type": "trend", "legend": ["Paid Reach only when paid_available", "Organic Reach"], "data": ["trend.series.reach_paid", "trend.series.reach_organic", "fallback trend.series.reach"] },
+    "content.kpis": { "type": "six-column KPI grid", "order": ["views", "reach", "likes", "comments", "shares", "engagement_rate"], "data": ["kpis[]"], "missing": "KPI card is omitted" },
+    "content.content_type": { "title": "Content Type", "type": "breakdown pie", "data": ["content_summary.by_type"], "empty": "No distribution data in selected range." },
+    "content.views_reach_trend": { "title": "Views & Reach Trend", "type": "trend", "legend": ["Views", "Reach"], "data": ["trend.series.views", "trend.series.reach"] },
+    "content.interaction_trend": { "title": "Interaction Trend", "type": "trend", "legend": ["Likes", "Comments", "Shares"], "data": ["trend.series.likes", "trend.series.comments", "trend.series.shares"] },
+    "content.engagement_split": { "title": "Engagement Split", "type": "breakdown pie", "legend": ["Likes", "Comments", "Shares"], "data": ["kpis.likes", "kpis.comments", "kpis.shares"], "show_zero_items": true },
+    "content.content_type_reach": { "title": "Content Type Reach", "type": "breakdown pie", "data": ["content_summary.reach_by_type"] },
+    "content.comment_sentiment": { "title": "Comment Sentiment", "type": "explicit unavailable panel", "subtitle": "Not provided by TikTok Organic API", "visible_text": "Sentiment is not inferred without a configured analysis model.", "data": [] },
+    "content.top_hashtags": { "title": "Top Hashtags", "type": "ranked list", "columns": ["hashtag", "count"], "data": ["top_hashtags[]"], "empty": "No hashtags in collected captions." },
+    "content.all_performing_content": { "title": "All Performing Content", "type": "table", "badge": "<count> videos", "columns": ["#", "Video", "Date", "Views", "Reach", "Likes", "Comments", "Shares", "Interactions"], "data": ["top_content[]"], "empty": "No videos were collected in this period." },
+    "audience.kpis": { "type": "six-column KPI grid", "order": ["followers", "new_followers", "views", "reach", "profile_views", "engagement_rate"], "data": ["kpis[]"], "missing": "KPI card is omitted" },
+    "audience.followers_trend": { "title": "Followers Trend", "type": "Recharts area trend", "legend": ["Followers"], "data": ["trend.series.followers"] },
+    "audience.new_followers_trend": { "title": "New Followers Trend", "type": "Recharts multi-area trend", "legend": ["Follows", "Unfollows", "Net"], "data": ["trend follower flow"] },
+    "facebook.page_like_types": { "title": "Page Like Types (Organic vs Paid)", "type": "breakdown pie", "legend": ["Organic", "Paid"], "data": ["sum follower follows", "hard-coded paid zero"], "show_zero_items": true },
+    "facebook.best_time_to_engage": { "title": "Best Time to Engage", "type": "7x12 two-hour heatmap", "legend": ["Low", "High"], "data": ["audience.audience_activity[]"], "empty": "No heatmap data in selected range." },
+    "facebook.top_countries": { "title": "Top Countries", "type": "ranked table", "columns": ["#", "Country", "Value"], "data": ["audience.audience_countries[]"], "empty": "No data in selected range." },
+    "facebook.top_cities": { "title": "Top Cities", "type": "ranked table", "columns": ["#", "City", "Value"], "data": ["audience.audience_cities[]"], "empty": "No data in selected range." },
+    "facebook.paid_reach_trend": { "title": "Paid Reach Trend", "type": "Recharts area trend", "data": ["trend.series.reach_paid"] },
+    "facebook.organic_reach_trend": { "title": "Organic Reach Trend", "type": "Recharts area trend", "data": ["trend.series.reach_organic", "fallback trend.series.reach"] },
+    "instagram.age_gender": { "title": "Age & Gender", "type": "age bar + gender legend + age radar", "legend": ["dynamic audience_genders labels", "Audience"], "data": ["audience.audience_ages[]", "audience.audience_genders[]", "kpis.followers"], "empty": "No data available" },
+    "instagram.audience_country_map": { "title": "Audience by Country", "type": "world choropleth + top five regions", "data": ["audience.audience_countries[]"], "external_map": "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json", "empty": "No data available" },
+    "instagram.best_time_to_engage": { "title": "Best Time to Engage", "type": "7x12 two-hour heatmap", "data": ["audience.audience_activity[]"] },
+    "instagram.organic_reach_trend": { "title": "Organic Reach Trend", "type": "Recharts area trend", "data": ["trend.series.reach_organic", "fallback trend.series.reach"] },
+    "instagram.top_countries": { "title": "Top Countries", "type": "ranked table", "columns": ["#", "Country", "Value"] },
+    "instagram.top_cities": { "title": "Top Cities", "type": "ranked table", "columns": ["#", "City", "Value"] },
+    "instagram.reach_source": { "title": "Reach Source (Organic vs Paid)", "type": "breakdown pie", "legend": ["Organic", "Paid"], "data": ["source_breakdown.reach", "fallback sum organic reach series"], "show_zero_items": true },
+    "instagram.paid_reach_trend": { "title": "Paid Reach Trend", "type": "Recharts area trend", "data": ["trend.series.reach_paid"] },
+    "instagram.most_comments_messages": { "title": "Most Comments and Messages", "type": "table", "columns": ["#", "Username", "Messages", "Likes"], "data": ["community.top_commenters[]"], "empty": "No commenter data in selected range." },
+    "instagram.most_liked_comments": { "title": "Most Liked Comments", "type": "table", "columns": ["#", "Username", "Comment", "Likes"], "data": ["community.top_liked_comments[]"], "empty": "No liked comments in selected range." },
+    "tiktok.age_gender": { "$ref": "instagram.age_gender" },
+    "tiktok.audience_country_map": { "$ref": "instagram.audience_country_map" },
+    "tiktok.best_time_to_engage": { "$ref": "instagram.best_time_to_engage" },
+    "tiktok.organic_reach_trend": { "$ref": "instagram.organic_reach_trend" },
+    "tiktok.top_countries": { "title": "Top Countries", "type": "ranked table", "columns": ["#", "Country", "Value"] },
+    "tiktok.age_groups": { "title": "Age Groups", "type": "ranked percentage table", "columns": ["#", "Age group", "Value"], "data": ["audience.audience_ages[]"] },
+    "tiktok.most_active_commenters": { "title": "Most Active Commenters", "type": "table", "columns": ["#", "Username", "Comments", "Likes"], "data": ["community.top_commenters[]"] },
+    "tiktok.most_liked_comments": { "$ref": "instagram.most_liked_comments" },
+    "stories.kpis": { "type": "six-column KPI grid", "order": ["Stories Count", "Story Views", "Story Reach", "Story Interactions", "Story Replies", "Story Completion Rate"], "data": ["stories.summary", "stories.previous_summary"] },
+    "stories.performance_trends": { "title": "Story Performance Trends", "type": "Recharts multi-area trend", "legend": ["Story Views", "Story Reach"], "data": ["stories.trend"] },
+    "stories.last_story": { "title": "Last Story", "type": "story detail", "fields": ["cover", "date", "Story Views", "Story Reach", "Replies", "Shares", "Profile Visits", "Follows", "Tap Forward", "Tap Back", "Swipe Forward", "Exits", "Navigation", "Completion"], "empty": "No stories in selected range." },
+    "stories.navigation_split": { "title": "Story Navigation Split", "type": "breakdown pie", "legend": ["Tap Forward", "Tap Back", "Exits", "Swipe Forward"], "data": ["stories.navigation"], "show_zero_items": true },
+    "stories.actions": { "title": "Story Actions", "type": "breakdown pie", "legend": ["Replies", "Shares", "Profile Visits", "Follows"], "data": ["stories.actions"], "show_zero_items": true },
+    "stories.sliders": { "title": "Story Sliders", "type": "manual previous/next story detail", "visible_text": "Story <index> / <count>", "empty": "No stories in selected range." },
+    "stories.table": { "title": "Stories", "type": "table", "subtitle": "<count> stories in selected range", "columns": ["#", "Cover", "Story", "Date", "Story Views", "Story Reach", "Interactions", "Replies"], "empty": "No stories in selected range." }
+  },
+  "visible_copy_rules": {
+    "dynamic": [
+      "Facebook and Instagram KPI labels come from kpis[].label except the derived Total Interactions card.",
+      "TikTok new_followers is displayed as Follower Growth and TikTok views as Video Views.",
+      "Brand name, error detail, selected date window, counts, timestamps, account names and row values come from the response.",
+      "New Followers Trend subtitle starts with Follows: <sum> | Unfollows: <sum> | Net: <sum> and appends · Estimated from follower snapshots only when metric_methodology.follower_flow says so."
+    ],
+    "fixed_subtitles": {
+      "account.followers_trend": "Follower trajectory",
+      "account.performance_trends.facebook_instagram": "Page Reach and Page Views trend",
+      "account.performance_trends.tiktok": "Video Reach and Video Views trend",
+      "account.view_type.paid": "Organic and paid view distribution",
+      "account.view_type.organic": "Organic <Platform> views",
+      "account.views_source_trend.paid": "Organic Views + Paid Views",
+      "account.views_source_trend.organic": "Organic <Platform> views",
+      "account.reach_distribution.paid": "Organic and paid reach distribution",
+      "account.reach_distribution.organic": "Organic <Platform> reach",
+      "account.reach_source_trend.paid": "Paid Reach + Organic Reach",
+      "account.reach_source_trend.organic": "Organic <Platform> reach",
+      "content.content_type": "Content type breakdown",
+      "content.views_reach_trend.facebook_instagram": "Daily page views and reach",
+      "content.views_reach_trend.tiktok": "Daily video views and reach",
+      "content.interaction_trend": "Likes, comments and shares over time",
+      "content.engagement_split": "Interaction mix",
+      "content.content_type_reach": "Reach by content type",
+      "content.comment_sentiment": "Not provided by TikTok Organic API",
+      "content.top_hashtags": "Hashtags found in collected captions",
+      "content.all_performing_content": "Videos ranked by collected interactions",
+      "audience.followers_trend": "Follower trajectory",
+      "facebook.page_like_types": "Like source split",
+      "facebook.best_time_to_engage": "Hourly activity density",
+      "facebook.top_countries": "Country ranking",
+      "facebook.top_cities": "City ranking",
+      "facebook.paid_reach_trend": "Paid delivery trend",
+      "facebook.organic_reach_trend": "Organic delivery trend",
+      "instagram_and_tiktok.best_time_to_engage": "Hourly activity density",
+      "instagram_and_tiktok.organic_reach_trend": "Organic delivery trend",
+      "instagram.top_countries": "Country ranking",
+      "instagram.top_cities": "City ranking",
+      "instagram.reach_source": "Reach delivery split",
+      "instagram.paid_reach_trend": "Paid delivery trend",
+      "instagram.most_comments_messages": "Instagram comment activity leaderboard",
+      "tiktok.most_active_commenters": "TikTok comment activity leaderboard",
+      "community.most_liked_comments": "Comment like leaderboard",
+      "stories.performance_trends": "Story views and story reach momentum",
+      "stories.navigation_split": "Navigation actions across story frames",
+      "stories.actions": "Replies, shares, visits and follows distribution"
+    },
+    "fixed_state_actions": ["Try again", "Dismiss", "Open Settings", "Connect TikTok account", "Download dashboard data", "Previous story", "Next story"]
+  },
+  "responsive_layout": [
+    { "range": ">=1280px", "metric_grid": "6 columns", "two_column": "1:1", "source_grid": "1:2", "content_chart_grid": "2:1", "three_column": "1:1:1", "stories_primary": "2:1", "stories_secondary": "3 columns", "audience_pair": "2 columns" },
+    { "range": "821px-1279px", "metric_grid": "3 columns", "two_column": "1:1", "source_grid": "1 column", "content_chart_grid": "1 column", "three_column": "1 column", "audience_pair": "1 column below Tailwind xl" },
+    { "range": "561px-820px", "metric_grid": "2 columns", "all dashboard multi-card grids": "1 column", "header": "vertical", "control_order": ["date/download", "TikTok connect", "tabs"], "tabs": "horizontal scroll" },
+    { "range": "<=560px", "metric_grid": "2 columns", "topbar_hidden": ["SSO badge", "status text", "live dot"], "tabs": "full width, minimum 68px per item", "page_padding": "12px horizontal" },
+    { "range": "<=1050px", "sidebar": "off-canvas drawer", "workspace_left_margin": 0 },
+    { "range": "settings <=900px", "settings_toolbar": "1 column", "hero/drawer/actions": "vertical", "settings_table": "760px minimum with horizontal overflow" }
+  ],
+  "state_matrix": [
+    { "state": "initial_loading", "render": "heading skeleton + six KPI skeletons + two chart skeletons + table skeleton" },
+    { "state": "background_refresh", "render": "existing dashboard remains visible at 0.64 opacity and pointer events disabled" },
+    { "state": "initial_error", "render": "Dashboard unavailable banner with error text and Try again; no data content" },
+    { "state": "refresh_error_with_stale_data", "render": "error banner plus last successful dashboard content" },
+    { "state": "zero_data", "condition": "no has_data, top_content, audience, audience_capabilities or story items", "render": "No <Platform> data yet + settings explanation + Open Settings" },
+    { "state": "partial_kpis", "render": "missing KPI cards are omitted; no placeholder card" },
+    { "state": "missing_trend", "render": "No trend data for this period." },
+    { "state": "missing_distribution", "render": "empty ring and No distribution data in selected range unless show_zero_items forces zero legends" },
+    { "state": "missing_content", "render": "No videos were collected in this period." },
+    { "state": "missing_audience_widget", "render": "widget-specific No data available or No data in selected range" },
+    { "state": "missing_stories_object_on_stories_tab", "render": "blank tab panel after header; canonical source has no explicit unavailable panel" },
+    { "state": "tiktok_limited_non_business", "render": "Limited TikTok analytics warning" },
+    { "state": "comment_sentiment", "render": "always explicit unavailable; never inferred" },
+    { "state": "media_failure", "render": "try cover/thumbnail/media candidate chain then /api/social/dashboard/media/cover-fallback; empty video icon if exhausted" }
+  ],
+  "capability_gates": [
+    { "surface": "TikTok sidebar link and Home target", "source": "GET /social/tiktok/oauth/capabilities", "condition": "dashboard_enabled", "failure_default": "hidden TikTok and Home targets Facebook" },
+    { "surface": "Connect TikTok account", "condition": "platform=tiktok AND backend can_connect AND local SSO role allows", "roles": ["super_admin", "agency_admin", "viewer+operator app_role"] },
+    { "surface": "Settings TikTok navigation", "condition": "dashboard_enabled" },
+    { "surface": "Settings connect/disconnect", "condition": "can_connect/can_disconnect for selected brand" },
+    { "surface": "Audit route/link", "condition": "decoded top-level role in super_admin/developer/owner" },
+    { "surface": "Stories tab", "condition": "platform=instagram only; not gated by provider capability" },
+    { "surface": "Audience tab", "condition": "always present; audience_capabilities is not used to hide it" },
+    { "surface": "Paid series and paid pie item in account section", "condition": "source_breakdown.paid_available" },
+    { "surface": "Settings links in dashboard shell", "condition": "not demo mode" }
+  ],
+  "settings": {
+    "header": ["Settings", "Social media setup", "Brands, linked accounts, backfill and nightly sync in one table."],
+    "top_navigation": ["TikTok when dashboard_enabled", "Facebook", "Instagram", "Audit when local super role"],
+    "toolbar": ["Search brands", "All/Ready/Preparing/Attention", "Select brand", "Add brand"],
+    "table_columns": ["Brand", "Meta Access", "Discovery", "Accounts", "Data", "Backfill", "Collector", "Last Sync", "Nightly", "Action"],
+    "table_states": ["Loading brands", "No brands in this view", "error strip", "TikTok success notice"],
+    "drawer_columns": ["Platform", "Account", "Linked", "Nightly", "Backfill", "Last Sync", "Status", "Action"],
+    "drawer_actions": ["conditional Connect TikTok", "conditional Disconnect TikTok", "Refresh accounts", "Close"],
+    "drawer_row_actions": ["Linked toggle", "Nightly toggle", "Retry"]
+  },
+  "audit": {
+    "visibility": "local super role only",
+    "header": ["Settings › Audit", "Operations audit", "Backfill, discovery, health, and data readiness for every linked account."],
+    "controls": ["Settings", "Refresh", "Search brands", "All platforms", "All job statuses", "visible/total rows and generated time"],
+    "auto_refresh_ms": 60000,
+    "sortable_columns": ["Brand", "Client", "Platform", "Account", "External ID", "Linked", "Discovered", "Asset ID", "Backfill", "Stage", "Job", "Attempts", "Scheduled", "Started", "Finished", "Error Code", "Error Msg", "Health", "Nightly", "Readiness", "Last Data", "Updated"],
+    "states": ["Loading audit data", "No rows match current filters", "error strip"]
+  },
+  "component_api_mapping": [
+    { "source": "app/App.tsx", "v2": "routes/AppRoutes.tsx", "required_api": ["SSO session/capability authority"], "r1_note": "V2 route surface currently contains additional visible routes; R5 must obey this inventory." },
+    { "source": "components/dashboard/SocialAppShell.tsx", "v2": "layout/AppShell.tsx + Sidebar.tsx + Topbar.tsx", "required_api": ["Brand name", "TikTok dashboard_enabled", "live/demo state"], "r1_note": "Brand selectors are an approved authority adaptation; unrelated visible navigation additions are not." },
+    { "source": "pages/PlatformDashboardPage.tsx", "v2": "features/dashboard/PlatformPage.tsx + platform PulseDashboard", "required_api": ["platform", "brand_name", "window", "has_data", "account", "kpis", "trend", "source_breakdown", "content_summary", "top_content", "top_hashtags", "audience", "community", "stories", "metric_methodology"] },
+    { "source": "components/dashboard/DashboardPrimitives.tsx", "v2": "features/facebook/FacebookPulseDashboard.tsx shared primitives", "required_api": ["typed metric values/deltas", "typed series", "content media candidates", "content views/reach"] },
+    { "source": "components/dashboard/AudienceInsightsSection.tsx", "v2": "per-platform AudienceSection implementations", "required_api": ["audience blocks", "community", "source_breakdown.reach", "follower-flow series"] },
+    { "source": "components/dashboard/AccumulateAudienceWidgets.tsx", "v2": "AudienceDemographicsCard.tsx plus missing/existing platform widgets", "required_api": ["countries", "cities", "genders", "ages", "activity", "followers", "reach series"] },
+    { "source": "components/dashboard/InstagramStoriesSection.tsx", "v2": "InstagramPulseDashboard StoriesSection", "required_api": ["stories.summary", "stories.previous_summary", "stories.trend", "stories.navigation", "stories.actions", "stories.items[]"] },
+    { "source": "pages/SettingsPage.tsx + BrandSetupDrawer.tsx", "v2": "features/settings/index.tsx + SettingsTables.tsx + SetupDrawer.tsx", "required_api": ["brand table/options/detail", "account link/nightly/backfill actions", "TikTok capabilities/connect/disconnect"] },
+    { "source": "pages/AuditPage.tsx", "v2": "features/settings/AuditPage", "required_api": ["22-column typed audit rows", "permission gate"] },
+    { "source": "pages/EntryGatePage.tsx + SsoConsumePage.tsx", "v2": "routes/LoginPage.tsx + SsoConsumePage.tsx", "required_api": ["server-side SSO consume/session"], "allowed_difference": "SSO consume/login security flow" },
+    { "source": "types.ts + lib/api.ts", "v2": "api/contracts.ts + transport.ts + useDashboard.ts", "required_api": ["exact fields above with same-origin transport"], "allowed_difference": "typed internal contract shape may differ if the visible semantics and fixture adapter are exact" }
+  ],
+  "non_rendered_source_files": [
+    { "path": "frontend/src/components/dashboard/FacebookAudienceSection.tsx", "reason": "Untracked source file is not imported by any reachable component; Provider unavailable card and Facebook world map are not canonical visible cards." },
+    { "path": "frontend/src/pages/ViewerPlatformPage.tsx", "reason": "Not routed by App.tsx." },
+    { "path": "frontend/src/components/AccountTransferPanel.tsx", "reason": "Not used by the current SettingsPage render path." },
+    { "path": "frontend/src/components/LinkedAccountTable.tsx", "reason": "Only used by the unrouted ViewerPlatformPage." },
+    { "path": "frontend/src/components/PlatformSummaryCard.tsx", "reason": "Not used by the current SettingsPage render path." },
+    { "path": "frontend/src/pages/TikTokMainPreviewPage.tsx", "reason": "Development-only preview route; not production-visible." }
+  ],
+  "approved_visible_differences": [
+    "SSO consume/login security flow",
+    "V2 Brand authority and required Brand/account selectors",
+    "Same-origin API transport",
+    "Hidden owner activation route or control that is absent from normal navigation",
+    "Accessibility infrastructure that does not alter the visible card/navigation matrix"
+  ],
+  "not_approved_as_visible_differences": [
+    "Additional Overview page or Overview navigation label",
+    "Integrations navigation item",
+    "Support, Back to Accumulate, or Sign out sidebar rows when they replace/add to the canonical shell outside an approved auth surface",
+    "Content Winners cards",
+    "Answered or unanswered comments cards",
+    "Facebook Age & Gender provider-unavailable card",
+    "Facebook audience world map",
+    "Any card inferred from an unimported source file",
+    "Any removal, rename, reorder, merge, or approximate substitute for a canonical card/table/KPI"
+  ]
+}

@@ -22,7 +22,8 @@ class WorkerRuntimeConfig:
 
     def __post_init__(self) -> None:
         if self.provider_egress_enabled and (
-            self.runtime_mode not in {RuntimeMode.DEVELOPMENT, RuntimeMode.ACTIVE}
+            self.runtime_mode
+            not in {RuntimeMode.DEVELOPMENT, RuntimeMode.STAGING, RuntimeMode.ACTIVE}
             or not self.writes_enabled
         ):
             raise ConfigurationError("worker_egress_requires_writable_v2_runtime")

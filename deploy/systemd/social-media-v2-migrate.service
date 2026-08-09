@@ -1,0 +1,22 @@
+[Unit]
+Description=Apply Social Media V2-owned database migrations
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=social-media-v2
+Group=social-media-v2
+WorkingDirectory=/opt/social-media-v2/backend
+EnvironmentFile=/etc/social-media-v2/production.env
+ExecStart=/opt/social-media-v2/backend/.venv/bin/python scripts/apply_migrations.py
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/social-media-v2
+StandardOutput=journal
+StandardError=journal
+
+# No install target: Operations invokes this reviewed one-shot explicitly.

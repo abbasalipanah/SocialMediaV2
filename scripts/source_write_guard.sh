@@ -17,9 +17,11 @@ Usage:
   source_write_guard.sh [PATH ...]
 
 Checks:
-- Any explicit PATH outside the downstream root is rejected.
-- Branch, HEAD, status, tracked diff and content manifests for all immutable source
-  projects must match the captured baseline.
+- Any explicit PATH inside a protected source project is rejected; other paths
+  outside the downstream root are warned.
+- Branch, HEAD, origin, status, tracked binary diff, exact untracked inventory and
+  artifact-excluded content manifests for all immutable source projects must match
+  the approved Revision 6 baseline.
 
 To verify baseline state only:
   source_write_guard.sh

@@ -22,6 +22,7 @@ from app.domain.platforms import PlatformId
 from app.domain.reporting import OverviewDashboard, PlatformDashboard
 
 ALLOWED_TABS = {
+    "account",
     "overview",
     "cover",
     "page",

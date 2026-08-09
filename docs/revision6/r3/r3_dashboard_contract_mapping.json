@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "revision": 6,
+  "phase": "R3",
+  "contract": "PlatformDashboard",
+  "transport": "same-origin /api/dashboards/{facebook|instagram|tiktok}",
+  "parallel_legacy_response": false,
+  "required_platform_fields": [
+    "meta",
+    "metrics",
+    "series",
+    "breakdowns",
+    "content",
+    "community",
+    "top_hashtags",
+    "content_summary",
+    "source_breakdown",
+    "metric_methodology",
+    "audience_capabilities",
+    "stories"
+  ],
+  "availability": {
+    "metric_value": "number|null plus data_status and availability_reason",
+    "content_level_metrics": "number|null plus content.data_status",
+    "source_breakdown": "object|null plus per-source and aggregate data_status",
+    "stories": "object|null plus summary/trend/navigation/actions/item and aggregate data_status",
+    "audience": "available|partial|pending|provider_unavailable|unavailable",
+    "missing_provider_data_as_zero": false
+  },
+  "metric_catalog": {
+    "facebook": [
+      { "id": "followers", "semantic": "snapshot", "aggregation": "last_valid", "method": "provider_reported" },
+      { "id": "new_followers", "semantic": "flow", "aggregation": "sum", "method": "derived:cumulative_delta:v1:utc_day", "source": ["followers"] },
+      { "id": "views", "semantic": "flow", "aggregation": "sum", "method": "provider_flow" },
+      { "id": "reach", "semantic": "flow", "aggregation": "sum", "method": "provider_flow" },
+      { "id": "page_views", "semantic": "flow", "aggregation": "sum", "method": "provider_flow" },
+      { "id": "interactions", "semantic": "flow", "aggregation": "sum", "method": "provider_flow" },
+      { "id": "total_actions", "semantic": "flow", "aggregation": "sum", "method": "provider_flow" },
+      { "id": "reactions", "semantic": "flow", "aggregation": "sum", "method": "provider_flow" }
+    ],
+    "instagram": [
+      { "id": "followers", "semantic": "snapshot", "aggregation": "last_valid", "method": "provider_reported" },
+      { "id": "following", "semantic": "snapshot", "aggregation": "last_valid", "method": "provider_reported" },
+      { "id": "media_count", "semantic": "snapshot", "aggregation": "last_valid", "method": "provider_reported" },
+      { "id": "new_followers", "semantic": "flow", "aggregation": "sum", "method": "provider_flow" },
+      { "id": "reach", "semantic": "flow", "aggregation": "sum", "method": "provider_flow" },
+      { "id": "views", "semantic": "flow", "aggregation": "sum", "method": "provider_flow" },
+      { "id": "profile_views", "semantic": "flow", "aggregation": "sum", "method": "provider_flow" },
+      { "id": "website_clicks", "semantic": "flow", "aggregation": "sum", "method": "provider_flow" },
+      { "id": "interactions", "semantic": "flow", "aggregation": "sum", "method": "provider_flow" }
+    ],
+    "tiktok": [
+      { "id": "followers", "semantic": "snapshot", "aggregation": "last_valid", "method": "provider_reported" },
+      { "id": "new_followers", "semantic": "flow", "aggregation": "sum", "method": "derived:cumulative_delta:v1:utc_day", "source": ["followers"] },
+      { "id": "video_views_total", "semantic": "cumulative", "aggregation": "last_valid", "method": "provider_reported" },
+      { "id": "video_views_change", "semantic": "flow", "aggregation": "sum", "method": "derived:cumulative_delta:v1:utc_day", "source": ["video_views_total"] },
+      { "id": "video_likes_total", "semantic": "cumulative", "aggregation": "last_valid", "method": "provider_reported" },
+      { "id": "video_comments_total", "semantic": "cumulative", "aggregation": "last_valid", "method": "provider_reported" },
+      { "id": "video_shares_total", "semantic": "cumulative", "aggregation": "last_valid", "method": "provider_reported" },
+      { "id": "video_engagements_total", "semantic": "cumulative", "aggregation": "last_valid", "method": "derived:sum_components:v1:same_sample", "source": ["video_likes_total", "video_comments_total", "video_shares_total"] },
+      { "id": "video_engagement_rate", "semantic": "ratio", "aggregation": "recompute", "method": "derived:ratio_from_components:v1:same_sample", "source": ["video_engagements_total", "video_views_total"] }
+    ]
+  },
+  "content_contract": {
+    "typed_metrics": ["views", "reach", "likes_count", "comments_count", "shares_count", "interactions"],
+    "typed_media": ["cover_url", "thumbnail_url", "cover_candidates", "thumbnail_candidates", "media_url_candidates"],
+    "typed_video": ["full_video_watched_rate", "total_time_watched", "average_time_watched"],
+    "summaries": ["content_summary.total", "content_summary.by_type", "content_summary.reach_by_type", "content_summary.views_by_type", "top_hashtags"],
+    "frontend_derives_source_split_series": false,
+    "frontend_derives_top_hashtags": false
+  },
+  "stories_contract": {
+    "nullable_when_not_collected": true,
+    "summary": ["count", "views", "reach", "interactions", "replies", "completion_rate", "data_status"],
+    "previous_summary": ["count", "views", "reach", "interactions", "replies", "completion_rate", "data_status"],
+    "trend": ["labels", "views", "reach", "data_status"],
+    "navigation": ["taps_forward", "taps_back", "swipe_forward", "exits", "data_status"],
+    "actions": ["replies", "shares", "profile_visits", "follows", "data_status"],
+    "item_metrics": ["views", "reach", "interactions", "replies", "shares", "profile_visits", "follows", "taps_forward", "taps_back", "swipe_forward", "exits", "navigation", "completion_rate", "data_status"],
+    "frontend_source": "PlatformDashboard.stories only",
+    "generic_content_breakdown_fallback": false
+  },
+  "audience_contract": {
+    "facebook": {
+      "source": "meta_graph_api_v23",
+      "geo": "available|pending|unavailable",
+      "age_gender": "provider_unavailable",
+      "activity": "provider_unavailable"
+    },
+    "instagram": {
+      "source": "meta_graph_api_v23",
+      "geo": "available|partial|unavailable",
+      "age_gender": "available|partial|unavailable",
+      "activity": "available|unavailable"
+    },
+    "tiktok": {
+      "source": "tiktok_display_api",
+      "geo": "available|partial|unavailable",
+      "age_gender": "available|partial|unavailable",
+      "activity": "available|unavailable"
+    }
+  },
+  "code_owners": {
+    "domain_models": "backend/app/domain/reporting/models.py",
+    "metric_catalog": "backend/app/domain/metrics/__init__.py",
+    "aggregation": "backend/app/application/queries/dashboard_aggregation.py",
+    "query_composition": "backend/app/application/queries/dashboards.py",
+    "openapi": "docs/contracts/social-media-v2-openapi.json",
+    "generated_typescript": "frontend/src/api/openapi.generated.ts",
+    "runtime_zod": "frontend/src/api/contracts.ts",
+    "stories_render": "frontend/src/features/instagram/InstagramPulseDashboard.tsx -> InstagramStoriesWorkspace.tsx",
+    "validator": "scripts/quality/revision6_r3_contract.py"
+  },
+  "deferred_to_r4": [
+    "persist and hydrate every optional content/story metric from V2-owned storage",
+    "collector request/pagination/retry/checkpoint parity",
+    "durable media candidates and provider-specific cover resolution",
+    "previous-period story metrics from persisted content insights",
+    "provider capability projection from collector state instead of response-data presence alone"
+  ]
+}

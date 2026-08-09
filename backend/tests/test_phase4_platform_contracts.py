@@ -9,6 +9,7 @@ from app.capabilities.registry import (
 )
 from app.core.config import (
     TIKTOK_ACCOUNT_AUTHORIZATION_URL,
+    TIKTOK_ACCOUNT_COMMENT_LIST_URL,
     TIKTOK_ACCOUNT_PROFILE_URL,
     TIKTOK_ACCOUNT_REFRESH_URL,
     TIKTOK_ACCOUNT_REVOKE_URL,
@@ -49,6 +50,7 @@ def tiktok_config() -> TikTokConfig:
         token_info_url=TIKTOK_ACCOUNT_TOKEN_INFO_URL,
         profile_url=TIKTOK_ACCOUNT_PROFILE_URL,
         video_list_url=TIKTOK_ACCOUNT_VIDEO_LIST_URL,
+        comment_list_url=TIKTOK_ACCOUNT_COMMENT_LIST_URL,
         redirect_uri=TIKTOK_REDIRECT_URI,
         activation_link_base=TIKTOK_ACTIVATION_LINK_BASE,
     )

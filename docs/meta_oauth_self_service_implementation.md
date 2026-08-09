@@ -10,7 +10,8 @@ One explicit Facebook authorization discovers both account types. Discovery neve
 account automatically. The user chooses the Facebook and/or Instagram accounts that should be
 attached to the exact selected Brand and confirms that selection in a second command.
 
-The Accumulate SSO token, provisioning payload and Settings-visibility contract were not changed.
+The Accumulate SSO-only token claims and Settings-visibility contract were not changed. No
+provisioning payload or authority-sync endpoint exists in the standalone runtime.
 
 ## Authorization boundary
 

@@ -52,6 +52,26 @@ class ReportingContent:
     likes_count: int
     comments_count: int
     shares_count: int
+    views_count: float | None = None
+    reach_count: float | None = None
+    cover_url: str | None = None
+    thumbnail_url: str | None = None
+    cover_candidates: tuple[str, ...] = ()
+    thumbnail_candidates: tuple[str, ...] = ()
+    media_url_candidates: tuple[str, ...] = ()
+    full_video_watched_rate: float | None = None
+    total_time_watched: float | None = None
+    average_time_watched: float | None = None
+    interactions_count: float | None = None
+    replies_count: float | None = None
+    profile_visits: float | None = None
+    follows_count: float | None = None
+    taps_forward: float | None = None
+    taps_back: float | None = None
+    swipe_forward: float | None = None
+    exits: float | None = None
+    navigation_count: float | None = None
+    completion_rate: float | None = None
 
 
 @dataclass(frozen=True)

@@ -69,6 +69,8 @@ def _record(payload: Mapping[str, Any], observed_at: datetime) -> ProviderRecord
     shares = payload.get("shares")
     if shares is not None and not isinstance(shares, Mapping):
         raise ValueError("provider_count_field_invalid")
+    media_url = optional_text(payload, "full_picture") or ""
+    media_candidates = (media_url,) if media_url else ()
     return ProviderRecord(
         external_id=required_text(payload, "id"),
         observed_at=observed_at,
@@ -76,13 +78,29 @@ def _record(payload: Mapping[str, Any], observed_at: datetime) -> ProviderRecord
             "content_type": optional_text(payload, "status_type") or "post",
             "permalink": optional_text(payload, "permalink_url") or "",
             "message": optional_text(payload, "message") or "",
-            "media_url": optional_text(payload, "full_picture") or "",
+            "media_url": media_url,
+            "cover_url": media_url or None,
+            "thumbnail_url": None,
+            "cover_candidates": media_candidates,
+            "thumbnail_candidates": (),
+            "media_url_candidates": media_candidates,
             "published_at": timestamp(payload, "created_time"),
             "likes_count": nested_count(payload, MetricId.REACTIONS.value),
             "comments_count": nested_count(payload, "comments"),
             "shares_count": nested_count(payload, "shares"),
+            "views_count": _optional_number(payload, "views_count"),
+            "reach_count": _optional_number(payload, "reach_count"),
         },
     )
+
+
+def _optional_number(payload: Mapping[str, Any], field: str) -> float | None:
+    value = payload.get(field)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int | float) or value < 0:
+        raise ValueError("provider_numeric_field_invalid")
+    return float(value)
 
 
 __all__ = ["FacebookContentReader"]

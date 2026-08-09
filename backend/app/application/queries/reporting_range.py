@@ -10,6 +10,7 @@ RANGE_DAYS = {
     "last_7_days": 7,
     "last_30_days": 30,
     "last_90_days": 90,
+    "last_365_days": 365,
 }
 
 

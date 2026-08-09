@@ -19,6 +19,13 @@ Gerçek provider veya production DB kullanmayan ürün demosu:
 ./scripts/dev/start_local.sh
 ```
 
+Frontend dizininden aynı yığını başlatmak için:
+
+```bash
+cd frontend
+npm run dev
+```
+
 Tarayıcı: `http://127.0.0.1:3010/`
 
 Temel doğrulama:
@@ -34,6 +41,10 @@ npm run build
 ```
 
 ## Bağımsız runtime
+
+Runtime durum sözleşmesi `development → dormant → staging → standalone_ready → active`
+sırasıdır. Repository'deki production env örneği güvenli olarak `standalone_ready`, writes off,
+provider off ve schedule off başlar; `active` moda otomatik geçiş yoktur.
 
 - DB migration: `backend/scripts/apply_migrations.py`
 - API: `uvicorn app.main:app`

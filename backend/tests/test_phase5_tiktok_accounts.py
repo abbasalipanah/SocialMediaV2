@@ -11,6 +11,7 @@ from app.application.ports.checkpoints import CheckpointKey, ProviderCheckpoint
 from app.application.ports.platforms import ProviderAccount, ProviderCredential
 from app.core.config import (
     TIKTOK_ACCOUNT_AUTHORIZATION_URL,
+    TIKTOK_ACCOUNT_COMMENT_LIST_URL,
     TIKTOK_ACCOUNT_PROFILE_URL,
     TIKTOK_ACCOUNT_REFRESH_URL,
     TIKTOK_ACCOUNT_REVOKE_URL,
@@ -29,6 +30,8 @@ from app.domain.metrics import MetricId
 from app.domain.platforms import PlatformId
 from app.infrastructure.providers.tiktok.accounts import (
     TikTokAccountsWireMapper,
+    TikTokAudienceReader,
+    TikTokCommentsReader,
     TikTokContentReader,
     TikTokProfileReader,
     TikTokResponseError,
@@ -67,6 +70,7 @@ def _config() -> TikTokConfig:
         token_info_url=TIKTOK_ACCOUNT_TOKEN_INFO_URL,
         profile_url=TIKTOK_ACCOUNT_PROFILE_URL,
         video_list_url=TIKTOK_ACCOUNT_VIDEO_LIST_URL,
+        comment_list_url=TIKTOK_ACCOUNT_COMMENT_LIST_URL,
         redirect_uri=TIKTOK_REDIRECT_URI,
         activation_link_base=TIKTOK_ACTIVATION_LINK_BASE,
     )
@@ -139,6 +143,73 @@ def test_account_request_mapping_is_exact_and_opaque() -> None:
     assert json.loads(profile["fields"])[0] == "business_id"
     assert videos["cursor"] == "next-page"
     assert "item_id" in json.loads(videos["fields"])
+    comments = mapper.comment_fields(
+        business_id="business-1", video_id="video-1", cursor="comment-page"
+    )
+    audience = mapper.audience_fields(
+        business_id="business-1", observed_on=NOW.date()
+    )
+    assert comments["cursor"] == "comment-page"
+    assert "comment_id" in json.loads(comments["fields"])
+    assert audience["start_date"] == NOW.date().isoformat()
+
+
+def test_comment_and_audience_readers_preserve_provider_values() -> None:
+    account = ProviderAccount(
+        platform=PlatformId.TIKTOK,
+        account_id="business-1",
+        credential=ProviderCredential(access_token="fixture-access-value"),
+    )
+    comments = TikTokCommentsReader(
+        lambda _business_id, _video_id, _cursor: {
+            "code": 0,
+            "message": "OK",
+            "request_id": "comments-request",
+            "data": {
+                "comments": [
+                    {
+                        "comment_id": "comment-1",
+                        "video_id": "video-1",
+                        "text": "hello",
+                        "create_time": 1_757_686_800,
+                        "likes": 4,
+                        "reply_comment_total": 2,
+                        "username": "viewer",
+                        "user_id": "viewer-1",
+                    }
+                ],
+                "has_more": False,
+            },
+        },
+        clock=lambda: NOW,
+    ).list_comments(account, content_id="video-1")
+    assert comments.items[0].fields["like_count"] == 4
+    assert comments.items[0].fields["reply_count"] == 2
+    assert comments.next_cursor is None
+
+    audience = TikTokAudienceReader(
+        lambda _business_id, _observed_on: {
+            "code": 0,
+            "message": "OK",
+            "request_id": "audience-request",
+            "data": {
+                "audience_countries": {"TR": 61, "DE": 14},
+                "audience_genders": [
+                    {"gender": "female", "percentage": 55},
+                    {"gender": "male", "percentage": 45},
+                ],
+                "audience_activity": {"monday": {"13:00": 8}},
+            },
+        },
+        observed_on=NOW.date(),
+        clock=lambda: NOW,
+    ).fetch_audience(account)
+    assert audience.breakdowns["audience_countries"] == {"TR": 61.0, "DE": 14.0}
+    assert audience.breakdowns["audience_genders"] == {
+        "female": 55.0,
+        "male": 45.0,
+    }
+    assert audience.breakdowns["audience_activity"] == {"monday|13": 8.0}
 
 
 def test_profile_video_and_unavailable_metric_fixtures(

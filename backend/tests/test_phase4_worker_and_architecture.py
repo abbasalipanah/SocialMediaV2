@@ -15,7 +15,7 @@ from app.core.config import ConfigurationError, RuntimeMode, load_settings
 from app.core.write_policy import WritePolicy
 from app.domain.metrics import MetricId
 from app.domain.platforms import CapabilityId, PlatformId
-from app.infrastructure.persistence.social_v2.platforms import (
+from app.infrastructure.persistence.legacy_socialmedia.platforms import (
     normalize_platform,
 )
 from app.workers import (
@@ -47,6 +47,21 @@ def test_worker_runtime_is_fail_closed_until_a_v2_collector_is_enabled() -> None
     ):
         WorkerRuntimeConfig(
             runtime_mode=RuntimeMode.DORMANT,
+            writes_enabled=False,
+            provider_egress_enabled=True,
+        )
+
+    staging = WorkerRuntimeConfig(
+        runtime_mode=RuntimeMode.STAGING,
+        writes_enabled=True,
+        provider_egress_enabled=True,
+        automated_schedule_enabled=False,
+    )
+    assert staging.provider_egress_enabled is True
+
+    with pytest.raises(ConfigurationError, match="worker_egress_requires_writable_v2_runtime"):
+        WorkerRuntimeConfig(
+            runtime_mode=RuntimeMode.STANDALONE_READY,
             writes_enabled=False,
             provider_egress_enabled=True,
         )

@@ -1,5 +1,8 @@
 # Writer Ownership Cutover Checklist — Unexecuted Draft
 
+> **ARCHIVED / SUPERSEDED:** Revizyon 6 V2'nin V1 writer sahipliğini devralmasını yasaklar. Bu
+> belge uygulanamaz; güncel standalone akış `docs/STANDALONE_DEPLOYMENT.md` içindedir.
+
 This checklist is **not** a cutover authorization. Every production step requires a new explicit approval after the V2 Release Candidate Complete gate.
 
 ## Preconditions

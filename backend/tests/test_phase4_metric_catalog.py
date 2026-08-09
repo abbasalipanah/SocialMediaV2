@@ -7,6 +7,7 @@ import pytest
 from app.application.queries.metrics import MetricQuery
 from app.domain.metrics import (
     AggregationPolicy,
+    DerivationOperator,
     MetricCatalogError,
     MetricId,
     SemanticType,
@@ -35,6 +36,12 @@ def test_bootstrap_catalog_covers_required_semantic_types() -> None:
     assert views_total.period_aggregation is AggregationPolicy.LAST_VALID
     assert views_change.semantic_type is SemanticType.FLOW
     assert views_change.period_aggregation is AggregationPolicy.SUM
+
+    for platform in (PlatformId.FACEBOOK, PlatformId.TIKTOK):
+        follower_growth = catalog.get(platform, MetricId.NEW_FOLLOWERS)
+        assert follower_growth.semantic_type is SemanticType.FLOW
+        assert follower_growth.derived_from_metric_ids == (MetricId.FOLLOWERS,)
+        assert follower_growth.derivation_operator is DerivationOperator.CUMULATIVE_DELTA
 
     rate = catalog.get(PlatformId.TIKTOK, MetricId.VIDEO_ENGAGEMENT_RATE)
     assert rate.period_aggregation is AggregationPolicy.RECOMPUTE

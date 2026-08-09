@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation } from "../routing";
 
 import { useBrandScope } from "../app/BrandScopeProvider";
 import { useAuth } from "../auth";

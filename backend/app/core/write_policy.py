@@ -22,7 +22,8 @@ class WritePolicy:
     def allows(self, command: str) -> bool:
         del command
         return (
-            self.runtime_mode in {RuntimeMode.DEVELOPMENT, RuntimeMode.ACTIVE}
+            self.runtime_mode
+            in {RuntimeMode.DEVELOPMENT, RuntimeMode.STAGING, RuntimeMode.ACTIVE}
             and self.writes_enabled
         )
 

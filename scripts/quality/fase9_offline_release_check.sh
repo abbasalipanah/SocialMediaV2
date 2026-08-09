@@ -64,8 +64,11 @@ assert "/api/media/{platform}/{content_id}" in schema["paths"]
 
 env = (root / "deploy/env/social-media-v2.production.env.example").read_text()
 for line in (
-    "SOCIAL_RUNTIME_MODE=active",
+    "SOCIAL_RUNTIME_MODE=standalone_ready",
+    "SOCIAL_WRITES_ENABLED=false",
+    "SOCIAL_META_ACCOUNT_ENABLED=false",
     "SOCIAL_META_COLLECTION_ENABLED=false",
+    "SOCIAL_TIKTOK_ACCOUNT_ENABLED=false",
     "SOCIAL_TIKTOK_COLLECTION_ENABLED=false",
     "SOCIAL_WORKER_SCHEDULE_ENABLED=false",
 ):

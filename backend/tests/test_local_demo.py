@@ -57,12 +57,43 @@ async def test_local_demo_opens_a_scoped_session_and_serves_product_data() -> No
             "/api/dashboards/overview", params={"brand_id": "101", "range": "last_30_days"}
         )
         assert dashboard.status_code == 200
-        assert dashboard.json()["meta"]["data_status"] == "partial"
+        assert dashboard.json()["meta"]["data_status"] == "available"
         assert {item["meta"]["platform"] for item in dashboard.json()["platforms"]} == {
             "facebook",
             "instagram",
             "tiktok",
         }
+
+        facebook = await browser.get(
+            "/api/dashboards/facebook",
+            params={"brand_id": "101", "range": "last_30_days"},
+        )
+        assert facebook.status_code == 200
+        dimensions = {item["dimension"] for item in facebook.json()["breakdowns"]}
+        assert "like_type" in dimensions
+        assert "page_fans_gender_age" not in dimensions
+        assert "best_time_to_engage" not in dimensions
+        assert facebook.json()["audience_capabilities"] == {
+            "source": "meta_graph_api_v23",
+            "geo": "available",
+            "age_gender": "provider_unavailable",
+            "activity": "provider_unavailable",
+        }
+        assert facebook.json()["source_breakdown"]["paid_available"] is True
+        assert facebook.json()["top_hashtags"][0]["name"].startswith("#")
+
+        instagram = await browser.get(
+            "/api/dashboards/instagram",
+            params={"brand_id": "101", "range": "last_30_days"},
+        )
+        assert instagram.status_code == 200
+        stories = instagram.json()["stories"]
+        assert stories["data_status"] == "partial"
+        assert stories["summary"]["views"] == 4000
+        assert stories["summary"]["completion_rate"] == 18.7
+        assert stories["trend"]["data_status"] == "unavailable"
+        assert stories["items"][0]["views"] is None
+        assert instagram.json()["metric_methodology"]["follower_flow"] == "provider_flow"
 
         settings = await browser.get("/api/settings/social-accounts", params={"brand_id": "101"})
         assert settings.status_code == 200

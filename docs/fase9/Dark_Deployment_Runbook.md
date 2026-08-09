@@ -1,5 +1,8 @@
 # Dark Deployment Runbook — Offline Draft
 
+> **ARCHIVED / SUPERSEDED:** Bu tarihsel dark-deployment taslağı Revizyon 6 runtime modelinin
+> yerine geçmez. Güncel güvenli başlangıç `standalone_ready` durumudur.
+
 Status: **NOT EXECUTED**. This document is a review artifact; it grants no production authority.
 
 ## Safety boundary

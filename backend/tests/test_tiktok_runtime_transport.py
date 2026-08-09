@@ -34,6 +34,7 @@ def test_tiktok_transport_posts_form_and_parses_allowlisted_json() -> None:
         get_urls=(INFO_URL,),
         timeout_seconds=5,
         sender=client.request,
+        sleeper=lambda _: None,
     )
 
     payload = transport.post(TOKEN_URL, data={"auth_code": "opaque"})
@@ -53,6 +54,7 @@ def test_tiktok_transport_rejects_unknown_urls_and_sanitizes_provider_failures()
         get_urls=(INFO_URL,),
         timeout_seconds=5,
         sender=client.request,
+        sleeper=lambda _: None,
     )
 
     with pytest.raises(TikTokTransportError, match="^provider_url_rejected$"):
@@ -61,3 +63,36 @@ def test_tiktok_transport_rejects_unknown_urls_and_sanitizes_provider_failures()
         transport.post(TOKEN_URL, data={"client_secret": "must-not-escape"})
     assert "secret-body" not in str(raised.value)
     assert "must-not-escape" not in str(raised.value)
+
+
+def test_tiktok_transport_retries_with_retry_after_and_enforces_budget() -> None:
+    attempts = 0
+    delays: list[float] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        if attempts == 1:
+            return httpx.Response(429, headers={"Retry-After": "0.25"})
+        return httpx.Response(
+            200,
+            json={"code": 0, "message": "OK", "request_id": "request", "data": {}},
+        )
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    transport = TikTokHttpTransport(
+        post_urls=(TOKEN_URL,),
+        get_urls=(INFO_URL,),
+        timeout_seconds=5,
+        sender=client.request,
+        max_retries=1,
+        request_budget=2,
+        sleeper=delays.append,
+    )
+
+    assert transport.get(INFO_URL, headers={})["code"] == 0
+    assert attempts == 2
+    assert delays == [0.25]
+    assert transport.remaining_requests == 0
+    with pytest.raises(TikTokTransportError, match="^provider_request_budget_exhausted$"):
+        transport.get(INFO_URL, headers={})

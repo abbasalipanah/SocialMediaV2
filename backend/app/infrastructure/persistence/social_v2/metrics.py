@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import date
 
 from sqlalchemy import Engine, bindparam, text
@@ -9,7 +10,8 @@ from sqlalchemy import Engine, bindparam, text
 from app.application.ports.persistence import MetricPoint
 from app.application.queries.metrics import MetricQuery
 from app.core.write_policy import WritePolicy
-from app.domain.metrics import MetricCatalog, MetricId
+from app.domain.metrics import MetricCatalog, MetricCatalogError, MetricId
+from app.domain.platforms import PlatformId
 
 from .base import SocialStoreBase
 
@@ -32,6 +34,7 @@ class SocialMetricStore(SocialStoreBase):
             capability=definition.required_capability,
             values={point.metric_id: point.value},
         )
+        self._assert_breakdown(definition.allowed_breakdowns, point.breakdown_key)
         if point.breakdown_key is None:
             conflict = """ON CONFLICT (asset_id, date, metric_id)
                 WHERE breakdown_key IS NULL AND breakdown_value IS NULL"""
@@ -70,6 +73,79 @@ class SocialMetricStore(SocialStoreBase):
                     "breakdown_value": point.breakdown_value,
                 },
             )
+
+    def replace_breakdown(
+        self,
+        *,
+        platform: PlatformId,
+        account_id: int,
+        brand_id: int,
+        observed_on: date,
+        metric_id: MetricId,
+        breakdown_key: str,
+        values: Mapping[str, float | int],
+    ) -> None:
+        self._assert_mutation("metric.replace_breakdown")
+        definition = self._metric_catalog.get(platform, metric_id)
+        self._assert_breakdown(definition.allowed_breakdowns, breakdown_key)
+        normalized: dict[str, float] = {}
+        for breakdown_value, value in values.items():
+            self._metric_catalog.validate_values(
+                platform=platform,
+                capability=definition.required_capability,
+                values={metric_id: value},
+            )
+            if not breakdown_value.strip() or len(breakdown_value.encode("utf-8")) > 128:
+                raise MetricCatalogError("metric_breakdown_value_invalid")
+            normalized[breakdown_value] = float(value)
+        with self.engine.begin() as connection:
+            self._assert_account_scope(
+                connection,
+                account_id=account_id,
+                platform=platform,
+                brand_id=brand_id,
+            )
+            connection.execute(
+                text(
+                    """DELETE FROM metrics_daily
+                       WHERE asset_id=:account_id AND date=:observed_on
+                         AND metric_id=:metric_id AND breakdown_key=:breakdown_key"""
+                ),
+                {
+                    "account_id": account_id,
+                    "observed_on": observed_on,
+                    "metric_id": metric_id.value,
+                    "breakdown_key": breakdown_key,
+                },
+            )
+            for breakdown_value, value in normalized.items():
+                connection.execute(
+                    text(
+                        """INSERT INTO metrics_daily (
+                            asset_id, brand_id, date, metric_id, value_numeric,
+                            breakdown_key, breakdown_value
+                        ) VALUES (
+                            :account_id, :brand_id, :observed_on, :metric_id, :value,
+                            :breakdown_key, :breakdown_value
+                        )"""
+                    ),
+                    {
+                        "account_id": account_id,
+                        "brand_id": brand_id,
+                        "observed_on": observed_on,
+                        "metric_id": metric_id.value,
+                        "value": value,
+                        "breakdown_key": breakdown_key,
+                        "breakdown_value": breakdown_value,
+                    },
+                )
+
+    @staticmethod
+    def _assert_breakdown(
+        allowed_breakdowns: tuple[str, ...], breakdown_key: str | None
+    ) -> None:
+        if breakdown_key is not None and breakdown_key not in allowed_breakdowns:
+            raise MetricCatalogError("metric_breakdown_not_allowed")
 
     def read(
         self,

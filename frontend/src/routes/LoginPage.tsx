@@ -1,5 +1,5 @@
 import { ArrowRight, ShieldCheck } from "lucide-react";
-import { Navigate } from "react-router-dom";
+import { Navigate } from "../routing";
 
 import { useAuth } from "../auth";
 import { ScreenState } from "../ui";
@@ -10,7 +10,7 @@ const accumulateUrl =
 
 export function LoginPage() {
   const { status, retry } = useAuth();
-  if (status === "signed_in") return <Navigate replace to="/overview" />;
+  if (status === "signed_in") return <Navigate replace to="/" />;
   if (status === "checking") {
     return (
       <ScreenState eyebrow="ACCUMULATE" title="Checking your session…">

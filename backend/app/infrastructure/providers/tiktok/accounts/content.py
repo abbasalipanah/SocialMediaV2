@@ -58,18 +58,33 @@ def _record(payload: object, observed_at: datetime) -> ProviderRecord:
     comments = _count(payload, "comments")
     shares = _count(payload, "shares")
     views = _count(payload, "video_views")
+    reach = _optional_number(payload, MetricId.REACH.value)
+    thumbnail_url = _optional_text(payload, "thumbnail_url")
+    permalink = _optional_text(payload, "share_url") or _optional_text(payload, "embed_url")
+    media_candidates = (thumbnail_url,) if thumbnail_url else ()
     return ProviderRecord(
         external_id=item_id,
         observed_at=observed_at,
         fields={
             "content_type": "video",
-            "permalink": "",
+            "permalink": permalink or "",
             "message": _optional_text(payload, "caption") or "",
-            "media_url": _optional_text(payload, "thumbnail_url") or "",
+            "media_url": thumbnail_url or "",
+            "cover_url": thumbnail_url,
+            "thumbnail_url": thumbnail_url,
+            "cover_candidates": media_candidates,
+            "thumbnail_candidates": media_candidates,
+            "media_url_candidates": media_candidates,
             "published_at": _timestamp(payload.get("create_time")),
             "likes_count": likes,
             "comments_count": comments,
             "shares_count": shares,
+            "views_count": float(views),
+            "reach_count": reach,
+            "interactions_count": float(likes + comments + shares),
+            "full_video_watched_rate": _optional_number(payload, "full_video_watched_rate"),
+            "total_time_watched": _optional_number(payload, "total_time_watched"),
+            "average_time_watched": _optional_number(payload, "average_time_watched"),
             "metric_values": {
                 MetricId.VIDEO_VIEWS_TOTAL: views,
                 MetricId.VIDEO_LIKES_TOTAL: likes,
@@ -101,6 +116,15 @@ def _count(payload: Mapping[str, Any], key: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise TikTokResponseError("response_field_invalid")
     return value
+
+
+def _optional_number(payload: Mapping[str, Any], key: str) -> float | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int | float) or value < 0:
+        raise TikTokResponseError("response_field_invalid")
+    return float(value)
 
 
 def _timestamp(value: object) -> datetime | None:

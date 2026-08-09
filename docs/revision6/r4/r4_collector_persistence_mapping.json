@@ -1,0 +1,62 @@
+{
+  "phase": "R4",
+  "status": "code_and_local_certification_complete",
+  "database_policy": {
+    "owner": "SocialMediadownstream V2",
+    "migration": "0002_content_story_parity.sql",
+    "v1_database_copy": false,
+    "v1_media_copy": false,
+    "v1_token_copy": false,
+    "v1_runtime_fallback": false,
+    "historical_import_authorized": false
+  },
+  "platforms": {
+    "facebook": {
+      "profile_and_daily_metrics": "matched",
+      "content_and_comments": "matched",
+      "audience_country_city": "matched",
+      "audience_age_gender_activity": "provider_unavailable"
+    },
+    "instagram": {
+      "posts_reels": "matched",
+      "stories": "matched",
+      "story_insights": "matched_with_nullable_provider_fields",
+      "audience_breakdowns": "matched",
+      "previous_period": "derived_from_v2_persisted_rows"
+    },
+    "tiktok": {
+      "token_refresh_and_scope_revalidation": "matched",
+      "profile_and_paged_videos": "matched",
+      "video_insights": "matched",
+      "comments": "optional_comment_list_scope",
+      "audience": "provider_supported_only",
+      "daily_history": "v2_daily_upsert",
+      "retry_and_request_budget": "bounded",
+      "live_connection_verification": "deferred_to_R8"
+    }
+  },
+  "recovery": {
+    "feed_story_checkpoint_isolation": true,
+    "crash_replay_idempotency": true,
+    "media_candidate_fallback": true,
+    "atomic_media_write": true,
+    "partial_provider_response": "explicit_partial_or_unavailable",
+    "synthetic_provider_values": false
+  },
+  "certification": {
+    "r4_targeted_backend_tests": 50,
+    "r4_postgres_tests": 6,
+    "frontend_tests": 22,
+    "fase5_full_backend_tests": 125,
+    "fase5_targeted_tests": 39,
+    "migration_runs": 2,
+    "source_guard": "pass",
+    "frontend_build": "pass"
+  },
+  "frontend_inventory": {
+    "canonical_definitions_preserved": 51,
+    "new_visible_cards": 0,
+    "removed_visible_cards": 0,
+    "blocked_by_r4": 0
+  }
+}

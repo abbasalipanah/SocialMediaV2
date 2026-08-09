@@ -7,8 +7,9 @@ same narrow-account-management principle used by Performance Marketing's Yandex 
 respecting TikTok Business Accounts OAuth semantics: one Business account is returned by each
 authorization and is linked as `pending_verification`.
 
-The Accumulate SSO contract, provisioning payload and existing owner-handoff route were not
-changed. App-role projection for viewer/operator sessions remains a later SSO/provisioning task.
+The Accumulate SSO-only contract and existing owner-handoff route were not changed. No
+provisioning payload or authority-sync endpoint exists; viewer/operator authorization comes only
+from signed SSO claims and server-produced capabilities.
 
 ## Authorization boundary
 

@@ -1,0 +1,771 @@
+{
+  "backend_wheel": {
+    "member_count": 134,
+    "members": [
+      {
+        "name": "app/README.md",
+        "sha256": "b4e44c09c23bb9b6df0cea760f11aaf1f9082c4f58e9e1e9b02edf0df5ab206d",
+        "size_bytes": 633
+      },
+      {
+        "name": "app/__init__.py",
+        "sha256": "8cea0cbfff7c61840dea763490c1658a3a04c6bdc9a413e5bdb88194640697ff",
+        "size_bytes": 58
+      },
+      {
+        "name": "app/local_demo.py",
+        "sha256": "096a285ef57507ab1ba26fe7da475dad4f7faeb215898b86e30646bc95599497",
+        "size_bytes": 30138
+      },
+      {
+        "name": "app/main.py",
+        "sha256": "d9dc96cee8f73e5aa327503a993af409fa16e236a010f4cb57615c64b49d718b",
+        "size_bytes": 4274
+      },
+      {
+        "name": "app/api/__init__.py",
+        "sha256": "6120c3bd8cd36440126868c0f6dfb2686cdc852146aa690aedb19a3e67d5be8f",
+        "size_bytes": 5428
+      },
+      {
+        "name": "app/api/contracts.py",
+        "sha256": "765e07d9a93be8587392d3da0c43c418d21d7db519ceb51d23be8834a51428d5",
+        "size_bytes": 5782
+      },
+      {
+        "name": "app/api/media.py",
+        "sha256": "ec134669bb7fa1fd17c43701a50da5dc50595388741169e5eb0b614301f65080",
+        "size_bytes": 2829
+      },
+      {
+        "name": "app/api/operations.py",
+        "sha256": "a2164072b8efc49e9623bfc2d944d82084db228ac0af270ec323b2afbd3a0c61",
+        "size_bytes": 2556
+      },
+      {
+        "name": "app/api/scope.py",
+        "sha256": "a0b9da25c8b748115d1b59898ae5182ec89ca5c0b5e18d03a88de744882a75a6",
+        "size_bytes": 1551
+      },
+      {
+        "name": "app/api/auth/__init__.py",
+        "sha256": "852cad56abbd7ebc592f8a8912df1bdcf82f571f598e833ff58af52e8b11c356",
+        "size_bytes": 3956
+      },
+      {
+        "name": "app/api/dashboards/__init__.py",
+        "sha256": "bad7c112c98be69210b506718cc0d3b32a52f6082bdd65fa7b517075a25176b8",
+        "size_bytes": 6544
+      },
+      {
+        "name": "app/api/insights/__init__.py",
+        "sha256": "f444d7971f27c406a444de9ddb20e48af556e2c221de9fbd647a05d5c10a031e",
+        "size_bytes": 1816
+      },
+      {
+        "name": "app/api/platforms/__init__.py",
+        "sha256": "70f601679b62b30ac9aeea67f1c7393db149d573890edae1fcc9588a86bcaf06",
+        "size_bytes": 2310
+      },
+      {
+        "name": "app/api/settings/__init__.py",
+        "sha256": "af4e296264bb6bfa8814f569fe40bfd7ac4db187c95fc2a394c213bc580a3635",
+        "size_bytes": 42087
+      },
+      {
+        "name": "app/api/workspace/__init__.py",
+        "sha256": "288ecd0c0f3111395aa224af3975607ac88a62fd2a2160f4085f6607785af0b6",
+        "size_bytes": 5933
+      },
+      {
+        "name": "app/application/__init__.py",
+        "sha256": "7db9a9c7cec34f2220ab9f7104f18aee896f89ef3c52f47e80341d8d04dbe8a0",
+        "size_bytes": 44
+      },
+      {
+        "name": "app/application/commands/__init__.py",
+        "sha256": "e60cb24f9c3d749c0c040942d674c8f31921e28beb63bca0ecad1bc259fa3941",
+        "size_bytes": 43
+      },
+      {
+        "name": "app/application/ports/__init__.py",
+        "sha256": "6f9854be4759d987af869ed223bf02571cdb697e29a64142318f45ed934830ba",
+        "size_bytes": 1684
+      },
+      {
+        "name": "app/application/ports/meta_activation.py",
+        "sha256": "b79a148a704cd029858c5f94156442f31f4189940fd426988e3bb7f3e4a5bb65",
+        "size_bytes": 3964
+      },
+      {
+        "name": "app/application/ports/reporting.py",
+        "sha256": "dd7f83c585063588414a0fbd86a5b47f3972c6cbbec74f6aae0fa254a6aa078f",
+        "size_bytes": 4948
+      },
+      {
+        "name": "app/application/ports/session_store.py",
+        "sha256": "03c4e3662a2b0fa6fecce47f4a679c9f48f7d46138c2c90c4948dfc89fe41756",
+        "size_bytes": 530
+      },
+      {
+        "name": "app/application/ports/tiktok_activation.py",
+        "sha256": "acee0be4bca0cc3947cd93b3547dcacde921097d9a3118df771d9ea30cf3fb12",
+        "size_bytes": 5400
+      },
+      {
+        "name": "app/application/ports/checkpoints/__init__.py",
+        "sha256": "152c4a2ca0c7819c685abb76c5b4dfb4956c353795045e2a17c5ee803763d189",
+        "size_bytes": 1681
+      },
+      {
+        "name": "app/application/ports/credentials/__init__.py",
+        "sha256": "d29746c8ff59c7460b99cf0b5ba91baa7a7ee9000b563dc0425bd19cf17dbb57",
+        "size_bytes": 2249
+      },
+      {
+        "name": "app/application/ports/persistence/__init__.py",
+        "sha256": "5845ec87cc9830eae64d4d1cf6b0ab0a217b817a84bad2e6f88a3b724be1bd23",
+        "size_bytes": 6691
+      },
+      {
+        "name": "app/application/ports/platforms/__init__.py",
+        "sha256": "42ad1f34bc67380910f4581727139728a3db596b51f2214da15db6dc05da6129",
+        "size_bytes": 650
+      },
+      {
+        "name": "app/application/ports/platforms/audience/__init__.py",
+        "sha256": "94f1c45f8be9ecb4beb3578aa868d44a6b9e7b5564a84a02b3bc2dd72e50a994",
+        "size_bytes": 582
+      },
+      {
+        "name": "app/application/ports/platforms/comments/__init__.py",
+        "sha256": "8bc79d523ed4d109fdfd43b9f5a69130d685c747e861fd49517c3148d8d507cf",
+        "size_bytes": 643
+      },
+      {
+        "name": "app/application/ports/platforms/content/__init__.py",
+        "sha256": "7f2968315873771d21643c49771aef107c3f6d5eb60f3d2a720b31aa9a0ed4fd",
+        "size_bytes": 569
+      },
+      {
+        "name": "app/application/ports/platforms/profile/__init__.py",
+        "sha256": "60da6951c6da40c2811e4c4af6221f322ba8637bacb428b13170aa8b7491589b",
+        "size_bytes": 1090
+      },
+      {
+        "name": "app/application/queries/__init__.py",
+        "sha256": "a3d92a0b8e877307d0d12b26347d3e189f5a144a2f1f69a6ac591e2c6de438e8",
+        "size_bytes": 378
+      },
+      {
+        "name": "app/application/queries/dashboard_aggregation.py",
+        "sha256": "876fdfa02966bb7c25ddb810d744743d8e655db5d1f25e13800239479979b733",
+        "size_bytes": 36153
+      },
+      {
+        "name": "app/application/queries/dashboards.py",
+        "sha256": "2934a42c9236b39b59706e873bf4721ab8a348d1760e634d2e8579db3251be26",
+        "size_bytes": 12707
+      },
+      {
+        "name": "app/application/queries/metrics.py",
+        "sha256": "aef2324185e33e906efce4c047d56ce97aa7bbadc32b41217e585a594813e674",
+        "size_bytes": 1069
+      },
+      {
+        "name": "app/application/queries/reporting_range.py",
+        "sha256": "54c6db7310c43b2ac9ec26b39206e7e5d15ffac94f2b35fa0b78b57a5527fe4d",
+        "size_bytes": 1547
+      },
+      {
+        "name": "app/application/services/__init__.py",
+        "sha256": "4472c4ac3558cb5813416b65be457c7c5c04c5bdff72bb12d9805b18a87afdd6",
+        "size_bytes": 35
+      },
+      {
+        "name": "app/application/services/authority.py",
+        "sha256": "6488756132eecbf5b6c498f7fa629bb9ba258354740935d439a67dbfed9dc209",
+        "size_bytes": 5982
+      },
+      {
+        "name": "app/application/services/meta_activation.py",
+        "sha256": "851f164322307534c2fe9597ecb464da7cf103b7ba138067781d13fb64a5c3c2",
+        "size_bytes": 11313
+      },
+      {
+        "name": "app/application/services/sso.py",
+        "sha256": "3680ce616890e393be7d610e2c6599ae3d140f384dfe4cdf40876d149880b42d",
+        "size_bytes": 12263
+      },
+      {
+        "name": "app/application/services/tiktok_activation.py",
+        "sha256": "ee0b29e7d197060d6897faf6d6b23af62570a8b978d271c48c19d9e80fee11aa",
+        "size_bytes": 12788
+      },
+      {
+        "name": "app/application/services/collection/__init__.py",
+        "sha256": "a16edb30fed7bced6faa1087b9bcf010875d321d32b3742e1d3a8c01295d1414",
+        "size_bytes": 536
+      },
+      {
+        "name": "app/application/services/collection/audience.py",
+        "sha256": "4d7d464781d8917e1b9af10a010a7412a73a06d05f4726770f68214ec8d7e9ed",
+        "size_bytes": 1653
+      },
+      {
+        "name": "app/application/services/collection/comments.py",
+        "sha256": "75450fb99c1f6d50e2d35f01a4a6b8cf5347a4834e34f4ccfcdb54dc1a739cbd",
+        "size_bytes": 3483
+      },
+      {
+        "name": "app/application/services/collection/content.py",
+        "sha256": "67ebc7cb43bc76ff2580d88e7522a9a6a99c33ed6a97f64adc4890a57b5b2be6",
+        "size_bytes": 7185
+      },
+      {
+        "name": "app/application/services/collection/contracts.py",
+        "sha256": "beab0b3cffaaf300c808d220f5703e4af5764b3d7a174eb7b86e08b7faa465a8",
+        "size_bytes": 2358
+      },
+      {
+        "name": "app/application/services/collection/daily_metrics.py",
+        "sha256": "8a190bf4e80a3136b3544db366467c6b8be8810391d1ea29c85b5e9eaf72c875",
+        "size_bytes": 1592
+      },
+      {
+        "name": "app/application/services/collection/media.py",
+        "sha256": "fa8a4d06f43a1cb06feee5124d190e7342ff71bd16763ce6de650469abe5f338",
+        "size_bytes": 3512
+      },
+      {
+        "name": "app/application/services/collection/profile.py",
+        "sha256": "c100afe4c74732832ed62f2f6aa0f9375bf7b7fcc4ac79b0b6ff9cf8080c2ed7",
+        "size_bytes": 1403
+      },
+      {
+        "name": "app/capabilities/__init__.py",
+        "sha256": "5dad37a5b7101de335601dc9ea741a41ec3bbcb10586840be98cdd4cad0dcb31",
+        "size_bytes": 354
+      },
+      {
+        "name": "app/capabilities/registry.py",
+        "sha256": "af5a585a6bbd9428fd8ee73d6c1b0a23687a05e477d80360c1f34c716f9eeac3",
+        "size_bytes": 4762
+      },
+      {
+        "name": "app/core/__init__.py",
+        "sha256": "683fe8a81e0a8bd414305d2d7430e424edf6b95bcb6e25400b81bd9f57de15f4",
+        "size_bytes": 460
+      },
+      {
+        "name": "app/core/boundary.py",
+        "sha256": "0b5bcdcb1f25a7477e27ec209cf07b9b02bb14da0a0c01b389452aeff32a0baa",
+        "size_bytes": 560
+      },
+      {
+        "name": "app/core/config.py",
+        "sha256": "dfeac097e7713f9c0e75c4dbf1a68f23e2c571cf796e5aed27f93b24daeb317d",
+        "size_bytes": 24966
+      },
+      {
+        "name": "app/core/permissions.py",
+        "sha256": "f2b1bbfc43fa9895ae02f9d0c4c7bc9a8942d7a15834dd236c26c95bc0ddf5df",
+        "size_bytes": 152
+      },
+      {
+        "name": "app/core/security.py",
+        "sha256": "de8494ae26d4bac0e2d68747ceb7851fc4488c70bf1f6a5161b83b53fdbab1e4",
+        "size_bytes": 340
+      },
+      {
+        "name": "app/core/time.py",
+        "sha256": "251dee01026aa1b451348cf3b6fd4c62be5252a5c7033b0d085c646cc2920405",
+        "size_bytes": 195
+      },
+      {
+        "name": "app/core/write_policy.py",
+        "sha256": "f54713c0b7d8ae3c43305c71d05014b4f7df746e5a7b84ad22a1df51ee8440d4",
+        "size_bytes": 907
+      },
+      {
+        "name": "app/domain/__init__.py",
+        "sha256": "1a6d1f92a89ed91d04d380c1a8349355354065b4222dc8762f934a39187f2564",
+        "size_bytes": 44
+      },
+      {
+        "name": "app/domain/authority/__init__.py",
+        "sha256": "101e5edfc18e911396294d049e7e7b332914853770ccc65094fcc01a99588788",
+        "size_bytes": 245
+      },
+      {
+        "name": "app/domain/authority/models.py",
+        "sha256": "c078fa2402b964c977f191d68985898eea5e467a05d5a233a1faca5585e34d3f",
+        "size_bytes": 885
+      },
+      {
+        "name": "app/domain/brands/__init__.py",
+        "sha256": "0a9f3c928cabbd15a10d722641cb6e16962e6a94f70a055e45eaf40068150369",
+        "size_bytes": 33
+      },
+      {
+        "name": "app/domain/insights/__init__.py",
+        "sha256": "0a9f3c928cabbd15a10d722641cb6e16962e6a94f70a055e45eaf40068150369",
+        "size_bytes": 33
+      },
+      {
+        "name": "app/domain/metrics/__init__.py",
+        "sha256": "f3d82129fe314dae179a4adf2bad78d2a58c5f267a91941c213da3b10b36f6a2",
+        "size_bytes": 22839
+      },
+      {
+        "name": "app/domain/platforms/__init__.py",
+        "sha256": "05fc66bebaf3629c647bc6933427d51c32e77820ddfe61951912c833c8895afe",
+        "size_bytes": 441
+      },
+      {
+        "name": "app/domain/reporting/__init__.py",
+        "sha256": "5b77f1ec13d7466e1c8665d2483ac8a508475f61c9f7c823cb959d1ce5397750",
+        "size_bytes": 1571
+      },
+      {
+        "name": "app/domain/reporting/models.py",
+        "sha256": "90ac577fa66e01360624dd9a5c2ec640cce4caef50eb9be0929a752a40542b9f",
+        "size_bytes": 7608
+      },
+      {
+        "name": "app/domain/social_accounts/__init__.py",
+        "sha256": "0a9f3c928cabbd15a10d722641cb6e16962e6a94f70a055e45eaf40068150369",
+        "size_bytes": 33
+      },
+      {
+        "name": "app/domain/sync/__init__.py",
+        "sha256": "160292ad648b01345d0012c5219ba8658c80ab0f75ecd6f69bc9740e601ca47b",
+        "size_bytes": 889
+      },
+      {
+        "name": "app/domain/sync/parity.py",
+        "sha256": "b994db4cc6438e5db977230305dc81078bf4496c7d1fee4db3e0c85ca8d5d350",
+        "size_bytes": 6850
+      },
+      {
+        "name": "app/infrastructure/__init__.py",
+        "sha256": "7b7ef4f91d3695940e76b1adc45b6640b0e87f225f3f3a028f75dbb5bfceb31e",
+        "size_bytes": 41
+      },
+      {
+        "name": "app/infrastructure/checkpoints/__init__.py",
+        "sha256": "ec39e09179983a850137df7e1d1db6aef60406d8c3fd8aa6a7ec083942f2f058",
+        "size_bytes": 140
+      },
+      {
+        "name": "app/infrastructure/checkpoints/projection_store.py",
+        "sha256": "72a19ae8bab0fe7e3ca6e307d219b13bdac680da1a7016c128091b960d79444c",
+        "size_bytes": 7308
+      },
+      {
+        "name": "app/infrastructure/credentials/__init__.py",
+        "sha256": "922ecea97e419a4ecf113990aa985f6048f4fc3451a4c519bbf2553f9936f9b5",
+        "size_bytes": 231
+      },
+      {
+        "name": "app/infrastructure/credentials/aes_gcm.py",
+        "sha256": "11c77d5abcc21733e0ef22b4ccb4d0bbba82e0bc01eacab3b30b64c1049c9bfc",
+        "size_bytes": 4921
+      },
+      {
+        "name": "app/infrastructure/credentials/projection_store.py",
+        "sha256": "f2e96c876bc7b16f05eae47cea4330d916fbe85fd818cabac8987aebc6362d5f",
+        "size_bytes": 8300
+      },
+      {
+        "name": "app/infrastructure/persistence/__init__.py",
+        "sha256": "a939e23d3b345fc8ed9cea808a91c5a0374270a6de45e38cad73b6f18236f34a",
+        "size_bytes": 53
+      },
+      {
+        "name": "app/infrastructure/persistence/media_files.py",
+        "sha256": "dbff08d6bb59486b6b5f1c4ede52c30dc4a932649711fd76f31cfa6a43e78cf4",
+        "size_bytes": 1672
+      },
+      {
+        "name": "app/infrastructure/persistence/model_registry.py",
+        "sha256": "bc535c063c554fb8126dd3d2939c351dad06a4ea247ecfe07e36c7c2f87e9530",
+        "size_bytes": 449
+      },
+      {
+        "name": "app/infrastructure/persistence/projection_state.py",
+        "sha256": "e5c7d0d17108aa49ea2ad3ad64a875f3df361de4e306f5ae400d5f7fea875bf7",
+        "size_bytes": 5216
+      },
+      {
+        "name": "app/infrastructure/persistence/legacy_socialmedia/__init__.py",
+        "sha256": "3fb8e2b93abda408d49986662eade1e405726736cbe5a8d5c50ddc6b3dbeffd0",
+        "size_bytes": 77
+      },
+      {
+        "name": "app/infrastructure/persistence/legacy_socialmedia/platforms.py",
+        "sha256": "a216b08eca423b23c0d65d1b184bfe780a3d6c08977f5d312e8938ec23b1b61f",
+        "size_bytes": 658
+      },
+      {
+        "name": "app/infrastructure/persistence/social_v2/__init__.py",
+        "sha256": "60aca1d6700e80589f14a7f336cef4d671239f42b5dcf4a1f45adca1ddcd91b3",
+        "size_bytes": 615
+      },
+      {
+        "name": "app/infrastructure/persistence/social_v2/base.py",
+        "sha256": "7b55752b53128f2c51df2f0db05c11dc41cd454f8c1336fd5a851081112438e6",
+        "size_bytes": 1357
+      },
+      {
+        "name": "app/infrastructure/persistence/social_v2/collection_targets.py",
+        "sha256": "ffacad4adbbbb6352e6cbe4124a21fa0a1146a70223c0902fc32523528b7f3df",
+        "size_bytes": 12613
+      },
+      {
+        "name": "app/infrastructure/persistence/social_v2/comments.py",
+        "sha256": "af788f09300a279a6037a556fe050dcf1c61b8848a2952101f7e6647726aacdc",
+        "size_bytes": 5116
+      },
+      {
+        "name": "app/infrastructure/persistence/social_v2/content.py",
+        "sha256": "6ff7d4dd51bc4055f05663843d0b5f58d48f6841fa14f82ecc33907cf2734bb5",
+        "size_bytes": 10480
+      },
+      {
+        "name": "app/infrastructure/persistence/social_v2/media.py",
+        "sha256": "9e3ebd512ae4ad55e9dd537249dc5c740b19e4c64fa46664790b6d074679cca4",
+        "size_bytes": 4678
+      },
+      {
+        "name": "app/infrastructure/persistence/social_v2/meta_activation.py",
+        "sha256": "1c7282cf4827ab22ce1b82f107e537684c518a67b25111a4d1361baf54de557c",
+        "size_bytes": 22478
+      },
+      {
+        "name": "app/infrastructure/persistence/social_v2/metrics.py",
+        "sha256": "c140b80fa85a0b2fe9ff12754d4e7580e2ad66b2ba9abb5af68cedc926d96e56",
+        "size_bytes": 7847
+      },
+      {
+        "name": "app/infrastructure/persistence/social_v2/models.py",
+        "sha256": "b94958de46fb1c7a0b9d5fd24902a2ea99f786cd510fb539110f24250a3bac15",
+        "size_bytes": 5946
+      },
+      {
+        "name": "app/infrastructure/persistence/social_v2/reporting.py",
+        "sha256": "a9052622c5704e39cf0e0eb8c20b6476afb0d06cc33d9653c943160dbb286db6",
+        "size_bytes": 18900
+      },
+      {
+        "name": "app/infrastructure/persistence/social_v2/tiktok_activation.py",
+        "sha256": "4bd159b8a2f444229e6ad33b0797d2bd9b1d0d0f35c5e4c8d501ce47770d59c1",
+        "size_bytes": 11443
+      },
+      {
+        "name": "app/infrastructure/providers/__init__.py",
+        "sha256": "4bf426086dbe9c780226f6925b680dde6f526ec0a52804ca9b92c314cd1f3ee0",
+        "size_bytes": 36
+      },
+      {
+        "name": "app/infrastructure/providers/meta/__init__.py",
+        "sha256": "136a9c018adfbb4302d1fc3552f6ba6d2119830ef86036b369ef50c1d88c3971",
+        "size_bytes": 704
+      },
+      {
+        "name": "app/infrastructure/providers/meta/audience.py",
+        "sha256": "aa92a71f8aa23b740f76a521d2426f9d713ac8bdbd70fd49fa2b620dae8108d6",
+        "size_bytes": 4630
+      },
+      {
+        "name": "app/infrastructure/providers/meta/fields.py",
+        "sha256": "d2771f35e9bbe250cc761c0ff14ccb12780569486180925e8c0e9c80ae7d6448",
+        "size_bytes": 2243
+      },
+      {
+        "name": "app/infrastructure/providers/meta/oauth.py",
+        "sha256": "288ee9f37950920c30988727932e0935899d33086fd3b4d3b26311bc2941687b",
+        "size_bytes": 9619
+      },
+      {
+        "name": "app/infrastructure/providers/meta/oauth_state.py",
+        "sha256": "a4b5d6b486051cb14bfd4e08dcd6573b1e3c20963b0c68d5579f62da6f3e646e",
+        "size_bytes": 7618
+      },
+      {
+        "name": "app/infrastructure/providers/meta/rate_guard.py",
+        "sha256": "149f7b95ec64b4cc9715beb73adda1af6da6c9fd3605cc9f08ca343f4c4d34ff",
+        "size_bytes": 6695
+      },
+      {
+        "name": "app/infrastructure/providers/meta/runtime.py",
+        "sha256": "22011b290e4d841ed08596b3ecaebdfcd8bc0e00920e907a6d38d17c6117b697",
+        "size_bytes": 3697
+      },
+      {
+        "name": "app/infrastructure/providers/meta/transport.py",
+        "sha256": "80f9ec2ba55d9c75c417015939b5e2b390b00e5895f95f39a1ba8e386db558d4",
+        "size_bytes": 8659
+      },
+      {
+        "name": "app/infrastructure/providers/meta/facebook/__init__.py",
+        "sha256": "798be3d44a6bc62abc35a21f638d8b69cef3e586b66c0db17d172a7c547797cb",
+        "size_bytes": 52
+      },
+      {
+        "name": "app/infrastructure/providers/meta/facebook/comments.py",
+        "sha256": "0cafe87fadc600bc316220d8d81372058b21e5ee34391ff39e84eb962fdeebfc",
+        "size_bytes": 3045
+      },
+      {
+        "name": "app/infrastructure/providers/meta/facebook/content.py",
+        "sha256": "b1e52e4ce7c0c182347beee8dcee0916c45fc249a057c90f91dedb71fb4bee6d",
+        "size_bytes": 3525
+      },
+      {
+        "name": "app/infrastructure/providers/meta/facebook/daily_metrics.py",
+        "sha256": "31384bbacbc8897e31db99a995b8acb240e8450c40d81b4eb053e928d93beca9",
+        "size_bytes": 3151
+      },
+      {
+        "name": "app/infrastructure/providers/meta/facebook/profile.py",
+        "sha256": "2f8e946ca6010390a11ec0e42070962400b9a5ce985c4e6377cb511214a4df65",
+        "size_bytes": 1771
+      },
+      {
+        "name": "app/infrastructure/providers/meta/instagram/__init__.py",
+        "sha256": "a69a06b736beea372cebc4f580ac4ed3d7042aacc054f42cd924e104f0c8cdc5",
+        "size_bytes": 53
+      },
+      {
+        "name": "app/infrastructure/providers/meta/instagram/comments.py",
+        "sha256": "13bbb4dc1fa2ae9c98be065c01803a79ccd67fee0da3c62598d344c903f1bf34",
+        "size_bytes": 2770
+      },
+      {
+        "name": "app/infrastructure/providers/meta/instagram/content.py",
+        "sha256": "32fd89355ec1c79d96337e48ad5866934e4b9a08515d5d318c20bee4e2df53db",
+        "size_bytes": 4764
+      },
+      {
+        "name": "app/infrastructure/providers/meta/instagram/content_insights.py",
+        "sha256": "d5e3d60684bdfa14b6f92a4cfc5d6bfccc06550ee6c838aeb10c9b523a32eee8",
+        "size_bytes": 5720
+      },
+      {
+        "name": "app/infrastructure/providers/meta/instagram/daily_metrics.py",
+        "sha256": "3e6250c2c10cd65d4eb24e58861c1a1c1cd868a6af1f1a288fb6a69cac8bec94",
+        "size_bytes": 3054
+      },
+      {
+        "name": "app/infrastructure/providers/meta/instagram/profile.py",
+        "sha256": "c87cedc4dea7814f47301c2ea4cfefed02bfc5608c299e82fcd14c04a51721c6",
+        "size_bytes": 1717
+      },
+      {
+        "name": "app/infrastructure/providers/tiktok/__init__.py",
+        "sha256": "289b59c3a2497435993c4ce418011f9b33d2153c520d5e642797273a17006c55",
+        "size_bytes": 42
+      },
+      {
+        "name": "app/infrastructure/providers/tiktok/runtime.py",
+        "sha256": "932bf021e006499bd86782189e3d7c016fc6e8d01b87135d95d9d22f43ca9119",
+        "size_bytes": 3327
+      },
+      {
+        "name": "app/infrastructure/providers/tiktok/accounts/__init__.py",
+        "sha256": "1dd8fedec0faa93ec67155be9e1e53be40573984943990f6b5044d292097554e",
+        "size_bytes": 1461
+      },
+      {
+        "name": "app/infrastructure/providers/tiktok/accounts/activation.py",
+        "sha256": "18da0c385014af8a2dd88400f09cc724fa75928c891a7052d1b5b2c617a0d702",
+        "size_bytes": 4946
+      },
+      {
+        "name": "app/infrastructure/providers/tiktok/accounts/audience.py",
+        "sha256": "f53878743edd336b4c50eeff56950a9bc37e82e5d416aafdf1dd09306232cc10",
+        "size_bytes": 4324
+      },
+      {
+        "name": "app/infrastructure/providers/tiktok/accounts/comments.py",
+        "sha256": "7cae7e6046d13a5ef25c5ad1af394fe3b60186441c0fe652bc829ce5f1801219",
+        "size_bytes": 4335
+      },
+      {
+        "name": "app/infrastructure/providers/tiktok/accounts/content.py",
+        "sha256": "50943924fdf2a49c731e990ada036a78bab551338e1c1bf897a8c95b9f830753",
+        "size_bytes": 5564
+      },
+      {
+        "name": "app/infrastructure/providers/tiktok/accounts/oauth_state.py",
+        "sha256": "09292a16d975a51151997962635ff13c9048f1308a69b0e049905de571e2b3e8",
+        "size_bytes": 6771
+      },
+      {
+        "name": "app/infrastructure/providers/tiktok/accounts/profile.py",
+        "sha256": "fdc4dec0a11509de0b2d2c81dc26c0e4d2cac33642257abec25c23e446859bcd",
+        "size_bytes": 2287
+      },
+      {
+        "name": "app/infrastructure/providers/tiktok/accounts/responses.py",
+        "sha256": "7525bd7ced8152e813a3a693d6c9c3ccb61c4105ac47bf32c1f7db5779fee73a",
+        "size_bytes": 3227
+      },
+      {
+        "name": "app/infrastructure/providers/tiktok/accounts/scopes.py",
+        "sha256": "272d9381fb0e4f3ffc6c7fc994beba60adae4d2554aa706b4712408e1eb555ec",
+        "size_bytes": 1213
+      },
+      {
+        "name": "app/infrastructure/providers/tiktok/accounts/transport.py",
+        "sha256": "97f636435be5a0a30545ff1fe075b3584faefa447e27f1f6adc146b812aec808",
+        "size_bytes": 4574
+      },
+      {
+        "name": "app/infrastructure/providers/tiktok/accounts/wire.py",
+        "sha256": "58f7133ba554c5c08c0a3305d4f2ce924d4beaf97d8752f7c1bee0a3affe2731",
+        "size_bytes": 6358
+      },
+      {
+        "name": "app/workers/__init__.py",
+        "sha256": "17fa7eed8165061b209399ba76e74a9aa12267a91933991a0d0260ead67b8360",
+        "size_bytes": 544
+      },
+      {
+        "name": "app/workers/__main__.py",
+        "sha256": "6173a644c0f5a3426694382b154e2e36fba6402e5a077d81b252bba77ec4ee97",
+        "size_bytes": 54
+      },
+      {
+        "name": "app/workers/collector.py",
+        "sha256": "00b974c0d1eb8860acb098bd5d711a86f75e4d7bf79d34e8d248ab3645595608",
+        "size_bytes": 29986
+      },
+      {
+        "name": "app/workers/contracts.py",
+        "sha256": "97072e6709dcaadf0a610b07f71a6a26dd0cadda42d575e77199c6d1ac7a3d0f",
+        "size_bytes": 956
+      },
+      {
+        "name": "app/workers/runtime.py",
+        "sha256": "4baba3525f1541e2719454794dd4b4fb6bc9687b0acf02df06c29a0a9ba4e06c",
+        "size_bytes": 3272
+      },
+      {
+        "name": "social_media_v2-0.1.0.dist-info/METADATA",
+        "sha256": "9d53f2f7234015f4d8019483fa509033a5f80911377a980d981de455e2ee7080",
+        "size_bytes": 1431
+      },
+      {
+        "name": "social_media_v2-0.1.0.dist-info/WHEEL",
+        "sha256": "c14c80f0e6ae95195b7f032d990b2f367806af140702f90a72f466762ce5262d",
+        "size_bytes": 92
+      },
+      {
+        "name": "social_media_v2-0.1.0.dist-info/top_level.txt",
+        "sha256": "8a8f60ecb09b7e64c6d5214a8043865e608507db8c3f61f995eae6d078875901",
+        "size_bytes": 4
+      },
+      {
+        "name": "social_media_v2-0.1.0.dist-info/RECORD",
+        "sha256": "e1acea3899d52437fcd9e190e78e2aef19bb3e20a212f89d8ef77f38a265681c",
+        "size_bytes": 12954
+      }
+    ],
+    "name": "social_media_v2-0.1.0-py3-none-any.whl",
+    "sha256": "195bc10fc55d61dcc120ec0b06cc257e347fcc14f0232accc423e10e67d63a02",
+    "size_bytes": 178783
+  },
+  "forbidden_runtime_findings": 0,
+  "forbidden_source_path_findings": 0,
+  "frontend": {
+    "file_count": 16,
+    "files": [
+      {
+        "name": "accumulate-logo.svg",
+        "sha256": "b7c1cf277a3696d7ff4a25d0a45305e616fcb8e7e3b3a5d38220b8c5fb299199",
+        "size_bytes": 273975
+      },
+      {
+        "name": "index.html",
+        "sha256": "6e8bd2822efbe77997604a7e601bb4ad11a6734f33ad4f5bbf0a75cc40edddbb",
+        "size_bytes": 509
+      },
+      {
+        "name": "favicon.png",
+        "sha256": "1398bde202fc1e4660bb51b3d98c4606d67a93fe9fee26d4f1c76f360db1ed69",
+        "size_bytes": 7012
+      },
+      {
+        "name": "catalog-dWJ-793t.js",
+        "sha256": "b2008abe022617c00a5eb7885eef2aebe6a46799f874d7dc36d26a46f21e4f08",
+        "size_bytes": 1613
+      },
+      {
+        "name": "index-BYgmXHtt.js",
+        "sha256": "d91330d1ed7c29d9f63858b2af4a345eda13152f9f711d41125f53d92ab243d4",
+        "size_bytes": 18545
+      },
+      {
+        "name": "index-DCJ0BZ_G.js",
+        "sha256": "8a8c43d214b021a1d3e1dbb4a018b34459224b963ebbd12de9a580ac06bcafe0",
+        "size_bytes": 188
+      },
+      {
+        "name": "PlatformPage-DxiAXBpl.js",
+        "sha256": "9d54cdeb289edcc261c136bd8337d1ed1893d8b7cb37e08c1d8ea2f00ae3deb6",
+        "size_bytes": 622071
+      },
+      {
+        "name": "index-C51BvI8o.js",
+        "sha256": "47fd71282512fe530902133322e2e3cba0d4c2d23f420ce9df5f009db8b595cf",
+        "size_bytes": 191
+      },
+      {
+        "name": "index-jxpBDh52.js",
+        "sha256": "2bf9e9ef09dc611986aaf6091853c7c88141dbae8246ab80f6f3d52bbf08e10e",
+        "size_bytes": 190
+      },
+      {
+        "name": "index-NghAwLwf.js",
+        "sha256": "6c2fac79d10985eb187ea297d2448e2618fc529764e9b564960edca73a9cddfc",
+        "size_bytes": 331196
+      },
+      {
+        "name": "index-BPIO2tP5.css",
+        "sha256": "aaef7af0a0c4a8e05ae92686b78003b43c9bc500630ee70ba96ec525107cd5fc",
+        "size_bytes": 109830
+      },
+      {
+        "name": "follower-avatar-12.jpg",
+        "sha256": "1a6d6132f2a50df30364a983fa12c7d3d832039c18561bfcd6a86c3f06dc3364",
+        "size_bytes": 3157
+      },
+      {
+        "name": "accumulate-dark.png",
+        "sha256": "464834f41e54e2d0c25336a774ce13427271f0ffe185d7c41837ce6e99c88c66",
+        "size_bytes": 30496
+      },
+      {
+        "name": "follower-avatar-9.jpg",
+        "sha256": "c5873a80b1a2c1769ae3c0342ebb7cc838a4454d4a6eaa1abbdea3b57c57ac64",
+        "size_bytes": 3962
+      },
+      {
+        "name": "accumulate-light.png",
+        "sha256": "fac9d0b13930e587ddcb763457d41fb00da5098b5783d3899bd501d69873e7ad",
+        "size_bytes": 24772
+      },
+      {
+        "name": "follower-avatar-5.jpg",
+        "sha256": "7c61df640bc5483de124880db4e479452092863f02204ee97a852d454bef1ca9",
+        "size_bytes": 3300
+      }
+    ]
+  },
+  "phase": "R7",
+  "schema_version": 1,
+  "secret_findings": 0,
+  "source_scope": "/home/api/colab_scripts/SocialMediadownstream"
+}

@@ -1,5 +1,9 @@
 # Faz 2 — SSO ve Provisioning Kapanış Adayı Raporu
 
+> **ARCHIVED / SUPERSEDED:** Bu tarihsel rapor Revizyon 6 R6 ile hükümsüzdür. Güncel runtime
+> sözleşmesi yalnız `docs/contracts/social-media-v2-sso-only.md` dosyasıdır; provisioning yüzeyi
+> final mimaride yoktur.
+
 Tarih: `2026-07-13`
 
 Son doğrulama: `2026-07-14`

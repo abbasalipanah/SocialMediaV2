@@ -17,11 +17,8 @@ class ConfigurationError(RuntimeError):
 class RuntimeMode(StrEnum):
     DEVELOPMENT = "development"
     DORMANT = "dormant"
-    CUTOVER_READ_ONLY = "cutover_read_only"
-    CUTOVER_CREDENTIAL_MIGRATION = "cutover_credential_migration"
-    CUTOVER_CANARY = "cutover_canary"
-    CUTOVER_CONTROL_PLANE_DRAIN = "cutover_control_plane_drain"
-    CUTOVER_ACTIVATION = "cutover_activation"
+    STAGING = "staging"
+    STANDALONE_READY = "standalone_ready"
     ACTIVE = "active"
 
 
@@ -38,6 +35,9 @@ TIKTOK_ACCOUNT_TOKEN_INFO_URL = (
 )
 TIKTOK_ACCOUNT_PROFILE_URL = "https://business-api.tiktok.com/open_api/v1.3/business/get/"
 TIKTOK_ACCOUNT_VIDEO_LIST_URL = "https://business-api.tiktok.com/open_api/v1.3/business/video/list/"
+TIKTOK_ACCOUNT_COMMENT_LIST_URL = (
+    "https://business-api.tiktok.com/open_api/v1.3/business/comment/list/"
+)
 TIKTOK_REDIRECT_URI = "https://social.theaccumulate.com/api/social/tiktok/oauth/callback"
 TIKTOK_ACTIVATION_LINK_BASE = "https://social.theaccumulate.com/settings/tiktok/connect"
 TIKTOK_REQUIRED_SCOPES = (
@@ -74,6 +74,14 @@ LOCAL_DB_HOSTS = {"127.0.0.1", "localhost", "::1", "postgres", "db"}
 BLOCKED_SOURCE_DB_NAMES = {"socialmedia_adv"}
 V2_DATABASE_PREFIX = "social_media_v2"
 PRODUCTION_LIKE_ENVS = {"production", "prod", "staging"}
+
+RUNTIME_MODE_SEQUENCE = (
+    RuntimeMode.DEVELOPMENT,
+    RuntimeMode.DORMANT,
+    RuntimeMode.STAGING,
+    RuntimeMode.STANDALONE_READY,
+    RuntimeMode.ACTIVE,
+)
 
 
 def _env(name: str, default: str = "") -> str:
@@ -165,6 +173,7 @@ class TikTokConfig:
     token_info_url: str
     profile_url: str
     video_list_url: str
+    comment_list_url: str
     redirect_uri: str
     activation_link_base: str
 
@@ -232,24 +241,59 @@ def _validate_database(app_env: str, mode: RuntimeMode, writes: bool, db: Databa
     if db.resolved_name in BLOCKED_SOURCE_DB_NAMES:
         raise ConfigurationError("A live source-project database can never be used by V2")
     production_like = app_env in PRODUCTION_LIKE_ENVS
-    if production_like and mode is RuntimeMode.ACTIVE:
+    if production_like and mode in {
+        RuntimeMode.STAGING,
+        RuntimeMode.STANDALONE_READY,
+        RuntimeMode.ACTIVE,
+    }:
         if not db.url or not db.resolved_name.startswith(V2_DATABASE_PREFIX):
-            raise ConfigurationError("Active runtime requires a dedicated Social Media V2 database")
-        if not writes:
-            raise ConfigurationError("Active runtime requires local session and provider writes")
+            raise ConfigurationError(
+                "Standalone runtime requires a dedicated Social Media V2 database"
+            )
         if db.resolved_host not in LOCAL_DB_HOSTS and not db.require_tls:
             raise ConfigurationError("Remote production database connections require TLS")
     if not production_like and db.configured and db.resolved_host not in LOCAL_DB_HOSTS:
         raise ConfigurationError(
             "Development may only use a local Social Media V2 database"
         )
-    if writes and not (
+    write_capable_runtime = (
         (app_env == "development" and mode is RuntimeMode.DEVELOPMENT)
-        or (production_like and mode is RuntimeMode.ACTIVE)
-    ):
-        raise ConfigurationError("Writes require development mode or the active V2 runtime")
+        or (app_env == "staging" and mode is RuntimeMode.STAGING)
+        or (app_env in {"production", "prod"} and mode is RuntimeMode.ACTIVE)
+    )
+    if writes and not write_capable_runtime:
+        raise ConfigurationError(
+            "Writes require development, V2-owned staging, or active production runtime"
+        )
     if writes and not db.configured:
         raise ConfigurationError("Writes require an explicit V2 database")
+
+
+def _validate_runtime_mode(app_env: str, mode: RuntimeMode, writes: bool) -> None:
+    if app_env in {"production", "prod"}:
+        allowed = {
+            RuntimeMode.DORMANT,
+            RuntimeMode.STANDALONE_READY,
+            RuntimeMode.ACTIVE,
+        }
+    elif app_env == "staging":
+        allowed = {
+            RuntimeMode.DORMANT,
+            RuntimeMode.STAGING,
+            RuntimeMode.STANDALONE_READY,
+        }
+    else:
+        allowed = {
+            RuntimeMode.DEVELOPMENT,
+            RuntimeMode.DORMANT,
+            RuntimeMode.STANDALONE_READY,
+        }
+    if mode not in allowed:
+        raise ConfigurationError(f"{mode.value} runtime is not valid for APP_ENV={app_env}")
+    if mode in {RuntimeMode.DORMANT, RuntimeMode.STANDALONE_READY} and writes:
+        raise ConfigurationError(f"{mode.value} runtime must remain write-disabled")
+    if mode in {RuntimeMode.STAGING, RuntimeMode.ACTIVE} and not writes:
+        raise ConfigurationError(f"{mode.value} runtime requires explicit V2 writes")
 
 
 def _validate_tiktok(
@@ -273,6 +317,18 @@ def _validate_tiktok(
         )
     if config.advertiser_enabled:
         raise ConfigurationError("TikTok advertiser integration is not available")
+    canonical_endpoints = (
+        (config.authorization_url, TIKTOK_ACCOUNT_AUTHORIZATION_URL),
+        (config.token_url, TIKTOK_ACCOUNT_TOKEN_URL),
+        (config.refresh_url, TIKTOK_ACCOUNT_REFRESH_URL),
+        (config.revoke_url, TIKTOK_ACCOUNT_REVOKE_URL),
+        (config.token_info_url, TIKTOK_ACCOUNT_TOKEN_INFO_URL),
+        (config.profile_url, TIKTOK_ACCOUNT_PROFILE_URL),
+        (config.video_list_url, TIKTOK_ACCOUNT_VIDEO_LIST_URL),
+        (config.comment_list_url, TIKTOK_ACCOUNT_COMMENT_LIST_URL),
+    )
+    if any(actual != expected for actual, expected in canonical_endpoints):
+        raise ConfigurationError("TikTok endpoint set differs from the canonical contract")
     _validate_public_endpoint(
         config.redirect_uri,
         expected_path="/api/social/tiktok/oauth/callback",
@@ -454,6 +510,10 @@ def load_settings() -> AppSettings:
         token_info_url=_env("SOCIAL_TIKTOK_ACCOUNT_TOKEN_INFO_URL", TIKTOK_ACCOUNT_TOKEN_INFO_URL),
         profile_url=_env("SOCIAL_TIKTOK_ACCOUNT_PROFILE_URL", TIKTOK_ACCOUNT_PROFILE_URL),
         video_list_url=_env("SOCIAL_TIKTOK_ACCOUNT_VIDEO_LIST_URL", TIKTOK_ACCOUNT_VIDEO_LIST_URL),
+        comment_list_url=_env(
+            "SOCIAL_TIKTOK_ACCOUNT_COMMENT_LIST_URL",
+            TIKTOK_ACCOUNT_COMMENT_LIST_URL,
+        ),
         redirect_uri=_env("SOCIAL_TIKTOK_REDIRECT_URI", TIKTOK_REDIRECT_URI),
         activation_link_base=_env(
             "SOCIAL_TIKTOK_ACTIVATION_LINK_BASE",
@@ -501,6 +561,7 @@ def load_settings() -> AppSettings:
             "30",
         ),
     )
+    _validate_runtime_mode(app_env, runtime_mode, writes)
     _validate_database(app_env, runtime_mode, writes, db)
     vault_enabled = _bool("SOCIAL_VAULT_ENABLED")
     _validate_tiktok(
@@ -530,11 +591,11 @@ def load_settings() -> AppSettings:
         raise ConfigurationError(
             "Worker schedule requires a writable V2 database and an enabled collector"
         )
-    if app_env in PRODUCTION_LIKE_ENVS and runtime_mode is RuntimeMode.ACTIVE:
+    if app_env in PRODUCTION_LIKE_ENVS and writes:
         if len(sso_secret.encode()) < 32:
-            raise ConfigurationError("Active runtime requires a strong SSO secret")
+            raise ConfigurationError("Writable standalone runtime requires a strong SSO secret")
         if not session_cookie_secure:
-            raise ConfigurationError("Active runtime requires secure session cookies")
+            raise ConfigurationError("Writable standalone runtime requires secure session cookies")
     return AppSettings(
         app_env=app_env,
         app_name=_env("APP_NAME", "social_media_v2"),
