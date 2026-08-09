@@ -32,14 +32,19 @@ transaction.
 | Surface | Rows |
 |---|---:|
 | Canonical accounts | 3 |
-| Allowlisted/mapped metrics | 78,276 |
+| Allowlisted/mapped metrics | 80,519 |
 | Content | 395 |
 | Comments | 611 |
 | Verified media | 389 |
+| Stored AI insight reports | 1 |
 
 The lower metric count than the legacy Brand total is intentional: noncanonical advertising,
 hashtag helper, provider-internal, and unsupported metric families are not copied. TikTok
 content-level snapshots are explicitly mapped to the V2 video-total metric contract.
+
+Stored AI import is reporting-only: the strategic summary and action recommendations are copied.
+Raw metric snapshots, LLM/provider configuration, connector analysis, anomalies, and platform
+evaluations remain excluded.
 
 ## Runtime verification
 

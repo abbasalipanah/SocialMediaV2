@@ -13,7 +13,7 @@ export default function OverviewPage() {
   const [range, setRange] = useState<RangeKey>("last_30_days");
   const { selectedBrand } = useBrandScope();
   const query = useOverviewDashboard(range);
-  const insights = useInsights(query.data?.meta.date_range.start_on, query.data?.meta.date_range.end_on);
+  const insights = useInsights();
 
   if (query.isPending) return <DashboardLoading title="Social Media Overview" />;
   if (query.isError || !query.data) return <DashboardError retry={() => void query.refetch()} />;

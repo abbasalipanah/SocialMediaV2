@@ -151,11 +151,10 @@
         "interactions",
         "new_followers",
         "reach",
-        "reactions",
         "video_engagements_total",
         "video_engagement_rate",
-        "views",
-        "website_clicks"
+        "video_views_total",
+        "views"
       ],
       "overview_aggregates": [
         "followers",
@@ -169,7 +168,8 @@
       "nested_platform_metrics": [
         "engagement_rate",
         "video_engagement_rate",
-        "video_engagements_total"
+        "video_engagements_total",
+        "video_views_total"
       ],
       "display_aliases": {
         "total_impressions": "views"
@@ -180,19 +180,21 @@
           "zero_denominator": "unavailable",
           "unit": "ratio"
         },
-        "activity_score": {
-          "formula": "clamp(round(avg_engagement_percent * 6 + reach_delta_pct * 0.4), 0, 100)",
-          "missing_engagement": "unavailable",
-          "missing_reach_delta": 0
+        "overall_organic_health": {
+          "formula": "classify non-declining audience, reach, interaction and engagement comparison signals",
+          "healthy": ">=75% non-declining",
+          "stable": ">=50% non-declining",
+          "needs_attention": "<50% non-declining",
+          "limited_data": "fewer than two comparable signals"
         }
       },
-      "action_breakdown": {
-        "likes": "sum(content.likes_count)",
-        "comments": "sum(content.comments_count)",
-        "clicks": "website_clicks",
-        "shares": "sum(content.shares_count)",
-        "saves": "provider_unavailable",
-        "reactions": "reactions"
+      "executive_sections": {
+        "what_changed": "largest absolute comparable period delta per platform",
+        "channel_health": "audience and interaction period deltas",
+        "performance_trend": "full selected-period platform series",
+        "content_snapshot": "selected-period content interactions grouped by content type",
+        "top_performing_content": "top three content rows by interactions",
+        "alerts_and_opportunities": "stored action_recommendations only"
       }
     }
   },

@@ -2508,36 +2508,47 @@ production egress, DB, schedule ve activation gate kapalı kaldı. Kanıt:
 `docs/revision6/r13/REVISION6_R13_NATIVE_COLLECTOR_PRODUCER_REPORT.md`. Makine-okunur sözleşme:
 `docs/contracts/social-media-v2-provider-capabilities.json`.
 
-### R14 — Overview surface parity (tamamlandı)
+### R14 — Executive Overview + stored AI opportunities (tamamlandı)
 
-2026-08-09 kullanıcı kararıyla mevcut fakat erişilemeyen V2 Overview bileşenini Accumulate
-Social Media bilgi mimarisiyle gerçek ürün yüzeyine dönüştürme fazıdır:
+2026-08-09 kullanıcı kararlarıyla V2 Overview, Accumulate shell'i değiştirmeden executive
+Social Media bilgi mimarisine dönüştürülmüştür:
 
-1. `/overview` gerçek fakat navigation'da gizli deep-link olur; `/` Home route'u Overview
-   içeriğini render eder ve sidebar'da yalnız tek görünür Home bağlantısı bulunur;
+1. `/overview` navigation'da gizli deep-link olur; `/` Home route'u aynı Overview içeriğini
+   render eder ve sidebar'da yalnız tek görünür Home bağlantısı bulunur;
 2. yalnız main layout değiştirilir; mevcut sidebar/topbar/footer tasarımı korunur;
-3. altı canonical KPI ve yedi canonical bölüm exact sıra/başlıklarla render edilir;
-4. Overview mevcut typed `/api/dashboards/overview` ve `/api/insights` read contract'larını
+3. altı KPI `Overall Organic Health`, `Total Audience`, `Total Reach`, `Total Impressions`,
+   `Total Interactions`, `Avg. Engagement` sırasıyla render edilir;
+4. yedi yüzey `What Changed?`, `Channel Health`, `Performance Trend`, `Content Snapshot`,
+   `Top Performing Content`, `Alerts & Opportunities`, üç platform summary kartı sırasıyla
+   render edilir;
+5. Overview mevcut typed `/api/dashboards/overview` ve `/api/insights` read contract'larını
    tüketir; yeni mutation, provider egress veya demo metric üretilmez;
-5. `views` yalnız Total Impressions görünür aliası olarak kullanılır; Avg. Engagement ve Activity
-   Score formülleri belgelenir; desteklenmeyen Saves `—` kalır;
-6. Cross-Channel tam seçili dönemi azami 12 ardışık bucket ile gösterir; son yedi güne sessizce
-   kırpılmaz;
-7. AI Insights modalı stored insight'ı read-only gösterir ve erişilebilir Dialog davranışlarını
-   kullanır;
-8. component, route, desktop Playwright, Pine Beach local API/browser, typecheck/build ve source
-   guard kanıtları birlikte tamamlanır.
+6. `views` yalnız Total Impressions görünür aliasıdır; Avg. Engagement
+   `interactions / reach`, health ise comparable audience/reach/interaction/engagement
+   sinyallerinin belgeli durum özetidir; eksik değerler sıfır yapılmaz;
+7. Performance Trend; Performance, Reach, Engagement ve Audience modlarında seçili dönemin tam
+   backend serisini gösterir; son yedi güne sessizce kırpılmaz;
+8. `What Changed?` her kanaldaki en güçlü gerçek period delta'sını gösterir. Channel Health
+   status'ları ve Content Snapshot payları deterministik backend verisinden türetilir;
+9. mevcut SocialMedia AI akışı salt-okunur incelenmiştir. V2 sayfa açılışında AI üretmez;
+   `Alerts & Opportunities`, yalnız V2-local DB'ye read-only snapshot ile alınmış stored
+   `action_recommendations` kayıtlarını ve kayıt dönemini gösterir. Dialog stored summary ve tüm
+   aksiyonları erişilebilir biçimde açar;
+10. component, route, desktop/mobile Playwright, Pine Beach local API/browser, typecheck/build ve
+    source guard kanıtları birlikte tamamlanır.
 
 Çıkış kapısı: `/` ve `/overview` Overview açar; sidebar'da Home/Overview için yalnız tek görünür
-Home bağlantısı bulunur; altı KPI, yedi bölüm ve üç platform kartı vardır;
-Pine Beach gerçek V2-local verisi görünür; uygulama API/console hatası yoktur; protected kaynak
-projelerin baseline'ı değişmemiştir.
+Home bağlantısı bulunur; altı KPI, yedi yüzey ve üç platform kartı vardır; Pine Beach gerçek
+V2-local verisi görünür; uygulama API/console hatası yoktur; protected kaynak projelerin baseline'ı
+değişmemiştir.
 
-Durum (2026-08-09): tamamlandı. Frontend component/route testleri `28 passed`; desktop
-Playwright paketi `10 passed, 1 project-skip`; Pine Beach local tarayıcı doğrulamasında altı KPI,
-yedi bölüm, üç platform kartı, honest Saves ve stored-insight modalı hatasız doğrulandı. TypeScript
-ve production build geçti. Kanıt:
-`docs/revision6/r14/REVISION6_R14_OVERVIEW_PARITY_REPORT.md`. Bağlayıcı karar:
+Durum (2026-08-09): tamamlandı. Pine Beach local snapshot'ına kaynak DB'deki tek completed AI
+raporunun yalnız strategic summary ve action recommendation alanları eklendi; kaynak bağlantı
+PostgreSQL `transaction_read_only=on` kaldı. Frontend component/route testleri `28 passed`;
+desktop Overview Playwright geçti ve mobile proje expected skip kaldı. 1680px/390px Pine Beach
+tarayıcı doğrulamasında altı KPI, yedi yüzey, üç platform kartı, üç gerçek stored-AI fırsatı,
+sıfır console/API hatası ve sıfır yatay taşma doğrulandı. TypeScript ve production build geçti.
+Kanıt: `docs/revision6/r14/REVISION6_R14_OVERVIEW_PARITY_REPORT.md`. Bağlayıcı karar:
 `docs/revision6/overrides/overview_surface_2026-08-09.json`.
 
 ### 22.1 Revizyon 6 stop koşulları

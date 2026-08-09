@@ -22,13 +22,16 @@
     "allowlisted dashboard metrics",
     "content",
     "comments without source user identifiers",
-    "brand media with size and SHA-256 validation"
+    "brand media with size and SHA-256 validation",
+    "stored AI strategic summary and action recommendations"
   ],
   "excluded": [
     "credentials",
     "OAuth state",
     "access and refresh tokens",
     "provider secrets",
+    "AI raw metric snapshots and LLM/provider configuration",
+    "AI connector analysis, anomalies and platform evaluations",
     "non-social advertising assets",
     "production or staging databases",
     "continuous replication"

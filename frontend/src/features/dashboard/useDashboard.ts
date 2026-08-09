@@ -59,17 +59,15 @@ export function useChannelDashboard(
   });
 }
 
-export function useInsights(rangeStart: string | undefined, rangeEnd: string | undefined) {
+export function useInsights() {
   const { selectedBrandId, rollup } = useBrandScope();
   return useQuery({
-    queryKey: ["insights", selectedBrandId, rollup, rangeStart, rangeEnd],
+    queryKey: ["insights", selectedBrandId, rollup],
     queryFn: ({ signal }) =>
       apiQuery(
         `/api/insights${queryString({
           brand_id: selectedBrandId,
           rollup,
-          start_date: rangeStart,
-          end_date: rangeEnd,
         })}`,
         insightsSchema,
         signal,

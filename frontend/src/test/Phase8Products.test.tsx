@@ -108,7 +108,7 @@ describe("Phase 8 product surfaces", () => {
     ]);
   });
 
-  it("keeps the active Accumulate Social overview information architecture", () => {
+  it("keeps the approved executive Social overview information architecture", async () => {
     const platformDashboard = {
       ...baseDashboard,
       meta: { ...baseDashboard.meta, data_status: "available" as const, freshness: "fresh" as const },
@@ -128,7 +128,22 @@ describe("Phase 8 product surfaces", () => {
         <AccumulateSocialOverview
           brandName="Hotel One"
           data={data}
-          insights={[]}
+          insights={[{
+            insight_id: 7,
+            brand_id: "hotel-1",
+            status: "completed",
+            date_from: "2026-07-01",
+            date_to: "2026-07-14",
+            summary: "Reach improved while interactions remained stable.",
+            recommendations: JSON.stringify([{
+              priority: 1,
+              title: "Scale short-form content",
+              description: "Publish more of the strongest short-form format.",
+              category: "content",
+            }]),
+            created_at: "2026-07-14T12:00:00Z",
+            completed_at: "2026-07-14T12:01:00Z",
+          }]}
           insightsError={false}
           insightsLoading={false}
           onRange={() => undefined}
@@ -138,14 +153,18 @@ describe("Phase 8 product surfaces", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Social Media Overview" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Audience Growth" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Cross-Channel" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Content Type" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "AI Insights" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Action Breakdown" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Top Performing Posts" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Platform Breakdown" })).toBeInTheDocument();
-    expect(screen.getAllByText(/Total Audience|Total Reach|Total Impressions|Total Interactions|Avg\. Engagement|Activity Score/)).toHaveLength(6);
+    expect(screen.getByRole("heading", { name: "What Changed?" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Channel Health" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Performance Trend" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Content Snapshot" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Top Performing Content" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Alerts & Opportunities" })).toBeInTheDocument();
+    expect(screen.getAllByText(/Overall Organic Health|Total Audience|Total Reach|Total Impressions|Total Interactions|Avg\. Engagement/)).toHaveLength(6);
+    expect(screen.getByText("Scale short-form content")).toBeInTheDocument();
+    expect(screen.getByText("Publish more of the strongest short-form format.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /View all/ }));
+    expect(screen.getByRole("dialog", { name: "AI Insights" })).toBeInTheDocument();
+    expect(screen.getByText("Reach improved while interactions remained stable.")).toBeInTheDocument();
   });
 
   it("keeps the Accumulate Facebook Cover as the combined Page, Content and Audience view", () => {

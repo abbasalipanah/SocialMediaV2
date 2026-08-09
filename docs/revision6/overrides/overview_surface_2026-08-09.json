@@ -6,7 +6,8 @@
   "overrides": [
     "SOCIAL_MEDIA_V2_MASTER_PLAN.md §0.0 canonical-source no-Overview restriction",
     "SOCIAL_MEDIA_V2_MASTER_PLAN.md §6.2 no-new-visible-navigation restriction",
-    "SOCIAL_MEDIA_V2_MASTER_PLAN.md §6.5 root Settings fallback"
+    "SOCIAL_MEDIA_V2_MASTER_PLAN.md §6.5 root Settings fallback",
+    "Earlier R14 seven-section Accumulate dashboard layout"
   ],
   "routes": {
     "home": "/",
@@ -19,38 +20,48 @@
     "duplicate_home_overview_entries_allowed": false,
     "sidebar_topbar_footer_redesign_allowed": false
   },
-  "readonly_reference": "/home/api/colab_scripts/Accumulate/frontend/components/accumulate/SocialMediaDashboard.tsx",
+  "readonly_references": [
+    "/home/api/colab_scripts/Accumulate/frontend/components/accumulate/SocialMediaDashboard.tsx",
+    "/home/api/colab_scripts/Accumulate/backend/app/api/routes/ai.py",
+    "/home/api/colab_scripts/SocialMedia/backend/app/services/ai_insight_service.py"
+  ],
   "kpis": [
+    "Overall Organic Health",
     "Total Audience",
     "Total Reach",
     "Total Impressions",
     "Total Interactions",
-    "Avg. Engagement",
-    "Activity Score"
+    "Avg. Engagement"
   ],
   "sections": [
-    "Audience Growth",
-    "Cross-Channel",
-    "Content Type",
-    "AI Insights",
-    "Action Breakdown",
-    "Top Performing Posts",
-    "Platform Breakdown"
+    "What Changed?",
+    "Channel Health",
+    "Performance Trend",
+    "Content Snapshot",
+    "Top Performing Content",
+    "Alerts & Opportunities",
+    "Platform Summary"
   ],
-  "platforms": ["facebook", "instagram", "tiktok"],
+  "platforms": ["instagram", "facebook", "tiktok"],
   "display_contract": {
     "total_impressions": "normalized views display alias",
     "avg_engagement": "interactions / reach",
-    "activity_score": "clamp(round(avg_engagement_percent * 6 + reach_delta_pct * 0.4), 0, 100)",
-    "saves_without_backend_data": "unavailable",
+    "engagement_delta": "current engagement rate minus previous engagement rate, in percentage points",
+    "health": "available audience, reach, interaction and engagement comparison signals: >=75% non-declining Healthy, >=50% Stable, otherwise Needs Attention; fewer than two signals Limited Data",
+    "what_changed": "largest absolute comparable period delta per platform",
+    "channel_health": "Attention when audience or interaction delta <= -5%; Growing when either >= +2% without that decline; otherwise Stable",
     "missing_value_policy": "do_not_render_as_zero",
-    "cross_channel_period_policy": "full selected range, at most 12 contiguous aggregate buckets",
-    "content_type_policy": "top three content types plus an exact aggregated Other bucket"
+    "trend_period_policy": "full selected backend series",
+    "content_type_policy": "top three content types plus an exact aggregated Other row when more than four types exist"
   },
   "ai_insights": {
     "source": "stored read-only /api/insights response",
+    "alerts_source": "stored action_recommendations only",
+    "stored_period_visible": true,
     "generation_or_mutation_on_open": false,
-    "accessible_dialog_required": true
+    "accessible_dialog_required": true,
+    "local_snapshot_allowed_fields": ["strategic_summary", "action_recommendations"],
+    "excluded_fields": ["raw_metrics_snapshot", "llm/provider configuration", "connector_analysis", "anomalies", "platform_evaluations"]
   },
   "runtime_boundaries": {
     "protected_projects_read_only": true,

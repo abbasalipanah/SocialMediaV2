@@ -1,8 +1,9 @@
 """Copy one allowlisted Brand snapshot from legacy SocialMedia into a V2-owned DB.
 
 The legacy connection is forced to PostgreSQL read-only mode. Only canonical social
-accounts and dashboard rows are selected; credentials, OAuth state, tokens, and
-provider configuration are intentionally outside this import surface.
+accounts, dashboard rows, and stored AI reporting output are selected; credentials,
+OAuth state, tokens, raw AI metric snapshots, and provider configuration are
+intentionally outside this import surface.
 """
 
 from __future__ import annotations
@@ -425,6 +426,20 @@ def _source_snapshot(connection: Any, brand_slug: str) -> dict[str, Any]:
             {"account_ids": list(account_ids)},
         ).mappings()
     ]
+    insights = [
+        dict(row)
+        for row in connection.execute(
+            text(
+                """SELECT id, brand_id, status, date_from, date_to,
+                          strategic_summary, action_recommendations,
+                          created_at, completed_at
+                   FROM brand_ai_insights
+                   WHERE brand_id=:brand_id
+                   ORDER BY created_at, id"""
+            ),
+            {"brand_id": brand_id},
+        ).mappings()
+    ]
     return {
         "brand": brand_row,
         "accounts": accounts,
@@ -433,6 +448,7 @@ def _source_snapshot(connection: Any, brand_slug: str) -> dict[str, Any]:
         "content": content,
         "comments": comments,
         "media": media,
+        "insights": insights,
     }
 
 
@@ -653,6 +669,19 @@ def _replace_target(connection: Any, snapshot: dict[str, Any]) -> dict[str, int]
                 for row in snapshot["media"]
             ],
         )
+    if snapshot["insights"]:
+        connection.execute(
+            text(
+                """INSERT INTO brand_ai_insights
+                          (id, brand_id, status, date_from, date_to,
+                           strategic_summary, action_recommendations,
+                           created_at, completed_at)
+                   VALUES (:id, :brand_id, :status, :date_from, :date_to,
+                           :strategic_summary, :action_recommendations,
+                           :created_at, :completed_at)"""
+            ),
+            snapshot["insights"],
+        )
     for account_id in account_ids:
         linked = snapshot["linked"].get(account_id, {})
         synced_at = linked.get("last_synced_at")
@@ -683,12 +712,19 @@ def _replace_target(connection: Any, snapshot: dict[str, Any]) -> dict[str, int]
                               GREATEST((SELECT max(id) FROM assets), 1), true)"""
         )
     )
+    connection.execute(
+        text(
+            """SELECT setval(pg_get_serial_sequence('brand_ai_insights', 'id'),
+                              GREATEST((SELECT max(id) FROM brand_ai_insights), 1), true)"""
+        )
+    )
     return {
         "accounts": len(snapshot["accounts"]),
         "metrics": len(snapshot["metrics"]),
         "content": len(snapshot["content"]),
         "comments": len(snapshot["comments"]),
         "media": len(snapshot["media"]),
+        "insights": len(snapshot["insights"]),
     }
 
 
@@ -732,7 +768,7 @@ def main() -> None:
         f"brand={snapshot['brand']['name']!r}, "
         f"accounts={counts['accounts']}, metrics={counts['metrics']}, "
         f"content={counts['content']}, comments={counts['comments']}, "
-        f"media={counts['media']}"
+        f"media={counts['media']}, insights={counts['insights']}"
     )
 
 
