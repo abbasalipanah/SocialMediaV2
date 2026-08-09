@@ -522,7 +522,9 @@ def metric_methodology(platform: PlatformId, catalog: MetricCatalog) -> Dashboar
             return "unavailable"
 
     engagement_id = (
-        MetricId.VIDEO_ENGAGEMENT_RATE if platform is PlatformId.TIKTOK else MetricId.INTERACTIONS
+        MetricId.VIDEO_ENGAGEMENT_RATE
+        if platform is PlatformId.TIKTOK
+        else MetricId.ENGAGEMENT_RATE
     )
     return DashboardMetricMethodology(
         follower_flow=method(MetricId.NEW_FOLLOWERS),

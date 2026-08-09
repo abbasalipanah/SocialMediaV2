@@ -40,6 +40,7 @@ export const METRIC_LABELS: Record<MetricId, string> = {
   views_paid: "Paid views",
   views_organic: "Organic views",
   interactions: "Interactions",
+  engagement_rate: "Engagement rate",
   page_views: "Page views",
   profile_views: "Profile views",
   website_clicks: "Website clicks",
@@ -57,8 +58,8 @@ export const METRIC_LABELS: Record<MetricId, string> = {
 
 export const PRIMARY_METRICS: Record<Platform | "overview", MetricId[]> = {
   overview: ["followers", "new_followers", "reach", "views", "interactions", "media_count"],
-  facebook: ["followers", "new_followers", "reach", "page_views", "interactions", "reactions"],
-  instagram: ["followers", "new_followers", "reach", "profile_views", "interactions", "media_count"],
+  facebook: ["followers", "new_followers", "reach", "page_views", "interactions", "engagement_rate"],
+  instagram: ["followers", "new_followers", "reach", "profile_views", "interactions", "engagement_rate"],
   tiktok: [
     "followers",
     "video_views_total",
@@ -78,6 +79,7 @@ export const TREND_METRICS: MetricId[] = [
   "reach",
   "views",
   "interactions",
+  "engagement_rate",
   "profile_views",
   "video_views_total",
   "video_engagements_total",

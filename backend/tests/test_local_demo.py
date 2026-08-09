@@ -92,7 +92,9 @@ async def test_local_demo_opens_a_scoped_session_and_serves_product_data() -> No
         assert stories["summary"]["completion_rate"] == 18.7
         assert stories["trend"]["data_status"] == "unavailable"
         assert stories["items"][0]["views"] is None
-        assert instagram.json()["metric_methodology"]["follower_flow"] == "provider_flow"
+        assert instagram.json()["metric_methodology"]["follower_flow"] == (
+            "derived:cumulative_delta:v1:utc_day"
+        )
 
         settings = await browser.get("/api/settings/social-accounts", params={"brand_id": "101"})
         assert settings.status_code == 200

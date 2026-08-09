@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-09` |
-| Durum | Revizyon 6 — R11 dashboard veri bütünlüğü tamamlandı; R8 dış public-origin/issuer/provider girdileri bekleniyor |
+| Durum | Revizyon 6 — R12 KPI ve frontend/backend veri sözleşmesi tamamlandı; R8 dış public-origin/issuer/provider girdileri bekleniyor |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -121,6 +121,23 @@ TikTok, baseline veya faz-kapanış ifadelerini hükümsüz kılar:
 32. Maddeler 26-31 veri completeness ürün kararıdır ve yeni açık kullanıcı kararı olmadan geri
     alınamaz. Makine-okunur karar
     `docs/revision6/overrides/dashboard_data_completeness_2026-08-09.json` dosyasındadır.
+33. Facebook, Instagram ve TikTok Page/Account, Content ve Audience bölümlerinin her biri tam
+    veri halinde tam altı KPI kartı gösterir. Sahte `Frequency`, sabit demo sayı veya unavailable
+    metriği sıfır kabul eden placeholder bu sayıyı tamamlamak için kullanılamaz.
+34. Facebook ve Instagram altıncı Page/Audience KPI'sı backend-derived `engagement_rate`
+    değeridir ve seçili dönemin `interactions / views` oranı olarak recompute edilir. TikTok
+    kendi `video_engagement_rate` sözleşmesini korur; oranlar API'de `ratio`, frontend'de yüzde
+    olarak gösterilir.
+35. Frontend tarafından tüketilen her canonical metric literal, dimension hint ve typed content/
+    Story alanı `docs/contracts/social-media-v2-frontend-data-matrix.json` içinde tek bir backend
+    route, producer/derivation/snapshot statüsü ve API yüzeyiyle eşleşir. Katalogda bulunmak native
+    collector desteği anlamına gelmez; `snapshot_compatible`, `provider_unavailable` ve
+    `demo_only_unavailable_runtime` durumları açıkça korunur.
+36. Overview API, Overview frontend'inin doğrudan tükettiği Followers, New Followers, Reach,
+    Views, Interactions, Website Clicks ve Reactions metriklerini toplar. TikTok Video
+    Engagements nested platform dashboard'dan okunur. Bu sözleşme ve altı KPI kararı yeni açık
+    kullanıcı kararı olmadan değiştirilemez; makine-okunur karar
+    `docs/revision6/overrides/frontend_backend_data_contract_2026-08-09.json` dosyasındadır.
 
 ### 0.1 Zorunlu çalışma sırası
 
@@ -2397,6 +2414,66 @@ provider verisi bulunmadığı açıkça belirtildi, gerçek Saves sıfırları 
 Ruff, `git diff --check` ve hatasız headless Chromium doğrulaması geçti. Kanıt:
 `docs/revision6/r11/REVISION6_R11_DASHBOARD_DATA_COMPLETENESS_REPORT.md`. Bağlayıcı karar:
 `docs/revision6/overrides/dashboard_data_completeness_2026-08-09.json`.
+
+### R12 — Altı KPI ve frontend/backend veri sözleşmesi
+
+2026-08-09 kullanıcı kararıyla canonical dashboard'daki altı KPI düzenini geri yüklemek ve
+frontend'in tükettiği metrik/dimension alanlarının backend tarafından gerçekten karşılanıp
+karşılanmadığını tek tek kanıtlamak için eklenen V2-only fazdır:
+
+1. Facebook ve Instagram'daki sahte/null `Frequency` kartı kaldırılır; Page ve Audience altıncı
+   KPI'sı gerçek, dönemsel backend `engagement_rate` metriği olur;
+2. tam veri fixture'ında üç platformun Page/Account, Content ve Audience yüzeyleri tam altı KPI
+   render eder; unavailable değer sırf kart sayısını tamamlamak için görünür sıfıra çevrilmez;
+3. `engagement_rate` catalog, aggregation, OpenAPI, generated TypeScript ve frontend yüzde
+   formatı boyunca aynı ratio semantiğini taşır;
+4. Overview backend aggregation'ı frontend'in doğrudan tükettiği yedi metric ID'yi eksiksiz
+   döndürür;
+5. frontend platform dosyalarındaki canonical metric literal'lar otomatik taranır; her biri
+   catalog metric, açık alias, Overview aggregate veya nested platform metriğiyle eşleştirilir;
+6. native provider, backend-derived, V2-local/legacy snapshot-compatible ve açık unavailable
+   durumları birbirine karıştırılmaz;
+7. audience dimension'ları ile content/community/Stories typed alanları provider → persistence
+   → reporting → API katmanlarında test edilir;
+8. sonuç matrisi `docs/contracts/social-media-v2-frontend-data-matrix.json` içinde tutulur ve
+   frontend/backend drift'i CI testini kırar.
+
+Çıkış kapısı: tam veri render testinde dokuz section'ın her biri altı KPI gösterir; sahte
+`Frequency` yoktur; bütün frontend metric literal'ları tek backend route'a sahiptir; Overview
+frontend metrikleri API'de bulunur; bütün dimension/typed alan tüketimleri kanıtlı veya açıkça
+unavailable statüsündedir; Pine Beach API/browser doğrulaması ve kaynak-write guard yeşildir.
+
+Durum (2026-08-09): tamamlandı. Kanıt:
+`docs/revision6/r12/REVISION6_R12_FRONTEND_BACKEND_DATA_CONTRACT_REPORT.md`. Bağlayıcı karar:
+`docs/revision6/overrides/frontend_backend_data_contract_2026-08-09.json`.
+
+### R13 — Native collector producer closure (planlandı)
+
+R12 auditinde katalog/API desteği bulunduğu halde yeni standalone provider collection tarafından
+henüz native üretilmeyen alanları kapatma fazıdır. R13, mevcut Pine Beach snapshot verisini
+silmez/değiştirmez ve protected kaynak projelere yazmaz.
+
+1. Üç platformda Follows, Unfollows ve Followers Net üretiminin direct provider verisi varsa onu,
+   yoksa açıkça versioned snapshot-delta metodolojisini kullanması sağlanır; yöntem API'de
+   `provider` gibi yanlış etiketlenmez;
+2. TikTok Business account insight penceresinden günlük Views, Unique Views/Reach, Profile Views
+   ve interaction bileşenleri V2-owned reader/persistence ile toplanır;
+3. Facebook `page_media_view` için doğrulanmış `is_from_ads` breakdown'ı V2 adapter'ına alınır;
+   provider'ın vermediği paid/organic Reach veya Instagram paid split uydurulmaz;
+4. Instagram Best Time to Engage ve Facebook Page Like Types için güncel provider capability
+   fixture/official-contract kanıtı aranır; destek yoksa mevcut honest unavailable/snapshot
+   statüsü korunur;
+5. her metric/dimension producer için provider fixture → collector → V2 persistence → dashboard
+   API → frontend test zinciri ayrı ayrı geçer;
+6. disposable PostgreSQL ve fake-provider testleri tamamlanmadan production provider egress,
+   production DB, worker schedule veya activation gate açılmaz.
+
+Çıkış kapısı: R12 matrisindeki `snapshot_compatible` alanların her biri ya test edilmiş native/
+versioned-derived producer'a taşınmış ya da provider limitation olarak açıkça onaylanmıştır;
+fresh-DB collection provasında frontend'in zorunlu kart/seri alanları boş kalmaz ve hiçbir eksik
+değer sıfır/organic/paid olarak uydurulmaz.
+
+Durum (2026-08-09): planlandı; uygulanmadı.
 
 ### 22.1 Revizyon 6 stop koşulları
 

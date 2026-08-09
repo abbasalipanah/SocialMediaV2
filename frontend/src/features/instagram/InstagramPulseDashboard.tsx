@@ -70,6 +70,7 @@ function pulseKpi(
     delta: current?.delta_pct ?? null,
     icon,
     color,
+    unit: current?.unit === "ratio" ? "ratio" : undefined,
   };
 }
 
@@ -80,7 +81,7 @@ function overviewKpis(data: PlatformDashboard): PulseKpi[] {
     pulseKpi(data, ["reach"], "reach", "Page Reach", Eye, "#8b5cf6"),
     pulseKpi(data, ["views", "profile_views"], "views", "Page Views", Eye, "#ec4899"),
     pulseKpi(data, ["interactions"], "interactions", "Interactions", MessageCircle, "#f59e0b"),
-    { id: "frequency", label: "Frequency", value: null, delta: null, icon: Target, color: "#6366f1" },
+    pulseKpi(data, ["engagement_rate"], "engagement_rate", "Engagement Rate", Activity, "#6366f1"),
   ];
 }
 
@@ -109,6 +110,7 @@ function audienceKpis(data: PlatformDashboard): PulseKpi[] {
     pulseKpi(data, ["views", "page_views"], "views", "Views", Eye, "#06b6d4"),
     pulseKpi(data, ["reach"], "reach", "Reach", Target, "#8b5cf6"),
     pulseKpi(data, ["profile_views"], "profile_views", "Profile Views", Eye, "#ec4899"),
+    pulseKpi(data, ["engagement_rate"], "engagement_rate", "Engagement Rate", Activity, "#6366f1"),
   ];
 }
 

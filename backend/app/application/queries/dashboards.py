@@ -36,6 +36,16 @@ from app.domain.reporting import (
     ReportingRange,
 )
 
+OVERVIEW_METRIC_IDS = (
+    MetricId.FOLLOWERS,
+    MetricId.NEW_FOLLOWERS,
+    MetricId.REACH,
+    MetricId.VIEWS,
+    MetricId.INTERACTIONS,
+    MetricId.WEBSITE_CLICKS,
+    MetricId.REACTIONS,
+)
+
 
 @dataclass(frozen=True)
 class DashboardQuery:
@@ -69,9 +79,7 @@ def build_platform_dashboard(
     generated = (now or datetime.now(UTC)).astimezone(UTC)
     accounts = store.list_accounts(brand_ids=query.resolved_brand_ids, platform=platform)
     if query.account_id is not None:
-        accounts = tuple(
-            account for account in accounts if account.account_id == query.account_id
-        )
+        accounts = tuple(account for account in accounts if account.account_id == query.account_id)
         if not accounts:
             raise ValueError("dashboard_account_scope_denied")
     account_ids = tuple(account.account_id for account in accounts)
@@ -211,7 +219,7 @@ def build_overview_dashboard(
     )
     metrics = tuple(
         result
-        for metric_id in (MetricId.FOLLOWERS, MetricId.REACH, MetricId.INTERACTIONS)
+        for metric_id in OVERVIEW_METRIC_IDS
         if (result := _overview_metric(metric_id, dashboards)) is not None
     )
     all_content = tuple(
@@ -362,4 +370,9 @@ def _overview_freshness(
     return max((item.meta.freshness for item in dashboards), key=rank.__getitem__)
 
 
-__all__ = ["DashboardQuery", "build_overview_dashboard", "build_platform_dashboard"]
+__all__ = [
+    "DashboardQuery",
+    "OVERVIEW_METRIC_IDS",
+    "build_overview_dashboard",
+    "build_platform_dashboard",
+]

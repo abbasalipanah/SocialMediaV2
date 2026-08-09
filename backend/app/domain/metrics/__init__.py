@@ -29,6 +29,7 @@ class MetricId(StrEnum):
     VIEWS_PAID = "views_paid"
     VIEWS_ORGANIC = "views_organic"
     INTERACTIONS = "interactions"
+    ENGAGEMENT_RATE = "engagement_rate"
     PAGE_VIEWS = "page_views"
     PROFILE_VIEWS = "profile_views"
     WEBSITE_CLICKS = "website_clicks"
@@ -346,6 +347,38 @@ def _profile_cumulative_delta(
     )
 
 
+def _profile_ratio(
+    platform: PlatformId,
+    metric_id: MetricId,
+    numerator_metric_id: MetricId,
+    denominator_metric_id: MetricId,
+) -> MetricDefinition:
+    return MetricDefinition(
+        metric_id=metric_id,
+        platform=platform,
+        entity_scope=EntityScope.PROFILE,
+        semantic_type=SemanticType.RATIO,
+        unit=Unit.RATIO,
+        source_field=None,
+        collection_granularity=CollectionGranularity.DAY,
+        period_aggregation=AggregationPolicy.RECOMPUTE,
+        brand_rollup_aggregation=AggregationPolicy.RECOMPUTE,
+        null_policy=NullPolicy.NOT_AVAILABLE,
+        reset_policy=ResetPolicy.NOT_APPLICABLE,
+        derived_from_metric_ids=(numerator_metric_id, denominator_metric_id),
+        derivation_operator=DerivationOperator.RATIO_FROM_COMPONENTS,
+        derivation_version=1,
+        derivation_window="selected_period",
+        first_sample_policy=FirstSamplePolicy.NOT_APPLICABLE,
+        numerator_metric_id=numerator_metric_id,
+        denominator_metric_id=denominator_metric_id,
+        zero_denominator_policy=ZeroDenominatorPolicy.NOT_AVAILABLE,
+        allowed_breakdowns=(),
+        required_capability=CapabilityId.PROFILE,
+        version=1,
+    )
+
+
 FACEBOOK_DAILY_SOURCE_METRICS = (
     ("page_media_view", MetricId.VIEWS),
     ("page_posts_impressions", MetricId.VIEWS),
@@ -525,6 +558,12 @@ def bootstrap_metric_catalog() -> MetricCatalog:
                     for source_field, metric_id in FACEBOOK_DAILY_SOURCE_METRICS
                 }.items()
             ),
+            _profile_ratio(
+                PlatformId.FACEBOOK,
+                MetricId.ENGAGEMENT_RATE,
+                MetricId.INTERACTIONS,
+                MetricId.VIEWS,
+            ),
             _profile_snapshot(
                 PlatformId.INSTAGRAM,
                 MetricId.FOLLOWERS,
@@ -549,7 +588,11 @@ def bootstrap_metric_catalog() -> MetricCatalog:
             ),
             _profile_snapshot(PlatformId.INSTAGRAM, MetricId.FOLLOWING, "follows_count"),
             _profile_snapshot(PlatformId.INSTAGRAM, MetricId.MEDIA_COUNT, "media_count"),
-            _profile_flow(PlatformId.INSTAGRAM, MetricId.NEW_FOLLOWERS, "follower_count"),
+            _profile_cumulative_delta(
+                PlatformId.INSTAGRAM,
+                MetricId.NEW_FOLLOWERS,
+                MetricId.FOLLOWERS,
+            ),
             _profile_flow(PlatformId.INSTAGRAM, MetricId.FOLLOWS, "follows"),
             _profile_flow(PlatformId.INSTAGRAM, MetricId.UNFOLLOWS, "unfollows"),
             _profile_flow(PlatformId.INSTAGRAM, MetricId.FOLLOWERS_NET, "followers_net"),
@@ -560,6 +603,12 @@ def bootstrap_metric_catalog() -> MetricCatalog:
             *(
                 _profile_flow(PlatformId.INSTAGRAM, metric_id, source_field)
                 for source_field, metric_id in INSTAGRAM_DAILY_SOURCE_METRICS
+            ),
+            _profile_ratio(
+                PlatformId.INSTAGRAM,
+                MetricId.ENGAGEMENT_RATE,
+                MetricId.INTERACTIONS,
+                MetricId.VIEWS,
             ),
             _profile_snapshot(
                 PlatformId.TIKTOK,

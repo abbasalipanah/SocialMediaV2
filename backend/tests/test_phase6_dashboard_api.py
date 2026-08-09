@@ -22,7 +22,11 @@ from app.application.ports.reporting import (
     ReportingMetric,
     ReportingSyncJob,
 )
-from app.application.queries import DashboardQuery, build_platform_dashboard
+from app.application.queries import (
+    DashboardQuery,
+    build_overview_dashboard,
+    build_platform_dashboard,
+)
 from app.core.security import sha256_text
 from app.domain.metrics import MetricId, bootstrap_metric_catalog
 from app.domain.platforms import PlatformId
@@ -396,6 +400,10 @@ def phase6_fixture(tmp_path: Path):
 
 def test_platform_dashboard_rollup_respects_metric_semantics(phase6_fixture) -> None:
     _, reporting, _ = phase6_fixture
+    reporting.metrics += (
+        _metric(11, "101", PlatformId.FACEBOOK, date(2026, 7, 2), MetricId.VIEWS, 100),
+        _metric(12, "102", PlatformId.FACEBOOK, date(2026, 7, 2), MetricId.VIEWS, 200),
+    )
     dashboard = build_platform_dashboard(
         store=reporting,
         catalog=bootstrap_metric_catalog(),
@@ -412,6 +420,10 @@ def test_platform_dashboard_rollup_respects_metric_semantics(phase6_fixture) -> 
     assert cards[MetricId.FOLLOWERS].value == 330
     assert cards[MetricId.FOLLOWERS].previous_value == 280
     assert cards[MetricId.REACH].value == 30
+    assert cards[MetricId.ENGAGEMENT_RATE].value == pytest.approx(8 / 300)
+    assert cards[MetricId.ENGAGEMENT_RATE].methodology == (
+        "derived:ratio_from_components:v1:selected_period"
+    )
     assert cards[MetricId.PAGE_VIEWS].value is None
     assert cards[MetricId.PAGE_VIEWS].data_status is DataStatus.UNAVAILABLE
     assert dashboard.meta.resolved_account_ids == (11, 12)
@@ -467,6 +479,50 @@ def test_tiktok_derived_counters_are_recomputed_without_fake_values(
     assert series[MetricId.VIDEO_ENGAGEMENTS_TOTAL].methodology == (
         "derived:sum_components:v1:same_sample"
     )
+
+
+def test_overview_exposes_every_metric_consumed_by_its_frontend(phase6_fixture) -> None:
+    _, reporting, _ = phase6_fixture
+    reporting.metrics += (
+        _metric(11, "101", PlatformId.FACEBOOK, date(2026, 7, 2), MetricId.VIEWS, 100),
+        _metric(21, "101", PlatformId.INSTAGRAM, date(2026, 7, 2), MetricId.VIEWS, 200),
+        _metric(31, "102", PlatformId.TIKTOK, date(2026, 7, 2), MetricId.VIEWS, 300),
+        _metric(
+            21,
+            "101",
+            PlatformId.INSTAGRAM,
+            date(2026, 7, 2),
+            MetricId.WEBSITE_CLICKS,
+            12,
+        ),
+        _metric(11, "101", PlatformId.FACEBOOK, date(2026, 7, 2), MetricId.REACTIONS, 9),
+    )
+    dashboard = build_overview_dashboard(
+        store=reporting,
+        catalog=bootstrap_metric_catalog(),
+        query=DashboardQuery(
+            requested_brand_id="100",
+            resolved_brand_ids=("101", "102"),
+            rollup=True,
+            date_range=ReportingRange(date(2026, 7, 1), date(2026, 7, 2), "custom"),
+        ),
+        now=NOW,
+    )
+
+    cards = {card.metric_id: card for card in dashboard.metrics}
+    assert set(cards) == {
+        MetricId.FOLLOWERS,
+        MetricId.NEW_FOLLOWERS,
+        MetricId.REACH,
+        MetricId.VIEWS,
+        MetricId.INTERACTIONS,
+        MetricId.WEBSITE_CLICKS,
+        MetricId.REACTIONS,
+    }
+    assert cards[MetricId.NEW_FOLLOWERS].value == 30
+    assert cards[MetricId.VIEWS].value == 600
+    assert cards[MetricId.WEBSITE_CLICKS].value == 12
+    assert cards[MetricId.REACTIONS].value == 9
 
 
 def test_instagram_structured_stories_preserve_content_level_metrics(

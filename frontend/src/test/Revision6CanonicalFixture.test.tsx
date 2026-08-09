@@ -168,7 +168,7 @@ function metricId(platform: Platform, key: string): MetricId | null {
   return ({
     views: "views",
     likes: "reactions",
-    engagement_rate: "interactions",
+    engagement_rate: "engagement_rate",
   } as Partial<Record<string, MetricId>>)[key] ?? null;
 }
 
@@ -189,6 +189,25 @@ function adapt(payload: SourcePayload): PlatformDashboard {
       availability_reason: null,
     }];
   });
+  const interactions = payload.kpis
+    .filter((item) => ["likes", "comments", "shares"].includes(item.key))
+    .reduce((sum, item) => sum + item.value, 0);
+  const previousInteractions = payload.kpis
+    .filter((item) => ["likes", "comments", "shares"].includes(item.key))
+    .reduce((sum, item) => sum + item.previous, 0);
+  if (interactions > 0) {
+    metrics.push({
+      metric_id: payload.platform === "tiktok" ? "video_engagements_total" : "interactions",
+      value: interactions,
+      previous_value: previousInteractions,
+      delta_pct: previousInteractions > 0 ? ((interactions - previousInteractions) / previousInteractions) * 100 : null,
+      semantic_type: "flow",
+      unit: "count",
+      data_status: "available",
+      methodology: "derived:sum_components:v1:selected_period",
+      availability_reason: null,
+    });
+  }
   const series = payload.trend.series.flatMap((item): DashboardSeries[] => {
     const id = metricId(payload.platform, item.key);
     if (!id) return [];
@@ -365,6 +384,27 @@ describe("Revision 6 shared canonical fixture", () => {
       expect(within(panel).getByRole("img", {
         name: "New Followers Trend: Follows, Unfollows, Net",
       })).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("keeps exactly six KPI cards in every platform section", () => {
+    const surfaces = [
+      <FacebookPulseDashboard data={adapt(materialize("facebook_full"))} tab="page" />,
+      <FacebookPulseDashboard data={adapt(materialize("facebook_full"))} tab="content" />,
+      <FacebookPulseDashboard data={adapt(materialize("facebook_full"))} tab="audience" />,
+      <InstagramPulseDashboard data={adapt(materialize("instagram_full_with_stories"))} tab="page" />,
+      <InstagramPulseDashboard data={adapt(materialize("instagram_full_with_stories"))} tab="content" />,
+      <InstagramPulseDashboard data={adapt(materialize("instagram_full_with_stories"))} tab="audience" />,
+      <TikTokPulseDashboard data={adapt(materialize("tiktok_full"))} tab="account" />,
+      <TikTokPulseDashboard data={adapt(materialize("tiktok_full"))} tab="content" />,
+      <TikTokPulseDashboard data={adapt(materialize("tiktok_full"))} tab="audience" />,
+    ];
+
+    for (const surface of surfaces) {
+      const { container, unmount } = render(surface);
+      expect(container.querySelectorAll(".facebook-pulse-kpi")).toHaveLength(6);
+      expect(screen.queryByText("Frequency")).not.toBeInTheDocument();
       unmount();
     }
   });

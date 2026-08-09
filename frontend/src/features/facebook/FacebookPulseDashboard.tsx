@@ -102,6 +102,7 @@ function kpiFromMetric(
     delta: current?.delta_pct ?? null,
     icon,
     color,
+    unit: current?.unit === "ratio" ? "ratio" : undefined,
   };
 }
 
@@ -112,7 +113,7 @@ function pageKpis(data: PlatformDashboard): PulseKpi[] {
     kpiFromMetric(data, "reach", "Page Reach", Eye, "#8b5cf6"),
     kpiFromMetric(data, "views", "Page Views", Eye, "#ec4899", ["page_views"]),
     kpiFromMetric(data, "interactions", "Interactions", MessageCircle, "#f59e0b"),
-    { id: "frequency", label: "Frequency", value: null, delta: null, icon: Target, color: "#6366f1" },
+    kpiFromMetric(data, "engagement_rate", "Engagement Rate", Activity, "#6366f1"),
   ];
 }
 
@@ -140,7 +141,8 @@ function audienceKpis(data: PlatformDashboard): PulseKpi[] {
     kpiFromMetric(data, "new_followers", "New Followers", Users, "#14b8a6"),
     kpiFromMetric(data, "views", "Views", Eye, "#06b6d4", ["page_views"]),
     kpiFromMetric(data, "reach", "Reach", Target, "#8b5cf6"),
-    kpiFromMetric(data, "profile_views", "Profile Views", Eye, "#ec4899"),
+    kpiFromMetric(data, "profile_views", "Profile Views", Eye, "#ec4899", ["page_views"]),
+    kpiFromMetric(data, "engagement_rate", "Engagement Rate", Activity, "#6366f1"),
   ];
 }
 

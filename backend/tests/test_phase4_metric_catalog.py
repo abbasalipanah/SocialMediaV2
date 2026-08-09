@@ -37,7 +37,7 @@ def test_bootstrap_catalog_covers_required_semantic_types() -> None:
     assert views_change.semantic_type is SemanticType.FLOW
     assert views_change.period_aggregation is AggregationPolicy.SUM
 
-    for platform in (PlatformId.FACEBOOK, PlatformId.TIKTOK):
+    for platform in PlatformId:
         follower_growth = catalog.get(platform, MetricId.NEW_FOLLOWERS)
         assert follower_growth.semantic_type is SemanticType.FLOW
         assert follower_growth.derived_from_metric_ids == (MetricId.FOLLOWERS,)
@@ -47,6 +47,16 @@ def test_bootstrap_catalog_covers_required_semantic_types() -> None:
     assert rate.period_aggregation is AggregationPolicy.RECOMPUTE
     assert rate.brand_rollup_aggregation is AggregationPolicy.RECOMPUTE
     assert rate.zero_denominator_policy is ZeroDenominatorPolicy.NOT_AVAILABLE
+
+    for platform in (PlatformId.FACEBOOK, PlatformId.INSTAGRAM):
+        profile_rate = catalog.get(platform, MetricId.ENGAGEMENT_RATE)
+        assert profile_rate.semantic_type is SemanticType.RATIO
+        assert profile_rate.derived_from_metric_ids == (
+            MetricId.INTERACTIONS,
+            MetricId.VIEWS,
+        )
+        assert profile_rate.period_aggregation is AggregationPolicy.RECOMPUTE
+        assert profile_rate.zero_denominator_policy is ZeroDenominatorPolicy.NOT_AVAILABLE
 
 
 def test_catalog_preserves_missing_values_and_rejects_free_metric_ids() -> None:

@@ -140,6 +140,7 @@ export const metricIdSchema = z.enum([
   "views_paid",
   "views_organic",
   "interactions",
+  "engagement_rate",
   "page_views",
   "profile_views",
   "website_clicks",

@@ -1,0 +1,313 @@
+{
+  "schema_version": 1,
+  "decision_date": "2026-08-09",
+  "scope": "frontend_to_v2_backend_read_contract",
+  "metric_sources": {
+    "facebook": [
+      "frontend/src/features/facebook/FacebookPulseDashboard.tsx"
+    ],
+    "instagram": [
+      "frontend/src/features/instagram/InstagramPulseDashboard.tsx",
+      "frontend/src/features/instagram/InstagramStoriesWorkspace.tsx"
+    ],
+    "tiktok": [
+      "frontend/src/features/tiktok/TikTokPulseDashboard.tsx"
+    ],
+    "overview": [
+      "frontend/src/features/overview/AccumulateSocialOverview.tsx"
+    ]
+  },
+  "metrics": {
+    "facebook": {
+      "consumed_metric_ids": [
+        "engagement_rate",
+        "followers",
+        "followers_net",
+        "follows",
+        "interactions",
+        "new_followers",
+        "page_views",
+        "profile_views",
+        "reach",
+        "reach_organic",
+        "reach_paid",
+        "unfollows",
+        "views",
+        "views_organic",
+        "views_paid"
+      ],
+      "provider_native": [
+        "followers",
+        "interactions",
+        "page_views",
+        "reach",
+        "views"
+      ],
+      "backend_derived": [
+        "engagement_rate",
+        "new_followers"
+      ],
+      "snapshot_compatible": [
+        "followers_net",
+        "follows",
+        "reach_organic",
+        "reach_paid",
+        "unfollows",
+        "views_organic",
+        "views_paid"
+      ],
+      "aliases": {
+        "profile_views": "page_views"
+      }
+    },
+    "instagram": {
+      "consumed_metric_ids": [
+        "engagement_rate",
+        "followers",
+        "followers_net",
+        "follows",
+        "interactions",
+        "new_followers",
+        "page_views",
+        "profile_views",
+        "reach",
+        "reach_organic",
+        "reach_paid",
+        "unfollows",
+        "views",
+        "views_organic",
+        "views_paid"
+      ],
+      "provider_native": [
+        "followers",
+        "interactions",
+        "profile_views",
+        "reach",
+        "views"
+      ],
+      "backend_derived": [
+        "engagement_rate",
+        "new_followers"
+      ],
+      "snapshot_compatible": [
+        "followers_net",
+        "follows",
+        "reach_organic",
+        "reach_paid",
+        "unfollows",
+        "views_organic",
+        "views_paid"
+      ],
+      "aliases": {
+        "page_views": "views"
+      }
+    },
+    "tiktok": {
+      "consumed_metric_ids": [
+        "followers",
+        "followers_net",
+        "follows",
+        "new_followers",
+        "profile_views",
+        "reach",
+        "reach_organic",
+        "unfollows",
+        "video_comments_total",
+        "video_engagement_rate",
+        "video_engagements_total",
+        "video_likes_total",
+        "video_shares_total",
+        "video_views_total",
+        "views"
+      ],
+      "provider_native": [
+        "followers",
+        "video_comments_total",
+        "video_likes_total",
+        "video_shares_total",
+        "video_views_total"
+      ],
+      "backend_derived": [
+        "new_followers",
+        "video_engagement_rate",
+        "video_engagements_total"
+      ],
+      "snapshot_compatible": [
+        "followers_net",
+        "follows",
+        "profile_views",
+        "reach",
+        "unfollows",
+        "views"
+      ],
+      "aliases": {
+        "reach_organic": "reach"
+      }
+    },
+    "overview": {
+      "consumed_metric_ids": [
+        "followers",
+        "interactions",
+        "new_followers",
+        "reach",
+        "reactions",
+        "video_engagements_total",
+        "views",
+        "website_clicks"
+      ],
+      "overview_aggregates": [
+        "followers",
+        "interactions",
+        "new_followers",
+        "reach",
+        "reactions",
+        "views",
+        "website_clicks"
+      ],
+      "nested_platform_metrics": [
+        "video_engagements_total"
+      ]
+    }
+  },
+  "dimensions": {
+    "facebook": [
+      {
+        "consumer": "Top Countries",
+        "frontend_hints": ["country"],
+        "support": "provider_native",
+        "backend_keys": ["page_fans_country"]
+      },
+      {
+        "consumer": "Top Cities",
+        "frontend_hints": ["city"],
+        "support": "provider_native",
+        "backend_keys": ["page_fans_city"]
+      },
+      {
+        "consumer": "Page Like Types (Organic vs Paid)",
+        "frontend_hints": ["like_type"],
+        "support": "demo_only_unavailable_runtime",
+        "backend_keys": ["like_type"]
+      },
+      {
+        "consumer": "Best Time to Engage",
+        "frontend_hints": ["activity", "best_time", "heatmap", "hourly"],
+        "support": "provider_unavailable",
+        "backend_keys": []
+      }
+    ],
+    "instagram": [
+      {
+        "consumer": "Audience by Country and Top Countries",
+        "frontend_hints": ["country"],
+        "support": "provider_native",
+        "backend_keys": [
+          "follower_demographics_country",
+          "engaged_audience_demographics_country",
+          "reached_audience_demographics_country"
+        ]
+      },
+      {
+        "consumer": "Top Cities",
+        "frontend_hints": ["city"],
+        "support": "provider_native",
+        "backend_keys": [
+          "follower_demographics_city",
+          "engaged_audience_demographics_city",
+          "reached_audience_demographics_city"
+        ]
+      },
+      {
+        "consumer": "Age & Gender",
+        "frontend_hints": ["age", "gender"],
+        "support": "provider_native",
+        "backend_keys": [
+          "follower_demographics_age",
+          "follower_demographics_gender",
+          "follower_demographics_age_gender"
+        ]
+      },
+      {
+        "consumer": "Best Time to Engage",
+        "frontend_hints": ["activity", "best_time", "heatmap", "hourly"],
+        "support": "snapshot_compatible",
+        "backend_keys": ["best_time_to_engage"]
+      }
+    ],
+    "tiktok": [
+      {
+        "consumer": "Audience by Country and Top Countries",
+        "frontend_hints": ["country"],
+        "support": "provider_native",
+        "backend_keys": ["audience_countries"]
+      },
+      {
+        "consumer": "Age Groups",
+        "frontend_hints": ["age"],
+        "support": "provider_native",
+        "backend_keys": ["audience_ages"]
+      },
+      {
+        "consumer": "Age & Gender",
+        "frontend_hints": ["gender"],
+        "support": "provider_native",
+        "backend_keys": ["audience_genders"]
+      },
+      {
+        "consumer": "Best Time to Engage",
+        "frontend_hints": ["activity", "best_time", "heatmap", "hourly"],
+        "support": "provider_native",
+        "backend_keys": ["audience_activity"]
+      }
+    ]
+  },
+  "typed_contracts": {
+    "platform_dashboard_fields": [
+      "metrics",
+      "series",
+      "breakdowns",
+      "content",
+      "community",
+      "top_hashtags",
+      "content_summary",
+      "source_breakdown",
+      "metric_methodology",
+      "audience_capabilities",
+      "stories"
+    ],
+    "content_field_map": {
+      "likes_count": "likes_count",
+      "comments_count": "comments_count",
+      "shares_count": "shares_count",
+      "interactions": "interactions_count",
+      "views": "views_count",
+      "reach": "reach_count",
+      "full_video_watched_rate": "full_video_watched_rate",
+      "total_time_watched": "total_time_watched",
+      "average_time_watched": "average_time_watched"
+    },
+    "story_field_map": {
+      "views": "views_count",
+      "reach": "reach_count",
+      "interactions": "interactions_count",
+      "replies": "replies_count",
+      "shares": "shares_count",
+      "profile_visits": "profile_visits",
+      "follows": "follows_count",
+      "sticker_taps": "sticker_taps",
+      "saves": "saves_count",
+      "taps_forward": "taps_forward",
+      "taps_back": "taps_back",
+      "swipe_forward": "swipe_forward",
+      "exits": "exits",
+      "navigation": "navigation_count",
+      "completion_rate": "completion_rate"
+    },
+    "explicit_unavailable": [
+      "comment_sentiment_without_analysis_model",
+      "facebook_age_gender",
+      "facebook_activity",
+      "instagram_story_sticker_taps"
+    ]
+  }
+}
