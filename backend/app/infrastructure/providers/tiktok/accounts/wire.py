@@ -9,6 +9,8 @@ from datetime import date
 from app.core.config import TIKTOK_APP_ID, TIKTOK_PROVIDER_PROFILE, TikTokConfig
 from app.domain.metrics import MetricId
 
+from .daily_metrics import MAX_TIKTOK_DAILY_WINDOW_DAYS, TIKTOK_DAILY_FIELDS
+
 
 class TikTokWireError(ValueError):
     pass
@@ -136,6 +138,27 @@ class TikTokAccountsWireMapper:
         if cursor:
             fields["cursor"] = cursor
         return fields
+
+    def daily_metric_fields(
+        self,
+        *,
+        business_id: str,
+        since: date,
+        until: date,
+    ) -> dict[str, str]:
+        self._assert_profile()
+        if (
+            not business_id
+            or until < since
+            or (until - since).days >= MAX_TIKTOK_DAILY_WINDOW_DAYS
+        ):
+            raise TikTokWireError("metric_range_invalid")
+        return {
+            "business_id": business_id,
+            "fields": json.dumps(TIKTOK_DAILY_FIELDS, separators=(",", ":")),
+            "start_date": since.isoformat(),
+            "end_date": until.isoformat(),
+        }
 
     def comment_fields(
         self,

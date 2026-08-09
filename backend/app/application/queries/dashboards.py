@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from app.application.ports.reporting import ReportingStore
 from app.application.queries.dashboard_aggregation import (
@@ -84,23 +84,33 @@ def build_platform_dashboard(
             raise ValueError("dashboard_account_scope_denied")
     account_ids = tuple(account.account_id for account in accounts)
     previous_range = previous_reporting_range(query.date_range)
-    samples = (
+    current_window_samples = (
         store.list_metrics(
             account_ids=account_ids,
-            start_on=query.date_range.start_on,
+            start_on=query.date_range.start_on - timedelta(days=1),
             end_on=query.date_range.end_on,
         )
         if account_ids
         else ()
     )
-    previous_samples = (
+    previous_window_samples = (
         store.list_metrics(
             account_ids=account_ids,
-            start_on=previous_range.start_on,
+            start_on=previous_range.start_on - timedelta(days=1),
             end_on=previous_range.end_on,
         )
         if account_ids
         else ()
+    )
+    samples = tuple(
+        sample
+        for sample in current_window_samples
+        if sample.observed_on >= query.date_range.start_on
+    )
+    previous_samples = tuple(
+        sample
+        for sample in previous_window_samples
+        if sample.observed_on >= previous_range.start_on
     )
     content_rows = (
         store.list_content(
@@ -137,6 +147,8 @@ def build_platform_dashboard(
         samples=samples,
         previous_samples=previous_samples,
         catalog=catalog,
+        derivation_samples=current_window_samples,
+        previous_derivation_samples=previous_window_samples,
     )
     available = sum(card.data_status is not DataStatus.UNAVAILABLE for card in cards)
     if not accounts or not available:
@@ -172,7 +184,12 @@ def build_platform_dashboard(
             warnings=tuple(warnings),
         ),
         metrics=cards,
-        series=metric_series(platform=platform, samples=samples, catalog=catalog),
+        series=metric_series(
+            platform=platform,
+            samples=samples,
+            catalog=catalog,
+            derivation_samples=current_window_samples,
+        ),
         breakdowns=breakdowns,
         content=content_cards(content_rows),
         community=community_summary(comment_rows, accounts_available=bool(accounts)),

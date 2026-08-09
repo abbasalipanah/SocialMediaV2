@@ -1,7 +1,8 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "decision_date": "2026-08-09",
   "scope": "frontend_to_v2_backend_read_contract",
+  "provider_capability_contract": "docs/contracts/social-media-v2-provider-capabilities.json",
   "metric_sources": {
     "facebook": [
       "frontend/src/features/facebook/FacebookPulseDashboard.tsx"
@@ -41,20 +42,20 @@
         "interactions",
         "page_views",
         "reach",
-        "views"
+        "views",
+        "views_organic",
+        "views_paid"
       ],
       "backend_derived": [
         "engagement_rate",
-        "new_followers"
-      ],
-      "snapshot_compatible": [
         "followers_net",
         "follows",
+        "new_followers",
+        "unfollows"
+      ],
+      "provider_limited_snapshot": [
         "reach_organic",
-        "reach_paid",
-        "unfollows",
-        "views_organic",
-        "views_paid"
+        "reach_paid"
       ],
       "aliases": {
         "profile_views": "page_views"
@@ -87,14 +88,14 @@
       ],
       "backend_derived": [
         "engagement_rate",
-        "new_followers"
-      ],
-      "snapshot_compatible": [
         "followers_net",
         "follows",
+        "new_followers",
+        "unfollows"
+      ],
+      "provider_limited_snapshot": [
         "reach_organic",
         "reach_paid",
-        "unfollows",
         "views_organic",
         "views_paid"
       ],
@@ -122,24 +123,23 @@
       ],
       "provider_native": [
         "followers",
+        "profile_views",
+        "reach",
         "video_comments_total",
         "video_likes_total",
         "video_shares_total",
-        "video_views_total"
+        "video_views_total",
+        "views"
       ],
       "backend_derived": [
+        "followers_net",
+        "follows",
         "new_followers",
+        "unfollows",
         "video_engagement_rate",
         "video_engagements_total"
       ],
-      "snapshot_compatible": [
-        "followers_net",
-        "follows",
-        "profile_views",
-        "reach",
-        "unfollows",
-        "views"
-      ],
+      "provider_limited_snapshot": [],
       "aliases": {
         "reach_organic": "reach"
       }

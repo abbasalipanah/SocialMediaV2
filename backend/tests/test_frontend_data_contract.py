@@ -26,16 +26,25 @@ from app.infrastructure.providers.meta.audience import (
     FACEBOOK_AUDIENCE_METRICS,
     INSTAGRAM_AUDIENCE_METRICS,
 )
+from app.infrastructure.providers.meta.facebook.daily_metrics import (
+    FACEBOOK_MEDIA_VIEW_BREAKDOWN_METRICS,
+)
 from app.infrastructure.providers.meta.instagram.content_insights import map_content_insights
+from app.infrastructure.providers.tiktok.accounts import TIKTOK_DAILY_METRIC_IDS
 from app.infrastructure.providers.tiktok.accounts.audience import AUDIENCE_FIELDS
 from scripts.import_legacy_brand import AUDIENCE_METRIC_MAP, CANONICAL_METRICS
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 MATRIX_PATH = REPOSITORY_ROOT / "docs/contracts/social-media-v2-frontend-data-matrix.json"
+CAPABILITY_PATH = REPOSITORY_ROOT / "docs/contracts/social-media-v2-provider-capabilities.json"
 
 
 def _matrix() -> dict[str, object]:
     return json.loads(MATRIX_PATH.read_text(encoding="utf-8"))
+
+
+def _capabilities() -> dict[str, object]:
+    return json.loads(CAPABILITY_PATH.read_text(encoding="utf-8"))
 
 
 def _metric_literals(paths: list[str]) -> set[str]:
@@ -62,7 +71,7 @@ def test_every_frontend_metric_literal_has_an_explicit_backend_route() -> None:
         routed_groups = (
             set(row["provider_native"]),
             set(row["backend_derived"]),
-            set(row["snapshot_compatible"]),
+            set(row["provider_limited_snapshot"]),
             set(row["aliases"]),
         )
         assert set.union(*routed_groups) == consumed
@@ -92,6 +101,7 @@ def test_metric_collection_statuses_are_evidence_backed() -> None:
         "facebook": {
             MetricId.FOLLOWERS.value,
             *(metric_id.value for _, metric_id in FACEBOOK_DAILY_SOURCE_METRICS),
+            *(metric_id.value for metric_id in FACEBOOK_MEDIA_VIEW_BREAKDOWN_METRICS),
         },
         "instagram": {
             MetricId.FOLLOWERS.value,
@@ -103,18 +113,22 @@ def test_metric_collection_statuses_are_evidence_backed() -> None:
             MetricId.VIDEO_LIKES_TOTAL.value,
             MetricId.VIDEO_COMMENTS_TOTAL.value,
             MetricId.VIDEO_SHARES_TOTAL.value,
+            *(metric_id.value for metric_id in TIKTOK_DAILY_METRIC_IDS),
         },
     }
     legacy_importable = set(CANONICAL_METRICS)
+    limited = _capabilities()["provider_limited_snapshot_metrics"]
 
     for platform_name in ("facebook", "instagram", "tiktok"):
         row = metrics[platform_name]
         assert set(row["provider_native"]).issubset(native[platform_name])
-        assert set(row["snapshot_compatible"]).issubset(legacy_importable)
+        assert set(row["provider_limited_snapshot"]).issubset(legacy_importable)
+        assert set(row["provider_limited_snapshot"]) == set(limited[platform_name])
 
 
 def test_every_frontend_dimension_has_a_declared_producer_or_unavailable_state() -> None:
     dimensions = _matrix()["dimensions"]
+    provider_limited = _capabilities()["provider_limited_dimensions"]
     catalog = bootstrap_metric_catalog()
     facebook_allowed = set(catalog.get(PlatformId.FACEBOOK, MetricId.FOLLOWERS).allowed_breakdowns)
     instagram_allowed = set(
@@ -151,6 +165,8 @@ def test_every_frontend_dimension_has_a_declared_producer_or_unavailable_state()
                     assert set(row["backend_keys"]).issubset(AUDIENCE_FIELDS)
             elif row["support"] == "snapshot_compatible":
                 assert set(row["backend_keys"]).issubset(imported_dimensions)
+            if row["support"] != "provider_native":
+                assert row["consumer"] in provider_limited.get(platform_name, {})
 
     assert set(FACEBOOK_AUDIENCE_METRICS).issubset(facebook_allowed)
     assert set(AUDIENCE_FIELDS).issubset(tiktok_allowed)
@@ -166,6 +182,7 @@ def test_every_frontend_dimension_has_a_declared_producer_or_unavailable_state()
     assert facebook.age_gender is AvailabilityStatus.PROVIDER_UNAVAILABLE
     assert facebook.activity is AvailabilityStatus.PROVIDER_UNAVAILABLE
     assert map_content_insights({}, story=True)["sticker_taps"] is None
+    assert provider_limited["instagram_story"]["Sticker Taps"] == "provider_unavailable"
 
 
 def test_typed_content_and_story_fields_cross_every_backend_layer() -> None:

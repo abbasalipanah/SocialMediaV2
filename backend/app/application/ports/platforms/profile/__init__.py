@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Protocol
 
@@ -29,6 +29,10 @@ class DailyMetricSnapshot:
     account_id: str
     observed_on: date
     metric_values: Mapping[MetricId, float | int | None]
+    metric_breakdowns: Mapping[
+        MetricId,
+        Mapping[str, Mapping[str, float | int]],
+    ] = field(default_factory=dict)
 
 
 class DailyMetricsReader(Protocol):

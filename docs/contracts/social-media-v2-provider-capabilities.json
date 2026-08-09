@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "verified_on": "2026-08-09",
+  "scope": "standalone_v2_native_collection",
+  "rules": {
+    "unknown_provider_fields": "unavailable_not_zero",
+    "snapshot_rows": "retained_but_never_labeled_provider_native",
+    "production_egress": "disabled_until_r8_owner_approval"
+  },
+  "native_producers": {
+    "facebook": {
+      "page_media_view_is_from_ads": {
+        "status": "fixture_verified",
+        "metric_ids": ["views_organic", "views_paid"],
+        "breakdown_key": "is_from_ads",
+        "request_period": "day",
+        "evidence": [
+          "backend/tests/test_phase5_daily_audience.py",
+          "readonly:SocialMedia/backend/app/connectors/facebook/legacy/collector.py"
+        ]
+      }
+    },
+    "tiktok": {
+      "business_account_daily_insights": {
+        "status": "fixture_verified",
+        "endpoint_family": "/business/get/",
+        "maximum_window_days": 30,
+        "source_fields": [
+          "followers_count",
+          "video_views",
+          "unique_video_views",
+          "profile_views",
+          "likes",
+          "comments",
+          "shares"
+        ],
+        "metric_ids": [
+          "followers",
+          "views",
+          "reach",
+          "profile_views",
+          "interactions"
+        ],
+        "evidence": [
+          "backend/tests/test_revision6_r13_native_producers.py",
+          "readonly:SocialMedia/backend/app/connectors/tiktok/adapter.py",
+          "https://business-api.tiktok.com/gateway/docs/index?doc_id=1735713875563521&language=ENGLISH"
+        ]
+      }
+    }
+  },
+  "versioned_derived_producers": {
+    "follower_directional_flow": {
+      "version": 1,
+      "window": "consecutive_utc_day_snapshots",
+      "platforms": ["facebook", "instagram", "tiktok"],
+      "direct_provider_precedence": true,
+      "outputs": {
+        "new_followers": "max(current_followers - previous_followers, 0)",
+        "follows": "max(current_followers - previous_followers, 0)",
+        "unfollows": "max(previous_followers - current_followers, 0)",
+        "followers_net": "current_followers - previous_followers"
+      },
+      "limitation": "Snapshot delta is directional net movement, not simultaneous gross acquisition and churn."
+    }
+  },
+  "provider_limited_snapshot_metrics": {
+    "facebook": ["reach_organic", "reach_paid"],
+    "instagram": ["reach_organic", "reach_paid", "views_organic", "views_paid"],
+    "tiktok": []
+  },
+  "provider_limited_dimensions": {
+    "facebook": {
+      "Page Like Types (Organic vs Paid)": "provider_unavailable",
+      "Best Time to Engage": "provider_unavailable"
+    },
+    "instagram": {
+      "Best Time to Engage": "snapshot_compatible_provider_contract_unverified"
+    },
+    "instagram_story": {
+      "Sticker Taps": "provider_unavailable"
+    }
+  }
+}

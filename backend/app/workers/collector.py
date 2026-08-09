@@ -69,6 +69,7 @@ from app.infrastructure.providers.tiktok.accounts import (
     TikTokAudienceReader,
     TikTokCommentsReader,
     TikTokContentReader,
+    TikTokDailyMetricsReader,
     TikTokHttpTransport,
     TikTokProfileReader,
     parse_token,
@@ -185,7 +186,7 @@ class StandaloneCollector:
             account_id=pending.external_id,
             credential=ProviderCredential(access_token=context.access_token),
         )
-        profile_reader, _, _, _ = self._tiktok_readers(
+        profile_reader, _, _, _, _ = self._tiktok_readers(
             provider_account, scopes=context.scopes
         )
         snapshot = profile_reader.fetch_profile(provider_account)
@@ -387,7 +388,7 @@ class StandaloneCollector:
             granted_scopes = context.scopes
         if granted_scopes is None:
             raise PermissionError("provider_scope_context_unavailable")
-        profile_reader, content_reader, audience_reader, comments_reader = (
+        profile_reader, daily_reader, content_reader, audience_reader, comments_reader = (
             self._tiktok_readers(provider_account, scopes=granted_scopes)
         )
         target = CollectionTarget(
@@ -399,6 +400,19 @@ class StandaloneCollector:
             target=target,
             reader=profile_reader,
             metric_store=self.metrics,
+        )
+        until = date.today() - timedelta(days=1)
+        since = (
+            until - timedelta(days=29)
+            if row.backfill_status != "complete"
+            else until
+        )
+        daily = collect_daily_metrics(
+            target=target,
+            reader=daily_reader,
+            metric_store=self.metrics,
+            since=since,
+            until=until,
         )
         partial_errors: set[str] = set()
         try:
@@ -472,6 +486,7 @@ class StandaloneCollector:
             status="partial" if partial_errors else "success",
             metric_count=(
                 profile.metric_count
+                + daily.metric_count
                 + len(totals)
                 + (audience.metric_count if audience is not None else 0)
             ),
@@ -508,6 +523,17 @@ class StandaloneCollector:
                 params=wire.profile_fields(business_id=business_id),
             )
         )
+        daily = TikTokDailyMetricsReader(
+            lambda business_id, since, until: transport.get(
+                config.profile_url,
+                headers=headers,
+                params=wire.daily_metric_fields(
+                    business_id=business_id,
+                    since=since,
+                    until=until,
+                ),
+            )
+        )
         content = TikTokContentReader(
             lambda business_id, cursor: transport.get(
                 config.video_list_url,
@@ -542,7 +568,7 @@ class StandaloneCollector:
             if comment_enabled
             else None
         )
-        return profile, content, audience, comments
+        return profile, daily, content, audience, comments
 
     def _access_token(self, platform: PlatformId, reference: str) -> str:
         token = self.credentials.get(

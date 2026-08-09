@@ -106,6 +106,22 @@ def test_facebook_daily_metrics_preserve_request_order_and_d_plus_one() -> None:
         query = {key: rows[-1] for key, rows in parse_qs(request.url.query.decode()).items()}
         requests.append(query)
         metric = query["metric"]
+        if query.get("breakdown") == "is_from_ads":
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {
+                            "name": "page_media_view",
+                            "values": [
+                                {"value": 8, "is_from_ads": "0"},
+                                {"value": 2, "is_from_ads": "1"},
+                            ],
+                        }
+                    ]
+                },
+                request=request,
+            )
         if metric == "page_total_actions":
             return httpx.Response(
                 400,
@@ -136,7 +152,9 @@ def test_facebook_daily_metrics_preserve_request_order_and_d_plus_one() -> None:
         since=DAY,
         until=DAY,
     )
-    by_metric = {row.metric_id: row.value for row in store.rows}
+    by_metric = {
+        row.metric_id: row.value for row in store.rows if row.breakdown_key is None
+    }
     assert outcome.status is CollectionStatus.SUCCESS
     assert by_metric == {
         MetricId.VIEWS: 10,
@@ -144,6 +162,8 @@ def test_facebook_daily_metrics_preserve_request_order_and_d_plus_one() -> None:
         MetricId.PAGE_VIEWS: 5,
         MetricId.INTERACTIONS: 7,
         MetricId.REACTIONS: 5,
+        MetricId.VIEWS_ORGANIC: 8,
+        MetricId.VIEWS_PAID: 2,
     }
     assert [request["metric"] for request in requests] == [
         "page_media_view",
@@ -154,8 +174,15 @@ def test_facebook_daily_metrics_preserve_request_order_and_d_plus_one() -> None:
         "page_post_engagements",
         "page_total_actions",
         "page_actions_post_reactions_total",
+        "page_media_view",
     ]
     assert all(request["since"] == request["until"] == "2026-07-14" for request in requests)
+    assert requests[-1]["breakdown"] == "is_from_ads"
+    assert {
+        (row.breakdown_value, row.value)
+        for row in store.rows
+        if row.breakdown_key == "is_from_ads"
+    } == {("Organic", 8), ("Paid", 2)}
 
 
 def test_instagram_partial_daily_metrics_preserve_null_instead_of_zero() -> None:

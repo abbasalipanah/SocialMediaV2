@@ -94,6 +94,9 @@ class ZeroDenominatorPolicy(StrEnum):
 
 class DerivationOperator(StrEnum):
     CUMULATIVE_DELTA = "cumulative_delta"
+    POSITIVE_SNAPSHOT_DELTA = "positive_snapshot_delta"
+    NEGATIVE_SNAPSHOT_DELTA = "negative_snapshot_delta"
+    SIGNED_SNAPSHOT_DELTA = "signed_snapshot_delta"
     SUM_COMPONENTS = "sum_components"
     RATIO_FROM_COMPONENTS = "ratio_from_components"
 
@@ -289,7 +292,13 @@ def _profile_snapshot(
     )
 
 
-def _profile_flow(platform: PlatformId, metric_id: MetricId, source_field: str) -> MetricDefinition:
+def _profile_flow(
+    platform: PlatformId,
+    metric_id: MetricId,
+    source_field: str,
+    *,
+    allowed_breakdowns: tuple[str, ...] = (),
+) -> MetricDefinition:
     return MetricDefinition(
         metric_id=metric_id,
         platform=platform,
@@ -310,7 +319,7 @@ def _profile_flow(platform: PlatformId, metric_id: MetricId, source_field: str) 
         numerator_metric_id=None,
         denominator_metric_id=None,
         zero_denominator_policy=ZeroDenominatorPolicy.NOT_APPLICABLE,
-        allowed_breakdowns=(),
+        allowed_breakdowns=allowed_breakdowns,
         required_capability=CapabilityId.PROFILE,
         version=1,
     )
@@ -337,6 +346,44 @@ def _profile_cumulative_delta(
         derivation_operator=DerivationOperator.CUMULATIVE_DELTA,
         derivation_version=1,
         derivation_window="utc_day",
+        first_sample_policy=FirstSamplePolicy.NOT_AVAILABLE,
+        numerator_metric_id=None,
+        denominator_metric_id=None,
+        zero_denominator_policy=ZeroDenominatorPolicy.NOT_APPLICABLE,
+        allowed_breakdowns=(),
+        required_capability=CapabilityId.PROFILE,
+        version=1,
+    )
+
+
+def _profile_snapshot_delta(
+    platform: PlatformId,
+    metric_id: MetricId,
+    *,
+    operator: DerivationOperator,
+) -> MetricDefinition:
+    if operator not in {
+        DerivationOperator.POSITIVE_SNAPSHOT_DELTA,
+        DerivationOperator.NEGATIVE_SNAPSHOT_DELTA,
+        DerivationOperator.SIGNED_SNAPSHOT_DELTA,
+    }:
+        raise MetricCatalogError("snapshot_delta_operator_invalid")
+    return MetricDefinition(
+        metric_id=metric_id,
+        platform=platform,
+        entity_scope=EntityScope.PROFILE,
+        semantic_type=SemanticType.FLOW,
+        unit=Unit.COUNT,
+        source_field=None,
+        collection_granularity=CollectionGranularity.DAY,
+        period_aggregation=AggregationPolicy.SUM,
+        brand_rollup_aggregation=AggregationPolicy.SUM,
+        null_policy=NullPolicy.NOT_AVAILABLE,
+        reset_policy=ResetPolicy.NOT_APPLICABLE,
+        derived_from_metric_ids=(MetricId.FOLLOWERS,),
+        derivation_operator=operator,
+        derivation_version=1,
+        derivation_window="consecutive_utc_day_snapshots",
         first_sample_policy=FirstSamplePolicy.NOT_AVAILABLE,
         numerator_metric_id=None,
         denominator_metric_id=None,
@@ -539,23 +586,42 @@ def bootstrap_metric_catalog() -> MetricCatalog:
                 "followers_count",
                 allowed_breakdowns=("page_fans_country", "page_fans_city"),
             ),
-            _profile_cumulative_delta(
+            _profile_snapshot_delta(
                 PlatformId.FACEBOOK,
                 MetricId.NEW_FOLLOWERS,
-                MetricId.FOLLOWERS,
+                operator=DerivationOperator.POSITIVE_SNAPSHOT_DELTA,
             ),
-            _profile_flow(PlatformId.FACEBOOK, MetricId.FOLLOWS, "follows"),
-            _profile_flow(PlatformId.FACEBOOK, MetricId.UNFOLLOWS, "unfollows"),
-            _profile_flow(PlatformId.FACEBOOK, MetricId.FOLLOWERS_NET, "followers_net"),
+            _profile_snapshot_delta(
+                PlatformId.FACEBOOK,
+                MetricId.FOLLOWS,
+                operator=DerivationOperator.POSITIVE_SNAPSHOT_DELTA,
+            ),
+            _profile_snapshot_delta(
+                PlatformId.FACEBOOK,
+                MetricId.UNFOLLOWS,
+                operator=DerivationOperator.NEGATIVE_SNAPSHOT_DELTA,
+            ),
+            _profile_snapshot_delta(
+                PlatformId.FACEBOOK,
+                MetricId.FOLLOWERS_NET,
+                operator=DerivationOperator.SIGNED_SNAPSHOT_DELTA,
+            ),
             _profile_flow(PlatformId.FACEBOOK, MetricId.VIEWS_ORGANIC, "views_organic"),
             _profile_flow(PlatformId.FACEBOOK, MetricId.VIEWS_PAID, "views_paid"),
             _profile_flow(PlatformId.FACEBOOK, MetricId.REACH_ORGANIC, "reach_organic"),
             _profile_flow(PlatformId.FACEBOOK, MetricId.REACH_PAID, "reach_paid"),
+            _profile_flow(
+                PlatformId.FACEBOOK,
+                MetricId.VIEWS,
+                "page_media_view",
+                allowed_breakdowns=("is_from_ads",),
+            ),
             *(
                 _profile_flow(PlatformId.FACEBOOK, metric_id, source_field)
                 for metric_id, source_field in {
                     metric_id: source_field
                     for source_field, metric_id in FACEBOOK_DAILY_SOURCE_METRICS
+                    if metric_id is not MetricId.VIEWS
                 }.items()
             ),
             _profile_ratio(
@@ -588,14 +654,26 @@ def bootstrap_metric_catalog() -> MetricCatalog:
             ),
             _profile_snapshot(PlatformId.INSTAGRAM, MetricId.FOLLOWING, "follows_count"),
             _profile_snapshot(PlatformId.INSTAGRAM, MetricId.MEDIA_COUNT, "media_count"),
-            _profile_cumulative_delta(
+            _profile_snapshot_delta(
                 PlatformId.INSTAGRAM,
                 MetricId.NEW_FOLLOWERS,
-                MetricId.FOLLOWERS,
+                operator=DerivationOperator.POSITIVE_SNAPSHOT_DELTA,
             ),
-            _profile_flow(PlatformId.INSTAGRAM, MetricId.FOLLOWS, "follows"),
-            _profile_flow(PlatformId.INSTAGRAM, MetricId.UNFOLLOWS, "unfollows"),
-            _profile_flow(PlatformId.INSTAGRAM, MetricId.FOLLOWERS_NET, "followers_net"),
+            _profile_snapshot_delta(
+                PlatformId.INSTAGRAM,
+                MetricId.FOLLOWS,
+                operator=DerivationOperator.POSITIVE_SNAPSHOT_DELTA,
+            ),
+            _profile_snapshot_delta(
+                PlatformId.INSTAGRAM,
+                MetricId.UNFOLLOWS,
+                operator=DerivationOperator.NEGATIVE_SNAPSHOT_DELTA,
+            ),
+            _profile_snapshot_delta(
+                PlatformId.INSTAGRAM,
+                MetricId.FOLLOWERS_NET,
+                operator=DerivationOperator.SIGNED_SNAPSHOT_DELTA,
+            ),
             _profile_flow(PlatformId.INSTAGRAM, MetricId.VIEWS_ORGANIC, "views_organic"),
             _profile_flow(PlatformId.INSTAGRAM, MetricId.VIEWS_PAID, "views_paid"),
             _profile_flow(PlatformId.INSTAGRAM, MetricId.REACH_ORGANIC, "reach_organic"),
@@ -621,15 +699,27 @@ def bootstrap_metric_catalog() -> MetricCatalog:
                     "audience_activity",
                 ),
             ),
-            _profile_cumulative_delta(
+            _profile_snapshot_delta(
                 PlatformId.TIKTOK,
                 MetricId.NEW_FOLLOWERS,
-                MetricId.FOLLOWERS,
+                operator=DerivationOperator.POSITIVE_SNAPSHOT_DELTA,
             ),
             _profile_snapshot(PlatformId.TIKTOK, MetricId.FOLLOWING, "following_count"),
-            _profile_flow(PlatformId.TIKTOK, MetricId.FOLLOWS, "follows"),
-            _profile_flow(PlatformId.TIKTOK, MetricId.UNFOLLOWS, "unfollows"),
-            _profile_flow(PlatformId.TIKTOK, MetricId.FOLLOWERS_NET, "followers_net"),
+            _profile_snapshot_delta(
+                PlatformId.TIKTOK,
+                MetricId.FOLLOWS,
+                operator=DerivationOperator.POSITIVE_SNAPSHOT_DELTA,
+            ),
+            _profile_snapshot_delta(
+                PlatformId.TIKTOK,
+                MetricId.UNFOLLOWS,
+                operator=DerivationOperator.NEGATIVE_SNAPSHOT_DELTA,
+            ),
+            _profile_snapshot_delta(
+                PlatformId.TIKTOK,
+                MetricId.FOLLOWERS_NET,
+                operator=DerivationOperator.SIGNED_SNAPSHOT_DELTA,
+            ),
             _profile_flow(PlatformId.TIKTOK, MetricId.VIEWS, "views"),
             _profile_flow(PlatformId.TIKTOK, MetricId.REACH, "reach"),
             _profile_flow(PlatformId.TIKTOK, MetricId.PROFILE_VIEWS, "profile_views"),

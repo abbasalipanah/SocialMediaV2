@@ -39,6 +39,18 @@ def collect_daily_metrics(
                 )
             )
             metric_count += 1
+        for metric_id, breakdowns in snapshot.metric_breakdowns.items():
+            for breakdown_key, values in breakdowns.items():
+                metric_store.replace_breakdown(
+                    platform=target.account.platform,
+                    account_id=target.local_account_id,
+                    brand_id=target.brand_id,
+                    observed_on=snapshot.observed_on,
+                    metric_id=metric_id,
+                    breakdown_key=breakdown_key,
+                    values=values,
+                )
+                metric_count += len(values)
     return CollectionOutcome(
         status=CollectionStatus.PARTIAL if missing else CollectionStatus.SUCCESS,
         metric_count=metric_count,

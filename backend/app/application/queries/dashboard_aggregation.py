@@ -51,7 +51,13 @@ from app.domain.reporting import (
 )
 
 
-def methodology_for_definition(definition: MetricDefinition) -> str:
+def methodology_for_definition(
+    definition: MetricDefinition,
+    *,
+    direct_provider_value: bool = False,
+) -> str:
+    if direct_provider_value and definition.semantic_type.value == "flow":
+        return "provider_flow"
     if definition.derivation_operator is not None:
         return ":".join(
             (
@@ -64,6 +70,30 @@ def methodology_for_definition(definition: MetricDefinition) -> str:
     if definition.semantic_type.value == "flow":
         return "provider_flow"
     return "provider_reported"
+
+
+_SNAPSHOT_DELTA_OPERATORS = frozenset(
+    {
+        DerivationOperator.POSITIVE_SNAPSHOT_DELTA,
+        DerivationOperator.NEGATIVE_SNAPSHOT_DELTA,
+        DerivationOperator.SIGNED_SNAPSHOT_DELTA,
+    }
+)
+
+
+def _snapshot_delta_value(
+    previous: float,
+    current: float,
+    operator: DerivationOperator,
+) -> float:
+    delta = current - previous
+    if operator is DerivationOperator.POSITIVE_SNAPSHOT_DELTA:
+        return max(delta, 0.0)
+    if operator is DerivationOperator.NEGATIVE_SNAPSHOT_DELTA:
+        return max(-delta, 0.0)
+    if operator is DerivationOperator.SIGNED_SNAPSHOT_DELTA:
+        return delta
+    raise ValueError("snapshot_delta_operator_invalid")
 
 
 def aggregate_value(
@@ -103,6 +133,21 @@ def aggregate_value(
         return None if any(value is None for value in values) else sum(values)  # type: ignore[arg-type]
     if definition.derivation_operator is DerivationOperator.CUMULATIVE_DELTA:
         source_id = definition.derived_from_metric_ids[0]
+        snapshot_by_account: dict[int, list[ReportingMetric]] = defaultdict(list)
+        for sample in samples:
+            if sample.metric_id is source_id and sample.breakdown_key is None:
+                snapshot_by_account[sample.account_id].append(sample)
+        snapshot_deltas: list[float] = []
+        for rows in snapshot_by_account.values():
+            ordered = sorted(rows, key=lambda row: row.observed_on)
+            snapshot_deltas.extend(
+                current.value - previous.value
+                for previous, current in zip(ordered, ordered[1:], strict=False)
+                if current.value >= previous.value
+            )
+        return sum(snapshot_deltas) if snapshot_deltas else None
+    if definition.derivation_operator in _SNAPSHOT_DELTA_OPERATORS:
+        source_id = definition.derived_from_metric_ids[0]
         by_account: dict[int, list[ReportingMetric]] = defaultdict(list)
         for sample in samples:
             if sample.metric_id is source_id and sample.breakdown_key is None:
@@ -111,9 +156,13 @@ def aggregate_value(
         for rows in by_account.values():
             ordered = sorted(rows, key=lambda row: row.observed_on)
             deltas.extend(
-                current.value - previous.value
+                _snapshot_delta_value(
+                    previous.value,
+                    current.value,
+                    definition.derivation_operator,
+                )
                 for previous, current in zip(ordered, ordered[1:], strict=False)
-                if current.value >= previous.value
+                if current.observed_on - previous.observed_on == timedelta(days=1)
             )
         return sum(deltas) if deltas else None
     return None
@@ -126,6 +175,8 @@ def metric_cards(
     samples: tuple[ReportingMetric, ...],
     previous_samples: tuple[ReportingMetric, ...],
     catalog: MetricCatalog,
+    derivation_samples: tuple[ReportingMetric, ...] | None = None,
+    previous_derivation_samples: tuple[ReportingMetric, ...] | None = None,
 ) -> tuple[tuple[DashboardMetric, ...], tuple[str, ...]]:
     cards: list[DashboardMetric] = []
     warnings: list[str] = []
@@ -133,9 +184,43 @@ def metric_cards(
     for definition in catalog.definitions():
         if definition.platform is not platform:
             continue
-        value = aggregate_value(definition, samples, catalog)
-        previous = aggregate_value(definition, previous_samples, catalog)
-        source_ids = set(definition.derived_from_metric_ids) or {definition.metric_id}
+        direct_samples = tuple(
+            sample
+            for sample in samples
+            if sample.metric_id is definition.metric_id and sample.breakdown_key is None
+        )
+        previous_direct_samples = tuple(
+            sample
+            for sample in previous_samples
+            if sample.metric_id is definition.metric_id and sample.breakdown_key is None
+        )
+        value = aggregate_value(
+            definition,
+            (
+                derivation_samples
+                if not direct_samples
+                and definition.derivation_operator in _SNAPSHOT_DELTA_OPERATORS
+                and derivation_samples is not None
+                else samples
+            ),
+            catalog,
+        )
+        previous = aggregate_value(
+            definition,
+            (
+                previous_derivation_samples
+                if not previous_direct_samples
+                and definition.derivation_operator in _SNAPSHOT_DELTA_OPERATORS
+                and previous_derivation_samples is not None
+                else previous_samples
+            ),
+            catalog,
+        )
+        source_ids = (
+            {definition.metric_id}
+            if direct_samples
+            else set(definition.derived_from_metric_ids) or {definition.metric_id}
+        )
         covered = {
             sample.account_id
             for sample in samples
@@ -161,7 +246,10 @@ def metric_cards(
                 semantic_type=definition.semantic_type,
                 unit=definition.unit,
                 data_status=status,
-                methodology=methodology_for_definition(definition),
+                methodology=methodology_for_definition(
+                    definition,
+                    direct_provider_value=bool(direct_samples),
+                ),
                 availability_reason=(
                     f"metric_unavailable:{definition.metric_id.value}"
                     if status is DataStatus.UNAVAILABLE
@@ -179,6 +267,7 @@ def metric_series(
     platform: PlatformId,
     samples: tuple[ReportingMetric, ...],
     catalog: MetricCatalog,
+    derivation_samples: tuple[ReportingMetric, ...] | None = None,
 ) -> tuple[DashboardSeries, ...]:
     result: list[DashboardSeries] = []
     registered: dict[MetricId, DashboardSeries] = {}
@@ -207,6 +296,30 @@ def metric_series(
                     for previous, current in zip(source.points, source.points[1:], strict=False)
                     if current.value >= previous.value
                 )
+        elif not points and definition.derivation_operator in _SNAPSHOT_DELTA_OPERATORS:
+            source_id = definition.derived_from_metric_ids[0]
+            by_account: dict[int, list[ReportingMetric]] = defaultdict(list)
+            for sample in derivation_samples or samples:
+                if sample.metric_id is source_id and sample.breakdown_key is None:
+                    by_account[sample.account_id].append(sample)
+            included_dates = {sample.observed_on for sample in samples}
+            by_delta_day: dict[date, float] = defaultdict(float)
+            for rows in by_account.values():
+                ordered = sorted(rows, key=lambda row: row.observed_on)
+                for previous, current in zip(ordered, ordered[1:], strict=False):
+                    if (
+                        current.observed_on in included_dates
+                        and current.observed_on - previous.observed_on == timedelta(days=1)
+                    ):
+                        by_delta_day[current.observed_on] += _snapshot_delta_value(
+                            previous.value,
+                            current.value,
+                            definition.derivation_operator,
+                        )
+            points = tuple(
+                DashboardPoint(observed_on=observed_on, value=value)
+                for observed_on, value in sorted(by_delta_day.items())
+            )
         elif not points and definition.derivation_operator is DerivationOperator.SUM_COMPONENTS:
             sources = tuple(
                 registered.get(metric_id) for metric_id in definition.derived_from_metric_ids
@@ -247,7 +360,14 @@ def metric_series(
                 metric_id=definition.metric_id,
                 semantic_type=definition.semantic_type,
                 points=points,
-                methodology=methodology_for_definition(definition),
+                methodology=methodology_for_definition(
+                    definition,
+                    direct_provider_value=any(
+                        sample.metric_id is definition.metric_id
+                        and sample.breakdown_key is None
+                        for sample in samples
+                    ),
+                ),
             )
             result.append(dashboard_series)
             registered[definition.metric_id] = dashboard_series

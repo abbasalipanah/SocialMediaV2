@@ -93,7 +93,7 @@ async def test_local_demo_opens_a_scoped_session_and_serves_product_data() -> No
         assert stories["trend"]["data_status"] == "unavailable"
         assert stories["items"][0]["views"] is None
         assert instagram.json()["metric_methodology"]["follower_flow"] == (
-            "derived:cumulative_delta:v1:utc_day"
+            "derived:positive_snapshot_delta:v1:consecutive_utc_day_snapshots"
         )
 
         settings = await browser.get("/api/settings/social-accounts", params={"brand_id": "101"})

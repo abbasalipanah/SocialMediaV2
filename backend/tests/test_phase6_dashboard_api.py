@@ -429,6 +429,34 @@ def test_platform_dashboard_rollup_respects_metric_semantics(phase6_fixture) -> 
     assert dashboard.meta.resolved_account_ids == (11, 12)
     assert dashboard.community.total_comments == 1
 
+
+def test_single_day_follower_flow_uses_prior_day_anchor_without_leaking_it(
+    phase6_fixture,
+) -> None:
+    _, reporting, _ = phase6_fixture
+    dashboard = build_platform_dashboard(
+        store=reporting,
+        catalog=bootstrap_metric_catalog(),
+        platform=PlatformId.FACEBOOK,
+        query=DashboardQuery(
+            requested_brand_id="100",
+            resolved_brand_ids=("101", "102"),
+            rollup=True,
+            date_range=ReportingRange(date(2026, 7, 1), date(2026, 7, 1), "custom"),
+        ),
+        now=NOW,
+    )
+
+    cards = {card.metric_id: card for card in dashboard.metrics}
+    assert cards[MetricId.FOLLOWERS].value == 300
+    assert cards[MetricId.FOLLOWS].value == 20
+    assert cards[MetricId.UNFOLLOWS].value == 0
+    assert cards[MetricId.FOLLOWERS_NET].value == 20
+    series = {row.metric_id: row for row in dashboard.series}
+    assert [(point.observed_on, point.value) for point in series[MetricId.FOLLOWS].points] == [
+        (date(2026, 7, 1), 20),
+    ]
+
     with pytest.raises(ValueError, match="dashboard_account_scope_denied"):
         build_platform_dashboard(
             store=reporting,
@@ -519,7 +547,7 @@ def test_overview_exposes_every_metric_consumed_by_its_frontend(phase6_fixture) 
         MetricId.WEBSITE_CLICKS,
         MetricId.REACTIONS,
     }
-    assert cards[MetricId.NEW_FOLLOWERS].value == 30
+    assert cards[MetricId.NEW_FOLLOWERS].value == 50
     assert cards[MetricId.VIEWS].value == 600
     assert cards[MetricId.WEBSITE_CLICKS].value == 12
     assert cards[MetricId.REACTIONS].value == 9

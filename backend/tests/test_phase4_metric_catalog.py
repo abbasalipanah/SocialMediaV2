@@ -41,7 +41,22 @@ def test_bootstrap_catalog_covers_required_semantic_types() -> None:
         follower_growth = catalog.get(platform, MetricId.NEW_FOLLOWERS)
         assert follower_growth.semantic_type is SemanticType.FLOW
         assert follower_growth.derived_from_metric_ids == (MetricId.FOLLOWERS,)
-        assert follower_growth.derivation_operator is DerivationOperator.CUMULATIVE_DELTA
+        assert (
+            follower_growth.derivation_operator
+            is DerivationOperator.POSITIVE_SNAPSHOT_DELTA
+        )
+        assert (
+            catalog.get(platform, MetricId.FOLLOWS).derivation_operator
+            is DerivationOperator.POSITIVE_SNAPSHOT_DELTA
+        )
+        assert (
+            catalog.get(platform, MetricId.UNFOLLOWS).derivation_operator
+            is DerivationOperator.NEGATIVE_SNAPSHOT_DELTA
+        )
+        assert (
+            catalog.get(platform, MetricId.FOLLOWERS_NET).derivation_operator
+            is DerivationOperator.SIGNED_SNAPSHOT_DELTA
+        )
 
     rate = catalog.get(PlatformId.TIKTOK, MetricId.VIDEO_ENGAGEMENT_RATE)
     assert rate.period_aggregation is AggregationPolicy.RECOMPUTE

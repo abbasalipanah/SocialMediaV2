@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-09` |
-| Durum | Revizyon 6 — R12 KPI ve frontend/backend veri sözleşmesi tamamlandı; R8 dış public-origin/issuer/provider girdileri bekleniyor |
+| Durum | Revizyon 6 — R13 native collector producer closure tamamlandı; R8 dış public-origin/issuer/provider girdileri bekleniyor |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -2447,7 +2447,7 @@ Durum (2026-08-09): tamamlandı. Kanıt:
 `docs/revision6/r12/REVISION6_R12_FRONTEND_BACKEND_DATA_CONTRACT_REPORT.md`. Bağlayıcı karar:
 `docs/revision6/overrides/frontend_backend_data_contract_2026-08-09.json`.
 
-### R13 — Native collector producer closure (planlandı)
+### R13 — Native collector producer closure (tamamlandı)
 
 R12 auditinde katalog/API desteği bulunduğu halde yeni standalone provider collection tarafından
 henüz native üretilmeyen alanları kapatma fazıdır. R13, mevcut Pine Beach snapshot verisini
@@ -2473,7 +2473,16 @@ versioned-derived producer'a taşınmış ya da provider limitation olarak açı
 fresh-DB collection provasında frontend'in zorunlu kart/seri alanları boş kalmaz ve hiçbir eksik
 değer sıfır/organic/paid olarak uydurulmaz.
 
-Durum (2026-08-09): planlandı; uygulanmadı.
+Durum (2026-08-09): tamamlandı. Takipçi akışları üç platform için direct provider öncelikli,
+yalnız ardışık UTC follower snapshot'larından versioned directional-delta fallback'li hale
+getirildi. TikTok Business günlük account reader/worker/persistence zinciri ve Facebook
+`page_media_view` / `is_from_ads` breakdown üreticisi V2 içinde uygulandı. Provider'ın
+doğrulanmamış organic/paid reach, Instagram paid split, Facebook Page Like Types/Best Time ve
+Instagram Best Time alanları uydurulmadı; capability sözleşmesinde açıkça sınırlandı. Fake
+provider ve disposable PostgreSQL sertifikasyonunda tam paket `156 passed` sonucu verdi;
+production egress, DB, schedule ve activation gate kapalı kaldı. Kanıt:
+`docs/revision6/r13/REVISION6_R13_NATIVE_COLLECTOR_PRODUCER_REPORT.md`. Makine-okunur sözleşme:
+`docs/contracts/social-media-v2-provider-capabilities.json`.
 
 ### 22.1 Revizyon 6 stop koşulları
 

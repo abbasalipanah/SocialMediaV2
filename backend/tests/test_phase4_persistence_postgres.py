@@ -13,7 +13,11 @@ from app.application.ports.persistence import (
     MediaRecord,
     MetricPoint,
 )
+from app.application.ports.platforms import ProviderAccount, ProviderCredential
+from app.application.queries.dashboard_aggregation import metric_cards
 from app.application.queries.metrics import MetricQuery
+from app.application.services.collection import CollectionStatus, CollectionTarget
+from app.application.services.collection.daily_metrics import collect_daily_metrics
 from app.core.config import RuntimeMode
 from app.core.write_policy import WritePolicy
 from app.domain.metrics import MetricId, bootstrap_metric_catalog
@@ -23,7 +27,9 @@ from app.infrastructure.persistence.social_v2 import (
     SocialContentStore,
     SocialMediaStore,
     SocialMetricStore,
+    SocialReportingStore,
 )
+from app.infrastructure.providers.tiktok.accounts import TikTokDailyMetricsReader
 
 DATABASE_URL = os.getenv("TEST_POSTGRES_URL")
 pytestmark = pytest.mark.skipif(not DATABASE_URL, reason="TEST_POSTGRES_URL is not configured")
@@ -178,6 +184,9 @@ def stores() -> Iterator[
         connection.execute(text("INSERT INTO brands (id) VALUES (7)"))
         connection.execute(
             text("INSERT INTO assets (id, brand_id, platform) VALUES (11, 7, 'instagram')")
+        )
+        connection.execute(
+            text("INSERT INTO assets (id, brand_id, platform) VALUES (12, 7, 'tiktok')")
         )
     policy = WritePolicy(runtime_mode=RuntimeMode.DEVELOPMENT, writes_enabled=True)
     result = (
@@ -406,3 +415,80 @@ def test_persistence_rejects_cross_brand_or_platform_account_scope(
             )
         )
     assert _row_counts(metric_store) == (0, 0, 0, 0)
+
+
+def test_tiktok_daily_fixture_persists_and_reaches_dashboard_aggregation(
+    stores: tuple[
+        SocialMetricStore,
+        SocialContentStore,
+        SocialCommentStore,
+        SocialMediaStore,
+    ],
+) -> None:
+    metric_store = stores[0]
+    reader = TikTokDailyMetricsReader(
+        lambda _business_id, _since, _until: {
+            "code": 0,
+            "message": "OK",
+            "request_id": "postgres-daily-fixture",
+            "data": {
+                "metrics": [
+                    {
+                        "date": "2026-08-01",
+                        "followers_count": 100,
+                        "video_views": 1000,
+                        "unique_video_views": 800,
+                        "profile_views": 30,
+                        "likes": 20,
+                        "comments": 4,
+                        "shares": 2,
+                    },
+                    {
+                        "date": "2026-08-02",
+                        "followers_count": 106,
+                        "video_views": 1200,
+                        "unique_video_views": 900,
+                        "profile_views": 40,
+                        "likes": 25,
+                        "comments": 5,
+                        "shares": 3,
+                    },
+                ]
+            },
+        }
+    )
+    outcome = collect_daily_metrics(
+        target=CollectionTarget(
+            account=ProviderAccount(
+                platform=PlatformId.TIKTOK,
+                account_id="business-1",
+                credential=ProviderCredential(access_token="fixture-access-value"),
+            ),
+            local_account_id=12,
+            brand_id=7,
+        ),
+        reader=reader,
+        metric_store=metric_store,
+        since=date(2026, 8, 1),
+        until=date(2026, 8, 2),
+    )
+    assert outcome.status is CollectionStatus.SUCCESS
+
+    samples = SocialReportingStore(metric_store.engine).list_metrics(
+        account_ids=(12,),
+        start_on=date(2026, 8, 1),
+        end_on=date(2026, 8, 2),
+    )
+    cards, _ = metric_cards(
+        platform=PlatformId.TIKTOK,
+        account_ids=(12,),
+        samples=samples,
+        previous_samples=(),
+        catalog=bootstrap_metric_catalog(),
+    )
+    by_id = {card.metric_id: card for card in cards}
+    assert by_id[MetricId.FOLLOWS].value == 6
+    assert by_id[MetricId.UNFOLLOWS].value == 0
+    assert by_id[MetricId.FOLLOWERS_NET].value == 6
+    assert by_id[MetricId.VIEWS].value == 2200
+    assert by_id[MetricId.PROFILE_VIEWS].value == 70

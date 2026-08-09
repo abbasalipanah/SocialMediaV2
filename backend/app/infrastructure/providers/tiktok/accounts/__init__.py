@@ -8,6 +8,12 @@ from .activation import (
 from .audience import AUDIENCE_FIELDS, TikTokAudienceReader
 from .comments import TikTokCommentsReader
 from .content import TikTokContentReader
+from .daily_metrics import (
+    MAX_TIKTOK_DAILY_WINDOW_DAYS,
+    TIKTOK_DAILY_FIELDS,
+    TIKTOK_DAILY_METRIC_IDS,
+    TikTokDailyMetricsReader,
+)
 from .oauth_state import (
     TikTokStateBinding,
     TikTokStateCodec,
@@ -36,6 +42,10 @@ __all__ = [
     "TikTokAccountsWireMapper",
     "TikTokAudienceReader",
     "TikTokContentReader",
+    "TIKTOK_DAILY_FIELDS",
+    "TIKTOK_DAILY_METRIC_IDS",
+    "MAX_TIKTOK_DAILY_WINDOW_DAYS",
+    "TikTokDailyMetricsReader",
     "TikTokCommentsReader",
     "TikTokProfileReader",
     "TikTokHttpTransport",
