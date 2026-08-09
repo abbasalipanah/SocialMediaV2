@@ -9,8 +9,10 @@ export const auth = {
   source_system: "accumulate",
   brand_id: "hotel-1",
   role: "agency_admin",
+  app_role: null,
   access_mode: "write",
   settings_visible: true,
+  integrations_visible: true,
   is_internal_staff: true,
   expires_at: "2026-07-14T22:00:00Z",
   revoked: false,
@@ -45,6 +47,7 @@ export const capabilities = {
   })),
   permissions: {
     settings_visible: true,
+    integrations_visible: true,
     internal_audit_visible: true,
     rollup_available: true,
     operation_mutation_available: false,
@@ -294,6 +297,25 @@ export function dashboardFor(platform: Platform) {
   };
 }
 
+export function overviewDashboard() {
+  const platforms = (["facebook", "instagram", "tiktok"] as const).map(dashboardFor);
+  return {
+    meta: { ...platforms[0].meta, dashboard_id: "overview", platform: null },
+    metrics: [
+      metric("followers", 3600, "snapshot"),
+      metric("new_followers", 252),
+      metric("reach", 27900),
+      metric("views", 44400),
+      metric("interactions", 3450),
+      metric("website_clicks", 220),
+      metric("reactions", 820),
+    ],
+    platforms,
+    content: platforms.flatMap((dashboard) => dashboard.content),
+    community: platforms[0].community,
+  };
+}
+
 const accountFor = (platform: Platform) => ({
   account_id: platform === "facebook" ? 31 : platform === "instagram" ? 32 : 33,
   brand_id: "hotel-1",
@@ -318,6 +340,8 @@ export async function mockR5Api(page: Page, authenticated = true) {
     }
     if (path === "/api/workspace/brands") return void await route.fulfill({ json: workspace });
     if (path === "/api/workspace/capabilities") return void await route.fulfill({ json: capabilities });
+    if (path === "/api/dashboards/overview") return void await route.fulfill({ json: overviewDashboard() });
+    if (path === "/api/insights") return void await route.fulfill({ json: { meta: scope, items: [] } });
     for (const platform of ["facebook", "instagram", "tiktok"] as const) {
       if (path === `/api/platforms/${platform}/accounts`) return void await route.fulfill({ json: { meta: scope, platform, accounts: [accountFor(platform)] } });
       if (path === `/api/dashboards/${platform}`) return void await route.fulfill({ json: dashboardFor(platform) });

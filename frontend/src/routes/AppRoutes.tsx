@@ -11,6 +11,7 @@ import { SsoConsumePage } from "./SsoConsumePage";
 const FacebookPage = lazy(() => import("../features/facebook"));
 const InstagramPage = lazy(() => import("../features/instagram"));
 const TikTokPage = lazy(() => import("../features/tiktok"));
+const OverviewPage = lazy(() => import("../features/overview"));
 const SettingsPage = lazy(() => import("../features/settings"));
 const IntegrationsPage = lazy(() => import("../features/integrations"));
 const TikTokConnectPage = lazy(() =>
@@ -60,7 +61,7 @@ function SettingsGuard({ audit = false, children }: { audit?: boolean; children:
   const allowed = audit
     ? capabilities?.permissions.internal_audit_visible
     : capabilities?.permissions.settings_visible;
-  return allowed ? children : <Navigate replace to="/facebook" />;
+  return allowed ? children : <Navigate replace to="/overview" />;
 }
 
 function IntegrationsGuard({ children }: { children: ReactNode }) {
@@ -68,7 +69,7 @@ function IntegrationsGuard({ children }: { children: ReactNode }) {
   if (isLoading) return <RouteLoading />;
   return capabilities?.permissions.integrations_visible
     ? children
-    : <Navigate replace to="/facebook" />;
+    : <Navigate replace to="/overview" />;
 }
 
 export function AppRoutes() {
@@ -80,6 +81,7 @@ export function AppRoutes() {
         <Route path="/sso/consume" element={<SsoConsumePage />} />
         <Route element={<AuthenticatedWorkspace />}>
           <Route element={<AppShell />}>
+            <Route path="overview" element={<OverviewPage />} />
             <Route path="facebook" element={<FacebookPage />} />
             <Route path="instagram" element={<InstagramPage />} />
             <Route path="tiktok" element={<TikTokPage />} />
@@ -94,8 +96,8 @@ export function AppRoutes() {
                 element={<SettingsGuard audit><AuditPage /></SettingsGuard>}
               />
             </Route>
-            <Route index element={<Navigate replace to="/facebook" />} />
-            <Route path="*" element={<Navigate replace to="/facebook" />} />
+            <Route index element={<OverviewPage />} />
+            <Route path="*" element={<Navigate replace to="/overview" />} />
           </Route>
         </Route>
       </Routes>

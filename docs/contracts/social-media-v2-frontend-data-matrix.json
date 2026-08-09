@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "decision_date": "2026-08-09",
   "scope": "frontend_to_v2_backend_read_contract",
   "provider_capability_contract": "docs/contracts/social-media-v2-provider-capabilities.json",
@@ -166,7 +166,30 @@
       ],
       "nested_platform_metrics": [
         "video_engagements_total"
-      ]
+      ],
+      "display_aliases": {
+        "total_impressions": "views"
+      },
+      "derived_display_metrics": {
+        "avg_engagement": {
+          "formula": "interactions / reach",
+          "zero_denominator": "unavailable",
+          "unit": "ratio"
+        },
+        "activity_score": {
+          "formula": "clamp(round(avg_engagement_percent * 6 + reach_delta_pct * 0.4), 0, 100)",
+          "missing_engagement": "unavailable",
+          "missing_reach_delta": 0
+        }
+      },
+      "action_breakdown": {
+        "likes": "sum(content.likes_count)",
+        "comments": "sum(content.comments_count)",
+        "clicks": "website_clicks",
+        "shares": "sum(content.shares_count)",
+        "saves": "provider_unavailable",
+        "reactions": "reactions"
+      }
     }
   },
   "dimensions": {
@@ -307,7 +330,8 @@
       "comment_sentiment_without_analysis_model",
       "facebook_age_gender",
       "facebook_activity",
-      "instagram_story_sticker_taps"
+      "instagram_story_sticker_taps",
+      "overview_saves"
     ]
   }
 }

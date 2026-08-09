@@ -171,6 +171,17 @@ const dashboard = {
   stories: null,
 };
 
+const overviewDashboard = {
+  meta: { ...dashboard.meta, dashboard_id: "overview", platform: null },
+  metrics: dashboard.metrics,
+  platforms: (["facebook", "instagram", "tiktok"] as const).map((platform) => ({
+    ...dashboard,
+    meta: { ...dashboard.meta, dashboard_id: platform, platform },
+  })),
+  content: dashboard.content,
+  community: dashboard.community,
+};
+
 const settingsMeta = {
   requested_brand_id: "child-1",
   rollup: false,
@@ -280,12 +291,14 @@ function mockApi(options: { authenticated?: boolean; integrationsVisible?: boole
       options.settingsVisible,
       options.integrationsVisible,
     ));
+    if (url.includes("/api/dashboards/overview")) return json(overviewDashboard);
     if (url.includes("/api/dashboards/")) {
       const platform = (["facebook", "instagram", "tiktok"] as const)
         .find((item) => url.includes(`/api/dashboards/${item}`)) ?? "facebook";
       return json({ ...dashboard, meta: { ...dashboard.meta, dashboard_id: platform, platform } });
     }
     if (url.includes("/api/platforms/facebook/accounts")) return json(accounts);
+    if (url.includes("/api/insights")) return json({ meta: settingsMeta, items: [] });
     if (url.includes("/api/settings/social-accounts")) return json(socialAccounts);
     if (url.includes("/api/settings/brand-links")) return json(brandLinks);
     if (url.includes("/api/settings/connections")) return json(connections);
@@ -335,6 +348,7 @@ describe("Phase 7 application shell", () => {
       "Home",
       "Analytics",
       "Social Media",
+      "Overview",
       "Facebook",
       "Instagram",
       "TikTok",
@@ -348,9 +362,10 @@ describe("Phase 7 application shell", () => {
 
     expect(await screen.findByRole("heading", { name: "Facebook Dashboard" }, { timeout: 3_000 })).toBeInTheDocument();
     const primary = screen.getByRole("complementary", { name: "Primary navigation" });
-    expect(within(primary).getByRole("link", { name: "Home" })).toHaveAttribute("href", "/facebook");
+    expect(within(primary).getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
     expect(within(primary).getByText("Analytics")).toBeInTheDocument();
     expect(within(primary).getByText("Social Media")).toBeInTheDocument();
+    expect(within(primary).getByRole("link", { name: "Overview" })).toHaveAttribute("href", "/overview");
     await waitFor(() =>
       expect(within(primary).getByRole("link", { name: "Facebook" })).toHaveAttribute(
         "href",
@@ -419,18 +434,18 @@ describe("Phase 7 application shell", () => {
 
   it("redirects a direct Settings route when the backend permission is absent", async () => {
     renderApp("/settings", mockApi({ settingsVisible: false }));
-    expect(await screen.findByRole("heading", { name: "Facebook Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Social Media Overview" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Settings" })).not.toBeInTheDocument();
   });
 
   it("renders root and unknown authenticated routes inside the standalone shell", async () => {
     const { unmount } = renderApp("/");
-    expect(await screen.findByRole("heading", { name: "Facebook Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Social Media Overview" })).toBeInTheDocument();
     expect(screen.getByRole("complementary", { name: "Primary navigation" })).toBeInTheDocument();
     unmount();
 
     renderApp("/not-a-dashboard-route");
-    expect(await screen.findByRole("heading", { name: "Facebook Dashboard" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Social Media Overview" })).toBeInTheDocument();
     expect(screen.getByRole("complementary", { name: "Primary navigation" })).toBeInTheDocument();
   });
 

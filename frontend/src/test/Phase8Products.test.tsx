@@ -10,6 +10,7 @@ import { InstagramPulseDashboard } from "../features/instagram/InstagramPulseDas
 import { AccumulateSocialOverview } from "../features/overview/AccumulateSocialOverview";
 import { AccountsTable } from "../features/settings/SettingsTables";
 import { TikTokPulseDashboard } from "../features/tiktok/TikTokPulseDashboard";
+import { MemoryRouter } from "../routing";
 import { Dialog } from "../ui";
 
 const metric = (value: number | null, status: "available" | "partial" | "unavailable"): DashboardMetric => ({
@@ -123,15 +124,17 @@ describe("Phase 8 product surfaces", () => {
     } as unknown as OverviewDashboard;
 
     render(
-      <AccumulateSocialOverview
-        brandName="Hotel One"
-        data={data}
-        insights={[]}
-        insightsError={false}
-        insightsLoading={false}
-        onRange={() => undefined}
-        range="last_30_days"
-      />,
+      <MemoryRouter initialEntries={["/overview"]}>
+        <AccumulateSocialOverview
+          brandName="Hotel One"
+          data={data}
+          insights={[]}
+          insightsError={false}
+          insightsLoading={false}
+          onRange={() => undefined}
+          range="last_30_days"
+        />
+      </MemoryRouter>,
     );
 
     expect(screen.getByRole("heading", { name: "Social Media Overview" })).toBeInTheDocument();
@@ -142,6 +145,7 @@ describe("Phase 8 product surfaces", () => {
     expect(screen.getByRole("heading", { name: "Action Breakdown" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Top Performing Posts" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Platform Breakdown" })).toBeInTheDocument();
+    expect(screen.getAllByText(/Total Audience|Total Reach|Total Impressions|Total Interactions|Avg\. Engagement|Activity Score/)).toHaveLength(6);
   });
 
   it("keeps the Accumulate Facebook Cover as the combined Page, Content and Audience view", () => {

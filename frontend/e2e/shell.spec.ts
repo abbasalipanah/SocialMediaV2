@@ -9,14 +9,15 @@ test("desktop shell preserves canonical navigation and a reloaded platform route
 
   await expect(page.getByRole("heading", { name: "Facebook Dashboard", exact: true })).toBeVisible();
   const sidebar = page.getByRole("complementary", { name: "Primary navigation" });
-  await expect(sidebar.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/tiktok");
+  await expect(sidebar.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
   await expect(sidebar.getByText("Analytics")).toBeVisible();
   await expect(sidebar.getByText("Social Media")).toBeVisible();
+  await expect(sidebar.getByRole("link", { name: "Overview" })).toHaveAttribute("href", "/overview");
   await expect(sidebar.getByRole("link", { name: "Facebook" })).toHaveAttribute("href", "/facebook");
   await expect(sidebar.getByRole("link", { name: "Instagram" })).toHaveAttribute("href", "/instagram");
   await expect(sidebar.getByRole("link", { name: "TikTok" })).toHaveAttribute("href", "/tiktok");
-  await expect(sidebar.getByRole("link", { name: "Settings" })).toHaveCount(2);
-  await expect(sidebar.getByText("Integrations")).toHaveCount(0);
+  await expect(sidebar.getByRole("link", { name: "Settings" })).toHaveCount(1);
+  await expect(sidebar.getByRole("link", { name: "Integrations" })).toHaveCount(1);
   await expect(sidebar.getByText("Support")).toHaveCount(0);
   await expect(sidebar.getByText("Sign out")).toHaveCount(0);
 

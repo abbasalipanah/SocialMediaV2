@@ -2,7 +2,7 @@ import {
   Activity,
   ArrowDownRight,
   ArrowUpRight,
-  BarChart3,
+  Bookmark,
   CalendarDays,
   Eye,
   Facebook,
@@ -17,6 +17,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { useState } from "react";
 
 import type {
   DashboardContent,
@@ -27,7 +28,8 @@ import type {
   Platform,
   ReportingInsight,
 } from "../../api";
-import { FollowerAvatarStack } from "../../ui";
+import { Link } from "../../routing";
+import { Dialog, FollowerAvatarStack } from "../../ui";
 import { CoverageNotice } from "../dashboard/DashboardFrame";
 import { ExportPng } from "../dashboard/ExportPng";
 import { RANGE_OPTIONS, type RangeKey } from "../dashboard/catalog";
@@ -57,11 +59,6 @@ function displayValue(metricValue: number | null, suffix = ""): string {
   return metricValue === null ? "—" : `${formatNumber(metricValue)}${suffix}`;
 }
 
-function changeLabel(item: DashboardMetric | undefined): string {
-  if (!item || item.delta_pct === null) return "No comparison";
-  return `${Math.abs(item.delta_pct).toFixed(1)}%`;
-}
-
 function PlatformIcon({ platform, size = 17 }: { platform: Platform; size?: number }) {
   if (platform === "facebook") return <Facebook size={size} />;
   if (platform === "instagram") return <Instagram size={size} />;
@@ -72,19 +69,25 @@ type KpiDefinition = {
   label: string;
   value: string;
   metric?: DashboardMetric;
+  badge?: string;
+  delta?: number | null;
   icon: LucideIcon;
   tone: string;
 };
 
 function KpiCard({ definition }: { definition: KpiDefinition }) {
-  const delta = definition.metric?.delta_pct ?? null;
+  const delta = definition.delta ?? definition.metric?.delta_pct ?? null;
   return (
     <article className="social-kpi-card">
       <div className="social-kpi-topline">
         <span className={`social-kpi-icon tone-${definition.tone}`}><definition.icon size={20} /></span>
         <span className={`social-kpi-change${delta === null ? " neutral" : delta >= 0 ? " positive" : " negative"}`}>
-          {delta !== null && (delta >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />)}
-          {changeLabel(definition.metric)}
+          {definition.badge ?? (
+            <>
+              {delta !== null && (delta >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />)}
+              {delta === null ? "No comparison" : `${Math.abs(delta).toFixed(1)}%`}
+            </>
+          )}
         </span>
       </div>
       <strong>{definition.value}</strong>
@@ -109,6 +112,26 @@ function chartLines(data: OverviewDashboard, metricIds: MetricId[]): ChartLine[]
     return series
       ? [{ name: PLATFORM_NAMES[platform], color: PLATFORM_COLORS[platform], points: series.points }]
       : [];
+  });
+}
+
+function bucketLines(lines: ChartLine[], limit = 12): ChartLine[] {
+  return lines.map((line) => {
+    if (line.points.length <= limit) return line;
+    const points = Array.from({ length: limit }, (_, index) => {
+      const start = Math.floor((index * line.points.length) / limit);
+      const end = Math.max(start + 1, Math.floor(((index + 1) * line.points.length) / limit));
+      const bucket = line.points.slice(start, end);
+      const first = bucket[0];
+      const last = bucket.at(-1);
+      return {
+        observed_on: first?.observed_on === last?.observed_on
+          ? first?.observed_on ?? ""
+          : `${first?.observed_on ?? ""} – ${last?.observed_on ?? ""}`,
+        value: bucket.reduce((total, point) => total + point.value, 0),
+      };
+    });
+    return { ...line, points };
   });
 }
 
@@ -166,9 +189,10 @@ function AudienceGrowthChart({ lines }: { lines: ChartLine[] }) {
 }
 
 function CrossChannelChart({ lines }: { lines: ChartLine[] }) {
-  const visibleLines = lines.map((line) => ({ ...line, points: line.points.slice(-7) }));
+  const visibleLines = bucketLines(lines);
   const maximum = Math.max(1, ...visibleLines.flatMap((line) => line.points.map((point) => point.value)));
   const slots = Math.max(1, ...visibleLines.map((line) => line.points.length));
+  const labels = visibleLines[0]?.points.map((point) => point.observed_on) ?? [];
   return (
     <article className="social-chart-card">
       <div className="social-card-heading">
@@ -193,6 +217,11 @@ function CrossChannelChart({ lines }: { lines: ChartLine[] }) {
                 })}
               </div>
             ))}
+          </div>
+          <div className="social-chart-axis">
+            <span>{labels[0] ?? ""}</span>
+            <span>{labels[Math.floor((labels.length - 1) / 2)] ?? ""}</span>
+            <span>{labels.at(-1) ?? ""}</span>
           </div>
           <div className="social-chart-legend">
             {visibleLines.map((line) => <span key={line.name}><i style={{ background: line.color }} />{line.name}</span>)}
@@ -251,23 +280,70 @@ function ContentTypeChart({ content }: { content: DashboardContent[] }) {
   );
 }
 
-function AIInsightBanner({ insight, loading, error }: { insight?: ReportingInsight; loading: boolean; error: boolean }) {
-  const copy = loading
-    ? "Loading the stored insight for this Brand and date range…"
-    : error
-      ? "Reporting is available, but the stored insight could not be loaded."
-      : insight?.summary || "No generated insight exists for this Brand and date range.";
+function AIInsightBanner({
+  insight,
+  loading,
+  error,
+  onOpen,
+}: {
+  insight?: ReportingInsight;
+  loading: boolean;
+  error: boolean;
+  onOpen: () => void;
+}) {
   return (
     <article className="social-ai-card">
       <div className="social-ai-content">
         <span className="social-ai-icon"><Sparkles size={27} /></span>
         <div>
-          <div className="social-ai-title"><h2>AI Insights</h2><span>{insight ? humanize(insight.status) : "Stored only"}</span></div>
-          <p>{copy}</p>
-          {insight?.recommendations && <small>{insight.recommendations}</small>}
+          <div className="social-ai-title"><h2>AI Insights</h2><span>{insight ? humanize(insight.status) : "New"}</span></div>
+          <p>Leverage our predictive algorithms to detect trends before they peak. Auto-scale your best performing content across all connected channels instantly.</p>
         </div>
+        <button className="social-ai-button" disabled={loading} onClick={onOpen} type="button">
+          <Sparkles size={15} /> {loading ? "Loading…" : "Open AI Insights"}
+        </button>
       </div>
+      {error && <span className="social-ai-error">Stored insight is temporarily unavailable.</span>}
     </article>
+  );
+}
+
+function AIInsightDialog({
+  open,
+  brandName,
+  insight,
+  loading,
+  error,
+  onClose,
+}: {
+  open: boolean;
+  brandName: string;
+  insight?: ReportingInsight;
+  loading: boolean;
+  error: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog description={brandName} onClose={onClose} open={open} title="AI Insights">
+      <div className="social-insight-dialog-content">
+        {loading ? (
+          <div className="social-insight-dialog-state">Loading stored insight…</div>
+        ) : error ? (
+          <div className="social-insight-dialog-state error">Stored insight could not be loaded.</div>
+        ) : insight ? (
+          <div className="social-insight-dialog-body">
+            <span>{humanize(insight.status)}</span>
+            <h3>Strategic Summary</h3>
+            <p>{insight.summary || "No summary was stored for this reporting period."}</p>
+            <h3>Recommendations</h3>
+            <p>{insight.recommendations || "No recommendations were stored for this reporting period."}</p>
+            <small>{insight.date_from || "—"} – {insight.date_to || "—"}</small>
+          </div>
+        ) : (
+          <div className="social-insight-dialog-state">No generated insight exists for this Brand and date range.</div>
+        )}
+      </div>
+    </Dialog>
   );
 }
 
@@ -285,7 +361,7 @@ function ActionBreakdown({ data }: { data: OverviewDashboard }) {
     { label: "Comments", value: totals.comments, icon: MessageCircle, tone: "blue" },
     { label: "Clicks", value: value(data.metrics, "website_clicks"), icon: MousePointerClick, tone: "indigo" },
     { label: "Shares", value: totals.shares, icon: Share2, tone: "amber" },
-    { label: "Saves", value: null, icon: Layers3, tone: "emerald" },
+    { label: "Saves", value: null, icon: Bookmark, tone: "emerald" },
     { label: "Reactions", value: value(data.metrics, "reactions"), icon: Activity, tone: "violet" },
   ];
   return (
@@ -320,26 +396,31 @@ function TopPosts({ data }: { data: OverviewDashboard }) {
       <h2>Top Performing Posts</h2>
       <div className="social-table-scroll">
         <table>
-          <thead><tr><th>#</th><th>Post Name</th><th>Platform</th><th>Date</th><th>Type</th><th>Likes</th><th>Interactions</th><th>Engagement Rate</th></tr></thead>
+          <thead><tr><th>#</th><th>Post Name</th><th>Platform</th><th>Date</th><th>Type</th><th>Imp.</th><th>Interactions</th><th>Engagement Rate</th></tr></thead>
           <tbody>
             {posts.length === 0 && <tr><td className="social-table-empty" colSpan={8}>No top post data available for the selected date range.</td></tr>}
             {posts.map((post, index) => {
               const platform = platforms.get(post.account_id);
+              const impressionValue = post.views ?? post.reach;
+              const engagementRate = post.reach && post.reach > 0
+                ? post.interactions / post.reach
+                : null;
+              const thumbnail = post.cover_url || post.thumbnail_url || post.media_url;
               return (
                 <tr key={`${post.account_id}-${post.external_content_id}`}>
                   <td>{index + 1}</td>
                   <td>
                     <div className="social-post-cell">
-                      <span className="social-post-thumb">{post.media_url ? <img alt="" src={post.media_url} /> : <Layers3 size={17} />}</span>
+                      <span className="social-post-thumb">{thumbnail ? <img alt="" src={thumbnail} /> : <Layers3 size={17} />}</span>
                       {post.permalink ? <a href={post.permalink} rel="noreferrer" target="_blank">{post.message || "Caption unavailable"}</a> : <span>{post.message || "Caption unavailable"}</span>}
                     </div>
                   </td>
                   <td>{platform ? <span className={`social-platform-label platform-${platform}`}><PlatformIcon platform={platform} />{PLATFORM_NAMES[platform]}</span> : "—"}</td>
                   <td>{post.published_at ? formatDate(post.published_at) : "—"}</td>
                   <td>{humanize(post.content_type)}</td>
-                  <td>{formatNumber(post.likes_count)}</td>
+                  <td>{displayValue(impressionValue)}</td>
                   <td className="social-cell-strong">{formatNumber(post.interactions)}</td>
-                  <td title="Impression coverage is not available in the content contract">—</td>
+                  <td className="social-cell-strong">{engagementRate === null ? "—" : `${(engagementRate * 100).toFixed(1)}%`}</td>
                 </tr>
               );
             })}
@@ -360,19 +441,34 @@ function PlatformBreakdown({ data }: { data: OverviewDashboard }) {
           if (!platform) return null;
           const followers = value(platformData.metrics, "followers");
           const interactions = value(platformData.metrics, "interactions") ?? value(platformData.metrics, "video_engagements_total");
-          return (
-            <article key={platform}>
+          const reach = value(platformData.metrics, "reach");
+          const engagementRate = interactions !== null && reach !== null && reach > 0
+            ? interactions / reach
+            : null;
+          const available = platformData.meta.data_status !== "unavailable";
+          const content = (
+            <>
               <div className="social-platform-card-top">
-                <span className={`social-platform-card-icon platform-${platform}`}><PlatformIcon platform={platform} size={25} /></span>
-                <span className={`social-health-pill status-${platformData.meta.data_status}`}>{humanize(platformData.meta.data_status)}</span>
+                <span className={`social-platform-card-icon platform-${platform}`}><PlatformIcon platform={platform} size={27} /></span>
+                <span className="social-platform-card-arrow">{available ? <ArrowUpRight size={20} /> : "SOON"}</span>
               </div>
               <h3>{PLATFORM_NAMES[platform]}</h3>
-              <p>{humanize(platformData.meta.freshness)} · Last sync {formatDate(platformData.meta.last_sync_at)}</p>
-              <dl>
-                <div><dt>Audience</dt><dd>{displayValue(followers)}</dd></div>
-                <div><dt>Interactions</dt><dd>{displayValue(interactions)}</dd></div>
-              </dl>
-            </article>
+              {available ? (
+                <div className="social-platform-card-metrics">
+                  <strong>{displayValue(followers)}</strong><span>followers</span>
+                  <p>{engagementRate === null ? "—" : `${(engagementRate * 100).toFixed(1)}%`} <small>engagement rate</small></p>
+                </div>
+              ) : (
+                <p className="social-platform-card-unavailable">Integration is not available for this Brand.</p>
+              )}
+            </>
+          );
+          return (
+            available ? (
+              <Link className="social-platform-card" key={platform} to={`/${platform}`}>{content}</Link>
+            ) : (
+              <article className="social-platform-card unavailable" key={platform}>{content}</article>
+            )
           );
         })}
       </div>
@@ -397,20 +493,48 @@ export function AccumulateSocialOverview({
   insightsLoading: boolean;
   insightsError: boolean;
 }) {
+  const [insightOpen, setInsightOpen] = useState(false);
   const audienceMetric = metric(data.metrics, "followers");
   const reachMetric = metric(data.metrics, "reach");
   const viewsMetric = metric(data.metrics, "views");
   const interactionsMetric = metric(data.metrics, "interactions");
-  const newFollowersMetric = metric(data.metrics, "new_followers");
-  const coverage = data.platforms.filter((item) => item.meta.data_status === "available").length;
+  const engagementRate = interactionsMetric?.value !== null
+    && interactionsMetric?.value !== undefined
+    && reachMetric?.value !== null
+    && reachMetric?.value !== undefined
+    && reachMetric.value > 0
+    ? interactionsMetric.value / reachMetric.value
+    : null;
+  const previousEngagementRate = interactionsMetric?.previous_value !== null
+    && interactionsMetric?.previous_value !== undefined
+    && reachMetric?.previous_value !== null
+    && reachMetric?.previous_value !== undefined
+    && reachMetric.previous_value > 0
+    ? interactionsMetric.previous_value / reachMetric.previous_value
+    : null;
+  const engagementDelta = engagementRate !== null
+    && previousEngagementRate !== null
+    && previousEngagementRate !== 0
+    ? ((engagementRate - previousEngagementRate) / Math.abs(previousEngagementRate)) * 100
+    : null;
+  const activityScore = engagementRate === null
+    ? null
+    : Math.max(0, Math.min(100, Math.round((engagementRate * 100 * 6) + ((reachMetric?.delta_pct ?? 0) * 0.4))));
+  const activityBadge = activityScore === null
+    ? "Unavailable"
+    : activityScore >= 80
+      ? "Excellent"
+      : activityScore >= 60
+        ? "Good"
+        : "Needs Improvement";
   const kpis: KpiDefinition[] = [
-    { label: "Reach", value: displayValue(reachMetric?.value ?? null), metric: reachMetric, icon: Eye, tone: "indigo" },
-    { label: "Views", value: displayValue(viewsMetric?.value ?? null), metric: viewsMetric, icon: BarChart3, tone: "blue" },
-    { label: "Interactions", value: displayValue(interactionsMetric?.value ?? null), metric: interactionsMetric, icon: Activity, tone: "rose" },
-    { label: "New Followers", value: displayValue(newFollowersMetric?.value ?? null), metric: newFollowersMetric, icon: Users, tone: "emerald" },
-    { label: "Data Coverage", value: `${coverage}/${data.platforms.length}`, icon: Layers3, tone: "violet" },
+    { label: "Total Reach", value: displayValue(reachMetric?.value ?? null), metric: reachMetric, icon: Users, tone: "rose" },
+    { label: "Total Impressions", value: displayValue(viewsMetric?.value ?? null), metric: viewsMetric, icon: Eye, tone: "violet" },
+    { label: "Total Interactions", value: displayValue(interactionsMetric?.value ?? null), metric: interactionsMetric, icon: MessageCircle, tone: "blue" },
+    { label: "Avg. Engagement", value: engagementRate === null ? "—" : `${(engagementRate * 100).toFixed(1)}%`, delta: engagementDelta, icon: MousePointerClick, tone: "indigo" },
+    { label: "Activity Score", value: activityScore === null ? "—" : String(activityScore), badge: activityBadge, icon: Layers3, tone: "amber" },
   ];
-  const audienceLines = chartLines(data, ["new_followers", "followers"]);
+  const audienceLines = bucketLines(chartLines(data, ["new_followers", "followers"]));
   const interactionLines = chartLines(data, ["interactions", "video_engagements_total"]);
 
   return (
@@ -450,12 +574,20 @@ export function AccumulateSocialOverview({
       </section>
 
       <section className="social-insight-grid">
-        <AIInsightBanner error={insightsError} insight={insights[0]} loading={insightsLoading} />
+        <AIInsightBanner error={insightsError} insight={insights[0]} loading={insightsLoading} onOpen={() => setInsightOpen(true)} />
         <ActionBreakdown data={data} />
       </section>
 
       <TopPosts data={data} />
       <PlatformBreakdown data={data} />
+      <AIInsightDialog
+        brandName={brandName}
+        error={insightsError}
+        insight={insights[0]}
+        loading={insightsLoading}
+        onClose={() => setInsightOpen(false)}
+        open={insightOpen}
+      />
     </main>
   );
 }

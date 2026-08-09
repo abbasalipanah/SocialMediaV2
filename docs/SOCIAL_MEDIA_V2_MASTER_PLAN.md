@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-09` |
-| Durum | Revizyon 6 — R13 native collector producer closure tamamlandı; R8 dış public-origin/issuer/provider girdileri bekleniyor |
+| Durum | Revizyon 6 — R14 Overview parity tamamlandı; R8 dış public-origin/issuer/provider girdileri bekleniyor |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -138,6 +138,27 @@ TikTok, baseline veya faz-kapanış ifadelerini hükümsüz kılar:
     Engagements nested platform dashboard'dan okunur. Bu sözleşme ve altı KPI kararı yeni açık
     kullanıcı kararı olmadan değiştirilemez; makine-okunur karar
     `docs/revision6/overrides/frontend_backend_data_contract_2026-08-09.json` dosyasındadır.
+37. 2026-08-09 tarihli açık kullanıcı kararıyla görünür `Overview`, Social Media navigation
+    ağacında Facebook'tan önce yer alır; `/overview` gerçek deep-link olur ve Home `/` üzerinde
+    aynı Overview çalışma alanını açar. Bu madde, R1'deki "kaynak snapshot'ta yoksa Overview
+    eklenmez" kuralını yalnız Overview yüzeyi için geçersiz kılar.
+38. Overview ana içerik bilgi mimarisi, salt-okunur Accumulate
+    `SocialMediaDashboard.tsx` yüzeyindeki altı KPI ve yedi bölüm sırasını kullanır. Sidebar,
+    topbar ve footer'ın genel tasarımı değiştirilemez.
+39. Overview KPI sırası tam olarak Total Audience, Total Reach, Total Impressions, Total
+    Interactions, Avg. Engagement ve Activity Score'dur. Total Impressions mevcut normalize
+    `views` slotunun görünür aliasıdır; yeni provider gerçeği olarak sunulamaz.
+40. Overview bölümleri Audience Growth, Cross-Channel, Content Type, AI Insights, Action
+    Breakdown, Top Performing Posts ve Platform Breakdown sırasını korur. Platform Breakdown
+    yalnız Facebook, Instagram ve TikTok'u gösterir; LinkedIn veya dördüncü platform eklenmez.
+41. Avg. Engagement `interactions / reach`; Activity Score
+    `clamp(round(avg_engagement_percent * 6 + reach_delta_pct * 0.4), 0, 100)` formülüdür.
+    Geçersiz payda veya eksik veri sıfır olarak uydurulmaz.
+42. Action Breakdown Saves backend sözleşmesinde yoksa `—` gösterir. AI Insights yalnız mevcut
+    stored insight okur; kullanıcı açması provider çağrısı, AI generation veya backend mutation
+    başlatmaz. Modal focus trap, Escape ve focus return davranışlarını korur.
+43. Maddeler 37-42 yeni açık kullanıcı kararı olmadan geri alınamaz. Makine-okunur karar
+    `docs/revision6/overrides/overview_surface_2026-08-09.json` dosyasındadır.
 
 ### 0.1 Zorunlu çalışma sırası
 
@@ -989,8 +1010,9 @@ teknik davranışlar snapshot ile çelişmediği ölçüde korunur:
 
 Social Media navigation route, label, ikon, platform görünürlüğü ve Settings konumu §22'deki
 frontend envanterinde exact olarak kaydedilir. V2 yalnız SSO consume/login ve owner activation
-gibi normal navigasyonda görünmeyen güvenlik rotalarını ekleyebilir. Görünür `Overview`, platform
-veya Settings satırı kaynak snapshot'ta yoksa eklenmez; varsa kaldırılmaz.
+gibi normal navigasyonda görünmeyen güvenlik rotalarını ekleyebilir. Görünür platform veya
+Settings satırı kaynak snapshot'ta yoksa eklenmez; varsa kaldırılmaz. Overview için §0.0 madde
+37-43'teki açık kullanıcı kararı bu kuralın dar istisnasıdır.
 
 Paid-media platformları, GA4 ve spend tabanlı kilit mantığı taşınmaz. Kanal availability backend'in linked-account/capability cevabından gelir.
 
@@ -1041,7 +1063,8 @@ SSO/owner/audit route'ları normal navigation'da gizli kalır.
 
 | Route | Sayfa |
 |---|---|
-| `/` | Social Media Settings canonical fallback |
+| `/` | Social Media Overview (Home) |
+| `/overview` | Social Media Overview deep-link |
 | `/facebook` | Facebook workspace |
 | `/instagram` | Instagram workspace |
 | `/tiktok` | TikTok workspace |
@@ -2483,6 +2506,37 @@ provider ve disposable PostgreSQL sertifikasyonunda tam paket `156 passed` sonuc
 production egress, DB, schedule ve activation gate kapalı kaldı. Kanıt:
 `docs/revision6/r13/REVISION6_R13_NATIVE_COLLECTOR_PRODUCER_REPORT.md`. Makine-okunur sözleşme:
 `docs/contracts/social-media-v2-provider-capabilities.json`.
+
+### R14 — Overview surface parity (tamamlandı)
+
+2026-08-09 kullanıcı kararıyla mevcut fakat erişilemeyen V2 Overview bileşenini Accumulate
+Social Media bilgi mimarisiyle gerçek ürün yüzeyine dönüştürme fazıdır:
+
+1. `/overview` gerçek route olur; `/` Home route'u aynı Overview içeriğini render eder ve sidebar
+   Social Media ağacında tek Overview bağlantısı gösterir;
+2. yalnız main layout değiştirilir; mevcut sidebar/topbar/footer tasarımı korunur;
+3. altı canonical KPI ve yedi canonical bölüm exact sıra/başlıklarla render edilir;
+4. Overview mevcut typed `/api/dashboards/overview` ve `/api/insights` read contract'larını
+   tüketir; yeni mutation, provider egress veya demo metric üretilmez;
+5. `views` yalnız Total Impressions görünür aliası olarak kullanılır; Avg. Engagement ve Activity
+   Score formülleri belgelenir; desteklenmeyen Saves `—` kalır;
+6. Cross-Channel tam seçili dönemi azami 12 ardışık bucket ile gösterir; son yedi güne sessizce
+   kırpılmaz;
+7. AI Insights modalı stored insight'ı read-only gösterir ve erişilebilir Dialog davranışlarını
+   kullanır;
+8. component, route, desktop Playwright, Pine Beach local API/browser, typecheck/build ve source
+   guard kanıtları birlikte tamamlanır.
+
+Çıkış kapısı: `/` ve `/overview` Overview açar; altı KPI, yedi bölüm ve üç platform kartı vardır;
+Pine Beach gerçek V2-local verisi görünür; uygulama API/console hatası yoktur; protected kaynak
+projelerin baseline'ı değişmemiştir.
+
+Durum (2026-08-09): tamamlandı. Frontend component/route testleri `28 passed`; desktop
+Playwright paketi `10 passed, 1 project-skip`; Pine Beach local tarayıcı doğrulamasında altı KPI,
+yedi bölüm, üç platform kartı, honest Saves ve stored-insight modalı hatasız doğrulandı. TypeScript
+ve production build geçti. Kanıt:
+`docs/revision6/r14/REVISION6_R14_OVERVIEW_PARITY_REPORT.md`. Bağlayıcı karar:
+`docs/revision6/overrides/overview_surface_2026-08-09.json`.
 
 ### 22.1 Revizyon 6 stop koşulları
 

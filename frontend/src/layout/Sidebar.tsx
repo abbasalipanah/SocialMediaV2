@@ -39,6 +39,7 @@ export const SOCIAL_NAVIGATION_LABELS = [
   "Home",
   "Analytics",
   "Social Media",
+  "Overview",
   ...platformNavigation.map((item) => item.label),
   "Settings",
   "Integrations",
@@ -79,7 +80,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const settingsVisible = capabilities?.permissions.settings_visible === true;
   const integrationsVisible = capabilities?.permissions.integrations_visible === true;
   const tiktokVisible = platformAvailable("tiktok", capabilities);
-  const homePath = tiktokVisible ? "/tiktok" : "/facebook";
+  const homePath = "/";
   const visiblePlatforms = platformNavigation.filter(
     (item) => item.platform !== "tiktok" || tiktokVisible,
   );
@@ -112,6 +113,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </div>
           <div className="sidebar-channel-tree">
             <div className="sidebar-channel-title">Social Media</div>
+            <div className="sidebar-channel-row">
+              <span aria-hidden="true" className="channel-connector" />
+              <NavigationLink icon={PieChart} label="Overview" onClick={onClose} path="/overview" />
+            </div>
             {visiblePlatforms.map(({ icon: Icon, label, path, platform }) => (
               <div className="sidebar-channel-row" key={platform}>
                 <span aria-hidden="true" className="channel-connector" />

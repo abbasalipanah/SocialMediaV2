@@ -1,0 +1,60 @@
+{
+  "decision_id": "overview-surface-2026-08-09",
+  "date": "2026-08-09",
+  "status": "binding",
+  "scope": "social_media_v2_overview_main_content",
+  "overrides": [
+    "SOCIAL_MEDIA_V2_MASTER_PLAN.md §0.0 canonical-source no-Overview restriction",
+    "SOCIAL_MEDIA_V2_MASTER_PLAN.md §6.2 no-new-visible-navigation restriction",
+    "SOCIAL_MEDIA_V2_MASTER_PLAN.md §6.5 root Settings fallback"
+  ],
+  "routes": {
+    "home": "/",
+    "overview": "/overview",
+    "same_workspace": true
+  },
+  "navigation": {
+    "overview_location": "Social Media tree before Facebook",
+    "home_remains_separate": true,
+    "sidebar_topbar_footer_redesign_allowed": false
+  },
+  "readonly_reference": "/home/api/colab_scripts/Accumulate/frontend/components/accumulate/SocialMediaDashboard.tsx",
+  "kpis": [
+    "Total Audience",
+    "Total Reach",
+    "Total Impressions",
+    "Total Interactions",
+    "Avg. Engagement",
+    "Activity Score"
+  ],
+  "sections": [
+    "Audience Growth",
+    "Cross-Channel",
+    "Content Type",
+    "AI Insights",
+    "Action Breakdown",
+    "Top Performing Posts",
+    "Platform Breakdown"
+  ],
+  "platforms": ["facebook", "instagram", "tiktok"],
+  "display_contract": {
+    "total_impressions": "normalized views display alias",
+    "avg_engagement": "interactions / reach",
+    "activity_score": "clamp(round(avg_engagement_percent * 6 + reach_delta_pct * 0.4), 0, 100)",
+    "saves_without_backend_data": "unavailable",
+    "missing_value_policy": "do_not_render_as_zero",
+    "cross_channel_period_policy": "full selected range, at most 12 contiguous aggregate buckets"
+  },
+  "ai_insights": {
+    "source": "stored read-only /api/insights response",
+    "generation_or_mutation_on_open": false,
+    "accessible_dialog_required": true
+  },
+  "runtime_boundaries": {
+    "protected_projects_read_only": true,
+    "production_provider_egress": false,
+    "production_database_write": false,
+    "worker_or_schedule_activation": false
+  },
+  "change_control": "Requires a new explicit user decision."
+}
