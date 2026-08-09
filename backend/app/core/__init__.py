@@ -2,7 +2,9 @@
 
 from .boundary import Boundary, mark_boundary
 from .config import (
+    AI_SUMMARY_OPENROUTER_BASE_URL,
     RUNTIME_MODE_SEQUENCE,
+    AiSummaryConfig,
     AppSettings,
     ConfigurationError,
     RuntimeMode,
@@ -11,6 +13,8 @@ from .config import (
 from .write_policy import WritePolicy
 
 __all__ = [
+    "AI_SUMMARY_OPENROUTER_BASE_URL",
+    "AiSummaryConfig",
     "AppSettings",
     "Boundary",
     "ConfigurationError",

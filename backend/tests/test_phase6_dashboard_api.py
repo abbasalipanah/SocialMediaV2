@@ -12,6 +12,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.api.auth import COOKIE_NAME
+from app.application.ports import AiSummaryLimitStatus
 from app.application.ports.reporting import (
     ReportingAccount,
     ReportingComment,
@@ -34,6 +35,55 @@ from app.domain.reporting import DataStatus, ReportingRange
 from app.main import create_app
 
 NOW = datetime(2026, 7, 14, 12, tzinfo=UTC)
+
+
+class FakeAiSummary:
+    provider_configured = True
+
+    def __init__(self) -> None:
+        self.generated: list[tuple[str, str, str]] = []
+
+    def limit_status(self, *, brand_id: str) -> AiSummaryLimitStatus:
+        return AiSummaryLimitStatus(
+            provider_configured=True,
+            can_generate=True,
+            reason="available",
+            weekly_limit=1,
+            used=0,
+            remaining=1,
+            window_days=7,
+            last_generated_at=None,
+            next_available_at=None,
+            generation_in_progress=False,
+        )
+
+    async def generate(
+        self,
+        *,
+        brand_id: str,
+        user_sub: str,
+        range_key: str,
+        start_on=None,
+        end_on=None,
+    ) -> ReportingInsight:
+        del start_on, end_on
+        self.generated.append((brand_id, user_sub, range_key))
+        return ReportingInsight(
+            2,
+            brand_id,
+            "completed",
+            date(2026, 7, 1),
+            date(2026, 7, 30),
+            "Generated summary",
+            "[]",
+            NOW,
+            NOW,
+            connector_analysis="[]",
+            anomalies="[]",
+            platform_evaluations="[]",
+            model="test-model",
+            created_by_user_sub=user_sub,
+        )
 
 
 class MemoryAuthority:
@@ -637,6 +687,7 @@ def test_phase6_openapi_publishes_typed_response_contracts() -> None:
         "/api/settings/tiktok/connection": "TikTokConnectionResponse",
         "/api/settings/tiktok/activation-readiness": "TikTokActivationReadinessResponse",
         "/api/insights": "InsightsResponse",
+        "/api/insights/limit": "AiSummaryLimitResponse",
         "/api/operations/readiness": "OperationsReadinessResponse",
         "/api/workspace/capabilities": "WorkspaceCapabilitiesResponse",
     }
@@ -645,6 +696,10 @@ def test_phase6_openapi_publishes_typed_response_contracts() -> None:
             "application/json"
         ]["schema"]
         assert response_schema == {"$ref": f"#/components/schemas/{model}"}
+    generation_schema = schema["paths"]["/api/insights/generate"]["post"]["responses"][
+        "200"
+    ]["content"]["application/json"]["schema"]
+    assert generation_schema == {"$ref": "#/components/schemas/ReportingInsight"}
     components = schema["components"]["schemas"]
     assert {"semantic_type", "data_status"}.issubset(components["DashboardMetric"]["required"])
     assert {"methodology", "availability_reason"}.issubset(
@@ -774,6 +829,64 @@ async def test_phase6_routes_are_scoped_read_only_and_honest(phase6_fixture) -> 
 
     assert authority.sessions == before[0]
     assert authority.projections == before[1]
+
+
+@pytest.mark.asyncio
+async def test_ai_summary_generation_requires_exact_viewer_operator_authority(
+    phase6_fixture,
+) -> None:
+    authority, reporting, media_root = phase6_fixture
+    runtime = FakeAiSummary()
+    app = create_app(authority, reporting, media_root, ai_summary=runtime)
+    session = authority.sessions[sha256_text(authority.raw_session)]
+    cookies = {COOKIE_NAME: authority.raw_session}
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test", cookies=cookies
+    ) as client:
+        denied = await client.get("/api/insights/limit", params={"brand_id": "101"})
+        assert denied.status_code == 403
+
+        session.update(
+            {
+                "role": "viewer",
+                "app_role": "operator",
+                "source_system": "accumulate",
+                "access_mode": "read",
+            }
+        )
+        session["brand_scope"]["brands"][1].update(
+            {"role": "viewer", "access_mode": "read"}
+        )
+        authority.projections["v2:brand-access:user-1:101"].update(
+            {"role": "viewer", "access_mode": "read"}
+        )
+
+        limit = await client.get("/api/insights/limit", params={"brand_id": "101"})
+        assert limit.status_code == 200
+        assert limit.json()["weekly_limit"] == 1
+        assert limit.json()["window_days"] == 7
+
+        missing_origin = await client.post(
+            "/api/insights/generate",
+            params={"brand_id": "101", "range": "last_30_days"},
+        )
+        assert missing_origin.status_code == 403
+        generated = await client.post(
+            "/api/insights/generate",
+            params={"brand_id": "101", "range": "last_30_days"},
+            headers={"Origin": "http://test"},
+        )
+        assert generated.status_code == 200
+        assert generated.json()["summary"] == "Generated summary"
+        assert runtime.generated == [("101", "user-1", "last_30_days")]
+
+        assert (
+            await client.get("/api/insights/limit", params={"brand_id": "102"})
+        ).status_code == 403
+        session["app_role"] = "admin"
+        assert (
+            await client.get("/api/insights/limit", params={"brand_id": "101"})
+        ).status_code == 403
 
 
 @pytest.mark.asyncio

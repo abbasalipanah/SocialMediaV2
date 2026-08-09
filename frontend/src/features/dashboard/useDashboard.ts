@@ -1,8 +1,11 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   apiQuery,
+  apiMutation,
+  aiSummaryLimitSchema,
   insightsSchema,
+  insightSchema,
   overviewDashboardSchema,
   platformDashboardSchema,
   queryString,
@@ -72,5 +75,42 @@ export function useInsights() {
         insightsSchema,
         signal,
       ),
+  });
+}
+
+export function useAiSummaryLimit(enabled: boolean) {
+  const { selectedBrandId, rollup } = useBrandScope();
+  return useQuery({
+    enabled: enabled && !rollup,
+    queryKey: ["insights", "limit", selectedBrandId],
+    queryFn: ({ signal }) =>
+      apiQuery(
+        `/api/insights/limit${queryString({ brand_id: selectedBrandId, rollup })}`,
+        aiSummaryLimitSchema,
+        signal,
+      ),
+  });
+}
+
+export function useGenerateAiSummary() {
+  const { selectedBrandId, rollup } = useBrandScope();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (range: RangeKey) =>
+      apiMutation(
+        `/api/insights/generate${queryString({
+          brand_id: selectedBrandId,
+          rollup,
+          range,
+        })}`,
+        insightSchema,
+        { method: "POST" },
+      ),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["insights", selectedBrandId, rollup] }),
+        queryClient.invalidateQueries({ queryKey: ["insights", "limit", selectedBrandId] }),
+      ]);
+    },
   });
 }

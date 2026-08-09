@@ -7,7 +7,8 @@
     "SOCIAL_MEDIA_V2_MASTER_PLAN.md §0.0 canonical-source no-Overview restriction",
     "SOCIAL_MEDIA_V2_MASTER_PLAN.md §6.2 no-new-visible-navigation restriction",
     "SOCIAL_MEDIA_V2_MASTER_PLAN.md §6.5 root Settings fallback",
-    "Earlier R14 seven-section Accumulate dashboard layout"
+    "Earlier R14 seven-section Accumulate dashboard layout",
+    "Earlier R14 stored-read-only AI opportunities restriction"
   ],
   "routes": {
     "home": "/",
@@ -39,7 +40,7 @@
     "Performance Trend",
     "Content Snapshot",
     "Top Performing Content",
-    "Alerts & Opportunities",
+    "AI Summary",
     "Platform Summary"
   ],
   "platforms": ["instagram", "facebook", "tiktok"],
@@ -54,14 +55,34 @@
     "trend_period_policy": "full selected backend series",
     "content_type_policy": "top three content types plus an exact aggregated Other row when more than four types exist"
   },
-  "ai_insights": {
-    "source": "stored read-only /api/insights response",
-    "alerts_source": "stored action_recommendations only",
+  "ai_summary": {
+    "history_source": "Brand-scoped completed /api/insights response",
     "stored_period_visible": true,
     "generation_or_mutation_on_open": false,
     "accessible_dialog_required": true,
-    "local_snapshot_allowed_fields": ["strategic_summary", "action_recommendations"],
-    "excluded_fields": ["raw_metrics_snapshot", "llm/provider configuration", "connector_analysis", "anomalies", "platform_evaluations"]
+    "generation_authority": {
+      "source_system": "accumulate",
+      "role": "viewer",
+      "app_role": "operator",
+      "scope": "exact session Brand, non-rollup",
+      "same_origin_post": true
+    },
+    "weekly_limit": {
+      "scope": "Brand-wide",
+      "window": "rolling 7x24 hours",
+      "successful_completions": 1,
+      "pending_blocks_concurrent_generation": true,
+      "failed_attempt_consumes_limit": false,
+      "backend_authoritative": true
+    },
+    "stored_output_fields": ["strategic_summary", "connector_analysis", "anomalies", "action_recommendations", "platform_evaluations", "llm_model"],
+    "excluded_fields": ["raw_metrics_snapshot", "provider secret/configuration", "user comments/messages", "permalinks"],
+    "provider_configuration": "independent V2-owned configuration; disabled until a V2 key is supplied"
+  },
+  "line_weights": {
+    "mini_sparkline": 1.15,
+    "performance_trend": 1.35,
+    "chart_grid": 0.55
   },
   "runtime_boundaries": {
     "protected_projects_read_only": true,

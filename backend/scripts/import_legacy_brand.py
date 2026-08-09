@@ -431,7 +431,9 @@ def _source_snapshot(connection: Any, brand_slug: str) -> dict[str, Any]:
         for row in connection.execute(
             text(
                 """SELECT id, brand_id, status, date_from, date_to,
-                          strategic_summary, action_recommendations,
+                          strategic_summary, connector_analysis, anomalies,
+                          action_recommendations, platform_evaluations,
+                          llm_model, error_message, created_by_user_sub,
                           created_at, completed_at
                    FROM brand_ai_insights
                    WHERE brand_id=:brand_id
@@ -674,10 +676,14 @@ def _replace_target(connection: Any, snapshot: dict[str, Any]) -> dict[str, int]
             text(
                 """INSERT INTO brand_ai_insights
                           (id, brand_id, status, date_from, date_to,
-                           strategic_summary, action_recommendations,
+                           strategic_summary, connector_analysis, anomalies,
+                           action_recommendations, platform_evaluations,
+                           llm_model, error_message, created_by_user_sub,
                            created_at, completed_at)
                    VALUES (:id, :brand_id, :status, :date_from, :date_to,
-                           :strategic_summary, :action_recommendations,
+                           :strategic_summary, :connector_analysis, :anomalies,
+                           :action_recommendations, :platform_evaluations,
+                           :llm_model, :error_message, :created_by_user_sub,
                            :created_at, :completed_at)"""
             ),
             snapshot["insights"],

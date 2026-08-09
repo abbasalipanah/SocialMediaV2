@@ -48,6 +48,9 @@ def test_safe_environment_contract_is_complete() -> None:
         "SOCIAL_META_REDIRECT_URI=https://social.theaccumulate.com/api/social/meta/oauth/callback",
         "SOCIAL_META_OAUTH_STATE_SECRET=",
         "SOCIAL_META_ACTIVATION_GATE_ENABLED=false",
+        "SOCIAL_AI_SUMMARY_ENABLED=false",
+        "SOCIAL_AI_OPENROUTER_API_KEY=",
+        "SOCIAL_AI_OPENROUTER_BASE_URL=https://openrouter.ai/api/v1",
     }
     assert required_lines.issubset(set(env.splitlines()))
 

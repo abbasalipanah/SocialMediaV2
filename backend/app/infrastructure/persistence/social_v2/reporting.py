@@ -430,6 +430,8 @@ class SocialReportingStore:
         statement = _expanded(
             f"""SELECT id, CAST(brand_id AS text) AS brand_id, status,
                        date_from, date_to, strategic_summary, action_recommendations,
+                       connector_analysis, anomalies, platform_evaluations,
+                       llm_model, error_message, created_by_user_sub,
                        created_at, completed_at
                 FROM brand_ai_insights
                 WHERE CAST(brand_id AS text) IN :brand_ids
@@ -451,6 +453,12 @@ class SocialReportingStore:
                     date_to=row["date_to"],
                     summary=row["strategic_summary"],
                     recommendations=row["action_recommendations"],
+                    connector_analysis=row["connector_analysis"],
+                    anomalies=row["anomalies"],
+                    platform_evaluations=row["platform_evaluations"],
+                    model=row["llm_model"],
+                    error_message=row["error_message"],
+                    created_by_user_sub=row["created_by_user_sub"],
                     created_at=row["created_at"],
                     completed_at=row["completed_at"],
                 )

@@ -25,13 +25,13 @@ test("Overview matches the approved executive information architecture with thre
     "Performance Trend",
     "Content Snapshot",
     "Top Performing Content",
-    "Alerts & Opportunities",
+    "AI Summary",
   ]) {
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
   }
 
-  await expect(page.getByText("No AI opportunities were stored for this Brand and date range.")).toBeVisible();
-  await expect(page.getByRole("button", { name: /View all/ })).toHaveCount(0);
+  await expect(page.getByText("No AI Summary has been generated for this Brand yet.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open", exact: true })).toBeVisible();
 
   const sidebar = page.getByRole("complementary", { name: "Primary navigation" });
   await expect(sidebar.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");

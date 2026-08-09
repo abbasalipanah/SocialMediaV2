@@ -2,16 +2,16 @@ import {
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
+  BrainCircuit,
   CalendarDays,
   Eye,
   Facebook,
   Heart,
   Instagram,
-  Lightbulb,
   MessageCircle,
+  RefreshCw,
   Sparkles,
   Target,
-  TrendingUp,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -21,6 +21,7 @@ import type {
   DashboardContent,
   DashboardMetric,
   DashboardSeries,
+  AiSummaryLimit,
   MetricId,
   OverviewDashboard,
   Platform,
@@ -114,8 +115,8 @@ function MiniSparkline({ points, color }: { points: SeriesPoint[]; color: string
   const coordinates = linePoints(values, minimum, maximum, 180, 44);
   return (
     <svg aria-hidden="true" className="overview-mini-sparkline" preserveAspectRatio="none" viewBox="0 0 180 44">
-      <polyline fill="none" points={coordinates} stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" />
-      {values.length === 1 && <circle cx="90" cy="22" fill={color} r="2.5" />}
+      <polyline fill="none" points={coordinates} stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.15" />
+      {values.length === 1 && <circle cx="90" cy="22" fill={color} r="1.8" />}
     </svg>
   );
 }
@@ -366,7 +367,7 @@ function PerformanceTrend({ data }: { data: OverviewDashboard }) {
                   stroke={line.color}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth="2.5"
+                  strokeWidth="1.35"
                 />
               ))}
             </svg>
@@ -474,62 +475,138 @@ function splitRecommendations(raw: string | null): string[] {
   return trimmed.split(/(?<=[.!?])\s+/).map((item) => item.trim()).filter(Boolean);
 }
 
-function alertTitle(recommendation: string): string {
-  const separator = recommendation.match(/^(.{4,58}?)(?::| — | - )\s+(.+)$/);
-  if (separator?.[1]) return separator[1].replace(/[.!?]+$/, "");
-  const words = recommendation.replace(/[.!?]+$/, "").split(/\s+/);
-  return words.length <= 7 ? words.join(" ") : `${words.slice(0, 7).join(" ")}…`;
+function structuredRows(raw: string | null): Record<string, unknown>[] {
+  if (!raw?.trim()) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+      : [];
+  } catch {
+    return [];
+  }
 }
 
-function alertDescription(recommendation: string): string {
-  const separator = recommendation.match(/^(.{4,58}?)(?::| — | - )\s+(.+)$/);
-  return separator?.[2] || recommendation;
+function textField(row: Record<string, unknown>, key: string): string {
+  const item = row[key];
+  return typeof item === "string" ? item : "";
 }
 
-function insightRecommendations(insights: ReportingInsight[]) {
-  const seen = new Set<string>();
-  return insights.flatMap((insight) => splitRecommendations(insight.recommendations).map((text) => ({ insight, text })))
-    .filter((item) => {
-      const key = item.text.toLocaleLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+function textList(row: Record<string, unknown>, key: string): string[] {
+  const item = row[key];
+  return Array.isArray(item) ? item.filter((value): value is string => typeof value === "string") : [];
 }
 
-function InsightDialog({
+function summaryDate(insight: ReportingInsight): string {
+  const raw = insight.completed_at ?? insight.created_at;
+  return formatSummaryTimestamp(raw);
+}
+
+function formatSummaryTimestamp(raw: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(raw));
+}
+
+function limitMessage(limit: AiSummaryLimit | undefined): string {
+  if (!limit) return "Checking weekly availability…";
+  if (limit.reason === "provider_not_configured") return "The independent V2 AI provider is not configured.";
+  if (limit.reason === "generation_in_progress") return "A new summary is being generated.";
+  if (limit.reason === "weekly_limit_reached" && limit.next_available_at) {
+    return `Weekly allowance used · available again ${formatSummaryTimestamp(limit.next_available_at)}.`;
+  }
+  return "One new summary is available in the current 7-day window.";
+}
+
+function AiSummaryDialog({
   brandName,
+  canGenerate,
   error,
+  generationError,
+  generating,
   insights,
+  limit,
+  limitLoading,
   loading,
   onClose,
+  onGenerate,
   open,
 }: {
   brandName: string;
+  canGenerate: boolean;
   error: boolean;
+  generationError: Error | null;
+  generating: boolean;
   insights: ReportingInsight[];
+  limit: AiSummaryLimit | undefined;
+  limitLoading: boolean;
   loading: boolean;
   onClose: () => void;
+  onGenerate: () => Promise<ReportingInsight>;
   open: boolean;
 }) {
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const completedInsights = insights.filter((item) => item.status === "completed");
+  const selected = completedInsights.find((item) => item.insight_id === selectedId) ?? completedInsights[0];
+  const connectorAnalysis = structuredRows(selected?.connector_analysis ?? null);
+  const anomalies = structuredRows(selected?.anomalies ?? null);
+  const actions = structuredRows(selected?.recommendations ?? null);
+  const evaluations = structuredRows(selected?.platform_evaluations ?? null);
+  const legacyRecommendations = actions.length === 0 ? splitRecommendations(selected?.recommendations ?? null) : [];
+  const generate = async () => {
+    try {
+      const created = await onGenerate();
+      setSelectedId(created.insight_id);
+    } catch {
+      // The mutation error is rendered inside the dialog.
+    }
+  };
   return (
-    <Dialog description={`${brandName} · stored reports only`} onClose={onClose} open={open} title="AI Insights">
-      <div className="social-insight-dialog-content">
+    <Dialog description={`${brandName} · saved summary history`} drawer onClose={onClose} open={open} title="AI Summary">
+      <div className="social-insight-dialog-content ai-summary-dialog">
+        {canGenerate && (
+          <section className="ai-summary-generation">
+            <div><strong>New AI Summary</strong><span>{limitLoading ? "Checking weekly availability…" : limitMessage(limit)}</span></div>
+            <button disabled={generating || !limit?.can_generate} onClick={() => void generate()} type="button">
+              <RefreshCw className={generating ? "spin" : ""} size={15} />
+              {generating ? "Generating…" : "Generate summary"}
+            </button>
+            {generationError && <p>{humanize(generationError.message)}</p>}
+          </section>
+        )}
         {loading ? <div className="social-insight-dialog-state">Loading stored insights…</div> : null}
         {!loading && error ? <div className="social-insight-dialog-state error">Stored insights could not be loaded.</div> : null}
-        {!loading && !error && insights.length === 0 ? <div className="social-insight-dialog-state">No generated insight exists for this Brand and date range.</div> : null}
-        {!loading && !error && insights.length > 0 ? (
-          <div className="overview-insight-dialog-list">
-            {insights.map((insight) => (
-              <article key={insight.insight_id}>
-                <div><span>{humanize(insight.status)}</span><small>{insight.date_from || "—"} – {insight.date_to || "—"}</small></div>
-                <h3>Strategic Summary</h3><p>{insight.summary || "No summary was stored for this reporting period."}</p>
-                <h3>Recommendations</h3>
-                {splitRecommendations(insight.recommendations).length > 0
-                  ? <ul>{splitRecommendations(insight.recommendations).map((item) => <li key={item}>{item}</li>)}</ul>
-                  : <p>No recommendations were stored for this reporting period.</p>}
+        {!loading && !error && completedInsights.length === 0 ? <div className="social-insight-dialog-state">No completed AI Summary has been generated for this Brand yet.</div> : null}
+        {!loading && !error && completedInsights.length > 0 ? (
+          <div className="ai-summary-layout">
+            <aside aria-label="AI Summary history" className="ai-summary-history">
+              <h3>Previous summaries</h3>
+              {completedInsights.map((insight) => (
+                <button className={selected?.insight_id === insight.insight_id ? "active" : ""} key={insight.insight_id} onClick={() => setSelectedId(insight.insight_id)} type="button">
+                  <strong>{summaryDate(insight)}</strong>
+                  <span>{insight.date_from || "—"} – {insight.date_to || "—"}</span>
+                  <em>{humanize(insight.status)}</em>
+                </button>
+              ))}
+            </aside>
+            {selected && (
+              <article className="ai-summary-detail">
+                <header><span>{humanize(selected.status)}</span><small>{selected.date_from || "—"} – {selected.date_to || "—"}</small></header>
+                <h3>Strategic Summary</h3>
+                <p>{selected.summary || "No strategic summary was stored for this reporting period."}</p>
+                {connectorAnalysis.length > 0 && <><h3>Channel Analysis</h3><div className="ai-summary-section-grid">{connectorAnalysis.map((row, index) => <section key={`${textField(row, "platform")}-${index}`}><strong>{textField(row, "platform") || "Channel"}</strong><p>{textField(row, "summary")}</p></section>)}</div></>}
+                {anomalies.length > 0 && <><h3>Anomalies</h3><div className="ai-summary-section-grid">{anomalies.map((row, index) => <section key={`${textField(row, "metric")}-${index}`}><strong>{textField(row, "platform")} · {humanize(textField(row, "metric"))}</strong><p>{textField(row, "description")}</p><em>{humanize(textField(row, "severity"))}</em></section>)}</div></>}
+                <h3>Recommended Actions</h3>
+                {actions.length > 0 ? <div className="ai-summary-actions">{actions.map((row, index) => <section key={`${textField(row, "title")}-${index}`}><span>{index + 1}</span><div><strong>{textField(row, "title")}</strong><p>{textField(row, "description")}</p><small>{humanize(textField(row, "priority"))} · {humanize(textField(row, "category"))}</small></div></section>)}</div>
+                  : legacyRecommendations.length > 0 ? <ul>{legacyRecommendations.map((item) => <li key={item}>{item}</li>)}</ul>
+                    : <p>No recommendations were stored for this reporting period.</p>}
+                {evaluations.length > 0 && <><h3>Platform Evaluations</h3><div className="ai-summary-evaluations">{evaluations.map((row, index) => <section key={`${textField(row, "platform")}-${index}`}><header><strong>{textField(row, "platform")}</strong><span>{String(row.performance_score ?? "—")}/100 · {humanize(textField(row, "trend"))}</span></header><p><b>Strengths:</b> {textList(row, "strengths").join(" · ") || "—"}</p><p><b>Weaknesses:</b> {textList(row, "weaknesses").join(" · ") || "—"}</p></section>)}</div></>}
+                <footer>Generated {summaryDate(selected)}{selected.model ? ` · ${selected.model}` : ""}</footer>
               </article>
-            ))}
+            )}
           </div>
         ) : null}
       </div>
@@ -537,7 +614,7 @@ function InsightDialog({
   );
 }
 
-function AlertsAndOpportunities({
+function AiSummaryCard({
   insights,
   loading,
   error,
@@ -548,29 +625,23 @@ function AlertsAndOpportunities({
   error: boolean;
   onOpen: () => void;
 }) {
-  const recommendations = insightRecommendations(insights).slice(0, 3);
-  const displayedInsight = recommendations[0]?.insight ?? insights[0];
-  const icons = [Lightbulb, TrendingUp, Users];
+  const displayedInsight = insights.find((item) => item.status === "completed" && item.summary) ?? insights[0];
+  const actions = structuredRows(displayedInsight?.recommendations ?? null).slice(0, 2);
   return (
-    <article className="overview-card overview-alerts-card">
+    <article className="overview-card overview-alerts-card overview-ai-summary-card">
       <div className="overview-card-title">
-        <div><h2>Alerts &amp; Opportunities</h2><p><Sparkles size={11} />Stored AI insights{displayedInsight?.date_to ? ` · through ${formatDateOnly(displayedInsight.date_to)}` : ""}</p></div>
-        {insights.length > 0 && <button onClick={onOpen} type="button">View all <ArrowRight size={13} /></button>}
+        <div><h2><BrainCircuit size={15} />AI Summary</h2><p>Saved analysis{displayedInsight?.date_to ? ` · through ${formatDateOnly(displayedInsight.date_to)}` : ""}</p></div>
+        <button onClick={onOpen} type="button">Open <ArrowRight size={13} /></button>
       </div>
-      <div className="overview-alert-list">
-        {loading && <p className="overview-empty-copy">Loading stored AI opportunities…</p>}
-        {!loading && error && <p className="overview-empty-copy error">Stored AI opportunities are temporarily unavailable.</p>}
-        {!loading && !error && recommendations.length === 0 && <p className="overview-empty-copy">No AI opportunities were stored for this Brand and date range.</p>}
-        {!loading && !error && recommendations.map((recommendation, index) => {
-          const Icon = icons[index] ?? Lightbulb;
-          return (
-            <button key={`${recommendation.insight.insight_id}-${recommendation.text}`} onClick={onOpen} type="button">
-              <span className={`overview-alert-icon alert-tone-${index}`}><Icon size={17} /></span>
-              <span><strong>{alertTitle(recommendation.text)}</strong><small>{alertDescription(recommendation.text)}</small></span>
-              <ArrowRight size={15} />
-            </button>
-          );
-        })}
+      <div className="overview-ai-summary-body">
+        {loading && <p className="overview-empty-copy">Loading saved AI Summary…</p>}
+        {!loading && error && <p className="overview-empty-copy error">AI Summary history is temporarily unavailable.</p>}
+        {!loading && !error && !displayedInsight && <p className="overview-empty-copy">No AI Summary has been generated for this Brand yet.</p>}
+        {!loading && !error && displayedInsight && <>
+          <div className="overview-ai-summary-meta"><span>{humanize(displayedInsight.status)}</span><small>{summaryDate(displayedInsight)}</small></div>
+          <p>{displayedInsight.summary || "No strategic summary was stored for this reporting period."}</p>
+          {actions.length > 0 && <ul>{actions.map((row, index) => <li key={`${textField(row, "title")}-${index}`}>{textField(row, "title")}</li>)}</ul>}
+        </>}
       </div>
     </article>
   );
@@ -606,6 +677,12 @@ export function AccumulateSocialOverview({
   insights,
   insightsLoading,
   insightsError,
+  canGenerateAiSummary = false,
+  aiSummaryLimit,
+  aiSummaryLimitLoading = false,
+  aiSummaryGenerating = false,
+  aiSummaryGenerationError = null,
+  onGenerateAiSummary,
 }: {
   data: OverviewDashboard;
   range: RangeKey;
@@ -614,6 +691,12 @@ export function AccumulateSocialOverview({
   insights: ReportingInsight[];
   insightsLoading: boolean;
   insightsError: boolean;
+  canGenerateAiSummary?: boolean;
+  aiSummaryLimit?: AiSummaryLimit;
+  aiSummaryLimitLoading?: boolean;
+  aiSummaryGenerating?: boolean;
+  aiSummaryGenerationError?: Error | null;
+  onGenerateAiSummary?: () => Promise<ReportingInsight>;
 }) {
   const [insightOpen, setInsightOpen] = useState(false);
   const audienceMetric = metric(data.metrics, "followers");
@@ -686,11 +769,24 @@ export function AccumulateSocialOverview({
       <section className="overview-content-grid">
         <ContentSnapshot content={data.content} />
         <TopContent data={data} />
-        <AlertsAndOpportunities error={insightsError} insights={insights} loading={insightsLoading} onOpen={() => setInsightOpen(true)} />
+        <AiSummaryCard error={insightsError} insights={insights} loading={insightsLoading} onOpen={() => setInsightOpen(true)} />
       </section>
 
       <PlatformSummary data={data} />
-      <InsightDialog brandName={brandName} error={insightsError} insights={insights} loading={insightsLoading} onClose={() => setInsightOpen(false)} open={insightOpen} />
+      <AiSummaryDialog
+        brandName={brandName}
+        canGenerate={canGenerateAiSummary}
+        error={insightsError}
+        generationError={aiSummaryGenerationError}
+        generating={aiSummaryGenerating}
+        insights={insights}
+        limit={aiSummaryLimit}
+        limitLoading={aiSummaryLimitLoading}
+        loading={insightsLoading}
+        onClose={() => setInsightOpen(false)}
+        onGenerate={onGenerateAiSummary ?? (() => Promise.reject(new Error("ai_summary_operator_required")))}
+        open={insightOpen}
+      />
     </main>
   );
 }

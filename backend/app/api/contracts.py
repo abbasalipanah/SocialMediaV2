@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
+from app.application.ports.ai_summary import AiSummaryLimitStatus
 from app.application.ports.reporting import (
     ReportingAccount,
     ReportingConnection,
@@ -184,6 +185,24 @@ class MetaLinkResponse:
 class InsightsResponse:
     meta: BrandScope
     items: tuple[ReportingInsight, ...]
+
+
+@dataclass(frozen=True)
+class AiSummaryLimitResponse:
+    provider_configured: bool
+    can_generate: bool
+    reason: str
+    weekly_limit: int
+    used: int
+    remaining: int
+    window_days: int
+    last_generated_at: datetime | None
+    next_available_at: datetime | None
+    generation_in_progress: bool
+
+    @classmethod
+    def from_status(cls, status: AiSummaryLimitStatus) -> AiSummaryLimitResponse:
+        return cls(**status.__dict__)
 
 
 @dataclass(frozen=True)

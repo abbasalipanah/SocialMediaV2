@@ -2,6 +2,14 @@
 
 from typing import Protocol
 
+from .ai_summary import (
+    AiSummaryError,
+    AiSummaryLimitStatus,
+    AiSummaryOutput,
+    AiSummaryProvider,
+    AiSummaryRepository,
+    AiSummaryService,
+)
 from .meta_activation import (
     MetaActivationError,
     MetaActivationProvider,
@@ -40,6 +48,12 @@ class AuthorityStore(SessionStore, Protocol):
 
 
 __all__ = [
+    "AiSummaryError",
+    "AiSummaryLimitStatus",
+    "AiSummaryOutput",
+    "AiSummaryProvider",
+    "AiSummaryRepository",
+    "AiSummaryService",
     "AuthorityStore",
     "ActivationAuthority",
     "ActivationContext",

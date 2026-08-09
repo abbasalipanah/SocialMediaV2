@@ -72,16 +72,24 @@ GET /api/integrations/status/social-accounts
 GET /api/integrations/status/connections
 GET /api/integrations/status/sync-jobs
 GET /api/insights
+GET /api/insights/limit
+POST /api/insights/generate
 GET /api/operations/readiness
 GET /api/workspace/capabilities
 ```
 
 Yalnız stored data okunur. GET route'ları setup ensure/recalculate, token refresh, provider fetch,
 media persistence, job enqueue, commit veya upsert yapamaz. Audit store bu fazda yapılandırılmamışsa
-boş ama dürüst `unavailable` cevabı döner. Stored AI insight okunur; GET LLM generation başlatmaz.
+boş ama dürüst `unavailable` cevabı döner. Stored AI Summary okunur; GET LLM generation başlatmaz.
 Connection DTO token/credential/source URL içermez.
 Integrations status endpoint'leri stored veriyi Settings yetkisini genişletmeden okur;
 Viewer/Operator hiçbir `/api/settings/*` endpoint'ine erişemez.
+
+`POST /api/insights/generate` yalnız Accumulate kaynaklı exact `viewer` + signed
+`app_role=operator`, exact session Brand, non-rollup ve same-origin istek kabul eder. Backend,
+Brand başına rolling 7x24 saatte bir completed summary uygular; active pending concurrent isteği
+engeller ve failed deneme hakkı tüketmez. Provider config/secret V2'ye aittir; provider kapalıysa
+geçmiş okunmaya devam eder fakat POST `provider_not_configured` ile kapanır.
 
 Workspace capability cevabındaki her platform kaydı `linked_account_count` ve
 `navigation_available` taşır. Navigation availability, seçili backend scope'unda stored linked

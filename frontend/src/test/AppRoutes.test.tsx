@@ -273,7 +273,7 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-function mockApi(options: { authenticated?: boolean; integrationsVisible?: boolean; settingsVisible?: boolean } = {}) {
+function mockApi(options: { authenticated?: boolean; integrationsVisible?: boolean; operator?: boolean; settingsVisible?: boolean } = {}) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     if (url.includes("/api/auth/me")) {
@@ -281,6 +281,7 @@ function mockApi(options: { authenticated?: boolean; integrationsVisible?: boole
         ? json({ detail: "session_invalid" }, 401)
         : json({
           ...auth,
+          ...(options.operator ? { role: "viewer", app_role: "operator", access_mode: "read" } : {}),
           settings_visible: options.settingsVisible ?? true,
           integrations_visible: options.integrationsVisible ?? true,
         });
@@ -298,6 +299,35 @@ function mockApi(options: { authenticated?: boolean; integrationsVisible?: boole
       return json({ ...dashboard, meta: { ...dashboard.meta, dashboard_id: platform, platform } });
     }
     if (url.includes("/api/platforms/facebook/accounts")) return json(accounts);
+    if (url.includes("/api/insights/limit")) return json({
+      provider_configured: true,
+      can_generate: true,
+      reason: "available",
+      weekly_limit: 1,
+      used: 0,
+      remaining: 1,
+      window_days: 7,
+      last_generated_at: null,
+      next_available_at: null,
+      generation_in_progress: false,
+    });
+    if (url.includes("/api/insights/generate") && init?.method === "POST") return json({
+      insight_id: 9,
+      brand_id: "child-1",
+      status: "completed",
+      date_from: "2026-06-15",
+      date_to: "2026-07-14",
+      summary: "New generated summary.",
+      recommendations: "[]",
+      connector_analysis: "[]",
+      anomalies: "[]",
+      platform_evaluations: "[]",
+      model: "test-model",
+      error_message: null,
+      created_by_user_sub: "user-1",
+      created_at: "2026-07-14T12:00:00Z",
+      completed_at: "2026-07-14T12:00:01Z",
+    });
     if (url.includes("/api/insights")) return json({ meta: settingsMeta, items: [] });
     if (url.includes("/api/settings/social-accounts")) return json(socialAccounts);
     if (url.includes("/api/settings/brand-links")) return json(brandLinks);
@@ -446,6 +476,21 @@ describe("Phase 7 application shell", () => {
     renderApp("/not-a-dashboard-route");
     expect(await screen.findByRole("heading", { name: "Social Media Overview" })).toBeInTheDocument();
     expect(screen.getByRole("complementary", { name: "Primary navigation" })).toBeInTheDocument();
+  });
+
+  it("shows weekly AI Summary generation only to the Accumulate viewer operator", async () => {
+    window.localStorage.clear();
+    const request = mockApi({ operator: true });
+    renderApp("/", request);
+    expect(await screen.findByRole("heading", { name: "AI Summary" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^Open$/ }));
+    expect(await screen.findByRole("button", { name: "Generate summary" })).toBeEnabled();
+    expect(screen.getByText(/One new summary is available/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Generate summary" }));
+    await waitFor(() => expect(request).toHaveBeenCalledWith(
+      expect.stringContaining("/api/insights/generate"),
+      expect.objectContaining({ method: "POST" }),
+    ));
   });
 
   it("keeps one footer Settings link and renders the Performance-style workspace in the shell", async () => {

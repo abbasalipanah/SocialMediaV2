@@ -1,5 +1,9 @@
 # Revision 6 / R14 — Executive Overview and stored AI opportunities report
 
+> Historical record: the stored-only AI boundary in this report was superseded by the user's
+> later explicit AI Summary decision. The current binding contract is recorded in
+> `docs/revision6/overrides/overview_surface_2026-08-09.json` and the R15 report.
+
 Date: `2026-08-09`
 
 ## Outcome

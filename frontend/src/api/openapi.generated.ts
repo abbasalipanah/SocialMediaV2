@@ -140,6 +140,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/insights/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate Insight */
+        post: operations["generate_insight_api_insights_generate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/insights/limit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Insight Limit */
+        get: operations["insight_limit_api_insights_limit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/integrations/meta/accounts/link": {
         parameters: {
             query?: never;
@@ -621,6 +655,29 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AiSummaryLimitResponse */
+        AiSummaryLimitResponse: {
+            /** Can Generate */
+            can_generate: boolean;
+            /** Generation In Progress */
+            generation_in_progress: boolean;
+            /** Last Generated At */
+            last_generated_at: string | null;
+            /** Next Available At */
+            next_available_at: string | null;
+            /** Provider Configured */
+            provider_configured: boolean;
+            /** Reason */
+            reason: string;
+            /** Remaining */
+            remaining: number;
+            /** Used */
+            used: number;
+            /** Weekly Limit */
+            weekly_limit: number;
+            /** Window Days */
+            window_days: number;
+        };
         /** AuditResponse */
         AuditResponse: {
             /** Items */
@@ -1289,21 +1346,33 @@ export interface components {
         };
         /** ReportingInsight */
         ReportingInsight: {
+            /** Anomalies */
+            anomalies?: string | null;
             /** Brand Id */
             brand_id: string;
             /** Completed At */
             completed_at: string | null;
+            /** Connector Analysis */
+            connector_analysis?: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /** Created By User Sub */
+            created_by_user_sub?: string | null;
             /** Date From */
             date_from: string | null;
             /** Date To */
             date_to: string | null;
+            /** Error Message */
+            error_message?: string | null;
             /** Insight Id */
             insight_id: number;
+            /** Model */
+            model?: string | null;
+            /** Platform Evaluations */
+            platform_evaluations?: string | null;
             /** Recommendations */
             recommendations: string | null;
             /** Status */
@@ -1814,6 +1883,77 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InsightsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_insight_api_insights_generate_post: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+                rollup?: boolean;
+                range?: string;
+                start_date?: string | null;
+                end_date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportingInsight"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    insight_limit_api_insights_limit_get: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+                rollup?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiSummaryLimitResponse"];
                 };
             };
             /** @description Validation Error */

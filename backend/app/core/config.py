@@ -69,6 +69,12 @@ META_REQUIRED_SCOPES = (
     "instagram_manage_insights",
     "instagram_manage_comments",
 )
+AI_SUMMARY_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+AI_SUMMARY_MODELS = (
+    "google/gemini-2.5-flash",
+    "google/gemini-2.0-flash-lite-001",
+    "google/gemini-2.0-flash-001",
+)
 
 LOCAL_DB_HOSTS = {"127.0.0.1", "localhost", "::1", "postgres", "db"}
 BLOCKED_SOURCE_DB_NAMES = {"socialmedia_adv"}
@@ -217,6 +223,19 @@ class MetaActivationRuntimeConfig:
 
 
 @dataclass(frozen=True)
+class AiSummaryConfig:
+    enabled: bool
+    api_key: str
+    base_url: str
+    models: tuple[str, ...]
+    provider_timeout_seconds: float
+
+    @property
+    def configured(self) -> bool:
+        return self.enabled and bool(self.api_key)
+
+
+@dataclass(frozen=True)
 class AppSettings:
     app_env: str
     app_name: str
@@ -233,6 +252,28 @@ class AppSettings:
     tiktok_activation: TikTokActivationRuntimeConfig
     meta: MetaConfig
     meta_activation: MetaActivationRuntimeConfig
+    ai_summary: AiSummaryConfig
+
+
+def _validate_ai_summary(
+    config: AiSummaryConfig,
+    *,
+    app_env: str,
+    writes: bool,
+    db: DatabaseConfig,
+) -> None:
+    if not config.enabled:
+        return
+    if not config.api_key:
+        raise ConfigurationError("AI Summary is enabled but its V2 provider key is missing")
+    if config.base_url.rstrip("/") != AI_SUMMARY_OPENROUTER_BASE_URL:
+        raise ConfigurationError("AI Summary provider endpoint is not allowlisted")
+    if not config.models:
+        raise ConfigurationError("AI Summary requires at least one allowlisted model")
+    if not db.url or not db.resolved_name.startswith(V2_DATABASE_PREFIX):
+        raise ConfigurationError("AI Summary requires a dedicated Social Media V2 database")
+    if app_env in PRODUCTION_LIKE_ENVS and not writes:
+        raise ConfigurationError("AI Summary requires writes in production-like runtimes")
 
 
 def _validate_database(app_env: str, mode: RuntimeMode, writes: bool, db: DatabaseConfig) -> None:
@@ -561,6 +602,19 @@ def load_settings() -> AppSettings:
             "30",
         ),
     )
+    ai_summary = AiSummaryConfig(
+        enabled=_bool("SOCIAL_AI_SUMMARY_ENABLED"),
+        api_key=_env("SOCIAL_AI_OPENROUTER_API_KEY"),
+        base_url=_env(
+            "SOCIAL_AI_OPENROUTER_BASE_URL",
+            AI_SUMMARY_OPENROUTER_BASE_URL,
+        ).rstrip("/"),
+        models=_csv("SOCIAL_AI_OPENROUTER_MODELS", AI_SUMMARY_MODELS),
+        provider_timeout_seconds=_positive_float(
+            "SOCIAL_AI_PROVIDER_TIMEOUT_SECONDS",
+            "45",
+        ),
+    )
     _validate_runtime_mode(app_env, runtime_mode, writes)
     _validate_database(app_env, runtime_mode, writes, db)
     vault_enabled = _bool("SOCIAL_VAULT_ENABLED")
@@ -579,6 +633,12 @@ def load_settings() -> AppSettings:
         db=db,
         vault_enabled=vault_enabled,
         production_like=app_env in PRODUCTION_LIKE_ENVS,
+    )
+    _validate_ai_summary(
+        ai_summary,
+        app_env=app_env,
+        writes=writes,
+        db=db,
     )
     sso_secret = _env("SOCIAL_SSO_HS256_SECRET")
     session_cookie_secure = _bool("SOCIAL_SESSION_COOKIE_SECURE")
@@ -612,4 +672,5 @@ def load_settings() -> AppSettings:
         tiktok_activation=tiktok_activation,
         meta=meta,
         meta_activation=meta_activation,
+        ai_summary=ai_summary,
     )

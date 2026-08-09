@@ -485,7 +485,7 @@ export const syncJobsSchema = z.object({
 });
 export type ReportingSyncJobs = z.infer<typeof syncJobsSchema>;
 
-const insightSchema = z.object({
+export const insightSchema = z.object({
   insight_id: z.number().int(),
   brand_id: z.string(),
   status: z.string(),
@@ -493,6 +493,12 @@ const insightSchema = z.object({
   date_to: z.string().nullable(),
   summary: z.string().nullable(),
   recommendations: z.string().nullable(),
+  connector_analysis: z.string().nullable(),
+  anomalies: z.string().nullable(),
+  platform_evaluations: z.string().nullable(),
+  model: z.string().nullable(),
+  error_message: z.string().nullable(),
+  created_by_user_sub: z.string().nullable(),
   created_at: z.string(),
   completed_at: z.string().nullable(),
 });
@@ -502,6 +508,20 @@ export const insightsSchema = z.object({
   meta: brandScopeSchema,
   items: z.array(insightSchema),
 });
+
+export const aiSummaryLimitSchema = z.object({
+  provider_configured: z.boolean(),
+  can_generate: z.boolean(),
+  reason: z.string(),
+  weekly_limit: z.number().int().positive(),
+  used: z.number().int().nonnegative(),
+  remaining: z.number().int().nonnegative(),
+  window_days: z.number().int().positive(),
+  last_generated_at: z.string().nullable(),
+  next_available_at: z.string().nullable(),
+  generation_in_progress: z.boolean(),
+});
+export type AiSummaryLimit = z.infer<typeof aiSummaryLimitSchema>;
 
 export const readinessSchema = z.object({
   status: z.string(),

@@ -138,6 +138,12 @@ class ReportingInsight:
     recommendations: str | None
     created_at: datetime
     completed_at: datetime | None
+    connector_analysis: str | None = None
+    anomalies: str | None = None
+    platform_evaluations: str | None = None
+    model: str | None = None
+    error_message: str | None = None
+    created_by_user_sub: str | None = None
 
 
 class ReportingStore(Protocol):

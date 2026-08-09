@@ -148,16 +148,28 @@ TikTok, baseline veya faz-kapanış ifadelerini hükümsüz kılar:
 39. Overview KPI sırası tam olarak Total Audience, Total Reach, Total Impressions, Total
     Interactions, Avg. Engagement ve Activity Score'dur. Total Impressions mevcut normalize
     `views` slotunun görünür aliasıdır; yeni provider gerçeği olarak sunulamaz.
-40. Overview bölümleri Audience Growth, Cross-Channel, Content Type, AI Insights, Action
-    Breakdown, Top Performing Posts ve Platform Breakdown sırasını korur. Platform Breakdown
+40. Overview bölümleri What Changed?, Channel Health, Performance Trend, Content Snapshot,
+    Top Performing Content, AI Summary ve Platform Summary sırasını korur. Platform Summary
     yalnız Facebook, Instagram ve TikTok'u gösterir; LinkedIn veya dördüncü platform eklenmez.
 41. Avg. Engagement `interactions / reach`; Activity Score
     `clamp(round(avg_engagement_percent * 6 + reach_delta_pct * 0.4), 0, 100)` formülüdür.
     Geçersiz payda veya eksik veri sıfır olarak uydurulmaz.
-42. Action Breakdown Saves backend sözleşmesinde yoksa `—` gösterir. AI Insights yalnız mevcut
-    stored insight okur; kullanıcı açması provider çağrısı, AI generation veya backend mutation
-    başlatmaz. Modal focus trap, Escape ve focus return davranışlarını korur.
-43. Maddeler 37-42 yeni açık kullanıcı kararı olmadan geri alınamaz. Makine-okunur karar
+42. Overview kartının canonical adı `AI Summary`'dir. Tamamlanmış geçmiş özetler Brand kapsamında
+    okunur. Yeni özet üretme yetkisi yalnız Accumulate kaynaklı exact `viewer` + signed
+    `app_role=operator`, exact session Brand ve non-rollup scope içindir; agency/super admin veya
+    başka app role bu üretme yetkisini devralmaz. Backend rolling 7x24 saat içinde Brand başına
+    yalnız bir tamamlanmış üretime izin verir; active pending istek concurrent üretimi engeller,
+    başarısız deneme haftalık hakkı tüketmez. POST same-origin ve backend-authoritative'dir.
+43. V2 AI provider ayarı ve anahtarı yalnız bu bağımsız projeye ait olur; korunan projeden secret
+    kopyalanmaz. Provider'a yalnız privacy-minimized aggregate metrikler ve kimliksiz sayısal top
+    content verisi gönderilir; kullanıcı yorumları/mesajları/permalink veya raw prompt snapshot'ı
+    persist edilmez. Provider yapılandırılmadığında geçmiş okunur, yeni üretim dürüstçe unavailable
+    kalır. Stored çıktı strategic summary, channel analysis, anomalies, recommended actions,
+    platform evaluations ve model alanlarını kapsar.
+44. Overview mini trend çizgileri `1.15`, Performance Trend çizgileri `1.35` SVG stroke width
+    kullanır; grid çizgileri `0.55` ve düşük kontrastlıdır. Referanstaki ince çizgi yoğunluğu yeni
+    açık kullanıcı kararı olmadan kalınlaştırılamaz.
+45. Maddeler 37-44 yeni açık kullanıcı kararı olmadan geri alınamaz. Makine-okunur karar
     `docs/revision6/overrides/overview_surface_2026-08-09.json` dosyasındadır.
 
 ### 0.1 Zorunlu çalışma sırası
@@ -2550,6 +2562,40 @@ tarayıcı doğrulamasında altı KPI, yedi yüzey, üç platform kartı, üç g
 sıfır console/API hatası ve sıfır yatay taşma doğrulandı. TypeScript ve production build geçti.
 Kanıt: `docs/revision6/r14/REVISION6_R14_OVERVIEW_PARITY_REPORT.md`. Bağlayıcı karar:
 `docs/revision6/overrides/overview_surface_2026-08-09.json`.
+
+### R15 — Thin Overview trends + weekly V2 AI Summary (tamamlandı)
+
+R15, kullanıcının R14 sonrasındaki açık kararıyla stored opportunities yüzeyini gerçek V2-owned
+AI Summary iş akışına dönüştürür:
+
+1. Overview mini sparkline ve Performance Trend çizgileri referans yoğunluğuna inceltilir; grid
+   çizgileri düşük kontrastlı kalır;
+2. `Alerts & Opportunities`/`AI Insights` adı kullanılmaz; kart ve accessible drawer canonical
+   olarak `AI Summary` adını taşır;
+3. drawer yalnız completed geçmiş özetleri listeler ve strategic summary, channel analysis,
+   anomalies, recommended actions ve platform evaluations bölümlerini gösterir;
+4. üretme yetkisi yalnız Accumulate exact `viewer` + signed `app_role=operator`, exact session
+   Brand ve non-rollup scope içindir; backend aynı kuralı bağımsız uygular;
+5. Brand-wide rolling 7x24 saat içinde bir completed özet sınırı PostgreSQL advisory transaction
+   lock ile atomik uygulanır; active pending eşzamanlı isteği engeller, failed deneme hakkı tüketmez;
+6. GET yalnız geçmiş/limit okur; generation POST same-origin'dir. Provider config/key V2-owned,
+   allowlisted ve default kapalıdır. Korunan projeden secret kopyalanmaz;
+7. provider girdisi aggregate/de-identified data ile sınırlıdır; raw prompt snapshot, kullanıcı
+   yorumu/mesajı ve permalink persist edilmez;
+8. Pine Beach'in mevcut completed structured summary kaydı read-only kaynaktan V2-local DB'ye
+   non-secret output olarak taşınır.
+
+Çıkış kapısı: exact yetki testleri, typed OpenAPI, frontend history/generation testleri, disposable
+PostgreSQL weekly-limit provası, production build, Overview Playwright, Pine Beach local browser
+smoke, secret/vocabulary guard ve protected source baseline birlikte yeşildir.
+
+Durum (2026-08-09): tamamlandı. Backend `140 passed` (`18` environment-gated skip), disposable
+PostgreSQL paketi `3 passed`, frontend `29 passed`, production build ve desktop Overview
+Playwright geçti. Pine Beach local browser'da completed history'nin tüm structured bölümleri,
+mini/performance stroke değerleri `1.15/1.35` ve sıfır application HTTP/console hatası doğrulandı.
+V2 AI provider anahtarı henüz provision edilmediği için yeni gerçek-provider generation default
+olarak kapalıdır; stored history çalışır. Kanıt:
+`docs/revision6/r15/REVISION6_R15_AI_SUMMARY_REPORT.md`.
 
 ### 22.1 Revizyon 6 stop koşulları
 

@@ -34,6 +34,8 @@ def test_all_routes_have_explicit_boundary_semantics() -> None:
         ("/api/dashboards/tiktok", ("GET",)),
         ("/api/health", ("GET",)),
         ("/api/insights", ("GET",)),
+        ("/api/insights/generate", ("POST",)),
+        ("/api/insights/limit", ("GET",)),
         ("/api/integrations/meta/accounts/link", ("POST",)),
         ("/api/integrations/meta/oauth/start", ("POST",)),
         ("/api/integrations/meta/self-service/readiness", ("GET",)),

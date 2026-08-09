@@ -9,12 +9,18 @@ from fastapi import FastAPI, Request, Response
 from sqlalchemy import create_engine
 
 from app.api import create_api_router
-from app.application.ports import AuthorityStore, ReportingStore
+from app.application.ports import AiSummaryService, AuthorityStore, ReportingStore
+from app.application.services.ai_summary import AiSummaryCoordinator
 from app.application.services.meta_activation import MetaActivationCoordinator
 from app.application.services.tiktok_activation import TikTokActivationCoordinator
 from app.core import WritePolicy, load_settings
+from app.domain.metrics import bootstrap_metric_catalog
 from app.infrastructure.persistence.projection_state import ProjectionStateStore
-from app.infrastructure.persistence.social_v2 import SocialReportingStore
+from app.infrastructure.persistence.social_v2 import (
+    SocialAiSummaryRepository,
+    SocialReportingStore,
+)
+from app.infrastructure.providers.ai import OpenRouterAiSummaryProvider
 from app.infrastructure.providers.meta.runtime import create_meta_activation_runtime
 from app.infrastructure.providers.tiktok.runtime import create_tiktok_activation_runtime
 
@@ -25,6 +31,7 @@ def create_app(
     media_root: Path | None = None,
     tiktok_activation: TikTokActivationCoordinator | None = None,
     meta_activation: MetaActivationCoordinator | None = None,
+    ai_summary: AiSummaryService | None = None,
 ) -> FastAPI:
     settings = load_settings()
     policy = WritePolicy.from_settings(settings)
@@ -50,6 +57,7 @@ def create_app(
             or request.url.path.startswith("/api/integrations/tiktok/")
             or request.url.path == "/api/social/meta/oauth/callback"
             or request.url.path.startswith("/api/integrations/meta/")
+            or request.url.path.startswith("/api/insights")
         ):
             response.headers["Cache-Control"] = "no-store"
             response.headers["Referrer-Policy"] = "no-referrer"
@@ -85,8 +93,22 @@ def create_app(
             engine=engine,
             authority_store=store,
         )
+    if ai_summary is None and engine is not None and reporting_store is not None:
+        ai_summary = AiSummaryCoordinator(
+            repository=SocialAiSummaryRepository(engine),
+            reporting_store=reporting_store,
+            metric_catalog=bootstrap_metric_catalog(),
+            provider=(
+                OpenRouterAiSummaryProvider(settings.ai_summary)
+                if settings.ai_summary.configured
+                else None
+            ),
+        )
     application.state.tiktok_activation_configured = tiktok_activation is not None
     application.state.meta_activation_configured = meta_activation is not None
+    application.state.ai_summary_provider_configured = (
+        ai_summary.provider_configured if ai_summary is not None else False
+    )
     resolved_media_root = media_root or (
         Path(settings.media_storage_root) if settings.media_storage_root else None
     )
@@ -99,6 +121,7 @@ def create_app(
             media_root=resolved_media_root,
             tiktok_activation=tiktok_activation,
             meta_activation=meta_activation,
+            ai_summary=ai_summary,
         )
     )
     return application
