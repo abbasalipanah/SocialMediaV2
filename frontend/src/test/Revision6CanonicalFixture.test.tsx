@@ -149,6 +149,9 @@ function metricId(platform: Platform, key: string): MetricId | null {
   const common: Partial<Record<string, MetricId>> = {
     followers: "followers",
     new_followers: "new_followers",
+    follows: "follows",
+    unfollows: "unfollows",
+    followers_net: "followers_net",
     reach: "reach",
     profile_views: "profile_views",
   };
@@ -285,8 +288,8 @@ function adapt(payload: SourcePayload): PlatformDashboard {
       previous_summary: { ...payload.stories.previous_summary, data_status: "available" },
       trend: { ...payload.stories.trend, data_status: "available" },
       navigation: { ...payload.stories.navigation, data_status: "available" },
-      actions: { ...payload.stories.actions, data_status: "available" },
-      items: payload.stories.items.map((item) => ({ ...item, data_status: "available" })),
+      actions: { ...payload.stories.actions, sticker_taps: null, saves: null, data_status: "available" },
+      items: payload.stories.items.map((item) => ({ ...item, sticker_taps: null, saves: null, data_status: "available" })),
       data_status: "available",
     } : null,
   };
@@ -312,8 +315,9 @@ describe("Revision 6 shared canonical fixture", () => {
     const instagramCase = fixture.cases.find((item) => item.id === "instagram_full_with_stories");
     expect(instagramCase?.expected_cover_excludes).toContain("stories");
     rerender(<InstagramPulseDashboard data={adapt(materialize("instagram_full_with_stories"))} tab="cover" />);
-    expect(screen.queryByRole("heading", { name: "Stories" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Evolution" })).not.toBeInTheDocument();
+    // The user-approved post-R10 override supersedes the historical R1 exclusion.
+    expect(screen.getByRole("heading", { name: "Stories" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Evolution" })).toBeInTheDocument();
 
     rerender(<TikTokPulseDashboard data={adapt(materialize("partial_metrics"))} tab="account" />);
     expect(screen.queryByText("Follower Growth")).not.toBeInTheDocument();
@@ -335,6 +339,34 @@ describe("Revision 6 shared canonical fixture", () => {
     expect(screen.getByRole("heading", { name: "Behaviour" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "History" })).toBeInTheDocument();
     expect(screen.getAllByText("446").length).toBeGreaterThan(0);
+    expect(screen.getByText("+11.5% vs previous story")).toBeInTheDocument();
+    expect(screen.getByText("+3.4pp vs previous story")).toBeInTheDocument();
+
+    const selectedActions = document.querySelector(".instagram-story-selected-actions");
+    const periodActions = document.querySelector(".instagram-story-behaviour");
+    if (!selectedActions || !periodActions) throw new Error("Missing R11 Story action panels");
+    expect(selectedActions).toHaveTextContent("Replies2Shares4Profile Visits8Follows1");
+    expect(periodActions).toHaveTextContent("Period Action TotalsReplies5Shares9Profile Visits16Follows3");
+    expect(within(selectedActions as HTMLElement).getAllByText("Not provided")).toHaveLength(2);
+    expect(within(periodActions as HTMLElement).getAllByText("Not provided")).toHaveLength(2);
+  });
+
+  it("locks the R11 three-series follower-flow contract for every platform", () => {
+    const cases = [
+      ["facebook", <FacebookPulseDashboard data={adapt(materialize("facebook_full"))} tab="page" />],
+      ["instagram", <InstagramPulseDashboard data={adapt(materialize("instagram_full_with_stories"))} tab="page" />],
+      ["tiktok", <TikTokPulseDashboard data={adapt(materialize("tiktok_full"))} tab="account" />],
+    ] as const;
+
+    for (const [platform, surface] of cases) {
+      const { unmount } = render(surface);
+      const panel = screen.getByRole("heading", { name: "New Followers Trend" }).closest("article");
+      if (!panel) throw new Error(`Missing follower-flow panel: ${platform}`);
+      expect(within(panel).getByRole("img", {
+        name: "New Followers Trend: Follows, Unfollows, Net",
+      })).toBeInTheDocument();
+      unmount();
+    }
   });
 
   it("renders every R1 card heading in canonical focused-tab order", () => {

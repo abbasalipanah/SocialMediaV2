@@ -1149,7 +1149,9 @@ body { background: #f8fafc; }
 .facebook-heatmap-scale { display: flex; grid-row: 3; grid-column: 2; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 13px; color: #94a3b8; font-size: .55rem; }
 .facebook-heatmap-scale i { width: 76px; height: 7px; border-radius: 99px; background: linear-gradient(90deg, hsl(203 72% 93%), hsl(125 72% 51%)); }
 .facebook-pulse-table-card { min-width: 0; overflow: hidden; border: 1px solid rgb(226 232 240 / 65%); border-radius: 16px; background: white; box-shadow: 0 1px 3px rgb(15 23 42 / 5%); }
+.facebook-pulse-table-card .facebook-table-scroll { max-height: 520px; overflow: auto; }
 .facebook-pulse-table-card .facebook-table-scroll table { min-width: 1120px; }
+.facebook-pulse-table-card .facebook-table-scroll th { position: sticky; z-index: 1; top: 0; }
 .facebook-table-title { display: flex; min-height: 61px; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 24px; border-bottom: 1px solid #f1f5f9; }
 .facebook-table-title > span { padding: 7px 11px; color: white; border-radius: 8px; background: #4f46e5; font-size: .62rem; font-weight: 750; }
 .facebook-table-title.stacked { display: block; }
@@ -1256,6 +1258,9 @@ body { background: #f8fafc; }
 .instagram-story-metric.tone-rose > div > span { color: #db2777; background: #fdf2f8; }
 .instagram-story-metric.tone-amber > div > span { color: #d97706; background: #fffbeb; }
 .instagram-story-gallery { margin-top: auto; padding-top: 14px; }
+.instagram-story-selected-actions { margin-top: 13px; }
+.instagram-story-selected-actions > h4 { margin: 0; color: #64748b; font-size: .59rem; font-weight: 750; }
+.instagram-story-selected-actions .instagram-story-action-grid { margin-top: 8px; }
 .instagram-story-gallery > h4 { display: block; margin: 0 0 8px; color: #64748b; font-size: .59rem; font-weight: 750; }
 .instagram-story-gallery > div { display: flex; min-width: 0; gap: 10px; padding: 3px; overflow-x: auto; }
 .instagram-story-gallery button { display: grid; flex: 0 0 50px; gap: 5px; padding: 0; color: #64748b; border: 0; outline: 2px solid transparent; outline-offset: 2px; border-radius: 9px; background: transparent; cursor: pointer; }
@@ -1317,9 +1322,9 @@ body { background: #f8fafc; }
 .instagram-story-action-grid .tone-emerald, .instagram-story-action-grid .tone-green { color: #059669; background: #ecfdf5; }
 
 .instagram-story-history { overflow: hidden; }
-.instagram-story-history-scroll { margin-top: 10px; overflow: auto; }
+.instagram-story-history-scroll { max-height: 455px; margin-top: 10px; overflow: auto; }
 .instagram-story-history table { width: 100%; min-width: 780px; border-collapse: collapse; text-align: left; }
-.instagram-story-history th { padding: 8px 7px; color: #64748b; border-bottom: 1px solid #e8edf5; background: #f8fafc; font-size: .49rem; font-weight: 800; }
+.instagram-story-history th { position: sticky; z-index: 1; top: 0; padding: 8px 7px; color: #64748b; border-bottom: 1px solid #e8edf5; background: #f8fafc; font-size: .49rem; font-weight: 800; }
 .instagram-story-history td { padding: 7px; color: #475569; border-bottom: 1px solid #f1f5f9; font-size: .57rem; font-variant-numeric: tabular-nums; }
 .instagram-story-history tbody tr:last-child td { border-bottom: 0; }
 .instagram-story-history td:nth-child(2) .instagram-story-artwork { width: 28px; height: 34px; border-radius: 5px; }
@@ -1384,7 +1389,7 @@ body { background: #f8fafc; }
 
 /* Settings workspace aligned with the active Performance Marketing application. */
 .settings-page { width: min(1320px, 100%); }
-.performance-settings-header { align-items: flex-end; margin-bottom: 18px; }
+.performance-settings-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
 .performance-settings-header h1 { margin: 5px 0 6px; color: #0f172a; font-size: 1.5rem; line-height: 1.25; letter-spacing: -.025em; }
 .performance-settings-header p:not(.eyebrow) { color: #64748b; font-size: .875rem; }
 .settings-header-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 9px; }

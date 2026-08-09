@@ -143,12 +143,13 @@ class SocialReportingStore:
                        i.cover_candidates, i.thumbnail_candidates, i.media_url_candidates,
                        i.full_video_watched_rate, i.total_time_watched,
                        i.average_time_watched, i.interactions_count, i.replies_count,
-                       i.profile_visits, i.follows_count, i.taps_forward, i.taps_back,
+                       i.saves_count, i.sticker_taps, i.profile_visits,
+                       i.follows_count, i.taps_forward, i.taps_back,
                        i.swipe_forward, i.exits, i.navigation_count, i.completion_rate,
                        EXISTS (
                            SELECT 1 FROM media_assets AS m
                            WHERE m.asset_id=i.asset_id AND m.content_id=i.content_id
-                             AND m.media_kind='cover'
+                             AND m.media_kind IN ('cover', 'story_cover')
                        ) AS local_media_available
                 FROM content_items AS i
                 JOIN assets AS a ON a.id=i.asset_id
@@ -193,16 +194,69 @@ class SocialReportingStore:
                     shares_count=int(row["shares_count"]),
                     views_count=_optional_float(row["views_count"]),
                     reach_count=_optional_float(row["reach_count"]),
-                    cover_url=row["cover_url"],
-                    thumbnail_url=row["thumbnail_url"],
-                    cover_candidates=_string_tuple(row["cover_candidates"]),
-                    thumbnail_candidates=_string_tuple(row["thumbnail_candidates"]),
-                    media_url_candidates=_string_tuple(row["media_url_candidates"]),
+                    cover_url=(
+                        _local_media_url(
+                            platform=normalize_platform(row["platform"]),
+                            content_id=str(row["content_id"]),
+                            brand_id=str(row["brand_id"]),
+                            account_id=int(row["asset_id"]),
+                        )
+                        if row["local_media_available"]
+                        else row["cover_url"]
+                    ),
+                    thumbnail_url=(
+                        _local_media_url(
+                            platform=normalize_platform(row["platform"]),
+                            content_id=str(row["content_id"]),
+                            brand_id=str(row["brand_id"]),
+                            account_id=int(row["asset_id"]),
+                        )
+                        if row["local_media_available"]
+                        else row["thumbnail_url"]
+                    ),
+                    cover_candidates=(
+                        (
+                            _local_media_url(
+                                platform=normalize_platform(row["platform"]),
+                                content_id=str(row["content_id"]),
+                                brand_id=str(row["brand_id"]),
+                                account_id=int(row["asset_id"]),
+                            ),
+                        )
+                        if row["local_media_available"]
+                        else _string_tuple(row["cover_candidates"])
+                    ),
+                    thumbnail_candidates=(
+                        (
+                            _local_media_url(
+                                platform=normalize_platform(row["platform"]),
+                                content_id=str(row["content_id"]),
+                                brand_id=str(row["brand_id"]),
+                                account_id=int(row["asset_id"]),
+                            ),
+                        )
+                        if row["local_media_available"]
+                        else _string_tuple(row["thumbnail_candidates"])
+                    ),
+                    media_url_candidates=(
+                        (
+                            _local_media_url(
+                                platform=normalize_platform(row["platform"]),
+                                content_id=str(row["content_id"]),
+                                brand_id=str(row["brand_id"]),
+                                account_id=int(row["asset_id"]),
+                            ),
+                        )
+                        if row["local_media_available"]
+                        else _string_tuple(row["media_url_candidates"])
+                    ),
                     full_video_watched_rate=_optional_float(row["full_video_watched_rate"]),
                     total_time_watched=_optional_float(row["total_time_watched"]),
                     average_time_watched=_optional_float(row["average_time_watched"]),
                     interactions_count=_optional_float(row["interactions_count"]),
                     replies_count=_optional_float(row["replies_count"]),
+                    saves_count=_optional_float(row["saves_count"]),
+                    sticker_taps=_optional_float(row["sticker_taps"]),
                     profile_visits=_optional_float(row["profile_visits"]),
                     follows_count=_optional_float(row["follows_count"]),
                     taps_forward=_optional_float(row["taps_forward"]),
@@ -304,9 +358,7 @@ class SocialReportingStore:
             checksum=str(row["checksum"]),
         )
 
-    def list_connections(
-        self, *, brand_ids: tuple[str, ...]
-    ) -> tuple[ReportingConnection, ...]:
+    def list_connections(self, *, brand_ids: tuple[str, ...]) -> tuple[ReportingConnection, ...]:
         if not brand_ids:
             return ()
         statement = _expanded(
@@ -331,9 +383,7 @@ class SocialReportingStore:
                 for row in rows
             )
 
-    def list_sync_jobs(
-        self, *, brand_ids: tuple[str, ...]
-    ) -> tuple[ReportingSyncJob, ...]:
+    def list_sync_jobs(self, *, brand_ids: tuple[str, ...]) -> tuple[ReportingSyncJob, ...]:
         if not brand_ids:
             return ()
         statement = _expanded(

@@ -16,8 +16,10 @@ const auth = {
   source_system: "accumulate",
   brand_id: "child-1",
   role: "agency_admin",
+  app_role: null,
   access_mode: "write",
   settings_visible: true,
+  integrations_visible: true,
   is_internal_staff: true,
   expires_at: "2026-07-14T18:00:00+00:00",
   revoked: false,
@@ -55,7 +57,7 @@ const workspace = {
   scope: { requested_brand_id: "child-1", rollup: false, resolved_brand_ids: ["child-1"] },
 };
 
-function capabilities(settingsVisible = true) {
+function capabilities(settingsVisible = true, integrationsVisible = true) {
   return {
     scope: { requested_brand_id: "child-1", rollup: false, resolved_brand_ids: ["child-1"] },
     platforms: [
@@ -96,6 +98,7 @@ function capabilities(settingsVisible = true) {
     ],
     permissions: {
       settings_visible: settingsVisible,
+      integrations_visible: integrationsVisible,
       internal_audit_visible: settingsVisible,
       rollup_available: true,
       operation_mutation_available: false,
@@ -259,15 +262,24 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-function mockApi(options: { authenticated?: boolean; settingsVisible?: boolean } = {}) {
+function mockApi(options: { authenticated?: boolean; integrationsVisible?: boolean; settingsVisible?: boolean } = {}) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     if (url.includes("/api/auth/me")) {
-      return options.authenticated === false ? json({ detail: "session_invalid" }, 401) : json(auth);
+      return options.authenticated === false
+        ? json({ detail: "session_invalid" }, 401)
+        : json({
+          ...auth,
+          settings_visible: options.settingsVisible ?? true,
+          integrations_visible: options.integrationsVisible ?? true,
+        });
     }
     if (url.includes("/api/auth/logout") && init?.method === "POST") return new Response(null, { status: 204 });
     if (url.includes("/api/workspace/brands")) return json(workspace);
-    if (url.includes("/api/workspace/capabilities")) return json(capabilities(options.settingsVisible));
+    if (url.includes("/api/workspace/capabilities")) return json(capabilities(
+      options.settingsVisible,
+      options.integrationsVisible,
+    ));
     if (url.includes("/api/dashboards/")) {
       const platform = (["facebook", "instagram", "tiktok"] as const)
         .find((item) => url.includes(`/api/dashboards/${item}`)) ?? "facebook";
@@ -279,6 +291,9 @@ function mockApi(options: { authenticated?: boolean; settingsVisible?: boolean }
     if (url.includes("/api/settings/connections")) return json(connections);
     if (url.includes("/api/settings/sync-jobs")) return json(syncJobs);
     if (url.includes("/api/settings/brands")) return json(settingsBrands);
+    if (url.includes("/api/integrations/status/social-accounts")) return json(socialAccounts);
+    if (url.includes("/api/integrations/status/connections")) return json(connections);
+    if (url.includes("/api/integrations/status/sync-jobs")) return json(syncJobs);
     if (url.includes("/api/operations/readiness")) return json(readiness);
     if (url.includes("/api/integrations/tiktok/self-service/readiness")) return json(tiktokSelfServiceReadiness);
     if (url.includes("/api/integrations/meta/self-service/readiness")) return json(metaSelfServiceReadiness);
@@ -324,6 +339,7 @@ describe("Phase 7 application shell", () => {
       "Instagram",
       "TikTok",
       "Settings",
+      "Integrations",
     ]);
   });
 
@@ -343,8 +359,8 @@ describe("Phase 7 application shell", () => {
     );
     expect(within(primary).getByRole("link", { name: "Instagram" })).toHaveAttribute("href", "/instagram");
     expect(within(primary).queryByRole("link", { name: "TikTok" })).not.toBeInTheDocument();
-    expect(within(primary).getAllByRole("link", { name: "Settings" })).toHaveLength(2);
-    expect(within(primary).queryByText("Integrations")).not.toBeInTheDocument();
+    expect(within(primary).getAllByRole("link", { name: "Settings" })).toHaveLength(1);
+    expect(within(primary).getByRole("link", { name: "Integrations" })).toHaveAttribute("href", "/integrations");
     expect(within(primary).queryByText("Support")).not.toBeInTheDocument();
     expect(within(primary).queryByText("Back to Accumulate")).not.toBeInTheDocument();
     expect(within(primary).queryByText("Sign out")).not.toBeInTheDocument();
@@ -387,24 +403,54 @@ describe("Phase 7 application shell", () => {
     expect(window.localStorage.getItem("social-media-v2:selected-account:user-1:facebook")).toBe("17");
   });
 
+  it("clears a remembered Brand and account when the authenticated scope changes", async () => {
+    window.localStorage.setItem("social-media-v2:selected-brand:user-1", "legacy-brand");
+    window.localStorage.setItem("social-media-v2:selected-account:user-1:facebook", "999");
+
+    renderApp("/facebook");
+
+    expect(await screen.findByRole("heading", { name: "Facebook Dashboard" })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(window.localStorage.getItem("social-media-v2:selected-brand:user-1")).toBe("child-1"),
+    );
+    expect(window.localStorage.getItem("social-media-v2:selected-account:user-1:facebook")).toBeNull();
+    expect(buttonContaining("Account group")).toHaveTextContent("Hotel One");
+  });
+
   it("redirects a direct Settings route when the backend permission is absent", async () => {
     renderApp("/settings", mockApi({ settingsVisible: false }));
     expect(await screen.findByRole("heading", { name: "Facebook Dashboard" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Settings" })).not.toBeInTheDocument();
   });
 
-  it("renders root and unknown authenticated routes as the standalone Settings surface", async () => {
+  it("renders root and unknown authenticated routes inside the standalone shell", async () => {
     const { unmount } = renderApp("/");
-    expect(await screen.findByRole("heading", { name: "Social media setup" })).toBeInTheDocument();
-    expect(screen.queryByRole("complementary", { name: "Primary navigation" })).not.toBeInTheDocument();
-    expect(screen.getAllByRole("columnheader").map((item) => item.textContent)).toEqual([
-      "Brand", "Meta Access", "Discovery", "Accounts", "Data", "Backfill", "Collector", "Last Sync", "Nightly", "Action",
-    ]);
+    expect(await screen.findByRole("heading", { name: "Facebook Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "Primary navigation" })).toBeInTheDocument();
     unmount();
 
     renderApp("/not-a-dashboard-route");
-    expect(await screen.findByRole("heading", { name: "Social media setup" })).toBeInTheDocument();
-    expect(screen.queryByRole("complementary", { name: "Primary navigation" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Facebook Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: "Primary navigation" })).toBeInTheDocument();
+  });
+
+  it("keeps one footer Settings link and renders the Performance-style workspace in the shell", async () => {
+    renderApp("/settings");
+    expect(await screen.findByRole("heading", { name: "Brand Setup and Account Mapping" })).toBeInTheDocument();
+    const primary = screen.getByRole("complementary", { name: "Primary navigation" });
+    expect(within(primary).getAllByRole("link", { name: "Settings" })).toHaveLength(1);
+    expect(await screen.findByRole("tab", { name: "Brands" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Platform Accounts" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Mappings" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Sync & Backfill" })).toBeInTheDocument();
+  });
+
+  it("allows Integrations without exposing Settings when only the integration capability exists", async () => {
+    renderApp("/integrations", mockApi({ settingsVisible: false, integrationsVisible: true }));
+    expect(await screen.findByRole("heading", { name: "Integrations" })).toBeInTheDocument();
+    const primary = screen.getByRole("complementary", { name: "Primary navigation" });
+    expect(within(primary).queryByRole("link", { name: "Settings" })).not.toBeInTheDocument();
+    expect(within(primary).getByRole("link", { name: "Integrations" })).toBeInTheDocument();
   });
 
   it("accepts both canonical SSO consume aliases", async () => {

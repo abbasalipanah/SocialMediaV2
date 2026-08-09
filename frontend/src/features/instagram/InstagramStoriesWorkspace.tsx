@@ -77,11 +77,11 @@ function comparison(
   points = false,
 ): { label: string; tone: Tone } {
   if (current === null || previous === null || (!points && previous === 0)) {
-    return { label: "Selected story", tone: "neutral" };
+    return { label: "Previous story unavailable", tone: "neutral" };
   }
   const delta = points ? current - previous : ((current - previous) / Math.abs(previous)) * 100;
   return {
-    label: `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}${points ? "pp" : "%"} vs previous`,
+    label: `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}${points ? "pp" : "%"} vs previous story`,
     tone: delta > 0 ? "positive" : delta < 0 ? "negative" : "neutral",
   };
 }
@@ -106,8 +106,31 @@ function StoryMetric({
     <article className={`instagram-story-metric tone-${tone}`}>
       <div><span><Icon size={18} /></span><small>{label}</small></div>
       <strong>{percentageValue ? percentage(value) : storyValue(value)}</strong>
-      <em className={delta.tone}>{delta.tone === "negative" ? <TrendingDown size={12} /> : <TrendingUp size={12} />}{delta.label}</em>
+      <em className={delta.tone}>{delta.tone === "negative" ? <TrendingDown size={12} /> : delta.tone === "positive" ? <TrendingUp size={12} /> : null}{delta.label}</em>
     </article>
+  );
+}
+
+type StoryActionValues = Pick<
+  DashboardStoryItem,
+  "follows" | "profile_visits" | "replies" | "saves" | "shares" | "sticker_taps"
+>;
+
+function StoryActionGrid({ values }: { values: StoryActionValues }) {
+  const actions = [
+    { label: "Replies", value: values.replies, icon: Reply, tone: "violet" },
+    { label: "Shares", value: values.shares, icon: Share2, tone: "emerald" },
+    { label: "Profile Visits", value: values.profile_visits, icon: UserRound, tone: "blue" },
+    { label: "Follows", value: values.follows, icon: UserPlus, tone: "green" },
+    { label: "Sticker Taps", value: values.sticker_taps, icon: MousePointerClick, tone: "rose" },
+    { label: "Saves", value: values.saves, icon: Bookmark, tone: "slate" },
+  ] as const;
+  return (
+    <div className="instagram-story-action-grid">
+      {actions.map(({ icon: Icon, label, tone, value }) => (
+        <div key={label}><span className={`tone-${tone}`}><Icon size={17} /></span><small>{label}</small><strong>{storyValue(value)}</strong>{value === null && <em>Not provided</em>}</div>
+      ))}
+    </div>
   );
 }
 
@@ -156,6 +179,10 @@ function LatestStoryPanel({
               <StoryMetric comparisonValue={previous?.reach ?? null} icon={Target} label="Reach" tone="blue" value={active.reach} />
               <StoryMetric comparisonValue={previous?.completion_rate ?? null} icon={Activity} label="Completion Rate" percentageValue tone="rose" value={active.completion_rate} />
               <StoryMetric comparisonValue={previous?.interactions ?? null} icon={Heart} label="Interactions" tone="amber" value={active.interactions} />
+            </div>
+            <div className="instagram-story-selected-actions">
+              <h4>Selected story actions</h4>
+              <StoryActionGrid values={active} />
             </div>
             <div className="instagram-story-gallery">
               <h4>Story gallery</h4>
@@ -244,25 +271,17 @@ function StoryHealth({ story, summary }: { story: DashboardStoryItem | null; sum
   );
 }
 
-function Behaviour({ story, data }: { story: DashboardStoryItem | null; data: DashboardStories }) {
+function Behaviour({ data }: { data: DashboardStories }) {
   const navigation = [
-    { label: "Tap Forward", value: story?.taps_forward ?? data.navigation.taps_forward, color: "#7c3aed" },
-    { label: "Swipe Forward", value: story?.swipe_forward ?? data.navigation.swipe_forward, color: "#2dd4bf" },
-    { label: "Tap Back", value: story?.taps_back ?? data.navigation.taps_back, color: "#f59e0b" },
-    { label: "Exits", value: story?.exits ?? data.navigation.exits, color: "#ec4899" },
+    { label: "Tap Forward", value: data.navigation.taps_forward, color: "#7c3aed" },
+    { label: "Swipe Forward", value: data.navigation.swipe_forward, color: "#2dd4bf" },
+    { label: "Tap Back", value: data.navigation.taps_back, color: "#f59e0b" },
+    { label: "Exits", value: data.navigation.exits, color: "#ec4899" },
   ];
   const total = navigation.reduce((sum, item) => sum + (item.value ?? 0), 0);
-  const actions = [
-    { label: "Replies", value: story?.replies ?? data.actions.replies, icon: Reply, tone: "violet" },
-    { label: "Shares", value: story?.shares ?? data.actions.shares, icon: Share2, tone: "emerald" },
-    { label: "Profile Visits", value: story?.profile_visits ?? data.actions.profile_visits, icon: UserRound, tone: "blue" },
-    { label: "Follows", value: story?.follows ?? data.actions.follows, icon: UserPlus, tone: "green" },
-    { label: "Sticker Taps", value: null, icon: MousePointerClick, tone: "rose" },
-    { label: "Saves", value: null, icon: Bookmark, tone: "slate" },
-  ] as const;
   return (
     <article className="instagram-story-surface instagram-story-behaviour">
-      <header className="instagram-story-section-heading"><div><h3>Behaviour</h3><small>Audience behaviour on this story</small></div></header>
+      <header className="instagram-story-section-heading"><div><h3>Behaviour</h3><small>Totals across the selected date range</small></div></header>
       <h4>Navigation Split</h4>
       {total > 0 ? (
         <>
@@ -273,12 +292,9 @@ function Behaviour({ story, data }: { story: DashboardStoryItem | null; data: Da
             {navigation.map((item) => <span key={item.label}><i style={{ background: item.color }} />{item.label}<b>{item.value === null ? "—" : `${((item.value / total) * 100).toFixed(1)}%`}</b></span>)}
           </div>
         </>
-      ) : <PulseEmpty copy="No navigation data for this story." />}
-      <div className="instagram-story-action-grid">
-        {actions.map(({ icon: Icon, label, tone, value }) => (
-          <div key={label}><span className={`tone-${tone}`}><Icon size={17} /></span><small>{label}</small><strong>{storyValue(value)}</strong>{value === null && <em>Not provided</em>}</div>
-        ))}
-      </div>
+      ) : <PulseEmpty copy="No navigation data for this period." />}
+      <h4>Period Action Totals</h4>
+      <StoryActionGrid values={data.actions} />
     </article>
   );
 }
@@ -365,7 +381,7 @@ export function InstagramStoriesWorkspace({ data }: { data: PlatformDashboard })
         <StoryHealth story={active} summary={storiesData.summary} />
       </div>
       <div className="instagram-stories-lower-grid">
-        <Behaviour data={storiesData} story={active} />
+        <Behaviour data={storiesData} />
         <History stories={stories} />
       </div>
     </section>

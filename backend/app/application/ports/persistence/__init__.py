@@ -69,6 +69,8 @@ class ContentRecord:
     average_time_watched: float | None = None
     interactions_count: float | None = None
     replies_count: float | None = None
+    saves_count: float | None = None
+    sticker_taps: float | None = None
     profile_visits: float | None = None
     follows_count: float | None = None
     taps_forward: float | None = None
@@ -92,6 +94,8 @@ class ContentRecord:
             self.average_time_watched,
             self.interactions_count,
             self.replies_count,
+            self.saves_count,
+            self.sticker_taps,
             self.profile_visits,
             self.follows_count,
             self.taps_forward,
@@ -103,11 +107,7 @@ class ContentRecord:
         )
         if any(
             value is not None
-            and (
-                isinstance(value, bool)
-                or not math.isfinite(float(value))
-                or float(value) < 0
-            )
+            and (isinstance(value, bool) or not math.isfinite(float(value)) or float(value) < 0)
             for value in optional_values
         ):
             raise ValueError("content_metric_invalid")
@@ -116,9 +116,8 @@ class ContentRecord:
             self.thumbnail_candidates,
             self.media_url_candidates,
         ):
-            if (
-                len(candidates) != len(set(candidates))
-                or any(not isinstance(value, str) or not value.strip() for value in candidates)
+            if len(candidates) != len(set(candidates)) or any(
+                not isinstance(value, str) or not value.strip() for value in candidates
             ):
                 raise ValueError("content_media_candidates_invalid")
 

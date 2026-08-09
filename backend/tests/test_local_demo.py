@@ -3,7 +3,8 @@ from __future__ import annotations
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from app.local_demo import create_local_demo_app
+from app.core.security import sha256_text
+from app.local_demo import LocalDemoAuthority, create_local_demo_app
 
 
 @pytest.fixture(autouse=True)
@@ -26,9 +27,7 @@ async def test_local_demo_opens_a_scoped_session_and_serves_product_data() -> No
         assert (await browser.get("/api/auth/me")).status_code == 401
         assert (await browser.post("/api/dev/session")).status_code == 403
 
-        opened = await browser.post(
-            "/api/dev/session", headers={"X-Social-Local-Demo": "true"}
-        )
+        opened = await browser.post("/api/dev/session", headers={"X-Social-Local-Demo": "true"})
         assert opened.status_code == 204
         assert opened.headers["x-social-local-demo"] == "true"
 
@@ -99,9 +98,7 @@ async def test_local_demo_opens_a_scoped_session_and_serves_product_data() -> No
         assert settings.status_code == 200
         assert len(settings.json()["items"]) == 3
 
-        closed = await browser.post(
-            "/api/dev/logout", headers={"X-Social-Local-Demo": "true"}
-        )
+        closed = await browser.post("/api/dev/logout", headers={"X-Social-Local-Demo": "true"})
         assert closed.status_code == 204
         assert (await browser.get("/api/auth/me")).status_code == 401
 
@@ -110,3 +107,24 @@ def test_local_demo_requires_an_explicit_flag(monkeypatch: pytest.MonkeyPatch) -
     monkeypatch.delenv("SOCIAL_LOCAL_DEMO")
     with pytest.raises(RuntimeError, match="SOCIAL_LOCAL_DEMO=true"):
         create_local_demo_app()
+
+
+def test_database_backed_local_demo_uses_the_pine_beach_scope() -> None:
+    authority = LocalDemoAuthority(database_backed=True)
+    raw_session = authority.open_session()
+
+    session = authority.get_session(sha256_text(raw_session))
+
+    assert session is not None
+    assert session["brand_id"] == "18"
+    assert session["brand_scope"]["default_brand_id"] == "18"
+    assert session["brand_scope"]["brands"] == [
+        {
+            "brand_id": "18",
+            "name": "Pine Beach Belek",
+            "parent_brand_id": None,
+            "visibility": "active",
+            "access_mode": "write",
+            "role": "agency_admin",
+        }
+    ]

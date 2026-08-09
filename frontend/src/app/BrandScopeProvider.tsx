@@ -75,12 +75,30 @@ export function BrandScopeProvider({ children }: { children: ReactNode }) {
     () => new Set(workspace?.brands.map((brand) => brand.brand_id) ?? []),
     [workspace],
   );
+  const workspaceScopeKey = useMemo(
+    () => [...brandIds].sort().join(","),
+    [brandIds],
+  );
 
   useEffect(() => {
-    if (!workspace || hydratedFor.current === user.user_id) return;
-    hydratedFor.current = user.user_id;
+    if (!workspace) return;
+    const hydrationKey = `${user.user_id}:${user.brand_id}:${workspaceScopeKey}`;
+    if (hydratedFor.current === hydrationKey) return;
+    hydratedFor.current = hydrationKey;
     const stored = window.localStorage.getItem(selectedBrandStorageKey(user.user_id));
-    setSelectedBrandId(stored && brandIds.has(stored) ? stored : user.brand_id);
+    const defaultBrandId = brandIds.has(user.brand_id)
+      ? user.brand_id
+      : workspace.default_brand_id;
+    const storedBrandIsValid = Boolean(stored && brandIds.has(stored));
+    setSelectedBrandId(storedBrandIsValid && stored ? stored : defaultBrandId);
+    if (stored && !storedBrandIsValid) {
+      window.localStorage.setItem(selectedBrandStorageKey(user.user_id), defaultBrandId);
+      PLATFORMS.forEach((platform) =>
+        window.localStorage.removeItem(selectedAccountStorageKey(user.user_id, platform)),
+      );
+      setAccountSelections({});
+      return;
+    }
     const remembered: AccountSelections = {};
     PLATFORMS.forEach((platform) => {
       const value = window.localStorage.getItem(selectedAccountStorageKey(user.user_id, platform));
@@ -88,7 +106,7 @@ export function BrandScopeProvider({ children }: { children: ReactNode }) {
       else if (value && Number.isSafeInteger(Number(value))) remembered[platform] = Number(value);
     });
     setAccountSelections(remembered);
-  }, [brandIds, user.brand_id, user.user_id, workspace]);
+  }, [brandIds, user.brand_id, user.user_id, workspace, workspaceScopeKey]);
 
   const selectedFamily = useMemo(
     () => workspace?.families.find((family) => family.brand_ids.includes(selectedBrandId)) ?? null,

@@ -82,6 +82,8 @@ def stores() -> Iterator[
                     average_time_watched double precision,
                     interactions_count double precision,
                     replies_count double precision,
+                    saves_count double precision,
+                    sticker_taps double precision,
                     profile_visits double precision,
                     follows_count double precision,
                     taps_forward double precision,

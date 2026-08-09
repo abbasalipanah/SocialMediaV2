@@ -40,6 +40,11 @@ type TikTokTab = "account" | "audience" | "content" | "cover";
 type PieRow = { label: string; value: number; color: string };
 
 const TIKTOK_COLORS = ["#25f4ee", "#fe2c55", "#8b5cf6", "#f59e0b", "#14b8a6", "#3b82f6"];
+const FOLLOWER_FLOW_KEYS = [
+  { id: "follows", label: "Follows", color: "#3b82f6" },
+  { id: "unfollows", label: "Unfollows", color: "#fe2c55" },
+  { id: "followers_net", label: "Net", color: "#14b8a6" },
+] as const;
 
 function metric(data: PlatformDashboard, id: MetricId): DashboardMetric | undefined {
   return data.metrics.find((item) => item.metric_id === id);
@@ -139,12 +144,12 @@ function AccountSection({ data, withTitle }: { data: PlatformDashboard; withTitl
       <KpiGrid rows={accountKpis(data)} />
       <div className="facebook-two-grid">
         <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: "#38bdf8" }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
-        <PulseTrendCard data={data} keys={[{ id: "new_followers", label: "Net", color: "#14b8a6" }]} subtitle="Net follower movement" title="New Followers Trend" />
+        <PulseTrendCard data={data} keys={[...FOLLOWER_FLOW_KEYS]} subtitle="Follows, unfollows and net movement" title="New Followers Trend" />
       </div>
-      <PulseTrendCard bar data={data} keys={[{ id: "reach", label: "Video Reach", color: "#ec4899" }, { id: "video_views_total", label: "Video Views", color: "#5eead4" }]} subtitle="Video Reach and Video Views trend" title="Performance Trends" wide />
+      <PulseTrendCard bar data={data} keys={[{ id: "reach", label: "Video Reach", color: "#ec4899" }, { id: "views", label: "Video Views", color: "#5eead4" }]} subtitle="Daily reach and views across the selected period" title="Performance Trends" wide />
       <div className="facebook-one-three-grid">
         <PulsePieCard rows={metricPie(data, [{ id: "video_views_total", label: "Organic Views", color: "#8b5cf6" }])} subtitle="Collected video views" title="Video View Type" />
-        <PulseTrendCard data={data} keys={[{ id: "video_views_total", label: "Organic Views", color: "#3b82f6" }]} subtitle="Collected video views" title="Views Source Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "views", label: "Organic Views", color: "#3b82f6" }]} subtitle="Daily views across the selected period" title="Views Source Trend" />
       </div>
       <div className="facebook-one-three-grid">
         <PulsePieCard rows={metricPie(data, [{ id: "reach", label: "Organic Reach", color: "#22c55e" }])} subtitle="Organic reach when available" title="Reach Distribution" />
@@ -161,7 +166,7 @@ function ContentSection({ data, withTitle }: { data: PlatformDashboard; withTitl
       <KpiGrid rows={contentKpis(data)} />
       <div className="facebook-one-three-grid">
         <PulsePieCard rows={summaryPieRows(data.content_summary.by_type, TIKTOK_COLORS)} subtitle="Content type breakdown" title="Content Type" />
-        <PulseTrendCard data={data} keys={[{ id: "video_views_total", label: "Video Views", color: "#ec4899" }, { id: "reach", label: "Video Reach", color: "#8b5cf6" }]} subtitle="Daily video views and reach" title="Views & Reach Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "views", label: "Video Views", color: "#ec4899" }, { id: "reach", label: "Video Reach", color: "#8b5cf6" }]} subtitle="Daily video views and reach" title="Views & Reach Trend" />
       </div>
       <div className="facebook-two-three-grid">
         <PulseTrendCard data={data} keys={[{ id: "video_likes_total", label: "Likes", color: "#fe2c55" }, { id: "video_comments_total", label: "Comments", color: "#3b82f6" }, { id: "video_shares_total", label: "Shares", color: "#25f4ee" }]} subtitle="Likes, comments and shares over time" title="Interaction Trend" />
@@ -188,7 +193,7 @@ function AudienceSection({ data, withTitle }: { data: PlatformDashboard; withTit
       <KpiGrid rows={audienceKpis(data)} />
       <div className="facebook-two-grid">
         <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: "#38bdf8" }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
-        <PulseTrendCard data={data} keys={[{ id: "new_followers", label: "Net", color: "#14b8a6" }]} subtitle="Net follower movement" title="New Followers Trend" />
+        <PulseTrendCard data={data} keys={[...FOLLOWER_FLOW_KEYS]} subtitle="Follows, unfollows and net movement" title="New Followers Trend" />
       </div>
       <div className="facebook-two-grid">
         <AudienceDemographicsCard breakdowns={data.breakdowns} />

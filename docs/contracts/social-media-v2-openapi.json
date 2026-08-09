@@ -35,6 +35,17 @@
             "title": "Access Mode",
             "type": "string"
           },
+          "app_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Role"
+          },
           "authenticated": {
             "title": "Authenticated",
             "type": "boolean"
@@ -58,6 +69,10 @@
             "format": "date-time",
             "title": "Expires At",
             "type": "string"
+          },
+          "integrations_visible": {
+            "title": "Integrations Visible",
+            "type": "boolean"
           },
           "is_internal_staff": {
             "title": "Is Internal Staff",
@@ -98,8 +113,10 @@
           "source_system",
           "brand_id",
           "role",
+          "app_role",
           "access_mode",
           "settings_visible",
+          "integrations_visible",
           "is_internal_staff",
           "expires_at",
           "revoked"
@@ -1153,6 +1170,17 @@
             ],
             "title": "Replies"
           },
+          "saves": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saves"
+          },
           "shares": {
             "anyOf": [
               {
@@ -1163,6 +1191,17 @@
               }
             ],
             "title": "Shares"
+          },
+          "sticker_taps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sticker Taps"
           }
         },
         "required": [
@@ -1170,6 +1209,8 @@
           "shares",
           "profile_visits",
           "follows",
+          "sticker_taps",
+          "saves",
           "data_status"
         ],
         "title": "DashboardStoryActions",
@@ -1292,6 +1333,17 @@
             ],
             "title": "Replies"
           },
+          "saves": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saves"
+          },
           "shares": {
             "anyOf": [
               {
@@ -1302,6 +1354,17 @@
               }
             ],
             "title": "Shares"
+          },
+          "sticker_taps": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sticker Taps"
           },
           "swipe_forward": {
             "anyOf": [
@@ -1365,6 +1428,8 @@
           "shares",
           "profile_visits",
           "follows",
+          "sticker_taps",
+          "saves",
           "taps_forward",
           "taps_back",
           "swipe_forward",
@@ -1855,6 +1920,9 @@
           "followers",
           "following",
           "new_followers",
+          "follows",
+          "unfollows",
+          "followers_net",
           "reach",
           "reach_paid",
           "reach_organic",
@@ -2962,6 +3030,10 @@
       },
       "WorkspacePermissions": {
         "properties": {
+          "integrations_visible": {
+            "title": "Integrations Visible",
+            "type": "boolean"
+          },
           "internal_audit_visible": {
             "title": "Internal Audit Visible",
             "type": "boolean"
@@ -2989,6 +3061,7 @@
         },
         "required": [
           "settings_visible",
+          "integrations_visible",
           "internal_audit_visible",
           "rollup_available",
           "operation_mutation_available",
@@ -4025,6 +4098,238 @@
           }
         },
         "summary": "Meta Self Service Readiness"
+      }
+    },
+    "/api/integrations/status/connections": {
+      "get": {
+        "operationId": "integration_connections_api_integrations_status_connections_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Brand Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rollup",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Rollup",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Integration Connections"
+      }
+    },
+    "/api/integrations/status/social-accounts": {
+      "get": {
+        "operationId": "integration_social_accounts_api_integrations_status_social_accounts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Brand Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rollup",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Rollup",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "platform",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/PlatformId"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Platform"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocialAccountsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Integration Social Accounts"
+      }
+    },
+    "/api/integrations/status/sync-jobs": {
+      "get": {
+        "operationId": "integration_sync_jobs_api_integrations_status_sync_jobs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Brand Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rollup",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Rollup",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncJobsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Integration Sync Jobs"
       }
     },
     "/api/integrations/tiktok/oauth/start": {

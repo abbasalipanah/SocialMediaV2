@@ -50,8 +50,21 @@ class FakeSelfServiceActivation:
 
 def _make_self_service_session(authority: MemoryAuthority) -> dict[str, object]:
     session = authority.sessions[sha256_text(authority.raw_session)]
+    session["role"] = "viewer"
+    session["app_role"] = "operator"
+    session["source_system"] = "accumulate"
+    session["access_mode"] = "read"
     session["settings_visible"] = False
+    session["integrations_visible"] = True
     session["is_internal_staff"] = False
+    session["permissions"] = (
+        "social.connection.manage",
+        "tiktok.connection.manage",
+    )
+    for brand in session["brand_scope"]["brands"]:
+        if brand["brand_id"] == session["brand_id"]:
+            brand["role"] = "viewer"
+            brand["access_mode"] = "read"
     session["launch_target"] = None
     session.pop("sso_issued_at", None)
     session.pop("sso_consumed_at", None)
@@ -86,6 +99,14 @@ async def test_self_service_readiness_is_brand_scoped_without_owner_sso(
             "/api/workspace/capabilities",
             params={"selected_brand_id": "101"},
         )
+        integration_accounts = await client.get(
+            "/api/integrations/status/social-accounts",
+            params={"brand_id": "101"},
+        )
+        settings_accounts = await client.get(
+            "/api/settings/social-accounts",
+            params={"brand_id": "101"},
+        )
 
         assert response.status_code == 200
         assert response.json() | {"checked_at": "ignored"} == {
@@ -101,22 +122,35 @@ async def test_self_service_readiness_is_brand_scoped_without_owner_sso(
         }
         assert response.headers["cache-control"] == "no-store"
         assert capabilities.json()["permissions"]["settings_visible"] is False
+        assert capabilities.json()["permissions"]["integrations_visible"] is True
         assert capabilities.json()["permissions"]["tiktok_connection_manage"] is True
+        assert integration_accounts.status_code == 200
+        assert settings_accounts.status_code == 403
 
-        session["permissions"] = ()
+        session["app_role"] = "viewer"
         denied = await client.get(
             "/api/integrations/tiktok/self-service/readiness",
             params={"brand_id": "101"},
         )
         assert denied.status_code == 403
-        assert denied.json() == {"detail": "tiktok_connection_manage_required"}
+        assert denied.json() == {"detail": "integrations_capability_required"}
+        denied_status = await client.get(
+            "/api/integrations/status/social-accounts",
+            params={"brand_id": "101"},
+        )
+        assert denied_status.status_code == 403
 
-        session["permissions"] = ("tiktok.connection.manage",)
+        session["app_role"] = "operator"
         wrong_brand = await client.get(
             "/api/integrations/tiktok/self-service/readiness",
             params={"brand_id": "102"},
         )
         assert wrong_brand.status_code == 403
+        wrong_brand_status = await client.get(
+            "/api/integrations/status/social-accounts",
+            params={"brand_id": "102"},
+        )
+        assert wrong_brand_status.status_code == 403
 
 
 @pytest.mark.asyncio

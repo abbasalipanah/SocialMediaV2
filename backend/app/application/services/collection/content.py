@@ -110,6 +110,8 @@ def _content_record(target: CollectionTarget, item: ProviderRecord) -> ContentRe
         average_time_watched=_optional_number(fields, "average_time_watched"),
         interactions_count=_optional_number(fields, "interactions_count"),
         replies_count=_optional_number(fields, "replies_count"),
+        saves_count=_optional_number(fields, "saves_count"),
+        sticker_taps=_optional_number(fields, "sticker_taps"),
         profile_visits=_optional_number(fields, "profile_visits"),
         follows_count=_optional_number(fields, "follows_count"),
         taps_forward=_optional_number(fields, "taps_forward"),

@@ -173,6 +173,12 @@ export function KpiGrid({ rows }: { rows: PulseKpi[] }) {
 
 type TrendKey = { id: MetricId; label: string; color: string };
 
+const FOLLOWER_FLOW_KEYS: TrendKey[] = [
+  { id: "follows", label: "Follows", color: "#3b82f6" },
+  { id: "unfollows", label: "Unfollows", color: "#ec4899" },
+  { id: "followers_net", label: "Net", color: "#14b8a6" },
+];
+
 function seriesFor(data: PlatformDashboard, id: MetricId): DashboardSeries | undefined {
   return data.series.find((item) => item.metric_id === id);
 }
@@ -208,6 +214,17 @@ function chartDate(value: string): string {
     : parsed.toLocaleDateString("en-US", { day: "2-digit", month: "short", timeZone: "UTC" });
 }
 
+function selectedRangeDates(startOn: string, endOn: string): string[] {
+  const start = new Date(`${startOn}T00:00:00Z`);
+  const end = new Date(`${endOn}T00:00:00Z`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) return [];
+  const dates: string[] = [];
+  for (let cursor = start; cursor <= end && dates.length < 366; cursor = new Date(cursor.getTime() + 86_400_000)) {
+    dates.push(cursor.toISOString().slice(0, 10));
+  }
+  return dates;
+}
+
 export function PulseTrendCard({
   data,
   title,
@@ -237,17 +254,21 @@ export function PulseTrendCard({
   const minimum = localZoom ? rawMinimum - localPadding : Math.min(0, rawMinimum);
   const maximum = localZoom ? rawMaximum + localPadding : Math.max(1, rawMaximum);
   const chartData = useMemo(() => {
-    const dates = [...new Set(lines.flatMap((line) => line.points.map((point) => point.observed_on)))].sort();
+    const sampledDates = lines.flatMap((line) => line.points.map((point) => point.observed_on));
+    const dates = [...new Set([
+      ...selectedRangeDates(data.meta.date_range.start_on, data.meta.date_range.end_on),
+      ...sampledDates,
+    ])].sort();
     return dates.map((observed_on) => ({
       observed_on,
       ...Object.fromEntries(lines.map((line) => [line.id, line.points.find((point) => point.observed_on === observed_on)?.value ?? null])),
     }));
-  }, [lines]);
+  }, [data.meta.date_range.end_on, data.meta.date_range.start_on, lines]);
   return (
     <article className={`facebook-pulse-card facebook-trend-card${wide ? " wide" : ""}`}>
       <PulseCardHeading subtitle={subtitle} title={title} />
       {values.length === 0 ? <PulseEmpty copy="No trend data for this period." /> : (
-        <div aria-label={title} className="facebook-rechart" role="img">
+        <div aria-label={`${title}: ${lines.map((line) => line.label).join(", ")}`} className="facebook-rechart" role="img">
           <ResponsiveContainer height="100%" width="100%">
             {bar ? (
               <BarChart data={chartData} margin={{ bottom: 2, left: -12, right: 10, top: 4 }}>
@@ -274,7 +295,7 @@ export function PulseTrendCard({
                 <Tooltip labelFormatter={(value) => chartDate(String(value))} />
                 <Legend iconType="circle" verticalAlign="top" wrapperStyle={{ color: "#64748b", fontSize: "10px", paddingBottom: "10px" }} />
                 {lines.map((line) => (
-                  <Area activeDot={{ r: 3 }} connectNulls dataKey={line.id} dot={false} fill={`url(#${gradientSeed}-${line.id})`} key={line.id} name={line.label} stroke={line.color} strokeWidth={1.45} type="monotone" />
+                  <Area activeDot={{ r: 3 }} connectNulls={false} dataKey={line.id} dot={false} fill={`url(#${gradientSeed}-${line.id})`} key={line.id} name={line.label} stroke={line.color} strokeWidth={1.45} type="monotone" />
                 ))}
               </AreaChart>
             )}
@@ -346,19 +367,21 @@ export function PulsePieCard({ legendColumns = 2, title, subtitle, rows }: { leg
 
 function pageViewRows(data: PlatformDashboard): PieRow[] {
   const source = data.source_breakdown?.views;
-  if (!source) return [];
+  const organic = source?.organic ?? metric(data.metrics, "views_organic")?.value ?? null;
+  const paid = source?.paid ?? metric(data.metrics, "views_paid")?.value ?? null;
   return [
-    source.organic === null ? null : { label: "Organic", value: source.organic, color: "#8b5cf6" },
-    !data.source_breakdown?.paid_available || source.paid === null ? null : { label: "Paid", value: source.paid, color: "#ec4899" },
+    organic === null ? null : { label: "Organic", value: organic, color: "#8b5cf6" },
+    paid === null ? null : { label: "Paid", value: paid, color: "#ec4899" },
   ].filter((item): item is PieRow => item !== null);
 }
 
 function reachTypeRows(data: PlatformDashboard): PieRow[] {
   const source = data.source_breakdown?.reach;
-  if (!source) return [];
+  const organic = source?.organic ?? metric(data.metrics, "reach_organic")?.value ?? null;
+  const paid = source?.paid ?? metric(data.metrics, "reach_paid")?.value ?? null;
   return [
-    source.organic === null ? null : { label: "Organic", value: source.organic, color: "#8b5cf6" },
-    !data.source_breakdown?.paid_available || source.paid === null ? null : { label: "Paid", value: source.paid, color: "#ec4899" },
+    organic === null ? null : { label: "Organic", value: organic, color: "#8b5cf6" },
+    paid === null ? null : { label: "Paid", value: paid, color: "#ec4899" },
   ].filter((item): item is PieRow => item !== null);
 }
 
@@ -455,7 +478,7 @@ export function PerformingContentTable({ content }: { content: DashboardContent[
   const rows = [...content].sort((left, right) => right.interactions - left.interactions);
   return (
     <article className="facebook-pulse-table-card">
-      <PulseTableHeading action={`${rows.length} videos`} subtitle="Videos ranked by collected interactions" title="All Performing Content" />
+      <PulseTableHeading action={`${rows.length} items`} subtitle="Content ranked by collected interactions" title="All Performing Content" />
       <div className="facebook-table-scroll"><table><thead><tr><th>#</th><th>Video</th><th>Date</th><th>Views</th><th>Reach</th><th>Likes</th><th>Comments</th><th>Shares</th><th>Interactions</th></tr></thead><tbody>
         {rows.length === 0 ? <tr><td colSpan={9}>No videos were collected in this period.</td></tr> : rows.map((item, index) => (
           <tr key={`${item.account_id}-${item.external_content_id}`}>
@@ -506,7 +529,7 @@ function PageSection({ data, withTitle }: { data: PlatformDashboard; withTitle: 
       <KpiGrid rows={pageKpis(data)} />
       <div className="facebook-two-grid">
         <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: "#38bdf8" }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
-        <PulseTrendCard data={data} keys={[{ id: "new_followers", label: "New Followers", color: "#14b8a6" }]} subtitle="Net follower movement" title="New Followers Trend" />
+        <PulseTrendCard data={data} keys={FOLLOWER_FLOW_KEYS} subtitle="Follows, unfollows and net movement" title="New Followers Trend" />
       </div>
       <PulseTrendCard bar data={data} keys={[{ id: "reach", label: "Page Reach", color: "#8b5cf6" }, { id: "views", label: "Page Views", color: "#5eead4" }]} subtitle="Page Reach and Page Views trend" title="Performance Trends" wide />
       <div className="facebook-one-three-grid">
@@ -551,7 +574,7 @@ function AudienceSection({ data, withTitle }: { data: PlatformDashboard; withTit
       <KpiGrid rows={audienceKpis(data)} />
       <div className="facebook-two-grid">
         <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: "#38bdf8" }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
-        <PulseTrendCard data={data} keys={[{ id: "new_followers", label: "New Followers", color: "#14b8a6" }]} subtitle="Net follower movement" title="New Followers Trend" />
+        <PulseTrendCard data={data} keys={FOLLOWER_FLOW_KEYS} subtitle="Follows, unfollows and net movement" title="New Followers Trend" />
       </div>
       <div className="facebook-two-grid">
         <PulsePieCard

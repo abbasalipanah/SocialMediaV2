@@ -1,26 +1,36 @@
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, LockKeyhole, ShieldCheck, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Link2,
+  ListChecks,
+  LockKeyhole,
+  RefreshCw,
+  ShieldCheck,
+  X,
+} from "lucide-react";
+import { useState } from "react";
 import { Link, Outlet, useLocation } from "../../routing";
 
 import { apiQuery, auditSchema, queryString, tiktokActivationReadinessSchema } from "../../api";
 import { useBrandScope } from "../../app/BrandScopeProvider";
 import { SetupDrawer } from "./SetupDrawer";
+import {
+  AccountsTable,
+  BrandsTable,
+  LinksTable,
+  SettingsTableError,
+  SettingsTableLoading,
+  SyncTable,
+  type SettingsView,
+} from "./SettingsTables";
 import { useSettingsData } from "./useSettingsData";
-
-function displayDate(value: string | null): string {
-  if (!value) return "-";
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString();
-}
 
 export default function SettingsPage() {
   const location = useLocation();
   const nested = location.pathname !== "/settings";
   const [setupOpen, setSetupOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
-  const [pendingBrandId, setPendingBrandId] = useState("");
+  const [view, setView] = useState<SettingsView>("brands");
   const { capabilities } = useBrandScope();
   const data = useSettingsData();
   const mutationAvailable = capabilities?.permissions.operation_mutation_available ?? false;
@@ -28,64 +38,101 @@ export default function SettingsPage() {
   const accounts = data.accounts.data?.items ?? [];
   const links = data.links.data?.items ?? [];
   const jobs = data.jobs.data?.items ?? [];
-  const tiktokVisible = capabilities?.platforms.find((item) => item.platform === "tiktok")?.navigation_available === true;
-  const auditVisible = capabilities?.permissions.internal_audit_visible === true;
-  const brandStatus = (brand: (typeof brands)[number]) => brand.linked_account_count === 0
-    ? "Attention"
-    : brand.last_sync_at ? "Ready" : "Preparing";
-  const visibleBrands = useMemo(() => brands.filter((brand) => {
-    const matchesSearch = `${brand.name ?? ""} ${brand.brand_id}`.toLowerCase().includes(search.trim().toLowerCase());
-    return matchesSearch && (filter === "all" || brandStatus(brand).toLowerCase() === filter);
-  }), [brands, filter, search]);
-  const loading = data.brands.isPending || data.accounts.isPending || data.jobs.isPending;
-  const failed = data.brands.isError || data.accounts.isError || data.jobs.isError;
+  const readyBrands = brands.filter((item) => item.linked_account_count > 0 && item.last_sync_at).length;
+  const pendingBrands = brands.filter((item) => item.linked_account_count > 0 && !item.last_sync_at).length;
+  const missingAccounts = brands.filter((item) => item.linked_account_count === 0).length;
+  const connectedAccounts = accounts.filter((item) => item.connection_state === "connected").length;
+  const activeJobs = jobs.filter((item) => ["pending", "running"].includes(item.status)).length;
+  const failedJobs = jobs.filter((item) => item.status === "failed").length;
+  const refreshing = [
+    data.brands,
+    data.accounts,
+    data.links,
+    data.connections,
+    data.jobs,
+    data.readiness,
+  ].some((query) => query.isFetching);
+
+  const tabs = (
+    <>
+      {([
+        ["brands", "Brands"],
+        ["accounts", "Platform Accounts"],
+        ["links", "Mappings"],
+        ["sync", "Sync & Backfill"],
+      ] as Array<[SettingsView, string]>).map(([id, label]) => (
+        <button
+          aria-selected={view === id}
+          className={view === id ? "active" : ""}
+          key={id}
+          onClick={() => setView(id)}
+          role="tab"
+          type="button"
+        >
+          {label}
+        </button>
+      ))}
+    </>
+  );
+
+  const viewLoading = view === "brands"
+    ? data.brands.isPending
+    : view === "accounts"
+      ? data.accounts.isPending
+      : view === "links"
+        ? data.links.isPending
+        : data.jobs.isPending;
+  const viewError = view === "brands"
+    ? data.brands.isError
+    : view === "accounts"
+      ? data.accounts.isError
+      : view === "links"
+        ? data.links.isError
+        : data.jobs.isError;
+  const retryView = () => {
+    if (view === "brands") void data.brands.refetch();
+    else if (view === "accounts") void data.accounts.refetch();
+    else if (view === "links") void data.links.refetch();
+    else void data.jobs.refetch();
+  };
+  const refreshPlatform = async () => {
+    await Promise.all([
+      data.brands.refetch(),
+      data.accounts.refetch(),
+      data.links.refetch(),
+      data.connections.refetch(),
+      data.jobs.refetch(),
+      data.readiness.refetch(),
+    ]);
+  };
 
   return (
-    <main className="canonical-settings shell">
-      <section className="hero-panel">
-        <div className="hero-copy">
-          <div className="eyebrow">Settings</div>
-          <h1>Social media setup</h1>
-          <p>Brands, linked accounts, backfill and nightly sync in one table.</p>
+    <main className="page-shell settings-page">
+      <header className="performance-settings-header">
+        <div>
+          <p className="eyebrow">Settings</p>
+          <h1>Brand Setup and Account Mapping</h1>
+          <p>Manage Brand readiness, social accounts, mappings and collection status in one table-first workspace.</p>
         </div>
-        <div className="top-nav">
-          {tiktokVisible && <Link to="/tiktok">TikTok</Link>}
-          <Link to="/facebook">Facebook</Link>
-          <Link to="/instagram">Instagram</Link>
-          {auditVisible && <Link className="action-button" to="/settings/audit">Audit</Link>}
+        <div className="settings-header-actions">
+          <button className="settings-action-button" onClick={() => setView("links")} type="button"><Link2 size={16} />Linked brands</button>
+          <button className="settings-action-button" onClick={() => setView("sync")} type="button"><ListChecks size={16} />Manual sync</button>
+          <button className="settings-action-button emphasized" disabled={refreshing} onClick={() => void refreshPlatform()} type="button"><RefreshCw className={refreshing ? "spin" : ""} size={16} />{refreshing ? "Refreshing" : "Refresh Platform"}</button>
         </div>
-      </section>
+      </header>
 
-      {failed && <div className="error-strip" role="alert">Settings records could not be loaded.</div>}
       {data.completionMessage && <div className="success-strip" role="status"><CheckCircle2 size={18} /><span>{data.completionMessage}</span><button aria-label="Dismiss" onClick={data.dismissCompletion} type="button"><X size={16} /></button></div>}
 
-      <section className="surface settings-toolbar">
-        <input className="search-input" onChange={(event) => setSearch(event.target.value)} placeholder="Search brands" value={search} />
-        <select aria-label="Brand status" className="toolbar-select" onChange={(event) => setFilter(event.target.value)} value={filter}>
-          <option value="all">All</option><option value="ready">Ready</option><option value="preparing">Preparing</option><option value="attention">Attention</option>
-        </select>
-        <select aria-label="Select brand" className="toolbar-select" onChange={(event) => setPendingBrandId(event.target.value)} value={pendingBrandId}>
-          <option value="">Select brand</option>
-          {brands.map((brand) => <option key={brand.brand_id} value={brand.brand_id}>{brand.name ?? `Brand ${brand.brand_id}`}</option>)}
-        </select>
-        <button className="action-button" disabled={!pendingBrandId || !mutationAvailable} title={mutationAvailable ? "Add selected Brand" : "Brand authority is managed by Accumulate"} type="button">Add brand</button>
+      <section aria-label="Settings summary" className="settings-summary-grid">
+        <article className="tone-indigo"><span>Current Brands</span><strong>{brands.length}</strong></article>
+        <article className="tone-emerald"><span>Ready</span><strong>{readyBrands}</strong></article>
+        <article className="tone-amber"><span>Pending Setup</span><strong>{pendingBrands}</strong></article>
+        <article className="tone-rose"><span>Missing Accounts</span><strong>{missingAccounts}</strong></article>
+        <article className="tone-sky"><span>Connected Accounts</span><strong>{connectedAccounts}</strong></article>
+        <article><span>{failedJobs ? "Failed Jobs" : "Active Jobs"}</span><strong>{failedJobs || activeJobs}</strong></article>
       </section>
 
-      <section className="surface table-surface">
-        <div className="settings-table-scroll"><table className="settings-table"><thead><tr><th>Brand</th><th>Meta Access</th><th>Discovery</th><th>Accounts</th><th>Data</th><th>Backfill</th><th>Collector</th><th>Last Sync</th><th>Nightly</th><th>Action</th></tr></thead><tbody>
-          {visibleBrands.map((brand) => {
-            const brandAccounts = accounts.filter((account) => account.brand_id === brand.brand_id);
-            const backfills = brandAccounts.map((account) => account.backfill_status);
-            const backfill = backfills.length === 0 ? "Not started" : backfills.every((status) => status === "complete") ? "Complete" : backfills.some((status) => status === "failed") ? "Attention" : "Preparing";
-            const nightly = brandAccounts.some((account) => account.nightly_enabled);
-            const metaAccess = brandAccounts.some((account) => account.platform === "facebook" || account.platform === "instagram") ? "Connected" : "Not connected";
-            const status = brandStatus(brand);
-            return <tr key={brand.brand_id}><td><div className="table-primary">{brand.name ?? `Brand ${brand.brand_id}`}</div><div className="table-secondary">{brand.parent_brand_id ? "Child Brand" : "Parent Brand"}</div></td><td>{metaAccess}</td><td>{brandAccounts.length > 0 ? "Complete" : "Pending"}</td><td>{brand.linked_account_count}</td><td><span className={`pill ${status === "Ready" ? "pill-live" : status === "Attention" ? "pill-alert" : "pill-ink"}`}>{status}</span></td><td>{backfill}</td><td>{nightly ? "Active" : "Dormant"}</td><td>{displayDate(brand.last_sync_at)}</td><td>{nightly ? "On" : "Off"}</td><td><button className="action-button action-button-small" onClick={() => setSetupOpen(true)} type="button">Setup</button></td></tr>;
-          })}
-          {loading && <tr><td className="table-empty" colSpan={10}>Loading brands</td></tr>}
-          {!loading && visibleBrands.length === 0 && <tr><td className="table-empty" colSpan={10}>No brands in this view</td></tr>}
-        </tbody></table></div>
-      </section>
+      {viewLoading ? <SettingsTableLoading /> : viewError ? <SettingsTableError retry={retryView} /> : view === "brands" ? <BrandsTable items={brands} navigation={tabs} onSetup={() => setSetupOpen(true)} /> : view === "accounts" ? <AccountsTable items={accounts} mutationAvailable={mutationAvailable} navigation={tabs} /> : view === "links" ? <LinksTable items={links} navigation={tabs} /> : <SyncTable items={jobs} mutationAvailable={mutationAvailable} navigation={tabs} />}
       {nested && <Outlet />}
       <SetupDrawer
         accounts={data.accounts.data?.items ?? []}

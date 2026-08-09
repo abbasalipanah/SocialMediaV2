@@ -40,9 +40,8 @@ class MemorySessionStore:
         if session_hash in self.sessions:
             self.sessions[session_hash]["revoked"] = True
 
-def token(
-    *, contract_overrides: Mapping[str, Any] | None = None, **top_overrides: Any
-) -> str:
+
+def token(*, contract_overrides: Mapping[str, Any] | None = None, **top_overrides: Any) -> str:
     now = datetime.now(UTC)
     contract: dict[str, Any] = {
         "version": "v1",
@@ -133,7 +132,10 @@ def test_owner_launch_context_is_preserved_in_the_hash_only_session() -> None:
     assert session["launch_target"] == "tiktok_owner_activation"
     assert session["sso_issued_at"] == verified.issued_at.isoformat()
     assert isinstance(session["sso_consumed_at"], str)
-    assert session["permissions"] == ("tiktok.connection.manage",)
+    assert session["permissions"] == (
+        "social.connection.manage",
+        "tiktok.connection.manage",
+    )
     assert session["sso_jti_hash"] == sha256_text(verified.jti)
     assert verified.jti not in repr(session)
 
@@ -163,10 +165,53 @@ def test_role_status_access_and_visibility_invariants_fail_closed() -> None:
             ),
             SECRET,
         )
-    with pytest.raises(SsoError, match="settings_visibility_mismatch"):
-        verify_sso(token(contract_overrides={"settings_visible": False}), SECRET)
+    derived = verify_sso(token(contract_overrides={"settings_visible": False}), SECRET)
+    assert derived.settings_visible is True
     with pytest.raises(SsoError, match="entitlement_inactive"):
         verify_sso(token(contract_overrides={"entitlement_status": "disabled"}), SECRET)
+
+
+def test_viewer_operator_gets_integrations_without_settings() -> None:
+    store = MemorySessionStore()
+    raw_session, verified = consume_sso(
+        token(
+            contract_overrides={
+                "role": "viewer",
+                "platform_role": "viewer",
+                "effective_role": "operator",
+                "app_role": "operator",
+                "access_mode": "read",
+                "is_internal_staff": False,
+                "settings_visible": False,
+            }
+        ),
+        SECRET,
+        store,
+    )
+    session = resolve_session(raw_session, store)
+    assert session is not None
+    assert verified.app_role == "operator"
+    assert session["settings_visible"] is False
+    assert session["integrations_visible"] is True
+    assert session["permissions"] == (
+        "social.connection.manage",
+        "tiktok.connection.manage",
+    )
+
+
+def test_internal_agency_operator_does_not_receive_settings() -> None:
+    verified = verify_sso(
+        token(
+            contract_overrides={
+                "role": "agency_operator",
+                "platform_role": "agency_operator",
+                "effective_role": "agency_operator",
+                "settings_visible": True,
+            }
+        ),
+        SECRET,
+    )
+    assert verified.settings_visible is False
 
 
 def test_contract_access_window_is_enforced_and_caps_session() -> None:
@@ -180,9 +225,7 @@ def test_contract_access_window_is_enforced_and_caps_session() -> None:
     with pytest.raises(SsoError, match="access_expired"):
         verify_sso(
             token(
-                contract_overrides={
-                    "access_expires_at": (now - timedelta(seconds=1)).isoformat()
-                }
+                contract_overrides={"access_expires_at": (now - timedelta(seconds=1)).isoformat()}
             ),
             SECRET,
             now,

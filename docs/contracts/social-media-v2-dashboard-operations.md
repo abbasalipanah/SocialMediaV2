@@ -1,6 +1,6 @@
 # Social Media V2 Dashboard and Operations API Contract
 
-Tarih: `2026-07-14`
+Tarih: `2026-08-09`
 
 Bu sözleşme salt-okunur dashboard/Settings yüzeyini ve V2-owned operasyon sınırlarını tanımlar.
 
@@ -10,8 +10,11 @@ Bu sözleşme salt-okunur dashboard/Settings yüzeyini ve V2-owned operasyon sı
 - `brand_id` seçimi imzalı SSO session kapsamı içinde çözülür.
 - `rollup=true`, yalnız kullanıcının erişebildiği active child Brand kimliklerini döndürür.
 - Account filtresi resolved Brand scope dışındaysa `dashboard_account_scope_denied` ile kapanır.
-- Settings route'ları role string'iyle değil signed session `settings_visible` capability'siyle
-  açılır.
+- Settings route'ları yalnız canonical `super_admin|agency_admin` rolünden backend'de türetilen
+  capability ile açılır; signed legacy visibility boolean'ı veya frontend tek başına yetki vermez.
+- Integrations `super_admin|agency_admin` rollerine ve Accumulate kaynaklı `viewer` + signed
+  `app_role=admin|operator` session'ına açılır. Viewer/Operator yalnız exact session Brand ve
+  non-rollup scope kullanabilir.
 - Her response requested Brand, rollup kararı, resolved Brand ve account kimliklerini taşır.
 
 ## Dashboard response
@@ -65,6 +68,9 @@ GET /api/settings/connections
 GET /api/settings/sync-jobs
 GET /api/settings/audit
 GET /api/settings/tiktok/connection
+GET /api/integrations/status/social-accounts
+GET /api/integrations/status/connections
+GET /api/integrations/status/sync-jobs
 GET /api/insights
 GET /api/operations/readiness
 GET /api/workspace/capabilities
@@ -74,6 +80,8 @@ Yalnız stored data okunur. GET route'ları setup ensure/recalculate, token refr
 media persistence, job enqueue, commit veya upsert yapamaz. Audit store bu fazda yapılandırılmamışsa
 boş ama dürüst `unavailable` cevabı döner. Stored AI insight okunur; GET LLM generation başlatmaz.
 Connection DTO token/credential/source URL içermez.
+Integrations status endpoint'leri stored veriyi Settings yetkisini genişletmeden okur;
+Viewer/Operator hiçbir `/api/settings/*` endpoint'ine erişemez.
 
 Workspace capability cevabındaki her platform kaydı `linked_account_count` ve
 `navigation_available` taşır. Navigation availability, seçili backend scope'unda stored linked

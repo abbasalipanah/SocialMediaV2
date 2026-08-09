@@ -197,7 +197,7 @@ describe("Phase 8 product surfaces", () => {
     expect(screen.queryByRole("heading", { name: "Unanswered Comments Queue" })).not.toBeInTheDocument();
   });
 
-  it("keeps the Accumulate Instagram Cover as the combined Page, Content and Audience view", () => {
+  it("keeps the Instagram Cover as the combined Page, Content, Stories and Audience view", () => {
     const data = {
       ...baseDashboard,
       meta: {
@@ -244,7 +244,8 @@ describe("Phase 8 product surfaces", () => {
     expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Content" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Audience" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Stories" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Stories" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Instagram Stories" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Story Performance Trends" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Age & Gender" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Audience by Country" })).toBeInTheDocument();

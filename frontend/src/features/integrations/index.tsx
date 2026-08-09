@@ -27,9 +27,9 @@ import type {
 } from "../../api";
 import { useBrandScope } from "../../app/BrandScopeProvider";
 import { humanize } from "../dashboard/format";
-import { useSettingsData } from "../settings/useSettingsData";
 import { TikTokConnectionModal } from "./TikTokConnectionModal";
 import { MetaConnectionModal } from "./MetaConnectionModal";
+import { useIntegrationsData } from "./useIntegrationsData";
 
 type IntegrationStatus = "connected" | "action_required" | "not_connected";
 type StatusFilter = "all" | IntegrationStatus;
@@ -142,7 +142,7 @@ export function buildSocialIntegrations({
 
 export default function IntegrationsPage() {
   const { capabilities, isLoading: scopeLoading, rollup, selectedBrand, selectedBrandId } = useBrandScope();
-  const data = useSettingsData();
+  const data = useIntegrationsData();
   const [selectedPlatformId, setSelectedPlatformId] = useState<Platform | "">("facebook");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");

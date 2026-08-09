@@ -1,0 +1,32 @@
+{
+  "decision_id": "settings-integrations-rbac-2026-08-09",
+  "date": "2026-08-09",
+  "status": "binding",
+  "scope": "social_media_v2",
+  "navigation": {
+    "social_tree_settings": false,
+    "footer_settings": true,
+    "footer_integrations": true,
+    "settings_count": 1
+  },
+  "settings": {
+    "reference": "performance_marketing_active_settings_workspace",
+    "allowed_roles": ["super_admin", "agency_admin"],
+    "backend_enforcement_required": true
+  },
+  "integrations": {
+    "reference": "performance_marketing_active_integrations_workspace",
+    "allowed_role_rules": [
+      {"role": "super_admin"},
+      {"role": "agency_admin"},
+      {
+        "role": "viewer",
+        "source_system": "accumulate",
+        "app_roles": ["admin", "operator"]
+      }
+    ],
+    "settings_api_reuse_for_viewer": false,
+    "backend_enforcement_required": true
+  },
+  "change_control": "Requires a new explicit user decision."
+}

@@ -57,7 +57,7 @@ class MemoryAuthority:
                             "parent_brand_id": "100",
                             "visibility": "active",
                             "access_mode": "write",
-                            "role": "agency_operator",
+                            "role": "agency_admin",
                         },
                         {
                             "brand_id": "102",
@@ -69,11 +69,11 @@ class MemoryAuthority:
                         },
                     ],
                 },
-                "role": "agency_operator",
+                "role": "agency_admin",
                 "access_mode": "write",
                 "settings_visible": True,
                 "is_internal_staff": True,
-                "permissions": ("tiktok.connection.manage",),
+                "permissions": ("social.connection.manage", "tiktok.connection.manage"),
                 "revoked": False,
                 "sso_jti_hash": sha256_text("phase6-jti"),
             }
@@ -112,7 +112,7 @@ class MemoryAuthority:
                 "active": True,
                 "authority_source": "full_snapshot",
                 "brand_id": "101",
-                "role": "agency_operator",
+                "role": "agency_admin",
                 "user_id": "user-1",
             },
             "v2:brand-access:user-1:102": {
@@ -352,9 +352,7 @@ class MemoryReporting:
             and start_on <= row.commented_at.date() <= end_on
         )
 
-    def find_media(
-        self, *, brand_ids, platform, external_content_id, account_id=None
-    ):
+    def find_media(self, *, brand_ids, platform, external_content_id, account_id=None):
         row = self.media
         if (
             row.brand_id not in brand_ids
@@ -429,9 +427,7 @@ def test_platform_dashboard_rollup_respects_metric_semantics(phase6_fixture) -> 
                     requested_brand_id="101",
                     resolved_brand_ids=("101",),
                     rollup=False,
-                    date_range=ReportingRange(
-                        date(2026, 7, 1), date(2026, 7, 2), "custom"
-                    ),
+                    date_range=ReportingRange(date(2026, 7, 1), date(2026, 7, 2), "custom"),
                 ),
                 account_id=12,
             ),
@@ -566,9 +562,7 @@ def test_phase6_openapi_publishes_typed_response_contracts() -> None:
         ]["schema"]
         assert response_schema == {"$ref": f"#/components/schemas/{model}"}
     components = schema["components"]["schemas"]
-    assert {"semantic_type", "data_status"}.issubset(
-        components["DashboardMetric"]["required"]
-    )
+    assert {"semantic_type", "data_status"}.issubset(components["DashboardMetric"]["required"])
     assert {"methodology", "availability_reason"}.issubset(
         components["DashboardMetric"]["required"]
     )
@@ -657,8 +651,7 @@ async def test_phase6_routes_are_scoped_read_only_and_honest(phase6_fixture) -> 
         )
         assert readiness.status_code == 200
         assert {
-            item["platform"]: item["account_count"]
-            for item in readiness.json()["platforms"]
+            item["platform"]: item["account_count"] for item in readiness.json()["platforms"]
         } == {"facebook": 2, "instagram": 1, "tiktok": 1}
         assert (
             await client.get(
@@ -672,9 +665,7 @@ async def test_phase6_routes_are_scoped_read_only_and_honest(phase6_fixture) -> 
         )
         assert connection.json()["state"] == "pending_verification"
         assert "token" not in connection.text.lower()
-        insights = await client.get(
-            "/api/insights", params={"brand_id": "101"}
-        )
+        insights = await client.get("/api/insights", params={"brand_id": "101"})
         assert insights.json()["items"][0]["summary"] == "Summary"
         media = await client.get(
             "/api/media/instagram/ig-post",
@@ -690,11 +681,11 @@ async def test_phase6_routes_are_scoped_read_only_and_honest(phase6_fixture) -> 
         assert blocked.status_code == 403
         assert blocked.json() == {"detail": "writes_disabled"}
 
+        authority.sessions[sha256_text(authority.raw_session)]["role"] = "agency_operator"
         authority.sessions[sha256_text(authority.raw_session)]["settings_visible"] = False
-        denied = await client.get(
-            "/api/settings/brands", params={"brand_id": "101"}
-        )
+        denied = await client.get("/api/settings/brands", params={"brand_id": "101"})
         assert denied.status_code == 403
+        authority.sessions[sha256_text(authority.raw_session)]["role"] = "agency_admin"
         authority.sessions[sha256_text(authority.raw_session)]["settings_visible"] = True
 
     assert authority.sessions == before[0]

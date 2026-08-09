@@ -209,8 +209,7 @@ def metric_series(
                 )
         elif not points and definition.derivation_operator is DerivationOperator.SUM_COMPONENTS:
             sources = tuple(
-                registered.get(metric_id)
-                for metric_id in definition.derived_from_metric_ids
+                registered.get(metric_id) for metric_id in definition.derived_from_metric_ids
             )
             if all(source is not None for source in sources):
                 source_maps = tuple(
@@ -218,9 +217,7 @@ def metric_series(
                     for source in sources
                     if source is not None
                 )
-                common_dates = set.intersection(
-                    *(set(source_map) for source_map in source_maps)
-                )
+                common_dates = set.intersection(*(set(source_map) for source_map in source_maps))
                 points = tuple(
                     DashboardPoint(
                         observed_on=observed_on,
@@ -235,12 +232,8 @@ def metric_series(
             numerator = registered.get(definition.numerator_metric_id)  # type: ignore[arg-type]
             denominator = registered.get(definition.denominator_metric_id)  # type: ignore[arg-type]
             if numerator is not None and denominator is not None:
-                numerator_map = {
-                    point.observed_on: point.value for point in numerator.points
-                }
-                denominator_map = {
-                    point.observed_on: point.value for point in denominator.points
-                }
+                numerator_map = {point.observed_on: point.value for point in numerator.points}
+                denominator_map = {point.observed_on: point.value for point in denominator.points}
                 points = tuple(
                     DashboardPoint(
                         observed_on=observed_on,
@@ -277,9 +270,7 @@ def metric_breakdowns(
         current = latest.get(key)
         if current is None or sample.observed_on >= current.observed_on:
             latest[key] = sample
-    grouped: dict[tuple[MetricId, str], dict[str, float]] = defaultdict(
-        lambda: defaultdict(float)
-    )
+    grouped: dict[tuple[MetricId, str], dict[str, float]] = defaultdict(lambda: defaultdict(float))
     for (metric_id, dimension, value, _), sample in latest.items():
         grouped[(metric_id, dimension)][value] += sample.value
     return tuple(
@@ -409,8 +400,7 @@ def _named_breakdown(
         None,
     )
     return tuple(
-        DashboardNamedValue(name=item.key, value=item.value)
-        for item in (row.items if row else ())
+        DashboardNamedValue(name=item.key, value=item.value) for item in (row.items if row else ())
     )
 
 
@@ -425,8 +415,7 @@ def content_summary(
         label = (row.content_type or "post").replace("_", " ").title()
         counts[label] = counts.get(label, 0) + 1
     by_type = tuple(
-        DashboardNamedValue(name=name, value=float(value))
-        for name, value in sorted(counts.items())
+        DashboardNamedValue(name=name, value=float(value)) for name, value in sorted(counts.items())
     )
     reach_by_type = _named_breakdown(breakdowns, "content_type_reach")
     views_by_type = _named_breakdown(breakdowns, "content_type_views")
@@ -474,7 +463,10 @@ def _source_values(
             item
             for item in breakdowns
             if item.metric_id is metric_id
-            and ("type" in item.dimension.lower() or "source" in item.dimension.lower())
+            and any(
+                "organic" in value.key.lower() or "paid" in value.key.lower()
+                for value in item.items
+            )
         ),
         None,
     )
@@ -522,9 +514,7 @@ def source_breakdown(
     )
 
 
-def metric_methodology(
-    platform: PlatformId, catalog: MetricCatalog
-) -> DashboardMetricMethodology:
+def metric_methodology(platform: PlatformId, catalog: MetricCatalog) -> DashboardMetricMethodology:
     def method(metric_id: MetricId) -> str:
         try:
             return methodology_for_definition(catalog.get(platform, metric_id))
@@ -532,9 +522,7 @@ def metric_methodology(
             return "unavailable"
 
     engagement_id = (
-        MetricId.VIDEO_ENGAGEMENT_RATE
-        if platform is PlatformId.TIKTOK
-        else MetricId.INTERACTIONS
+        MetricId.VIDEO_ENGAGEMENT_RATE if platform is PlatformId.TIKTOK else MetricId.INTERACTIONS
     )
     return DashboardMetricMethodology(
         follower_flow=method(MetricId.NEW_FOLLOWERS),
@@ -555,8 +543,7 @@ def audience_capabilities(
     age_available = any("age" in item for item in dimensions)
     gender_available = any("gender" in item for item in dimensions)
     activity_available = any(
-        "activity" in item or "best_time" in item or "hourly" in item
-        for item in dimensions
+        "activity" in item or "best_time" in item or "hourly" in item for item in dimensions
     )
     if platform is PlatformId.FACEBOOK:
         return DashboardAudienceCapabilities(
@@ -590,23 +577,17 @@ def audience_capabilities(
         geo=geo_status,
         age_gender=age_status,
         activity=(
-            AvailabilityStatus.AVAILABLE
-            if activity_available
-            else AvailabilityStatus.UNAVAILABLE
+            AvailabilityStatus.AVAILABLE if activity_available else AvailabilityStatus.UNAVAILABLE
         ),
     )
 
 
-def _breakdown_total(
-    breakdowns: tuple[DashboardBreakdown, ...], hint: str
-) -> float | None:
+def _breakdown_total(breakdowns: tuple[DashboardBreakdown, ...], hint: str) -> float | None:
     row = next((item for item in breakdowns if hint in item.dimension.lower()), None)
     return sum(item.value for item in row.items) if row else None
 
 
-def _story_named_totals(
-    breakdowns: tuple[DashboardBreakdown, ...], hint: str
-) -> dict[str, float]:
+def _story_named_totals(breakdowns: tuple[DashboardBreakdown, ...], hint: str) -> dict[str, float]:
     row = next((item for item in breakdowns if hint in item.dimension.lower()), None)
     return {item.key.lower(): item.value for item in row.items} if row else {}
 
@@ -632,9 +613,7 @@ def _story_interactions(row: ReportingContent) -> float:
 
 
 def _story_completion(rows: tuple[ReportingContent, ...]) -> float | None:
-    values = tuple(
-        row.completion_rate for row in rows if row.completion_rate is not None
-    )
+    values = tuple(row.completion_rate for row in rows if row.completion_rate is not None)
     return sum(values) / len(values) if values else None
 
 
@@ -646,9 +625,7 @@ def _story_summary_from_rows(
     story_interactions = sum(_story_interactions(row) for row in rows) if rows else None
     story_replies = (
         sum(
-            row.replies_count
-            if row.replies_count is not None
-            else float(row.comments_count)
+            row.replies_count if row.replies_count is not None else float(row.comments_count)
             for row in rows
         )
         if rows
@@ -694,9 +671,7 @@ def stories_contract(
     if platform is not PlatformId.INSTAGRAM:
         return None
     story_rows = tuple(row for row in rows if "story" in row.content_type.lower())
-    previous_story_rows = tuple(
-        row for row in previous_rows if "story" in row.content_type.lower()
-    )
+    previous_story_rows = tuple(row for row in previous_rows if "story" in row.content_type.lower())
     has_story_breakdown = any("story_" in row.dimension.lower() for row in breakdowns)
     if not story_rows and not has_story_breakdown:
         return None
@@ -709,15 +684,11 @@ def stories_contract(
     summary_views = row_summary.views if summary_views is None else summary_views
     summary_reach = row_summary.reach if summary_reach is None else summary_reach
     summary_interactions = (
-        row_summary.interactions
-        if summary_interactions is None
-        else summary_interactions
+        row_summary.interactions if summary_interactions is None else summary_interactions
     )
     summary_replies = row_summary.replies if summary_replies is None else summary_replies
     summary_completion = (
-        row_summary.completion_rate
-        if summary_completion is None
-        else summary_completion
+        row_summary.completion_rate if summary_completion is None else summary_completion
     )
     complete_summary = all(
         value is not None
@@ -735,12 +706,8 @@ def stories_contract(
         date_range.start_on + timedelta(days=index)
         for index in range((date_range.end_on - date_range.start_on).days + 1)
     )
-    views_complete = bool(story_rows) and all(
-        row.views_count is not None for row in story_rows
-    )
-    reach_complete = bool(story_rows) and all(
-        row.reach_count is not None for row in story_rows
-    )
+    views_complete = bool(story_rows) and all(row.views_count is not None for row in story_rows)
+    reach_complete = bool(story_rows) and all(row.reach_count is not None for row in story_rows)
     daily_views: dict[date, float] = defaultdict(float)
     daily_reach: dict[date, float] = defaultdict(float)
     for row in story_rows:
@@ -758,23 +725,27 @@ def stories_contract(
     actions_from_rows = {
         "replies": _optional_sum(
             tuple(
-                row.replies_count
-                if row.replies_count is not None
-                else float(row.comments_count)
+                row.replies_count if row.replies_count is not None else float(row.comments_count)
                 for row in story_rows
             )
         ),
         "shares": _optional_sum(tuple(float(row.shares_count) for row in story_rows)),
         "profile_visits": _optional_sum(tuple(row.profile_visits for row in story_rows)),
-        "follows": _optional_sum(tuple(row.follows_count for row in story_rows)),
+        MetricId.FOLLOWS.value: _optional_sum(tuple(row.follows_count for row in story_rows)),
+        "sticker_taps": _optional_sum(tuple(row.sticker_taps for row in story_rows)),
+        "saves": _optional_sum(tuple(row.saves_count for row in story_rows)),
     }
     previous_summary = _story_summary_from_rows(previous_story_rows)
     navigation_complete = bool(navigation_values) or all(
         value is not None for value in navigation_from_rows.values()
     )
-    actions_complete = bool(action_values) or all(
-        value is not None for value in actions_from_rows.values()
+    core_action_values = (
+        actions_from_rows["replies"],
+        actions_from_rows["shares"],
+        actions_from_rows["profile_visits"],
+        actions_from_rows[MetricId.FOLLOWS.value],
     )
+    actions_complete = bool(action_values) or all(value is not None for value in core_action_values)
     items_complete = bool(story_rows) and all(
         all(
             value is not None
@@ -840,9 +811,9 @@ def stories_contract(
             taps_back=_first_named_value(navigation_values, "back", "tap back")
             if navigation_values
             else navigation_from_rows["taps_back"],
-            swipe_forward=_first_named_value(
-                navigation_values, "next story", "swipe forward"
-            ) if navigation_values else navigation_from_rows["swipe_forward"],
+            swipe_forward=_first_named_value(navigation_values, "next story", "swipe forward")
+            if navigation_values
+            else navigation_from_rows["swipe_forward"],
             exits=_first_named_value(navigation_values, "exited", "exits")
             if navigation_values
             else navigation_from_rows["exits"],
@@ -857,25 +828,25 @@ def stories_contract(
         ),
         actions=DashboardStoryActions(
             replies=(
-                action_values.get("replies")
-                if action_values
-                else actions_from_rows["replies"]
+                action_values.get("replies") if action_values else actions_from_rows["replies"]
             ),
-            shares=(
-                action_values.get("shares")
-                if action_values
-                else actions_from_rows["shares"]
-            ),
+            shares=(action_values.get("shares") if action_values else actions_from_rows["shares"]),
             profile_visits=(
                 action_values.get("profile visits")
                 if action_values
                 else actions_from_rows["profile_visits"]
             ),
             follows=(
-                action_values.get("follows")
+                action_values.get(MetricId.FOLLOWS.value)
                 if action_values
-                else actions_from_rows["follows"]
+                else actions_from_rows[MetricId.FOLLOWS.value]
             ),
+            sticker_taps=(
+                action_values.get("sticker taps")
+                if action_values
+                else actions_from_rows["sticker_taps"]
+            ),
+            saves=(action_values.get("saves") if action_values else actions_from_rows["saves"]),
             data_status=(
                 DataStatus.AVAILABLE
                 if action_values or all(value is not None for value in actions_from_rows.values())
@@ -902,6 +873,8 @@ def stories_contract(
                 shares=float(row.shares_count),
                 profile_visits=row.profile_visits,
                 follows=row.follows_count,
+                sticker_taps=row.sticker_taps,
+                saves=row.saves_count,
                 taps_forward=row.taps_forward,
                 taps_back=row.taps_back,
                 swipe_forward=row.swipe_forward,
@@ -930,9 +903,7 @@ def stories_contract(
             )
             for row in story_rows
         ),
-        data_status=(
-            DataStatus.AVAILABLE if structured_available else DataStatus.PARTIAL
-        ),
+        data_status=(DataStatus.AVAILABLE if structured_available else DataStatus.PARTIAL),
     )
 
 

@@ -64,6 +64,8 @@ class ReportingContent:
     average_time_watched: float | None = None
     interactions_count: float | None = None
     replies_count: float | None = None
+    saves_count: float | None = None
+    sticker_taps: float | None = None
     profile_visits: float | None = None
     follows_count: float | None = None
     taps_forward: float | None = None
@@ -184,9 +186,7 @@ class ReportingStore(Protocol):
         self, *, brand_ids: tuple[str, ...]
     ) -> tuple[ReportingConnection, ...]: ...
 
-    def list_sync_jobs(
-        self, *, brand_ids: tuple[str, ...]
-    ) -> tuple[ReportingSyncJob, ...]: ...
+    def list_sync_jobs(self, *, brand_ids: tuple[str, ...]) -> tuple[ReportingSyncJob, ...]: ...
 
     def list_insights(
         self,

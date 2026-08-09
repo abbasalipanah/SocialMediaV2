@@ -1,0 +1,44 @@
+{
+  "decision_id": "dashboard-data-completeness-2026-08-09",
+  "date": "2026-08-09",
+  "status": "binding",
+  "scope": "social_media_v2",
+  "instagram_cover": {
+    "sections": ["page", "content", "stories", "audience"],
+    "stories_required": true
+  },
+  "follower_flow": {
+    "platforms": ["facebook", "instagram", "tiktok"],
+    "series": ["follows", "unfollows", "followers_net"],
+    "selected_period_required": true
+  },
+  "stories": {
+    "selected_story_actions": [
+      "replies",
+      "shares",
+      "profile_visits",
+      "follows",
+      "sticker_taps",
+      "saves"
+    ],
+    "behaviour_action_scope": "selected_date_period_totals",
+    "relative_comparisons": {
+      "baseline": "immediately_previous_chronological_story",
+      "views_reach_interactions": "relative_percent_change",
+      "completion_rate": "percentage_point_change"
+    },
+    "missing_value_policy": "not_provided",
+    "reported_zero_policy": "show_zero"
+  },
+  "bounded_tables": {
+    "all_performing_content": true,
+    "stories_history": true,
+    "internal_vertical_scroll": true,
+    "sticky_header": true
+  },
+  "tiktok_performance_trends": {
+    "must_match_selected_period": true,
+    "short_cumulative_content_fallback_allowed": false
+  },
+  "change_control": "Requires a new explicit user decision."
+}

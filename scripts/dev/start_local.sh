@@ -16,6 +16,12 @@ if [[ ! -x "$FRONTEND/node_modules/.bin/vite" ]]; then
   exit 1
 fi
 
+"$ROOT/scripts/dev/ensure_local_db.sh"
+set -a
+# shellcheck disable=SC1090
+source "$ROOT/.local/social-media-v2-db.env"
+set +a
+
 for port in 8000 3010; do
   if python3 - "$port" <<'PY'
 import socket
@@ -41,7 +47,6 @@ cleanup_local() {
 }
 trap cleanup_local EXIT INT TERM
 
-unset SOCIAL_DB_URL SOCIAL_DB_HOST SOCIAL_DB_NAME SOCIAL_DB_USER SOCIAL_DB_PASSWORD
 export APP_ENV=development
 export SOCIAL_RUNTIME_MODE=development
 export SOCIAL_WRITES_ENABLED=false
@@ -58,7 +63,8 @@ export SOCIAL_META_ACTIVATION_GATE_ENABLED=false
 (
   cd "$BACKEND"
   exec "$PYTHON" -m uvicorn app.local_demo:create_local_demo_app \
-    --factory --host 127.0.0.1 --port 8000
+    --factory --host 127.0.0.1 --port 8000 \
+    --reload --reload-dir "$BACKEND/app"
 ) &
 backend_pid=$!
 
@@ -79,7 +85,8 @@ done
 
 echo
 echo "Social Media local demo is ready: http://127.0.0.1:3010/"
-echo "Demo data is in memory; production DB and providers are not used."
+echo "Dashboard data is read from the isolated Social Media V2 local database."
+echo "Production providers and source-project writers are not used."
 echo "Press Ctrl+C to stop both processes."
 echo
 

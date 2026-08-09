@@ -79,8 +79,21 @@ class FakeMetaActivation:
 
 def _session(authority: MemoryAuthority) -> dict[str, object]:
     session = authority.sessions[sha256_text(authority.raw_session)]
+    session["role"] = "viewer"
+    session["app_role"] = "operator"
+    session["source_system"] = "accumulate"
+    session["access_mode"] = "read"
     session["settings_visible"] = False
+    session["integrations_visible"] = True
     session["is_internal_staff"] = False
+    session["permissions"] = (
+        "social.connection.manage",
+        "tiktok.connection.manage",
+    )
+    for brand in session["brand_scope"]["brands"]:
+        if brand["brand_id"] == session["brand_id"]:
+            brand["role"] = "viewer"
+            brand["access_mode"] = "read"
     session["launch_target"] = None
     session.pop("sso_issued_at", None)
     session.pop("sso_consumed_at", None)

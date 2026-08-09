@@ -19,6 +19,9 @@ class MetricId(StrEnum):
     FOLLOWERS = "followers"
     FOLLOWING = "following"
     NEW_FOLLOWERS = "new_followers"
+    FOLLOWS = "follows"
+    UNFOLLOWS = "unfollows"
+    FOLLOWERS_NET = "followers_net"
     REACH = "reach"
     REACH_PAID = "reach_paid"
     REACH_ORGANIC = "reach_organic"
@@ -285,9 +288,7 @@ def _profile_snapshot(
     )
 
 
-def _profile_flow(
-    platform: PlatformId, metric_id: MetricId, source_field: str
-) -> MetricDefinition:
+def _profile_flow(platform: PlatformId, metric_id: MetricId, source_field: str) -> MetricDefinition:
     return MetricDefinition(
         metric_id=metric_id,
         platform=platform,
@@ -510,6 +511,13 @@ def bootstrap_metric_catalog() -> MetricCatalog:
                 MetricId.NEW_FOLLOWERS,
                 MetricId.FOLLOWERS,
             ),
+            _profile_flow(PlatformId.FACEBOOK, MetricId.FOLLOWS, "follows"),
+            _profile_flow(PlatformId.FACEBOOK, MetricId.UNFOLLOWS, "unfollows"),
+            _profile_flow(PlatformId.FACEBOOK, MetricId.FOLLOWERS_NET, "followers_net"),
+            _profile_flow(PlatformId.FACEBOOK, MetricId.VIEWS_ORGANIC, "views_organic"),
+            _profile_flow(PlatformId.FACEBOOK, MetricId.VIEWS_PAID, "views_paid"),
+            _profile_flow(PlatformId.FACEBOOK, MetricId.REACH_ORGANIC, "reach_organic"),
+            _profile_flow(PlatformId.FACEBOOK, MetricId.REACH_PAID, "reach_paid"),
             *(
                 _profile_flow(PlatformId.FACEBOOK, metric_id, source_field)
                 for metric_id, source_field in {
@@ -539,15 +547,16 @@ def bootstrap_metric_catalog() -> MetricCatalog:
                     "reached_audience_demographics_age_gender",
                 ),
             ),
-            _profile_snapshot(
-                PlatformId.INSTAGRAM, MetricId.FOLLOWING, "follows_count"
-            ),
-            _profile_snapshot(
-                PlatformId.INSTAGRAM, MetricId.MEDIA_COUNT, "media_count"
-            ),
-            _profile_flow(
-                PlatformId.INSTAGRAM, MetricId.NEW_FOLLOWERS, "follower_count"
-            ),
+            _profile_snapshot(PlatformId.INSTAGRAM, MetricId.FOLLOWING, "follows_count"),
+            _profile_snapshot(PlatformId.INSTAGRAM, MetricId.MEDIA_COUNT, "media_count"),
+            _profile_flow(PlatformId.INSTAGRAM, MetricId.NEW_FOLLOWERS, "follower_count"),
+            _profile_flow(PlatformId.INSTAGRAM, MetricId.FOLLOWS, "follows"),
+            _profile_flow(PlatformId.INSTAGRAM, MetricId.UNFOLLOWS, "unfollows"),
+            _profile_flow(PlatformId.INSTAGRAM, MetricId.FOLLOWERS_NET, "followers_net"),
+            _profile_flow(PlatformId.INSTAGRAM, MetricId.VIEWS_ORGANIC, "views_organic"),
+            _profile_flow(PlatformId.INSTAGRAM, MetricId.VIEWS_PAID, "views_paid"),
+            _profile_flow(PlatformId.INSTAGRAM, MetricId.REACH_ORGANIC, "reach_organic"),
+            _profile_flow(PlatformId.INSTAGRAM, MetricId.REACH_PAID, "reach_paid"),
             *(
                 _profile_flow(PlatformId.INSTAGRAM, metric_id, source_field)
                 for source_field, metric_id in INSTAGRAM_DAILY_SOURCE_METRICS
@@ -568,6 +577,14 @@ def bootstrap_metric_catalog() -> MetricCatalog:
                 MetricId.NEW_FOLLOWERS,
                 MetricId.FOLLOWERS,
             ),
+            _profile_snapshot(PlatformId.TIKTOK, MetricId.FOLLOWING, "following_count"),
+            _profile_flow(PlatformId.TIKTOK, MetricId.FOLLOWS, "follows"),
+            _profile_flow(PlatformId.TIKTOK, MetricId.UNFOLLOWS, "unfollows"),
+            _profile_flow(PlatformId.TIKTOK, MetricId.FOLLOWERS_NET, "followers_net"),
+            _profile_flow(PlatformId.TIKTOK, MetricId.VIEWS, "views"),
+            _profile_flow(PlatformId.TIKTOK, MetricId.REACH, "reach"),
+            _profile_flow(PlatformId.TIKTOK, MetricId.PROFILE_VIEWS, "profile_views"),
+            _profile_flow(PlatformId.TIKTOK, MetricId.INTERACTIONS, "interactions"),
             views_total,
             views_change,
             *engagement_counters,

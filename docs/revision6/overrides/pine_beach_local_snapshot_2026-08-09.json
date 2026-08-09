@@ -1,0 +1,37 @@
+{
+  "decision_id": "pine_beach_local_snapshot_2026_08_09",
+  "status": "implemented",
+  "scope": "v2_local_development_only",
+  "source": {
+    "project": "/home/api/colab_scripts/SocialMedia",
+    "database_mode": "postgresql_forced_read_only",
+    "brand_slug": "pine-beach-belek",
+    "allowed_platforms": ["facebook", "instagram", "tiktok"],
+    "writes_allowed": false
+  },
+  "target": {
+    "project": "/home/api/colab_scripts/SocialMediadownstream",
+    "database": "social_media_v2_local",
+    "container": "social-media-v2-postgres",
+    "media_location": ".local/media",
+    "git_tracked_runtime_data": false
+  },
+  "included": [
+    "brand",
+    "canonical social accounts",
+    "allowlisted dashboard metrics",
+    "content",
+    "comments without source user identifiers",
+    "brand media with size and SHA-256 validation"
+  ],
+  "excluded": [
+    "credentials",
+    "OAuth state",
+    "access and refresh tokens",
+    "provider secrets",
+    "non-social advertising assets",
+    "production or staging databases",
+    "continuous replication"
+  ],
+  "refresh_command": "scripts/dev/import_pine_beach.sh"
+}

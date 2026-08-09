@@ -42,6 +42,7 @@ from app.application.services.meta_activation import MetaActivationCoordinator
 from app.application.services.sso import (
     TIKTOK_CONNECTION_MANAGE_PERMISSION,
     resolve_session,
+    session_can_access_settings,
 )
 from app.application.services.tiktok_activation import TikTokActivationCoordinator
 from app.capabilities import PlatformCapabilityRegistry
@@ -88,6 +89,7 @@ def create_settings_router(
         rollup: bool,
         require_write: bool = False,
         require_settings: bool = True,
+        require_integrations: bool = False,
     ) -> RequestScope:
         if reporting_store is None:
             raise HTTPException(503, "reporting_store_unavailable")
@@ -98,7 +100,31 @@ def create_settings_router(
             rollup=rollup,
             require_write=require_write,
             require_settings=require_settings,
+            require_integrations=require_integrations,
         )
+
+    def _integration_scope(
+        *,
+        raw_session: str | None,
+        brand_id: str | None,
+        rollup: bool,
+    ) -> RequestScope:
+        scope = _scope(
+            raw_session=raw_session,
+            brand_id=brand_id,
+            rollup=rollup,
+            require_settings=False,
+            require_integrations=True,
+        )
+        if not session_can_access_settings(scope.session):
+            session_brand_id = str(scope.session.get("brand_id") or "")
+            if (
+                scope.workspace.scope.rollup
+                or scope.workspace.scope.requested_brand_id != session_brand_id
+                or scope.workspace.scope.resolved_brand_ids != (session_brand_id,)
+            ):
+                raise HTTPException(403, "integration_brand_forbidden")
+        return scope
 
     def _session_time(session: dict[str, object], field: str) -> datetime:
         value = session.get(field)
@@ -176,8 +202,9 @@ def create_settings_router(
             raw_session=raw_session,
             brand_id=requested_brand_id,
             rollup=False,
-            require_write=True,
+            require_write=False,
             require_settings=False,
+            require_integrations=True,
         )
         session_brand_id = str(scope.session.get("brand_id") or "")
         if (
@@ -186,12 +213,6 @@ def create_settings_router(
             or scope.workspace.scope.resolved_brand_ids != (session_brand_id,)
         ):
             raise HTTPException(403, "tiktok_self_service_brand_forbidden")
-        permissions = scope.session.get("permissions")
-        if (
-            not isinstance(permissions, (list, tuple))
-            or TIKTOK_CONNECTION_MANAGE_PERMISSION not in permissions
-        ):
-            raise HTTPException(403, "tiktok_connection_manage_required")
         try:
             context = ActivationContext(
                 user_id=str(scope.session.get("user_id") or ""),
@@ -215,8 +236,9 @@ def create_settings_router(
             raw_session=raw_session,
             brand_id=requested_brand_id,
             rollup=False,
-            require_write=True,
+            require_write=False,
             require_settings=False,
+            require_integrations=True,
         )
         session_brand_id = str(scope.session.get("brand_id") or "")
         if (
@@ -300,9 +322,7 @@ def create_settings_router(
     ) -> BrandLinksResponse:
         scope = _scope(raw_session=session, brand_id=brand_id, rollup=rollup)
         assert reporting_store is not None
-        accounts = reporting_store.list_accounts(
-            brand_ids=scope.workspace.scope.resolved_brand_ids
-        )
+        accounts = reporting_store.list_accounts(brand_ids=scope.workspace.scope.resolved_brand_ids)
         return BrandLinksResponse(
             meta=scope.workspace.scope,
             items=tuple(
@@ -327,9 +347,7 @@ def create_settings_router(
     ) -> ConnectionsResponse:
         scope = _scope(raw_session=session, brand_id=brand_id, rollup=rollup)
         assert reporting_store is not None
-        rows = reporting_store.list_connections(
-            brand_ids=scope.workspace.scope.resolved_brand_ids
-        )
+        rows = reporting_store.list_connections(brand_ids=scope.workspace.scope.resolved_brand_ids)
         return ConnectionsResponse(meta=scope.workspace.scope, items=rows)
 
     @router.get("/api/settings/sync-jobs", response_model=SyncJobsResponse)
@@ -341,9 +359,68 @@ def create_settings_router(
     ) -> SyncJobsResponse:
         scope = _scope(raw_session=session, brand_id=brand_id, rollup=rollup)
         assert reporting_store is not None
-        rows = reporting_store.list_sync_jobs(
-            brand_ids=scope.workspace.scope.resolved_brand_ids
+        rows = reporting_store.list_sync_jobs(brand_ids=scope.workspace.scope.resolved_brand_ids)
+        return SyncJobsResponse(meta=scope.workspace.scope, items=rows)
+
+    @router.get(
+        "/api/integrations/status/social-accounts",
+        response_model=SocialAccountsResponse,
+    )
+    @mark_boundary(Boundary.QUERY)
+    async def integration_social_accounts(
+        brand_id: str | None = Query(default=None),
+        rollup: bool = Query(default=False),
+        platform: Annotated[PlatformId | None, Query()] = None,
+        session: str | None = Cookie(default=None, alias=COOKIE_NAME),
+    ) -> SocialAccountsResponse:
+        scope = _integration_scope(
+            raw_session=session,
+            brand_id=brand_id,
+            rollup=rollup,
         )
+        assert reporting_store is not None
+        rows = reporting_store.list_accounts(
+            brand_ids=scope.workspace.scope.resolved_brand_ids,
+            platform=platform,
+        )
+        return SocialAccountsResponse(meta=scope.workspace.scope, items=rows)
+
+    @router.get(
+        "/api/integrations/status/connections",
+        response_model=ConnectionsResponse,
+    )
+    @mark_boundary(Boundary.QUERY)
+    async def integration_connections(
+        brand_id: str | None = Query(default=None),
+        rollup: bool = Query(default=False),
+        session: str | None = Cookie(default=None, alias=COOKIE_NAME),
+    ) -> ConnectionsResponse:
+        scope = _integration_scope(
+            raw_session=session,
+            brand_id=brand_id,
+            rollup=rollup,
+        )
+        assert reporting_store is not None
+        rows = reporting_store.list_connections(brand_ids=scope.workspace.scope.resolved_brand_ids)
+        return ConnectionsResponse(meta=scope.workspace.scope, items=rows)
+
+    @router.get(
+        "/api/integrations/status/sync-jobs",
+        response_model=SyncJobsResponse,
+    )
+    @mark_boundary(Boundary.QUERY)
+    async def integration_sync_jobs(
+        brand_id: str | None = Query(default=None),
+        rollup: bool = Query(default=False),
+        session: str | None = Cookie(default=None, alias=COOKIE_NAME),
+    ) -> SyncJobsResponse:
+        scope = _integration_scope(
+            raw_session=session,
+            brand_id=brand_id,
+            rollup=rollup,
+        )
+        assert reporting_store is not None
+        rows = reporting_store.list_sync_jobs(brand_ids=scope.workspace.scope.resolved_brand_ids)
         return SyncJobsResponse(meta=scope.workspace.scope, items=rows)
 
     @router.get("/api/settings/audit", response_model=AuditResponse)
@@ -387,19 +464,15 @@ def create_settings_router(
             if row.platform is PlatformId.FACEBOOK
         )
         discoveries = (
-            meta_activation.list_discoveries(context)
-            if meta_activation is not None
-            else ()
+            meta_activation.list_discoveries(context) if meta_activation is not None else ()
         )
         selected = connections[-1] if connections else None
-        connection_state = selected.state if selected else (
-            "connected" if accounts else "disconnected"
+        connection_state = (
+            selected.state if selected else ("connected" if accounts else "disconnected")
         )
         if any(item.status == "discovered" for item in discoveries):
             connection_state = "pending_verification"
-        start_available = (
-            meta_activation is not None and meta_activation.ready_for_start(context)
-        )
+        start_available = meta_activation is not None and meta_activation.ready_for_start(context)
         if start_available:
             reason = "self_service_available"
         elif meta_activation is None:
@@ -414,12 +487,8 @@ def create_settings_router(
             brand_id=scope.workspace.scope.requested_brand_id,
             can_manage=True,
             connection_state=connection_state,
-            facebook_linked_count=sum(
-                item.platform is PlatformId.FACEBOOK for item in accounts
-            ),
-            instagram_linked_count=sum(
-                item.platform is PlatformId.INSTAGRAM for item in accounts
-            ),
+            facebook_linked_count=sum(item.platform is PlatformId.FACEBOOK for item in accounts),
+            instagram_linked_count=sum(item.platform is PlatformId.INSTAGRAM for item in accounts),
             discoveries=tuple(
                 MetaDiscoveryItem(
                     connection_id=item.connection_id,
@@ -559,9 +628,7 @@ def create_settings_router(
             instagram_count=result.instagram_count,
         )
 
-    @router.get(
-        "/api/settings/tiktok/connection", response_model=TikTokConnectionResponse
-    )
+    @router.get("/api/settings/tiktok/connection", response_model=TikTokConnectionResponse)
     @mark_boundary(Boundary.QUERY)
     async def tiktok_connection(
         brand_id: str | None = Query(default=None),
@@ -585,8 +652,7 @@ def create_settings_router(
             state=state,
             connection=selected,
             capabilities=tuple(
-                capabilities.get(PlatformId.TIKTOK, capability)
-                for capability in CapabilityId
+                capabilities.get(PlatformId.TIKTOK, capability) for capability in CapabilityId
             ),
             checked_at=datetime.now(UTC),
         )
@@ -878,9 +944,8 @@ def _meta_callback_page(
         },
         separators=(",", ":"),
     ).replace("<", "\\u003c")
-    fallback_path = (
-        f"/integrations?meta_oauth={callback_status}"
-        + (f"&error={error_code}" if error_code else "")
+    fallback_path = f"/integrations?meta_oauth={callback_status}" + (
+        f"&error={error_code}" if error_code else ""
     )
     fallback_json = json.dumps(fallback_path)
     title = "Meta accounts discovered" if not error_code else "Meta connection failed"
@@ -1002,9 +1067,8 @@ def _self_service_callback_page(
         },
         separators=(",", ":"),
     ).replace("<", "\\u003c")
-    fallback_path = (
-        f"/integrations?tiktok_oauth={callback_status}"
-        + (f"&error={error_code}" if error_code else "")
+    fallback_path = f"/integrations?tiktok_oauth={callback_status}" + (
+        f"&error={error_code}" if error_code else ""
     )
     fallback_json = json.dumps(fallback_path)
     title = "TikTok connection received" if not error_code else "TikTok connection failed"

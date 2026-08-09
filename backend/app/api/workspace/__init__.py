@@ -13,7 +13,11 @@ from app.api.contracts import (
 )
 from app.application.ports import AuthorityStore, ReportingStore
 from app.application.services.authority import AuthorityError, build_brand_workspace
-from app.application.services.sso import TIKTOK_CONNECTION_MANAGE_PERMISSION, resolve_session
+from app.application.services.sso import (
+    resolve_session,
+    session_can_access_integrations,
+    session_can_access_settings,
+)
 from app.capabilities import PlatformCapabilityRegistry
 from app.core import Boundary, RuntimeMode, WritePolicy, mark_boundary
 from app.domain.authority import BrandWorkspace
@@ -52,9 +56,7 @@ def create_workspace_router(
         response.headers["Cache-Control"] = "no-store"
         return workspace
 
-    @router.get(
-        "/api/workspace/capabilities", response_model=WorkspaceCapabilitiesResponse
-    )
+    @router.get("/api/workspace/capabilities", response_model=WorkspaceCapabilitiesResponse)
     @mark_boundary(Boundary.QUERY)
     async def workspace_capabilities(
         response: Response,
@@ -80,31 +82,21 @@ def create_workspace_router(
             else ()
         )
         response.headers["Cache-Control"] = "no-store"
-        session_permissions = payload.get("permissions")
         selected_brand_is_session_brand = (
             workspace.scope.rollup is False
             and workspace.scope.requested_brand_id == str(payload.get("brand_id") or "")
-            and workspace.scope.resolved_brand_ids
-            == (str(payload.get("brand_id") or ""),)
+            and workspace.scope.resolved_brand_ids == (str(payload.get("brand_id") or ""),)
         )
-        selected_brand_is_writeable = any(
-            brand.brand_id == workspace.scope.requested_brand_id
-            and brand.access_mode == "write"
-            for brand in workspace.brands
-        )
+        integrations_visible = session_can_access_integrations(payload)
         return WorkspaceCapabilitiesResponse(
             scope=workspace.scope,
             platforms=tuple(
                 CapabilityPlatform(
                     platform=platform,
                     capabilities=tuple(
-                        record
-                        for record in capabilities.records()
-                        if record.platform is platform
+                        record for record in capabilities.records() if record.platform is platform
                     ),
-                    linked_account_count=sum(
-                        account.platform is platform for account in accounts
-                    ),
+                    linked_account_count=sum(account.platform is platform for account in accounts),
                     navigation_available=(
                         any(account.platform is platform for account in accounts)
                         or any(
@@ -117,21 +109,16 @@ def create_workspace_router(
                 for platform in PlatformId
             ),
             permissions=WorkspacePermissions(
-                settings_visible=payload.get("settings_visible") is True,
-                internal_audit_visible=payload.get("is_internal_staff") is True,
+                settings_visible=session_can_access_settings(payload),
+                integrations_visible=integrations_visible,
+                internal_audit_visible=(
+                    session_can_access_settings(payload)
+                    and payload.get("is_internal_staff") is True
+                ),
                 rollup_available=True,
                 operation_mutation_available=False,
-                tiktok_connection_manage=(
-                    selected_brand_is_session_brand
-                    and selected_brand_is_writeable
-                    and isinstance(session_permissions, (list, tuple))
-                    and TIKTOK_CONNECTION_MANAGE_PERMISSION in session_permissions
-                ),
-                meta_connection_manage=(
-                    selected_brand_is_session_brand
-                    and selected_brand_is_writeable
-                    and not workspace.scope.rollup
-                ),
+                tiktok_connection_manage=(selected_brand_is_session_brand and integrations_visible),
+                meta_connection_manage=(selected_brand_is_session_brand and integrations_visible),
             ),
             runtime=RuntimeCapabilities(
                 mode=runtime_mode,

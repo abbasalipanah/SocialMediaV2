@@ -2,8 +2,8 @@
 
 | Alan | Değer |
 |---|---|
-| Tarih | `2026-08-07` |
-| Durum | Revizyon 6 — R0-R7 sertifikalı; R8 current-host local staging ve sentetik SSO E2E hazır, public-origin/onaylı issuer/provider girdileri bekleniyor |
+| Tarih | `2026-08-09` |
+| Durum | Revizyon 6 — R11 dashboard veri bütünlüğü tamamlandı; R8 dış public-origin/issuer/provider girdileri bekleniyor |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -77,6 +77,50 @@ TikTok, baseline veya faz-kapanış ifadelerini hükümsüz kılar:
     görünür parity'sini geçersiz kılan dar bir product override'dır. Sidebar, topbar, footer,
     diğer platformlar ve typed Stories API sözleşmesi korunur. Makine-okunur karar
     `docs/revision6/overrides/instagram_stories_main_2026-08-07.json` dosyasındadır.
+20. 2026-08-09 tarihli açık kullanıcı kararı Settings ve Integrations yüzeyleri için
+    Performance Marketing ürünündeki aktif bilgi mimarisi ve erişim modelini dar, normatif
+    referans yapar. Social Media navigation ağacında Settings bulunamaz; yalnız sidebar'ın alt
+    bölümünde tek bir Settings bağlantısı bulunur. Integrations da aynı alt bölümde ayrı bir
+    bağlantı ve ayrı route olarak bulunur.
+21. Settings sayfası Social Media domain verisini gösterir fakat sayfa iskeleti, başlık/aksiyon
+    düzeni, özet kartları, sekmeli table-first çalışma alanı ve responsive davranışı Performance
+    Marketing Settings yüzeyiyle uyumlu olur. Bu karar sidebar, topbar veya footer'ın genel
+    tasarımını değiştirme yetkisi vermez.
+22. Settings frontend route'u ve bütün `/api/settings/*` backend yüzeyi yalnız canonical rolü
+    `super_admin` veya `agency_admin` olan aktif SSO session'larına açıktır. `is_internal_staff`,
+    frontend görünürlüğü veya request parametresi tek başına Settings yetkisi veremez.
+23. Integrations frontend route'u ve entegrasyon liste/durum/bağlantı backend yüzeyi
+    `super_admin` ve `agency_admin` rollerine; ayrıca yalnız Accumulate kaynaklı `viewer` rolünün
+    signed `app_role` değeri `admin` veya `operator` olduğunda açılır. Diğer roller ve app-role
+    birleşimleri fail-closed reddedilir. Yetki hem route görünürlüğünde hem her backend isteğinde
+    zorlanır; yalnız UI gizlemek kabul edilmez.
+24. Settings ve Integrations aynı backend verisini kullanabilse bile Viewer/Operator erişimi
+    `/api/settings/*` üzerinden verilmez. Integrations kendi yetkili read yüzeyine sahip olur;
+    bağlantı mutation'ları exact session Brand, non-rollup scope, runtime write policy, OAuth
+    state ve mevcut güvenlik kapılarından geçmeye devam eder.
+25. Maddeler 20-24 başka bir ajan veya uygulama turunda kendiliğinden yeniden yorumlanamaz.
+    Sidebar'a ikinci Settings eklemek, Settings rollerini genişletmek ya da Integrations'ı yalnız
+    Settings yetkisine bağlamak için yeni ve açık kullanıcı kararı gerekir. Makine-okunur karar
+    `docs/revision6/overrides/settings_integrations_rbac_2026-08-09.json` dosyasındadır.
+26. Instagram Cover; Page, Content, Stories ve Audience bölümlerini birlikte gösterir. Stories
+    yalnız odak sekmesinde bırakılarak Cover'dan tekrar çıkarılamaz.
+27. Facebook, Instagram ve TikTok takipçi akış grafikleri aynı seçili tarih aralığında üç gerçek
+    seri gösterir: `follows`, `unfollows`, `followers_net`. `new_followers` tek başına bu grafiğin
+    yerine kullanılamaz.
+28. Stories üst KPI yüzdeleri seçili hikâyeyi galerideki hemen önceki kronolojik hikâyeyle
+    karşılaştırır. Views/Reach/Interactions göreli yüzde değişim; Completion Rate yüzde-puan
+    (`pp`) farkıdır. Önceki hikâye veya geçerli payda yoksa oran uydurulmaz.
+29. Stories üst aksiyon alanı yalnız seçili hikâyenin Replies, Shares, Profile Visits, Follows,
+    Sticker Taps ve Saves değerlerini; Behaviour alanı ise seçili tarih aralığındaki aynı altı
+    metriğin toplamını gösterir. Provider'ın vermediği değer `Not provided`, raporladığı gerçek
+    sıfır `0` olarak ayrıştırılır.
+30. All Performing Content ve Stories History tabloları sayfayı sınırsız uzatamaz; sabit azami
+    yükseklik, tablo içi dikey scroll ve scroll sırasında görünür kalan başlık satırı kullanır.
+31. TikTok Performance Trends seçili Date Period ile aynı başlangıç/bitiş günlerini kapsar;
+    Last 30 Days seçiliyken yedi/ondan az günlük cumulative content fallback'i kullanılamaz.
+32. Maddeler 26-31 veri completeness ürün kararıdır ve yeni açık kullanıcı kararı olmadan geri
+    alınamaz. Makine-okunur karar
+    `docs/revision6/overrides/dashboard_data_completeness_2026-08-09.json` dosyasındadır.
 
 ### 0.1 Zorunlu çalışma sırası
 
@@ -107,6 +151,14 @@ TikTok, baseline veya faz-kapanış ifadelerini hükümsüz kılar:
 - İlk standalone runtime V2-owned DB/schema kullanır; `/api/v2`, event bus veya gereksiz microservice eklenmez.
 - Eksik/unsupported provider verisi `0` olarak uydurulmaz.
 - YouTube ve başka yeni platformlar ayrı plan/onay olmadan kapsama alınmaz.
+- Sidebar'da yalnız alt bölümde bir Settings bulunur; Social Media navigation ağacında ikinci
+  Settings bulunmaz. Integrations alt bölümde ayrı bir navigation öğesidir.
+- Settings yalnız `super_admin | agency_admin`; Integrations ise bunlara ek olarak Accumulate
+  `viewer` + `app_role in {admin, operator}` için kullanılabilir. Backend enforcement zorunludur.
+- Instagram Cover Stories içerir; üç platformun takipçi akışı Follows/Unfollows/Net serileridir;
+  Stories seçili-hikâye aksiyonları ile dönem toplamları birbirine karıştırılmaz.
+- Stories ve content uzun tabloları iç scroll kullanır; TikTok trend ekseni seçili dönemle
+  birebir eşleşir. Eksik provider değeri sıfır olarak uydurulmaz.
 - Bu planda açıkça ertelenen hiçbir karar “uygulamayı tamamlamak için gerekli” gerekçesiyle otomatik kapsam içine alınmaz.
 
 ### 0.3 Tamamlandı iddiasının biçimi
@@ -2238,6 +2290,113 @@ değiştirilmedi. Public origin/TLS, onaylı Accumulate staging issuer'ı, provi
 canary scope ve change window henüz sağlanmadığından `STANDALONE_RUNTIME_COMPLETE=false` kalır.
 Kanıt:
 `docs/revision6/r8/REVISION6_R8_STAGING_PREFLIGHT_REPORT.md`.
+
+### R9 — Settings/Integrations parity ve kesin RBAC
+
+2026-08-09 kullanıcı kararıyla R8'den sonra eklenen V2-only ürün düzeltme fazıdır:
+
+1. Social Media navigation ağacındaki Settings kaldırılır; sidebar alt bölümünde yalnız bir
+   Settings bağlantısı bırakılır ve Integrations ayrı alt bağlantı olarak eklenir;
+2. Settings sayfası Performance Marketing'in aktif başlık/aksiyon, altı summary kartı, sekmeli
+   table-first ve responsive workspace düzeniyle Social Media domain verisini kullanır;
+3. Integrations ayrı route ve kendi yetkili status API'leriyle çalışır; Viewer/Operator için
+   Settings endpoint'leri yeniden kullanılmaz;
+4. SSO/local session `app_role` değerini korur; Settings yalnız
+   `super_admin|agency_admin`, Integrations bunlara ek olarak Accumulate
+   `viewer + app_role in {admin, operator}` için backend ve frontend'de fail-closed zorlanır;
+5. Viewer/Operator bağlantı komutları exact session Brand, non-rollup scope ve mevcut runtime,
+   OAuth-state, same-origin ve write-policy kapılarından geçmeye devam eder;
+6. backend/frontend unit-integration testleri, deterministic OpenAPI/generated types, production
+   build, vocabulary/secret scan ve source-write guard yeniden çalıştırılır.
+
+Çıkış kapısı: Render edilmiş sidebar'da bir Settings vardır; üç RBAC ailesinin route/API matrisi
+testlidir; Settings ve Integrations gerçek backend contract'larıyla çalışır ve üç canlı kaynak
+projenin baseline'ı değişmemiştir.
+
+Durum (2026-08-09): tamamlandı. Sidebar render testinde tek Settings ve ayrı Integrations
+doğrulandı. Settings admin-only; Viewer/Operator Integrations erişimi ve Settings API reddi
+backend integration testleriyle sabitlendi. Deterministic OpenAPI/generated types güncel;
+`124 passed, 16 environment-gated skipped` backend, `25 passed` frontend, Ruff, wheel,
+production frontend build, vocabulary/secret scan ve source-write guard yeşildir. Kanıt:
+`docs/revision6/r9/REVISION6_R9_SETTINGS_INTEGRATIONS_REPORT.md`. Bağlayıcı karar:
+`docs/revision6/overrides/settings_integrations_rbac_2026-08-09.json`.
+
+### R10 — Pine Beach Belek V2-local gerçek veri snapshot'ı
+
+2026-08-09 kullanıcı kararıyla yerel demo fixture'ının yerine gerçek Brand verisini görsel
+olarak incelemek için eklenen, yalnız V2 development runtime'ına ait veri fazıdır:
+
+1. Kaynak `SocialMedia` DB bağlantısı PostgreSQL `default_transaction_read_only=on` ile açılır;
+   kaynak repository, DB, media, servis, worker ve timer üzerinde hiçbir write çalıştırılmaz;
+2. yalnız `pine-beach-belek` Brand'i ve canonical `facebook|instagram|tiktok` hesapları alınır;
+   DB'de aynı Brand'e bağlanmış Social Media dışı asset'ler kapsam dışıdır;
+3. hedef yalnız `social-media-v2-postgres` konteynerindeki
+   `social_media_v2_local` DB'sidir; kaynak ve hedef endpoint eşitliği ile V2-owned DB prefix'i
+   import aracı tarafından fail-closed doğrulanır;
+4. credential, OAuth state, access/refresh token, provider secret ve connection security
+   tabloları okunmaz veya taşınmaz;
+5. canonical dashboard metrikleri, içerik, yorum ve non-secret hesap durumu V2 şemasına
+   idempotent tek target transaction ile yazılır; TikTok content snapshot'ları V2 metric
+   semantiğine açık mapping ile çevrilir;
+6. yalnız bu Brand'e ait doğrulanmış media dosyaları kaynak klasörden salt okunur alınır,
+   size+SHA-256 kontrolüyle V2 `.local/media` alanına kopyalanır ve authenticated V2 media
+   endpoint'inden servis edilir;
+7. `.local/` bütünü Git dışıdır. Bu işlem production/staging data migration, V1 cutover,
+   sürekli replikasyon veya provider collection aktivasyonu değildir; yenileme yalnız
+   `scripts/dev/import_pine_beach.sh` ile manuel snapshot olarak yapılır;
+8. §2.3'teki mevcut media volume'unu ürüne/repository'ye kopyalama yasağı devam eder. Buradaki
+   dar istisna yalnız kullanıcı tarafından istenen Brand'in yerel, Git-dışı görsel doğrulama
+   kopyasıdır ve production artifact'i olamaz.
+
+Çıkış kapısı: Pine Beach Belek tek workspace Brand'i olarak açılır; üç platform dashboard API'si
+`available`, Facebook/Instagram/Stories/TikTok tarayıcı render'ları hatasız, test edilen yerel
+media yanıtları `200`, import tekrar çalıştırılabilir ve kaynak guard başlangıç/bitişte eşittir.
+
+Durum (2026-08-09): tamamlandı. V2-local DB'ye `3` canonical hesap, `78.276` allowlisted/mapped
+metrik, `395` içerik, `611` yorum ve `389` checksum-doğrulanmış media kaydı aktarıldı. Gerçek
+Chromium doğrulamasında Pine Beach Belek seçildi; Facebook, Instagram, Instagram Stories ve
+TikTok ekranları doğru başlıklarla açıldı, connection error oluşmadı ve test edilen bütün yerel
+media yanıtları `200` döndü. İlk import sertifikasyonunda backend sonucu
+`128 passed, 16 environment-gated skipped`, frontend sonucu `25 passed` idi. Eski localStorage
+Brand kapsamının yeni session
+kapsamına taşınması ayrıca fail-closed temizlendi; güncel frontend sonucu `26 passed` ve
+typecheck pass'tir. Kanıt:
+`docs/revision6/r10/REVISION6_R10_PINE_BEACH_LOCAL_SNAPSHOT_REPORT.md`. Bağlayıcı yerel-snapshot
+kararı: `docs/revision6/overrides/pine_beach_local_snapshot_2026-08-09.json`.
+
+### R11 — Dashboard veri bütünlüğü ve dönem tutarlılığı
+
+2026-08-09 kullanıcı kararıyla Pine Beach gerçek veri incelemesinde bulunan görünür veri
+boşluklarını düzeltmek için eklenen V2-only ürün fazıdır:
+
+1. Instagram Cover'a Stories bölümü eklenir; Page, Content, Stories ve Audience birlikte kalır;
+2. üç platformun takipçi akışı Follows, Unfollows ve Net olmak üzere üç günlük seri kullanır;
+3. Pine Beach'te mevcut organic/paid views/reach ve TikTok günlük account metrikleri canonical
+   V2 catalog/import sözleşmesine alınır; unsupported veri uydurulmaz;
+4. Stories üst alanında seçili hikâye aksiyonları, Behaviour alanında seçili tarih aralığının
+   aksiyon toplamları gösterilir;
+5. Story KPI karşılaştırmaları önceki kronolojik hikâyeye göre açık etiketlenir; Completion Rate
+   farkı yüzde-puan, diğer KPI farkları göreli yüzde olarak hesaplanır;
+6. All Performing Content ve Stories History tablolarına azami yükseklik, iç scroll ve sticky
+   header uygulanır;
+7. TikTok Performance Trends günlük views/reach serilerini ve Date Period ile aynı tarih
+   uçlarını kullanır;
+8. importer/migration/OpenAPI/generated types, backend/frontend testleri, build ve gerçek Pine
+   Beach tarayıcı doğrulaması birlikte tamamlanır.
+
+Çıkış kapısı: Cover Stories görünür; üç follower-flow serisi her platformda seçili dönemle
+eşleşir; seçili Story ve dönem aksiyonları ayrıdır; uzun tablolar sayfa yerine kendi içinde
+kayar; TikTok trend ekseni tam seçili dönemdir; browser console temiz ve kaynak projeler
+değişmemiştir.
+
+Durum (2026-08-09): tamamlandı. Pine Beach snapshot'ı genişletilmiş allowlist ile `80.519`
+metriğe yenilendi. Instagram follower-flow ve TikTok daily views/reach serileri son 30 günün
+tamamını kapsadı. Stories seçili-hikâye ve dönem aksiyonları ayrı gösterildi; Sticker Taps için
+provider verisi bulunmadığı açıkça belirtildi, gerçek Saves sıfırları korundu. Backend
+`128 passed, 16 environment-gated skipped`, frontend `27 passed`, TypeScript, production build,
+Ruff, `git diff --check` ve hatasız headless Chromium doğrulaması geçti. Kanıt:
+`docs/revision6/r11/REVISION6_R11_DASHBOARD_DATA_COMPLETENESS_REPORT.md`. Bağlayıcı karar:
+`docs/revision6/overrides/dashboard_data_completeness_2026-08-09.json`.
 
 ### 22.1 Revizyon 6 stop koşulları
 

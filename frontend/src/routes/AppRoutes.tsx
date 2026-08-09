@@ -12,6 +12,7 @@ const FacebookPage = lazy(() => import("../features/facebook"));
 const InstagramPage = lazy(() => import("../features/instagram"));
 const TikTokPage = lazy(() => import("../features/tiktok"));
 const SettingsPage = lazy(() => import("../features/settings"));
+const IntegrationsPage = lazy(() => import("../features/integrations"));
 const TikTokConnectPage = lazy(() =>
   import("../features/settings").then((module) => ({ default: module.TikTokConnectPage })),
 );
@@ -62,6 +63,14 @@ function SettingsGuard({ audit = false, children }: { audit?: boolean; children:
   return allowed ? children : <Navigate replace to="/facebook" />;
 }
 
+function IntegrationsGuard({ children }: { children: ReactNode }) {
+  const { capabilities, isLoading } = useBrandScope();
+  if (isLoading) return <RouteLoading />;
+  return capabilities?.permissions.integrations_visible
+    ? children
+    : <Navigate replace to="/facebook" />;
+}
+
 export function AppRoutes() {
   return (
     <Suspense fallback={<RouteLoading />}>
@@ -74,19 +83,20 @@ export function AppRoutes() {
             <Route path="facebook" element={<FacebookPage />} />
             <Route path="instagram" element={<InstagramPage />} />
             <Route path="tiktok" element={<TikTokPage />} />
+            <Route path="integrations" element={<IntegrationsGuard><IntegrationsPage /></IntegrationsGuard>} />
+            <Route path="settings" element={<SettingsGuard><SettingsPage /></SettingsGuard>}>
+              <Route
+                path="tiktok/connect"
+                element={<TikTokConnectPage />}
+              />
+              <Route
+                path="audit"
+                element={<SettingsGuard audit><AuditPage /></SettingsGuard>}
+              />
+            </Route>
+            <Route index element={<Navigate replace to="/facebook" />} />
+            <Route path="*" element={<Navigate replace to="/facebook" />} />
           </Route>
-          <Route path="settings" element={<SettingsGuard><SettingsPage /></SettingsGuard>}>
-            <Route
-              path="tiktok/connect"
-              element={<TikTokConnectPage />}
-            />
-            <Route
-              path="audit"
-              element={<SettingsGuard audit><AuditPage /></SettingsGuard>}
-            />
-          </Route>
-          <Route index element={<SettingsGuard><SettingsPage /></SettingsGuard>} />
-          <Route path="*" element={<SettingsGuard><SettingsPage /></SettingsGuard>} />
         </Route>
       </Routes>
     </Suspense>

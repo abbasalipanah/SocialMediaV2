@@ -191,6 +191,8 @@ class DashboardStoryActions:
     shares: float | None
     profile_visits: float | None
     follows: float | None
+    sticker_taps: float | None
+    saves: float | None
     data_status: DataStatus
 
 
@@ -208,6 +210,8 @@ class DashboardStoryItem:
     shares: float | None
     profile_visits: float | None
     follows: float | None
+    sticker_taps: float | None
+    saves: float | None
     taps_forward: float | None
     taps_back: float | None
     swipe_forward: float | None

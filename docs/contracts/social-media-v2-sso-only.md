@@ -1,6 +1,6 @@
 # Social Media V2 — SSO-Only Contract v1
 
-Tarih: `2026-08-07`
+Tarih: `2026-08-09`
 
 Durum: **NORMATİF — HANDOFF İÇİN HENÜZ AKTİF DEĞİL**
 
@@ -34,8 +34,10 @@ Normal launch `/settings`, owner launch `/settings/tiktok/connect` allowlisted y
 
 - `version=v1`, `issued_at`, `user_id`, `email`, `brand_id`
 - `brand_status=active|suspended|archived`
-- aynı değeri taşıyan `role`, `platform_role`, `effective_role`
+- aynı workspace değerini taşıyan `role`, `platform_role`; `effective_role` workspace rolü veya
+  varsa app-specific rol olabilir
 - canonical role: `super_admin|agency_admin|agency_operator|viewer`
+- optional normalized `app_role`; Integrations için kullanılan değerler `admin|operator`
 - `app_id=social_media`, `allowed_apps` içinde `social_media`
 - `entitlement_status=enabled`
 - `access_mode=read|write`
@@ -87,6 +89,12 @@ yapmaz.
 - JTI tek kullanımlıdır; replay atomik olarak reddedilir.
 - Session ömrü JWT expiry, access expiry ve 12 saatin minimumudur.
 - Brand kapsamı local session'a immutable signed-claim snapshot'ı olarak alınır.
+- Settings authority signed `settings_visible` boolean'ından türetilmez: yalnız canonical
+  `super_admin|agency_admin` workspace rolleri Settings açabilir. Legacy boolean biçimsel olarak
+  doğrulanır, fakat rol kararını genişletemez.
+- Integrations authority `super_admin|agency_admin` için doğrudan; yalnız Accumulate kaynaklı
+  `viewer` + signed `app_role=admin|operator` için exact session Brand kapsamında verilir.
+- Viewer/Operator Integrations erişimi `/api/settings/*` erişimi kazandırmaz.
 - Logout same-origin kontrolüyle yalnız V2 sessionını revoke eder ve cookie'yi siler.
 - Session expiry veya revocation sonrası fresh Accumulate SSO zorunludur.
 

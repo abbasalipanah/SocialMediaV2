@@ -14,18 +14,42 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 const localDemoEnabled =
   import.meta.env.DEV && import.meta.env.VITE_LOCAL_DEMO?.trim().toLowerCase() === "true";
+let localDemoSessionBootstrap: Promise<void> | null = null;
+
+function openLocalDemoSession(): Promise<void> {
+  if (!localDemoSessionBootstrap) {
+    localDemoSessionBootstrap = apiCommand("/api/dev/session", {
+      method: "POST",
+      headers: { "X-Social-Local-Demo": "true" },
+    }).catch((error) => {
+      localDemoSessionBootstrap = null;
+      throw error;
+    });
+  }
+  return localDemoSessionBootstrap;
+}
 
 async function currentUser(signal?: AbortSignal): Promise<AuthUser | null> {
+  if (localDemoEnabled) {
+    await openLocalDemoSession();
+    try {
+      return await apiQuery("/api/auth/me", authUserSchema, signal);
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 401) throw error;
+      // The in-memory local authority is reset whenever the backend reloads.
+      // Open a fresh loopback-only session instead of leaving the UI in an
+      // unrecoverable connection-error state with a stale cookie.
+      localDemoSessionBootstrap = null;
+      await openLocalDemoSession();
+      return apiQuery("/api/auth/me", authUserSchema, signal);
+    }
+  }
+
   try {
     return await apiQuery("/api/auth/me", authUserSchema, signal);
   } catch (error) {
     if (error instanceof ApiError && error.status === 401) {
-      if (!localDemoEnabled) return null;
-      await apiCommand("/api/dev/session", {
-        method: "POST",
-        headers: { "X-Social-Local-Demo": "true" },
-      });
-      return apiQuery("/api/auth/me", authUserSchema, signal);
+      return null;
     }
     throw error;
   }

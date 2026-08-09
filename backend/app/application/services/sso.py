@@ -15,6 +15,9 @@ from app.core.security import sha256_text
 
 CANONICAL_ROLES = {"super_admin", "agency_admin", "agency_operator", "viewer"}
 WRITE_ROLES = {"super_admin", "agency_admin", "agency_operator"}
+SETTINGS_ROLES = {"super_admin", "agency_admin"}
+PLATFORM_CONNECTION_APP_ROLES = {"admin", "operator"}
+PLATFORM_CONNECTION_MANAGE_PERMISSION = "social.connection.manage"
 TIKTOK_CONNECTION_MANAGE_PERMISSION = "tiktok.connection.manage"
 BRAND_STATUSES = {"active", "suspended", "archived"}
 LAUNCH_TARGETS = {None: "/settings", "tiktok_owner_activation": "/settings/tiktok/connect"}
@@ -51,6 +54,7 @@ class VerifiedSso:
     email: str
     brand_id: str
     role: str
+    app_role: str | None
     access_mode: str
     settings_visible: bool
     is_internal_staff: bool
@@ -60,6 +64,26 @@ class VerifiedSso:
     launch_target: str | None
     launch_path: str
     brand_scope: Mapping[str, object]
+
+
+def session_can_access_settings(session: Mapping[str, object]) -> bool:
+    """Settings authority is derived from the canonical workspace role only."""
+
+    return str(session.get("role") or "").strip().lower() in SETTINGS_ROLES
+
+
+def session_can_access_integrations(session: Mapping[str, object]) -> bool:
+    """Mirror Performance Marketing connection authority without granting Settings."""
+
+    role = str(session.get("role") or "").strip().lower()
+    if role in SETTINGS_ROLES:
+        return True
+    return (
+        role == "viewer"
+        and str(session.get("source_system") or "").strip().lower() == "accumulate"
+        and str(session.get("app_role") or "").strip().lower() in PLATFORM_CONNECTION_APP_ROLES
+        and bool(str(session.get("brand_id") or "").strip())
+    )
 
 
 def _contract_datetime(value: object, field: str) -> datetime | None:
@@ -210,7 +234,17 @@ def verify_sso(token: str, secret: str, now: datetime | None = None) -> Verified
     role = contract.get("role")
     if role not in CANONICAL_ROLES:
         raise SsoError("invalid_role")
-    if contract.get("platform_role") != role or contract.get("effective_role") != role:
+    if contract.get("platform_role") != role:
+        raise SsoError("role_mismatch")
+    raw_app_role = contract.get("app_role")
+    if raw_app_role is not None and not isinstance(raw_app_role, str):
+        raise SsoError("invalid_app_role")
+    app_role = raw_app_role.strip().lower() or None if isinstance(raw_app_role, str) else None
+    effective_role = contract.get("effective_role")
+    if not isinstance(effective_role, str) or effective_role not in {
+        role,
+        app_role,
+    }:
         raise SsoError("role_mismatch")
 
     brand_status = contract.get("brand_status")
@@ -221,11 +255,10 @@ def verify_sso(token: str, secret: str, now: datetime | None = None) -> Verified
         raise SsoError("access_mode_mismatch")
 
     internal_staff = contract.get("is_internal_staff")
-    settings_visible = contract.get("settings_visible")
-    if not isinstance(internal_staff, bool) or not isinstance(settings_visible, bool):
+    signed_settings_visible = contract.get("settings_visible")
+    if not isinstance(internal_staff, bool) or not isinstance(signed_settings_visible, bool):
         raise SsoError("invalid_visibility_claims")
-    if settings_visible != internal_staff:
-        raise SsoError("settings_visibility_mismatch")
+    settings_visible = role in SETTINGS_ROLES
     if contract.get("platform_branch_scope_mode") != "all":
         raise SsoError("invalid_branch_scope")
     branches = contract.get("platform_branches")
@@ -274,6 +307,7 @@ def verify_sso(token: str, secret: str, now: datetime | None = None) -> Verified
         email=email,
         brand_id=brand_id,
         role=role,
+        app_role=app_role,
         access_mode=expected_access_mode,
         settings_visible=settings_visible,
         is_internal_staff=internal_staff,
@@ -291,9 +325,16 @@ def consume_sso(token: str, secret: str, store: SessionStore) -> tuple[str, Veri
     raw_session = secrets.token_urlsafe(32)
     consumed_at = datetime.now(UTC)
     jti_hash = sha256_text(verified.jti)
+    session_authority = {
+        "role": verified.role,
+        "app_role": verified.app_role,
+        "source_system": "accumulate",
+        "brand_id": verified.brand_id,
+    }
+    integrations_visible = session_can_access_integrations(session_authority)
     permissions = (
-        (TIKTOK_CONNECTION_MANAGE_PERMISSION,)
-        if verified.settings_visible and verified.access_mode == "write"
+        (PLATFORM_CONNECTION_MANAGE_PERMISSION, TIKTOK_CONNECTION_MANAGE_PERMISSION)
+        if integrations_visible
         else ()
     )
     payload = {
@@ -303,8 +344,10 @@ def consume_sso(token: str, secret: str, store: SessionStore) -> tuple[str, Veri
         "brand_id": verified.brand_id,
         "brand_scope": verified.brand_scope,
         "role": verified.role,
+        "app_role": verified.app_role,
         "access_mode": verified.access_mode,
         "settings_visible": verified.settings_visible,
+        "integrations_visible": integrations_visible,
         "is_internal_staff": verified.is_internal_staff,
         "expires_at": verified.expires_at.isoformat(),
         "sso_issued_at": verified.issued_at.isoformat(),

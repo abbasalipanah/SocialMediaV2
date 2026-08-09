@@ -25,8 +25,10 @@ class AuthMeResponse:
     source_system: str | None
     brand_id: str
     role: str
+    app_role: str | None
     access_mode: str
     settings_visible: bool
+    integrations_visible: bool
     is_internal_staff: bool
     expires_at: datetime
     revoked: bool
@@ -195,6 +197,7 @@ class CapabilityPlatform:
 @dataclass(frozen=True)
 class WorkspacePermissions:
     settings_visible: bool
+    integrations_visible: bool
     internal_audit_visible: bool
     rollup_available: bool
     operation_mutation_available: bool

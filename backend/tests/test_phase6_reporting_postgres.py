@@ -49,9 +49,7 @@ def test_reporting_adapter_is_scope_safe_and_side_effect_free(
     reporting_store: SocialReportingStore,
 ) -> None:
     before = _counts(reporting_store.engine)
-    accounts = reporting_store.list_accounts(
-        brand_ids=("101", "102"), platform=PlatformId.FACEBOOK
-    )
+    accounts = reporting_store.list_accounts(brand_ids=("101", "102"), platform=PlatformId.FACEBOOK)
     assert tuple(row.account_id for row in accounts) == (11, 12)
     assert all(row.brand_id != "999" for row in accounts)
     metrics = reporting_store.list_metrics(
@@ -63,19 +61,28 @@ def test_reporting_adapter_is_scope_safe_and_side_effect_free(
     )[0]
     assert content.external_content_id == "post-1"
     assert content.media_url == "/api/media/facebook/post-1?brand_id=101&account_id=11"
-    assert reporting_store.list_comments(
-        account_ids=(11,), start_on=date(2026, 7, 1), end_on=date(2026, 7, 2)
-    )[0].external_comment_id == "comment-1"
-    assert reporting_store.find_media(
-        brand_ids=("101",),
-        platform=PlatformId.FACEBOOK,
-        external_content_id="post-1",
-    ) is not None
-    assert reporting_store.find_media(
-        brand_ids=("102",),
-        platform=PlatformId.FACEBOOK,
-        external_content_id="post-1",
-    ) is None
+    assert (
+        reporting_store.list_comments(
+            account_ids=(11,), start_on=date(2026, 7, 1), end_on=date(2026, 7, 2)
+        )[0].external_comment_id
+        == "comment-1"
+    )
+    assert (
+        reporting_store.find_media(
+            brand_ids=("101",),
+            platform=PlatformId.FACEBOOK,
+            external_content_id="post-1",
+        )
+        is not None
+    )
+    assert (
+        reporting_store.find_media(
+            brand_ids=("102",),
+            platform=PlatformId.FACEBOOK,
+            external_content_id="post-1",
+        )
+        is None
+    )
     assert reporting_store.list_connections(brand_ids=("101",))[0].state == "connected"
     assert reporting_store.list_sync_jobs(brand_ids=("101",))[0].status == "pending"
     assert reporting_store.list_insights(brand_ids=("101",))[0].summary == "Stored summary"
@@ -157,7 +164,8 @@ def _schema() -> tuple[str, ...]:
             media_url_candidates jsonb NOT NULL DEFAULT '[]'::jsonb,
             full_video_watched_rate double precision, total_time_watched double precision,
             average_time_watched double precision, interactions_count double precision,
-            replies_count double precision, profile_visits double precision,
+            replies_count double precision, saves_count double precision,
+            sticker_taps double precision, profile_visits double precision,
             follows_count double precision, taps_forward double precision,
             taps_back double precision, swipe_forward double precision, exits double precision,
             navigation_count double precision, completion_rate double precision

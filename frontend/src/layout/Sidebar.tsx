@@ -3,6 +3,7 @@ import {
   Home,
   Instagram,
   PieChart,
+  PlugZap,
   Settings,
   X,
 } from "lucide-react";
@@ -40,6 +41,7 @@ export const SOCIAL_NAVIGATION_LABELS = [
   "Social Media",
   ...platformNavigation.map((item) => item.label),
   "Settings",
+  "Integrations",
 ] as const;
 
 function platformAvailable(platform: Platform, capabilities: ReturnType<typeof useBrandScope>["capabilities"]) {
@@ -75,6 +77,7 @@ function NavigationLink({
 export function Sidebar({ open, onClose }: SidebarProps) {
   const { capabilities } = useBrandScope();
   const settingsVisible = capabilities?.permissions.settings_visible === true;
+  const integrationsVisible = capabilities?.permissions.integrations_visible === true;
   const tiktokVisible = platformAvailable("tiktok", capabilities);
   const homePath = tiktokVisible ? "/tiktok" : "/facebook";
   const visiblePlatforms = platformNavigation.filter(
@@ -115,18 +118,15 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 <NavigationLink icon={Icon} label={label} onClick={onClose} path={path} />
               </div>
             ))}
-            {settingsVisible && (
-              <div className="sidebar-channel-row">
-                <span aria-hidden="true" className="channel-connector" />
-                <NavigationLink icon={Settings} label="Settings" onClick={onClose} path="/settings" />
-              </div>
-            )}
           </div>
         </nav>
 
         <nav aria-label="Account navigation" className="sidebar-footer">
           {settingsVisible && (
             <NavigationLink icon={Settings} label="Settings" onClick={onClose} path="/settings" />
+          )}
+          {integrationsVisible && (
+            <NavigationLink icon={PlugZap} label="Integrations" onClick={onClose} path="/integrations" />
           )}
           <div className="sidebar-product-note"><span />SocialMedia standalone</div>
         </nav>

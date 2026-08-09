@@ -15,6 +15,7 @@ MEDIA_INSIGHT_METRICS = (
     "likes",
     "comments",
     "shares",
+    "saved",
     "replies",
 )
 STORY_INSIGHT_METRICS = (
@@ -25,7 +26,7 @@ STORY_INSIGHT_METRICS = (
     "exits",
     "navigation",
     "profile_visits",
-    "follows",
+    MetricId.FOLLOWS.value,
     "swipe_forward",
 )
 
@@ -39,15 +40,11 @@ def fetch_content_insights(
     requested = STORY_INSIGHT_METRICS if story else MEDIA_INSIGHT_METRICS
     payloads: list[Mapping[str, Any]] = []
     try:
-        payloads.append(
-            transport.get(f"{content_id}/insights", {"metric": ",".join(requested)})
-        )
+        payloads.append(transport.get(f"{content_id}/insights", {"metric": ",".join(requested)}))
     except MetaTransportError:
         for metric in requested:
             try:
-                payloads.append(
-                    transport.get(f"{content_id}/insights", {"metric": metric})
-                )
+                payloads.append(transport.get(f"{content_id}/insights", {"metric": metric}))
             except MetaTransportError:
                 continue
     values: dict[str, float] = {}
@@ -67,9 +64,7 @@ def fetch_content_insights(
     return values
 
 
-def map_content_insights(
-    metrics: Mapping[str, float], *, story: bool
-) -> dict[str, float | None]:
+def map_content_insights(metrics: Mapping[str, float], *, story: bool) -> dict[str, float | None]:
     views = metrics.get(MetricId.VIEWS.value, metrics.get("impressions"))
     components = tuple(
         metrics.get(key) for key in ("taps_forward", "taps_back", "swipe_forward", "exits")
@@ -78,9 +73,7 @@ def map_content_insights(
     if navigation is None and all(value is not None for value in components):
         navigation = sum(value for value in components if value is not None)
     completion = None
-    if story and views is not None and views > 0 and all(
-        value is not None for value in components
-    ):
+    if story and views is not None and views > 0 and all(value is not None for value in components):
         navigation_total = sum(value for value in components if value is not None)
         completion = max(0.0, (1.0 - navigation_total / views) * 100.0)
     return {
@@ -88,8 +81,10 @@ def map_content_insights(
         "reach_count": metrics.get(MetricId.REACH.value),
         "interactions_count": metrics.get("total_interactions"),
         "replies_count": metrics.get("replies"),
+        "saves_count": metrics.get("saved"),
+        "sticker_taps": None,
         "profile_visits": metrics.get("profile_visits"),
-        "follows_count": metrics.get("follows"),
+        "follows_count": metrics.get(MetricId.FOLLOWS.value),
         "taps_forward": metrics.get("taps_forward"),
         "taps_back": metrics.get("taps_back"),
         "swipe_forward": metrics.get("swipe_forward"),

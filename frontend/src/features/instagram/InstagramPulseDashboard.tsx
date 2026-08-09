@@ -123,21 +123,29 @@ function engagementRows(content: DashboardContent[]): PieRow[] {
 
 function reachRows(data: PlatformDashboard): PieRow[] {
   const source = data.source_breakdown?.reach;
-  if (!source) return [];
+  const organic = source?.organic ?? metric(data, "reach_organic")?.value ?? null;
+  const paid = source?.paid ?? metric(data, "reach_paid")?.value ?? null;
   return [
-    source.organic === null ? null : { label: "Organic Reach", value: source.organic, color: "#22c55e" },
-    !data.source_breakdown?.paid_available || source.paid === null ? null : { label: "Paid Reach", value: source.paid, color: "#ef4444" },
+    organic === null ? null : { label: "Organic Reach", value: organic, color: "#22c55e" },
+    paid === null ? null : { label: "Paid Reach", value: paid, color: "#ef4444" },
   ].filter((item): item is PieRow => item !== null);
 }
 
 function pageViewRows(data: PlatformDashboard): PieRow[] {
   const source = data.source_breakdown?.views;
-  if (!source) return [];
+  const organic = source?.organic ?? metric(data, "views_organic")?.value ?? null;
+  const paid = source?.paid ?? metric(data, "views_paid")?.value ?? null;
   return [
-    source.organic === null ? null : { label: "Organic", value: source.organic, color: "#ec4899" },
-    !data.source_breakdown?.paid_available || source.paid === null ? null : { label: "Paid", value: source.paid, color: "#8b5cf6" },
+    organic === null ? null : { label: "Organic", value: organic, color: "#ec4899" },
+    paid === null ? null : { label: "Paid", value: paid, color: "#8b5cf6" },
   ].filter((item): item is PieRow => item !== null);
 }
+
+const FOLLOWER_FLOW_KEYS = [
+  { id: "follows", label: "Follows", color: "#3b82f6" },
+  { id: "unfollows", label: "Unfollows", color: "#ec4899" },
+  { id: "followers_net", label: "Net", color: "#14b8a6" },
+] as const;
 
 function findBreakdown(breakdowns: DashboardBreakdown[], hints: string[]): DashboardBreakdown | undefined {
   return breakdowns.find((item) => {
@@ -222,7 +230,7 @@ function PageSection({ data, withTitle }: { data: PlatformDashboard; withTitle: 
       <KpiGrid rows={overviewKpis(data)} />
       <div className="facebook-two-grid">
         <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: "#38bdf8" }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
-        <PulseTrendCard data={data} keys={[{ id: "new_followers", label: "Follows", color: "#3b82f6" }]} subtitle="Follows, unfollows and net movement" title="New Followers Trend" />
+        <PulseTrendCard data={data} keys={[...FOLLOWER_FLOW_KEYS]} subtitle="Follows, unfollows and net movement" title="New Followers Trend" />
       </div>
       <PulseTrendCard bar data={data} keys={[{ id: "reach", label: "Page Reach", color: "#8b5cf6" }, { id: "views", label: "Page Views", color: "#5eead4" }]} subtitle="Page Reach and Page Views trend" title="Performance Trends" wide />
       <div className="facebook-one-three-grid">
@@ -275,7 +283,7 @@ function AudienceSection({ data, withTitle }: { data: PlatformDashboard; withTit
       <KpiGrid rows={audienceKpis(data)} />
       <div className="facebook-two-grid">
         <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: "#38bdf8" }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
-        <PulseTrendCard data={data} keys={[{ id: "new_followers", label: "Follows", color: "#3b82f6" }]} subtitle="Follows, unfollows and net movement" title="New Followers Trend" />
+        <PulseTrendCard data={data} keys={[...FOLLOWER_FLOW_KEYS]} subtitle="Follows, unfollows and net movement" title="New Followers Trend" />
       </div>
       <div className="facebook-two-grid">
         <AudienceDemographicsCard breakdowns={data.breakdowns} />
@@ -305,6 +313,7 @@ export function InstagramPulseDashboard({ data, tab }: { data: PlatformDashboard
       {(tab === "page" || cover) && <PageSection data={data} withTitle={cover} />}
       {(tab === "content" || cover) && <ContentSection data={data} withTitle={cover} />}
       {tab === "stories" && <InstagramStoriesWorkspace data={data} />}
+      {cover && <section className="facebook-pulse-section"><SectionTitle>Stories</SectionTitle><InstagramStoriesWorkspace data={data} /></section>}
       {(tab === "audience" || cover) && <AudienceSection data={data} withTitle={cover} />}
     </div>
   );

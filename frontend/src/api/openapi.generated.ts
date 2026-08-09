@@ -191,6 +191,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/integrations/status/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Integration Connections */
+        get: operations["integration_connections_api_integrations_status_connections_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/status/social-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Integration Social Accounts */
+        get: operations["integration_social_accounts_api_integrations_status_social_accounts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/status/sync-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Integration Sync Jobs */
+        get: operations["integration_sync_jobs_api_integrations_status_sync_jobs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/integrations/tiktok/oauth/start": {
         parameters: {
             query?: never;
@@ -584,6 +635,8 @@ export interface components {
         AuthMeResponse: {
             /** Access Mode */
             access_mode: string;
+            /** App Role */
+            app_role: string | null;
             /** Authenticated */
             authenticated: boolean;
             /** Brand Id */
@@ -595,6 +648,8 @@ export interface components {
              * Format: date-time
              */
             expires_at: string;
+            /** Integrations Visible */
+            integrations_visible: boolean;
             /** Is Internal Staff */
             is_internal_staff: boolean;
             /** Revoked */
@@ -919,8 +974,12 @@ export interface components {
             profile_visits: number | null;
             /** Replies */
             replies: number | null;
+            /** Saves */
+            saves: number | null;
             /** Shares */
             shares: number | null;
+            /** Sticker Taps */
+            sticker_taps: number | null;
         };
         /** DashboardStoryItem */
         DashboardStoryItem: {
@@ -949,8 +1008,12 @@ export interface components {
             reach: number | null;
             /** Replies */
             replies: number | null;
+            /** Saves */
+            saves: number | null;
             /** Shares */
             shares: number | null;
+            /** Sticker Taps */
+            sticker_taps: number | null;
             /** Swipe Forward */
             swipe_forward: number | null;
             /** Taps Back */
@@ -1116,7 +1179,7 @@ export interface components {
          * MetricId
          * @enum {string}
          */
-        MetricId: "followers" | "following" | "new_followers" | "reach" | "reach_paid" | "reach_organic" | "views" | "views_paid" | "views_organic" | "interactions" | "page_views" | "profile_views" | "website_clicks" | "total_actions" | "reactions" | "media_count" | "video_views_total" | "video_views_change" | "video_likes_total" | "video_comments_total" | "video_shares_total" | "video_engagements_total" | "video_engagement_rate";
+        MetricId: "followers" | "following" | "new_followers" | "follows" | "unfollows" | "followers_net" | "reach" | "reach_paid" | "reach_organic" | "views" | "views_paid" | "views_organic" | "interactions" | "page_views" | "profile_views" | "website_clicks" | "total_actions" | "reactions" | "media_count" | "video_views_total" | "video_views_change" | "video_likes_total" | "video_comments_total" | "video_shares_total" | "video_engagements_total" | "video_engagement_rate";
         /** OperationsReadinessResponse */
         OperationsReadinessResponse: {
             /** Database Configured */
@@ -1464,6 +1527,8 @@ export interface components {
         };
         /** WorkspacePermissions */
         WorkspacePermissions: {
+            /** Integrations Visible */
+            integrations_visible: boolean;
             /** Internal Audit Visible */
             internal_audit_visible: boolean;
             /** Meta Connection Manage */
@@ -1852,6 +1917,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MetaSelfServiceReadinessResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    integration_connections_api_integrations_status_connections_get: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+                rollup?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectionsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    integration_social_accounts_api_integrations_status_social_accounts_get: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+                rollup?: boolean;
+                platform?: components["schemas"]["PlatformId"] | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialAccountsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    integration_sync_jobs_api_integrations_status_sync_jobs_get: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+                rollup?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SyncJobsResponse"];
                 };
             };
             /** @description Validation Error */

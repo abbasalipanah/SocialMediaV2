@@ -16,7 +16,12 @@ yapılması gereken işlem yalnız şudur:
 4. Parent/child Brand seçimi kullanılacaksa imzalı token içindeki optional `brand_scope` alanını
    [`contracts/social-media-v2-sso-only.md`](contracts/social-media-v2-sso-only.md)
    sözleşmesine göre gönderin.
-5. Ortak SSO secretını iki tarafta secret yönetimiyle tanımlayın ve gerçek browser login/logout
+5. Social Media Integrations erişimi verilecek bir read-only kullanıcı için workspace
+   `role=viewer` değerini koruyun ve signed contract'a Brand üyeliğinden türetilmiş
+   `app_role=admin|operator` ekleyin. Bu alan yoksa veya başka değerdeyse Integrations kapalıdır.
+   Settings için app role kullanılmaz; yalnız `super_admin|agency_admin` workspace rolleri kabul
+   edilir.
+6. Ortak SSO secretını iki tarafta secret yönetimiyle tanımlayın ve gerçek browser login/logout
    testi yapın.
 
 Accumulate tarafında Social Media frontend’i gömülmeyecek; Meta/TikTok bağlantısı, dashboard,

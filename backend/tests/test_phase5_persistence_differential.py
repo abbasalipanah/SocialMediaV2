@@ -97,6 +97,7 @@ def _prepare(engine: Engine) -> None:
                        total_time_watched double precision,
                        average_time_watched double precision,
                        interactions_count double precision, replies_count double precision,
+                       saves_count double precision, sticker_taps double precision,
                        profile_visits double precision, follows_count double precision,
                        taps_forward double precision, taps_back double precision,
                        swipe_forward double precision, exits double precision,

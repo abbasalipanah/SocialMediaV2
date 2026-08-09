@@ -8,7 +8,13 @@ from fastapi.responses import RedirectResponse
 from app.api.contracts import AuthMeResponse
 from app.application.ports import AuthorityStore
 from app.application.services.authority import session_has_current_brand_access
-from app.application.services.sso import SsoError, consume_sso, resolve_session
+from app.application.services.sso import (
+    SsoError,
+    consume_sso,
+    resolve_session,
+    session_can_access_integrations,
+    session_can_access_settings,
+)
 from app.core import AppSettings, Boundary, WritePolicy, mark_boundary
 from app.core.security import sha256_text
 
@@ -71,6 +77,9 @@ def create_auth_router(
             "email": payload.get("email"),
             "source_system": payload.get("source_system"),
             **payload,
+            "app_role": payload.get("app_role"),
+            "settings_visible": session_can_access_settings(payload),
+            "integrations_visible": session_can_access_integrations(payload),
         }
 
     @router.post("/api/auth/logout", status_code=204)

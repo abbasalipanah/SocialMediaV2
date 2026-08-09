@@ -37,7 +37,8 @@ class SocialContentStore(SocialStoreBase):
                         thumbnail_candidates, media_url_candidates,
                         full_video_watched_rate, total_time_watched,
                         average_time_watched, interactions_count, replies_count,
-                        profile_visits, follows_count, taps_forward, taps_back,
+                        saves_count, sticker_taps, profile_visits, follows_count,
+                        taps_forward, taps_back,
                         swipe_forward, exits, navigation_count, completion_rate,
                         created_at
                     ) VALUES (
@@ -49,7 +50,8 @@ class SocialContentStore(SocialStoreBase):
                         CAST(:media_url_candidates AS jsonb),
                         :full_video_watched_rate, :total_time_watched,
                         :average_time_watched, :interactions_count, :replies_count,
-                        :profile_visits, :follows_count, :taps_forward, :taps_back,
+                        :saves_count, :sticker_taps, :profile_visits, :follows_count,
+                        :taps_forward, :taps_back,
                         :swipe_forward, :exits, :navigation_count, :completion_rate,
                         now()
                     )
@@ -75,6 +77,8 @@ class SocialContentStore(SocialStoreBase):
                         average_time_watched=EXCLUDED.average_time_watched,
                         interactions_count=EXCLUDED.interactions_count,
                         replies_count=EXCLUDED.replies_count,
+                        saves_count=EXCLUDED.saves_count,
+                        sticker_taps=EXCLUDED.sticker_taps,
                         profile_visits=EXCLUDED.profile_visits,
                         follows_count=EXCLUDED.follows_count,
                         taps_forward=EXCLUDED.taps_forward,
@@ -109,6 +113,8 @@ class SocialContentStore(SocialStoreBase):
                     "average_time_watched": record.average_time_watched,
                     "interactions_count": record.interactions_count,
                     "replies_count": record.replies_count,
+                    "saves_count": record.saves_count,
+                    "sticker_taps": record.sticker_taps,
                     "profile_visits": record.profile_visits,
                     "follows_count": record.follows_count,
                     "taps_forward": record.taps_forward,
@@ -134,7 +140,8 @@ class SocialContentStore(SocialStoreBase):
                               i.thumbnail_candidates, i.media_url_candidates,
                               i.full_video_watched_rate, i.total_time_watched,
                               i.average_time_watched, i.interactions_count,
-                              i.replies_count, i.profile_visits, i.follows_count,
+                              i.replies_count, i.saves_count, i.sticker_taps,
+                              i.profile_visits, i.follows_count,
                               i.taps_forward, i.taps_back, i.swipe_forward,
                               i.exits, i.navigation_count, i.completion_rate
                        FROM content_items AS i
@@ -170,6 +177,8 @@ class SocialContentStore(SocialStoreBase):
                     average_time_watched=_optional_float(row["average_time_watched"]),
                     interactions_count=_optional_float(row["interactions_count"]),
                     replies_count=_optional_float(row["replies_count"]),
+                    saves_count=_optional_float(row["saves_count"]),
+                    sticker_taps=_optional_float(row["sticker_taps"]),
                     profile_visits=_optional_float(row["profile_visits"]),
                     follows_count=_optional_float(row["follows_count"]),
                     taps_forward=_optional_float(row["taps_forward"]),

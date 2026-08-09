@@ -88,8 +88,14 @@ required = {
     "full_video_watched_rate",
     "navigation_count",
     "completion_rate",
+    "saves_count",
+    "sticker_taps",
 }
-assert versions == ["0001_v2_initial.sql", "0002_content_story_parity.sql"]
+assert versions == [
+    "0001_v2_initial.sql",
+    "0002_content_story_parity.sql",
+    "0003_story_action_totals.sql",
+]
 assert required <= columns
 print("R4 migration idempotency and content columns: PASS")
 engine.dispose()
