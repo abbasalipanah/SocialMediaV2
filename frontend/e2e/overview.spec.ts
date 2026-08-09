@@ -38,5 +38,5 @@ test("Overview matches the Accumulate information architecture with three suppor
 
   const sidebar = page.getByRole("complementary", { name: "Primary navigation" });
   await expect(sidebar.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
-  await expect(sidebar.getByRole("link", { name: "Overview" })).toHaveAttribute("href", "/overview");
+  await expect(sidebar.getByRole("link", { name: "Overview" })).toHaveCount(0);
 });

@@ -39,7 +39,6 @@ export const SOCIAL_NAVIGATION_LABELS = [
   "Home",
   "Analytics",
   "Social Media",
-  "Overview",
   ...platformNavigation.map((item) => item.label),
   "Settings",
   "Integrations",
@@ -113,10 +112,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </div>
           <div className="sidebar-channel-tree">
             <div className="sidebar-channel-title">Social Media</div>
-            <div className="sidebar-channel-row">
-              <span aria-hidden="true" className="channel-connector" />
-              <NavigationLink icon={PieChart} label="Overview" onClick={onClose} path="/overview" />
-            </div>
             {visiblePlatforms.map(({ icon: Icon, label, path, platform }) => (
               <div className="sidebar-channel-row" key={platform}>
                 <span aria-hidden="true" className="channel-connector" />

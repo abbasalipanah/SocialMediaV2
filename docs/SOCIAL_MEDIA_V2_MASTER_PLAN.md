@@ -138,10 +138,10 @@ TikTok, baseline veya faz-kapanış ifadelerini hükümsüz kılar:
     Engagements nested platform dashboard'dan okunur. Bu sözleşme ve altı KPI kararı yeni açık
     kullanıcı kararı olmadan değiştirilemez; makine-okunur karar
     `docs/revision6/overrides/frontend_backend_data_contract_2026-08-09.json` dosyasındadır.
-37. 2026-08-09 tarihli açık kullanıcı kararıyla görünür `Overview`, Social Media navigation
-    ağacında Facebook'tan önce yer alır; `/overview` gerçek deep-link olur ve Home `/` üzerinde
-    aynı Overview çalışma alanını açar. Bu madde, R1'deki "kaynak snapshot'ta yoksa Overview
-    eklenmez" kuralını yalnız Overview yüzeyi için geçersiz kılar.
+37. 2026-08-09 tarihli son kullanıcı düzeltmesiyle Home, Overview çalışma alanının tek görünür
+    navigation girişidir. Social Media ağacına ayrıca `Overview` satırı eklenemez. `/overview`
+    yalnız doğrudan deep-link olarak aynı çalışma alanını açabilir. Bu madde önceki R14 görünür
+    Overview satırı kararını geçersiz kılar.
 38. Overview ana içerik bilgi mimarisi, salt-okunur Accumulate
     `SocialMediaDashboard.tsx` yüzeyindeki altı KPI ve yedi bölüm sırasını kullanır. Sidebar,
     topbar ve footer'ın genel tasarımı değiştirilemez.
@@ -1012,7 +1012,8 @@ Social Media navigation route, label, ikon, platform görünürlüğü ve Settin
 frontend envanterinde exact olarak kaydedilir. V2 yalnız SSO consume/login ve owner activation
 gibi normal navigasyonda görünmeyen güvenlik rotalarını ekleyebilir. Görünür platform veya
 Settings satırı kaynak snapshot'ta yoksa eklenmez; varsa kaldırılmaz. Overview için §0.0 madde
-37-43'teki açık kullanıcı kararı bu kuralın dar istisnasıdır.
+37-43'teki açık kullanıcı kararı yalnız Home içeriği ve gizli `/overview` deep-link'i için dar
+istisnadır; ikinci görünür navigation satırı üretmez.
 
 Paid-media platformları, GA4 ve spend tabanlı kilit mantığı taşınmaz. Kanal availability backend'in linked-account/capability cevabından gelir.
 
@@ -2512,8 +2513,8 @@ production egress, DB, schedule ve activation gate kapalı kaldı. Kanıt:
 2026-08-09 kullanıcı kararıyla mevcut fakat erişilemeyen V2 Overview bileşenini Accumulate
 Social Media bilgi mimarisiyle gerçek ürün yüzeyine dönüştürme fazıdır:
 
-1. `/overview` gerçek route olur; `/` Home route'u aynı Overview içeriğini render eder ve sidebar
-   Social Media ağacında tek Overview bağlantısı gösterir;
+1. `/overview` gerçek fakat navigation'da gizli deep-link olur; `/` Home route'u Overview
+   içeriğini render eder ve sidebar'da yalnız tek görünür Home bağlantısı bulunur;
 2. yalnız main layout değiştirilir; mevcut sidebar/topbar/footer tasarımı korunur;
 3. altı canonical KPI ve yedi canonical bölüm exact sıra/başlıklarla render edilir;
 4. Overview mevcut typed `/api/dashboards/overview` ve `/api/insights` read contract'larını
@@ -2527,7 +2528,8 @@ Social Media bilgi mimarisiyle gerçek ürün yüzeyine dönüştürme fazıdır
 8. component, route, desktop Playwright, Pine Beach local API/browser, typecheck/build ve source
    guard kanıtları birlikte tamamlanır.
 
-Çıkış kapısı: `/` ve `/overview` Overview açar; altı KPI, yedi bölüm ve üç platform kartı vardır;
+Çıkış kapısı: `/` ve `/overview` Overview açar; sidebar'da Home/Overview için yalnız tek görünür
+Home bağlantısı bulunur; altı KPI, yedi bölüm ve üç platform kartı vardır;
 Pine Beach gerçek V2-local verisi görünür; uygulama API/console hatası yoktur; protected kaynak
 projelerin baseline'ı değişmemiştir.
 

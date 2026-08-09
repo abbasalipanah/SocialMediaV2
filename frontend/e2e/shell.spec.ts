@@ -12,7 +12,7 @@ test("desktop shell preserves canonical navigation and a reloaded platform route
   await expect(sidebar.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
   await expect(sidebar.getByText("Analytics")).toBeVisible();
   await expect(sidebar.getByText("Social Media")).toBeVisible();
-  await expect(sidebar.getByRole("link", { name: "Overview" })).toHaveAttribute("href", "/overview");
+  await expect(sidebar.getByRole("link", { name: "Overview" })).toHaveCount(0);
   await expect(sidebar.getByRole("link", { name: "Facebook" })).toHaveAttribute("href", "/facebook");
   await expect(sidebar.getByRole("link", { name: "Instagram" })).toHaveAttribute("href", "/instagram");
   await expect(sidebar.getByRole("link", { name: "TikTok" })).toHaveAttribute("href", "/tiktok");

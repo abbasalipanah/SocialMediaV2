@@ -14,8 +14,9 @@
     "same_workspace": true
   },
   "navigation": {
-    "overview_location": "Social Media tree before Facebook",
-    "home_remains_separate": true,
+    "visible_overview_entry": "Home only",
+    "overview_deep_link_visible_in_sidebar": false,
+    "duplicate_home_overview_entries_allowed": false,
     "sidebar_topbar_footer_redesign_allowed": false
   },
   "readonly_reference": "/home/api/colab_scripts/Accumulate/frontend/components/accumulate/SocialMediaDashboard.tsx",
@@ -43,7 +44,8 @@
     "activity_score": "clamp(round(avg_engagement_percent * 6 + reach_delta_pct * 0.4), 0, 100)",
     "saves_without_backend_data": "unavailable",
     "missing_value_policy": "do_not_render_as_zero",
-    "cross_channel_period_policy": "full selected range, at most 12 contiguous aggregate buckets"
+    "cross_channel_period_policy": "full selected range, at most 12 contiguous aggregate buckets",
+    "content_type_policy": "top three content types plus an exact aggregated Other bucket"
   },
   "ai_insights": {
     "source": "stored read-only /api/insights response",

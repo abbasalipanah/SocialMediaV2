@@ -348,7 +348,6 @@ describe("Phase 7 application shell", () => {
       "Home",
       "Analytics",
       "Social Media",
-      "Overview",
       "Facebook",
       "Instagram",
       "TikTok",
@@ -365,7 +364,7 @@ describe("Phase 7 application shell", () => {
     expect(within(primary).getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
     expect(within(primary).getByText("Analytics")).toBeInTheDocument();
     expect(within(primary).getByText("Social Media")).toBeInTheDocument();
-    expect(within(primary).getByRole("link", { name: "Overview" })).toHaveAttribute("href", "/overview");
+    expect(within(primary).queryByRole("link", { name: "Overview" })).not.toBeInTheDocument();
     await waitFor(() =>
       expect(within(primary).getByRole("link", { name: "Facebook" })).toHaveAttribute(
         "href",

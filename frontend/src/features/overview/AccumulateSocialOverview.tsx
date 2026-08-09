@@ -36,10 +36,12 @@ import { RANGE_OPTIONS, type RangeKey } from "../dashboard/catalog";
 import { formatDate, formatNumber, humanize } from "../dashboard/format";
 
 const PLATFORM_COLORS: Record<Platform, string> = {
-  facebook: "#1877f2",
-  instagram: "#d946ef",
+  facebook: "#5eead4",
+  instagram: "#818cf8",
   tiktok: "#111827",
 };
+
+const PLATFORM_DISPLAY_ORDER: Platform[] = ["instagram", "facebook", "tiktok"];
 
 const PLATFORM_NAMES: Record<Platform, string> = {
   facebook: "Facebook",
@@ -103,7 +105,7 @@ type ChartLine = {
 };
 
 function chartLines(data: OverviewDashboard, metricIds: MetricId[]): ChartLine[] {
-  return data.platforms.flatMap((platformData) => {
+  return orderedPlatforms(data).flatMap((platformData) => {
     const platform = platformData.meta.platform;
     if (!platform) return [];
     const series = metricIds
@@ -112,6 +114,14 @@ function chartLines(data: OverviewDashboard, metricIds: MetricId[]): ChartLine[]
     return series
       ? [{ name: PLATFORM_NAMES[platform], color: PLATFORM_COLORS[platform], points: series.points }]
       : [];
+  });
+}
+
+function orderedPlatforms(data: OverviewDashboard) {
+  return [...data.platforms].sort((left, right) => {
+    const leftIndex = left.meta.platform ? PLATFORM_DISPLAY_ORDER.indexOf(left.meta.platform) : -1;
+    const rightIndex = right.meta.platform ? PLATFORM_DISPLAY_ORDER.indexOf(right.meta.platform) : -1;
+    return leftIndex - rightIndex;
   });
 }
 
@@ -146,6 +156,14 @@ function linePoints(values: number[], minimum: number, maximum: number): string 
     .join(" ");
 }
 
+function ChartLegend({ lines }: { lines: ChartLine[] }) {
+  return (
+    <div className="social-chart-legend">
+      {lines.map((line) => <span key={line.name}><i style={{ background: line.color }} />{line.name}</span>)}
+    </div>
+  );
+}
+
 function AudienceGrowthChart({ lines }: { lines: ChartLine[] }) {
   const allValues = lines.flatMap((line) => line.points.map((point) => point.value));
   const minimum = allValues.length > 0 ? Math.min(...allValues) : 0;
@@ -155,32 +173,36 @@ function AudienceGrowthChart({ lines }: { lines: ChartLine[] }) {
     <article className="social-chart-card">
       <div className="social-card-heading">
         <div><h2>Audience Growth</h2><p>Net follower growth</p></div>
+        {allValues.length > 0 && <ChartLegend lines={lines} />}
       </div>
       {allValues.length === 0 ? (
         <div className="social-chart-empty">No follower observations in this range.</div>
       ) : (
         <>
           <svg aria-label="Audience growth by platform" className="social-line-chart" preserveAspectRatio="none" role="img" viewBox="0 0 380 160">
+            <defs>
+              {lines.map((line, index) => (
+                <linearGradient id={`overview-line-${index}`} key={line.name} x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor={line.color} stopOpacity="0.2" />
+                  <stop offset="100%" stopColor={line.color} stopOpacity="0" />
+                </linearGradient>
+              ))}
+            </defs>
             {[26, 55, 84, 113, 142].map((y) => <line key={y} x1="18" x2="362" y1={y} y2={y} />)}
-            {lines.map((line) => (
-              <polyline
-                fill="none"
-                key={line.name}
-                points={linePoints(line.points.map((point) => point.value), minimum, maximum)}
-                stroke={line.color}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2.5"
-              />
-            ))}
+            {lines.map((line, index) => {
+              const points = linePoints(line.points.map((point) => point.value), minimum, maximum);
+              return (
+                <g key={line.name}>
+                  <polygon fill={`url(#overview-line-${index})`} points={`${points} 362,142 18,142`} />
+                  <polyline fill="none" points={points} stroke={line.color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
+                </g>
+              );
+            })}
           </svg>
           <div className="social-chart-axis">
             <span>{labels[0] ?? ""}</span>
             <span>{labels[Math.floor((labels.length - 1) / 2)] ?? ""}</span>
             <span>{labels.at(-1) ?? ""}</span>
-          </div>
-          <div className="social-chart-legend">
-            {lines.map((line) => <span key={line.name}><i style={{ background: line.color }} />{line.name}</span>)}
           </div>
         </>
       )}
@@ -197,6 +219,7 @@ function CrossChannelChart({ lines }: { lines: ChartLine[] }) {
     <article className="social-chart-card">
       <div className="social-card-heading">
         <div><h2>Cross-Channel</h2><p>Daily interaction</p></div>
+        {visibleLines.some((line) => line.points.length > 0) && <ChartLegend lines={visibleLines} />}
       </div>
       {visibleLines.every((line) => line.points.length === 0) ? (
         <div className="social-chart-empty">No interaction observations in this range.</div>
@@ -223,9 +246,6 @@ function CrossChannelChart({ lines }: { lines: ChartLine[] }) {
             <span>{labels[Math.floor((labels.length - 1) / 2)] ?? ""}</span>
             <span>{labels.at(-1) ?? ""}</span>
           </div>
-          <div className="social-chart-legend">
-            {visibleLines.map((line) => <span key={line.name}><i style={{ background: line.color }} />{line.name}</span>)}
-          </div>
         </>
       )}
     </article>
@@ -238,7 +258,14 @@ function contentDistribution(content: DashboardContent[]) {
   const counts = new Map<string, number>();
   content.forEach((item) => counts.set(humanize(item.content_type), (counts.get(humanize(item.content_type)) ?? 0) + 1));
   const total = Math.max(1, content.length);
-  return Array.from(counts.entries()).map(([label, count], index) => ({
+  const ranked = Array.from(counts.entries()).sort((left, right) => right[1] - left[1]);
+  const visible = ranked.length <= 4
+    ? ranked
+    : [
+        ...ranked.slice(0, 3),
+        ["Other", ranked.slice(3).reduce((sum, [, count]) => sum + count, 0)] as [string, number],
+      ];
+  return visible.map(([label, count], index) => ({
     label,
     count,
     percentage: (count / total) * 100,
@@ -436,15 +463,19 @@ function PlatformBreakdown({ data }: { data: OverviewDashboard }) {
     <section className="social-platform-section">
       <h2><Layers3 size={20} />Platform Breakdown</h2>
       <div className="social-platform-grid">
-        {data.platforms.map((platformData) => {
+        {orderedPlatforms(data).map((platformData) => {
           const platform = platformData.meta.platform;
           if (!platform) return null;
           const followers = value(platformData.metrics, "followers");
           const interactions = value(platformData.metrics, "interactions") ?? value(platformData.metrics, "video_engagements_total");
           const reach = value(platformData.metrics, "reach");
-          const engagementRate = interactions !== null && reach !== null && reach > 0
-            ? interactions / reach
-            : null;
+          const reportedEngagementRate = value(platformData.metrics, "engagement_rate")
+            ?? value(platformData.metrics, "video_engagement_rate");
+          const engagementRate = reportedEngagementRate ?? (
+            interactions !== null && reach !== null && reach > 0
+              ? interactions / reach
+              : null
+          );
           const available = platformData.meta.data_status !== "unavailable";
           const content = (
             <>
@@ -549,14 +580,16 @@ export function AccumulateSocialOverview({
             <span className="social-range-icon"><CalendarDays size={18} /></span>
             <span><small>Date Period</small><select aria-label="Date period" onChange={(event) => onRange(event.target.value as RangeKey)} value={range}>{RANGE_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></span>
             <span className="social-connected-icons" aria-label="Connected platforms">
-              {data.platforms.slice(0, 3).map((platformData) => platformData.meta.platform && <i className={`platform-${platformData.meta.platform}`} key={platformData.meta.platform}><PlatformIcon platform={platformData.meta.platform} size={15} /></i>)}
+              {orderedPlatforms(data).slice(0, 3).map((platformData) => platformData.meta.platform && <i className={`platform-${platformData.meta.platform}`} key={platformData.meta.platform}><PlatformIcon platform={platformData.meta.platform} size={15} /></i>)}
             </span>
           </label>
           <ExportPng metrics={data.metrics} subtitle={`${brandName} · ${data.meta.date_range.start_on} to ${data.meta.date_range.end_on}`} title="Social Media Overview" />
         </div>
       </header>
 
-      <CoverageNotice status={data.meta.data_status} warnings={data.meta.warnings} />
+      {data.meta.data_status !== "available" && (
+        <CoverageNotice status={data.meta.data_status} warnings={data.meta.warnings} />
+      )}
 
       <section aria-label="Key performance indicators" className="social-kpi-grid">
         <article className="social-kpi-card social-audience-kpi">

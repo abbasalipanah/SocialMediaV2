@@ -43,9 +43,9 @@ close, and focus return.
 
 ## Route and navigation behavior
 
-- Home links to `/` and renders Overview.
-- Overview is a separate visible Social Media tree item linking to `/overview`.
-- Root rendering prevents Home and Overview from being active at the same time.
+- Home links to `/` and is the only visible navigation entry for Overview.
+- `/overview` remains a direct deep-link but is not duplicated in the Social Media tree.
+- The final user correction explicitly prohibits simultaneous Home and Overview menu entries.
 - Unauthorized Settings or Integrations deep-links fail closed to `/overview`.
 - Existing sidebar/topbar/footer styling and role-driven Settings/Integrations visibility remain
   unchanged.
@@ -60,6 +60,7 @@ opened `/overview` and verified:
 - exactly six KPI labels;
 - all seven section headings;
 - exactly three Platform Breakdown cards;
+- one visible Home entry and no duplicate Overview sidebar entry;
 - Saves shown as unavailable;
 - stored-insight dialog opens;
 - zero application HTTP or console errors.

@@ -146,12 +146,14 @@
     },
     "overview": {
       "consumed_metric_ids": [
+        "engagement_rate",
         "followers",
         "interactions",
         "new_followers",
         "reach",
         "reactions",
         "video_engagements_total",
+        "video_engagement_rate",
         "views",
         "website_clicks"
       ],
@@ -165,6 +167,8 @@
         "website_clicks"
       ],
       "nested_platform_metrics": [
+        "engagement_rate",
+        "video_engagement_rate",
         "video_engagements_total"
       ],
       "display_aliases": {
