@@ -106,8 +106,16 @@ CHART_KEYS = {
 
 _RELEASE_ROOT = Path(__file__).resolve().parents[4]
 _LOGO_PATHS = (
-    _RELEASE_ROOT / "frontend" / "public" / "branding" / "accumulate-dark.png",
-    _RELEASE_ROOT / "frontend" / "dist" / "branding" / "accumulate-dark.png",
+    _RELEASE_ROOT
+    / "frontend"
+    / "public"
+    / "branding"
+    / "accumulate-sidebar-logo.png",
+    _RELEASE_ROOT
+    / "frontend"
+    / "dist"
+    / "branding"
+    / "accumulate-sidebar-logo.png",
 )
 
 
@@ -310,15 +318,15 @@ class _WorkbookRenderer:
                 "accumulate-logo.png",
                 {
                     "image_data": logo_data,
-                    "x_scale": 0.29,
-                    "y_scale": 0.29,
+                    "x_scale": 0.145,
+                    "y_scale": 0.145,
                     "object_position": 1,
                     "description": "Accumulate",
                 },
             )
         else:
             sheet.merge_range("B2:F3", "Accumulate", self.formats.logo)
-        sheet.write("G2", "AI", self.formats.logo_ai)
+            sheet.write("G2", "AI", self.formats.logo_ai)
         sheet.merge_range("B5:H6", "SOCIAL MEDIA REPORT", self.formats.title)
         sheet.merge_range(
             "B7:H7", f"{context.brand_name} · {context.surface.title()}", self.formats.subtitle

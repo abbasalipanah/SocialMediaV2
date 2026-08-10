@@ -129,6 +129,7 @@ def test_instagram_workbook_is_native_safe_and_uses_dashboard_projection(
             for name in names
             if name.startswith("xl/charts/chart")
         )
+        embedded_logo = archive.read("xl/media/image1.png")
 
     expected_sheets = {
         "Report Info",
@@ -144,6 +145,14 @@ def test_instagram_workbook_is_native_safe_and_uses_dashboard_projection(
     }
     assert all(name in workbook_xml for name in expected_sheets)
     assert "xl/media/image1.png" in names
+    expected_logo = (
+        Path(__file__).resolve().parents[2]
+        / "frontend"
+        / "public"
+        / "branding"
+        / "accumulate-sidebar-logo.png"
+    )
+    assert embedded_logo == expected_logo.read_bytes()
     assert not any(name.startswith("xl/externalLinks/") for name in names)
     assert not any(name.endswith("vbaProject.bin") for name in names)
     assert "<f>" not in worksheet_xml
