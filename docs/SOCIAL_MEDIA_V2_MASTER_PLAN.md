@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R24 tam uygulama sertifikasyonu yürütülüyor; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
+| Durum | Revizyon 6 — R24 tam uygulama sertifikasyonu tamamlandı; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -2911,7 +2911,7 @@ artifact SHA parity ve journal kontrolünü geçti. Collection service/timer ina
 korunan projeler ve public routing değişmedi. Kanıt:
 `docs/revision6/r23/REVISION6_R23_PERFORMING_CONTENT_LINKS_REPORT.md`.
 
-### R24 — Tam uygulama ve veri sertifikasyonu (devam ediyor)
+### R24 — Tam uygulama ve veri sertifikasyonu (tamamlandı)
 
 2026-08-10 kullanıcı kararıyla R22 sonrasında bütün V2 ürününü kapsayan final sertifikasyon turu
 bağlayıcıdır. R22 tarihsel release/commit kanıtı yeniden yazılmaz; genişletilmiş çalışma R24
@@ -2947,8 +2947,19 @@ etki, gerekçe ve takip kararı raporda ayrı tutulur. Korunan projeler salt oku
 shared Nginx ve public cutover bu fazın parçası değildir. Makine-okunur kapsam:
 `docs/revision6/overrides/final_certification_2026-08-10.json`.
 
-Durum (2026-08-10): devam ediyor. Uygulama, gerçek veri, export, yetki/güvenlik, dependency ve
-operasyon prova kanıtları tamamlanmadan R24 kapatılamaz.
+Durum (2026-08-10): tamamlandı. Pine Beach Belek için dört tarih aralığı, exact/account/child/
+rollup scope, 14 dashboard/tab yüzeyi ve 14 XLSX workbook gerçek V2 verisiyle doğrulandı. Toplam
+88 sheet ve 45 chart; canonical logo, Report Info, ham veri ve toplam kontrolleri geçti. Super
+Admin, Agency Admin, Viewer ve Viewer+Operator navigation/route/API matrisi; Settings,
+Integrations, AI history/haftalık limit ve signed SSO expiry/logout akışları geçti. Instagram
+Content içindeki Story scope sapması ve dependency audit'te bulunan `cryptography 46.0.7`
+advisory'leri kapatıldı; fresh-env pip-audit ve npm audit sıfır vulnerability verdi. Backend,
+PostgreSQL fazları, frontend, typecheck/build, desktop/mobile Playwright, OpenAPI, mypy, secret,
+vocabulary ve source guard kapıları geçti. V2-only restart → R23 rollback → R24 forward provası
+başarılıdır; aktif release `/opt/social-media-v2/releases/20260810T140721Z-r24audit`, açık
+kritik/yüksek bulgu `0/0`dır. Collection service/timer kapalı ve loopback sınırı korunmuştur.
+Korunan projeler, DNS/TLS/shared Nginx/public route değişmemiştir. Kanıt:
+`docs/revision6/r24/REVISION6_R24_FINAL_CERTIFICATION_REPORT.md`.
 
 ### 22.1 Revizyon 6 stop koşulları
 

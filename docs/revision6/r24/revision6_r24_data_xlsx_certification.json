@@ -1,0 +1,116 @@
+{
+  "artifact": "revision6_r24_data_xlsx_certification",
+  "as_of": "2026-08-10T12:00:00Z",
+  "status": "passed",
+  "database_access": "v2_local_read_only",
+  "brand": {
+    "id": "18",
+    "name": "Pine Beach Belek"
+  },
+  "accounts": {
+    "facebook": [1411],
+    "instagram": [1412],
+    "tiktok": [2862]
+  },
+  "date_ranges": {
+    "last_7_days": {
+      "start_on": "2026-08-03",
+      "end_on": "2026-08-09",
+      "observed_days": {
+        "facebook": 7,
+        "instagram": 7,
+        "tiktok": 7
+      },
+      "content_rows": {
+        "facebook": 2,
+        "instagram": 2,
+        "instagram_stories": 0,
+        "tiktok": 0
+      }
+    },
+    "last_30_days": {
+      "start_on": "2026-07-11",
+      "end_on": "2026-08-09",
+      "observed_days": {
+        "facebook": 30,
+        "instagram": 30,
+        "tiktok": 30
+      },
+      "content_rows": {
+        "facebook": 14,
+        "instagram": 29,
+        "instagram_non_story": 13,
+        "instagram_stories": 16,
+        "tiktok": 3
+      }
+    },
+    "last_90_days": {
+      "start_on": "2026-05-12",
+      "end_on": "2026-08-09",
+      "observed_days": {
+        "facebook": 90,
+        "instagram": 90,
+        "tiktok": 90
+      },
+      "content_rows": {
+        "facebook": 37,
+        "instagram": 50,
+        "instagram_stories": 56,
+        "tiktok": 3
+      }
+    },
+    "last_365_days": {
+      "start_on": "2025-08-10",
+      "end_on": "2026-08-09",
+      "observed_days": {
+        "facebook": 259,
+        "instagram": 260,
+        "tiktok": 100
+      },
+      "content_rows": {
+        "facebook": 50,
+        "instagram": 50,
+        "instagram_stories": 116,
+        "tiktok": 25
+      },
+      "note": "Observed provider history is reported honestly; missing historical days are not demo-filled."
+    }
+  },
+  "metric_contract": {
+    "facebook_metric_count": 16,
+    "instagram_metric_count": 17,
+    "tiktok_metric_count": 17,
+    "primary_kpis_non_null": true,
+    "follows_unfollows_net_present": true,
+    "tiktok_last_30_views_reach_points": 30,
+    "completion_rate_unit": "percent_0_to_100"
+  },
+  "rollup": {
+    "requested_brand_id": "19",
+    "resolved_brand_ids": [19, 28, 29, 30],
+    "exact_parent_accounts": [],
+    "rollup_accounts": [2386, 2388, 2800],
+    "cross_scope_fail_closed": true
+  },
+  "xlsx": {
+    "workbooks": 14,
+    "total_sheets": 88,
+    "total_charts": 45,
+    "canonical_logo_sha256": "46e27509774512dccdc506ccd74ff80c9cd38d4d5096ebe31034480b54e801a7",
+    "report_info_verified": true,
+    "sheet_sets_verified": true,
+    "raw_daily_verified": true,
+    "content_story_rows_and_totals_verified": true,
+    "formulas_present": false,
+    "external_links_present": false,
+    "macros_present": false,
+    "persistent_artifacts": 0
+  },
+  "honest_empty_states": [
+    "TikTok has no content in last_7_days.",
+    "Instagram has no stories in last_7_days.",
+    "Comment Sentiment remains provider-unavailable and is not fabricated."
+  ],
+  "critical_findings": [],
+  "high_findings": []
+}

@@ -1,7 +1,7 @@
 {
   "decision_id": "final-certification-2026-08-10",
   "date": "2026-08-10",
-  "status": "binding_in_progress",
+  "status": "binding_complete",
   "revision": "R24",
   "scope": "social_media_v2_only",
   "protected_projects": [
@@ -76,6 +76,15 @@
     "open_critical_findings": 0,
     "open_high_findings": 0,
     "dns_tls_public_cutover_allowed": false
+  },
+  "certification": {
+    "completed_at": "2026-08-10T14:24:00Z",
+    "release": "/opt/social-media-v2/releases/20260810T140721Z-r24audit",
+    "data_xlsx_result": "docs/revision6/r24/revision6_r24_data_xlsx_certification.json",
+    "runtime_result": "docs/revision6/r24/revision6_r24_runtime_certification.json",
+    "final_report": "docs/revision6/r24/REVISION6_R24_FINAL_CERTIFICATION_REPORT.md",
+    "protected_source_guard": "passed",
+    "restart_rollback_forward": "passed"
   },
   "change_control": "Requires a new explicit user decision."
 }

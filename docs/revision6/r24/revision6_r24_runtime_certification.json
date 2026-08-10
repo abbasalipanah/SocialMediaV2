@@ -1,0 +1,67 @@
+{
+  "artifact": "revision6_r24_runtime_certification",
+  "date": "2026-08-10",
+  "status": "passed",
+  "release": "/opt/social-media-v2/releases/20260810T140721Z-r24audit",
+  "roles": {
+    "super_admin": {
+      "settings": true,
+      "integrations": true,
+      "ai_summary_generate": false
+    },
+    "agency_admin": {
+      "settings": true,
+      "integrations": true,
+      "ai_summary_generate": false
+    },
+    "viewer": {
+      "settings": false,
+      "integrations": false,
+      "ai_summary_generate": false
+    },
+    "viewer_app_role_operator": {
+      "settings": false,
+      "integrations": true,
+      "ai_summary_generate": true,
+      "weekly_limit": 1,
+      "window_days": 7
+    }
+  },
+  "surfaces": {
+    "overview": ["overview"],
+    "facebook": ["cover", "page", "content", "audience"],
+    "instagram": ["cover", "page", "content", "stories", "audience"],
+    "tiktok": ["cover", "account", "content", "audience"]
+  },
+  "ranges": ["last_7_days", "last_30_days", "last_90_days", "last_365_days"],
+  "scope": ["account", "brand", "child", "rollup", "cross_scope_denied"],
+  "flows": {
+    "settings": "passed",
+    "integrations": "passed",
+    "ai_summary_history_and_limit": "passed",
+    "sso_signed_consume": "passed",
+    "sso_expiry": "passed",
+    "logout": "passed"
+  },
+  "browser": {
+    "console_errors": 0,
+    "request_failures": 0,
+    "local_api_5xx": 0
+  },
+  "network": {
+    "api": "127.0.0.1:8026",
+    "web": "127.0.0.1:3026",
+    "public_cutover": false
+  },
+  "operations": {
+    "restart": "passed",
+    "rollback_to": "/opt/social-media-v2/releases/20260810T132946Z-r23content",
+    "rollback": "passed",
+    "forward_to": "/opt/social-media-v2/releases/20260810T140721Z-r24audit",
+    "forward": "passed",
+    "collection_service": "inactive",
+    "collection_timer": "inactive_disabled"
+  },
+  "open_critical_findings": 0,
+  "open_high_findings": 0
+}
