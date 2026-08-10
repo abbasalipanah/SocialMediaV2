@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -165,12 +165,17 @@ describe("Phase 8 product surfaces", () => {
     expect(screen.getByRole("heading", { name: "Content Snapshot" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Top Performing Content" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "AI Summary" })).toBeInTheDocument();
-    expect(screen.getAllByText(/Overall Organic Health|Total Audience|Total Reach|Total Impressions|Total Interactions|Avg\. Engagement/)).toHaveLength(6);
-    expect(document.querySelector(".overview-mini-sparkline polyline")).toHaveAttribute("stroke-width", "1.25");
+    expect(screen.queryByText("Overall Organic Health")).not.toBeInTheDocument();
+    expect(screen.getAllByText(/Total Audience|Total Reach|Total Impressions|Total Interactions|Avg\. Engagement/)).toHaveLength(5);
+    expect(document.querySelector(".overview-mini-line")).toHaveAttribute("stroke-width", "1.25");
     expect(document.querySelector(".overview-mini-sparkline defs")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Audience" }));
     expect(document.querySelector(".overview-performance-line")).toHaveAttribute("stroke-width", "1.25");
+    expect(document.querySelector(".overview-performance-line")).toHaveAttribute("data-curve", "monotone");
     expect(document.querySelectorAll(".overview-performance-area")).toHaveLength(1);
+    expect(screen.getByLabelText("LinkedIn Planned")).toBeInTheDocument();
+    expect(screen.getByLabelText("X Coming soon")).toBeInTheDocument();
+    expect(screen.getByLabelText("YouTube Coming soon")).toBeInTheDocument();
     expect(screen.getByText("Scale short-form content")).toBeInTheDocument();
     expect(screen.queryByText("Publish more of the strongest short-form format.")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Open/ }));
@@ -178,6 +183,65 @@ describe("Phase 8 product surfaces", () => {
     expect(screen.getAllByText("Reach improved while interactions remained stable.")).toHaveLength(2);
     expect(screen.getByText("Publish more of the strongest short-form format.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Generate summary/ })).not.toBeInTheDocument();
+  });
+
+  it("rotates Channel Health one platform at a time only after three connected channels", () => {
+    vi.useFakeTimers();
+    const platforms = (["instagram", "facebook", "tiktok", "linkedin"] as const).map((platform, index) => ({
+      ...baseDashboard,
+      meta: {
+        ...baseDashboard.meta,
+        dashboard_id: `${platform}-dashboard`,
+        platform,
+        resolved_account_ids: [index + 1],
+        data_status: "available" as const,
+        freshness: "fresh" as const,
+      },
+      metrics: [metric(1200 + index, "available")],
+      series: [{
+        metric_id: "followers" as const,
+        semantic_type: "snapshot" as const,
+        points: [
+          { observed_on: "2026-07-01", value: 1100 + index },
+          { observed_on: "2026-07-14", value: 1200 + index },
+        ],
+        methodology: "provider_reported",
+      }],
+    }));
+    const data = {
+      meta: { ...baseDashboard.meta, platform: null, data_status: "available" as const },
+      metrics: [metric(4800, "available")],
+      platforms,
+      content: [],
+      community: baseDashboard.community,
+    } as unknown as OverviewDashboard;
+
+    try {
+      render(
+        <MemoryRouter initialEntries={["/overview"]}>
+          <AccumulateSocialOverview
+            brandName="Hotel One"
+            data={data}
+            insights={[]}
+            insightsError={false}
+            insightsLoading={false}
+            onRange={() => undefined}
+            range="last_30_days"
+          />
+        </MemoryRouter>,
+      );
+      const carousel = screen.getByLabelText("Connected channel health");
+      expect(within(carousel).getByText("Instagram")).toBeInTheDocument();
+      expect(within(carousel).queryByText("LinkedIn")).not.toBeInTheDocument();
+
+      act(() => vi.advanceTimersByTime(4_500));
+
+      expect(within(carousel).queryByText("Instagram")).not.toBeInTheDocument();
+      expect(within(carousel).getByText("LinkedIn")).toBeInTheDocument();
+      expect(screen.queryByLabelText("LinkedIn Planned")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("keeps the Accumulate Facebook Cover as the combined Page, Content and Audience view", () => {

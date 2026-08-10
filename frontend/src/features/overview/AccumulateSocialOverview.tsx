@@ -8,14 +8,16 @@ import {
   Facebook,
   Heart,
   Instagram,
+  Linkedin,
   MessageCircle,
   RefreshCw,
   Sparkles,
   Target,
   Users,
+  Youtube,
   type LucideIcon,
 } from "lucide-react";
-import { useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 import type {
   DashboardContent,
@@ -40,19 +42,43 @@ import {
   V1_OVERVIEW_PLATFORM_COLORS,
 } from "../dashboard/visualPalette";
 
-const PLATFORM_DISPLAY_ORDER: Platform[] = ["instagram", "facebook", "tiktok"];
+type OverviewPlatformId = Platform | "linkedin" | "x" | "youtube";
 
-const PLATFORM_NAMES: Record<Platform, string> = {
+const PLATFORM_DISPLAY_ORDER: OverviewPlatformId[] = [
+  "instagram",
+  "facebook",
+  "tiktok",
+  "linkedin",
+  "x",
+  "youtube",
+];
+
+const PLATFORM_NAMES: Record<OverviewPlatformId, string> = {
   facebook: "Facebook",
   instagram: "Instagram",
   tiktok: "TikTok",
+  linkedin: "LinkedIn",
+  x: "X",
+  youtube: "YouTube",
 };
 
-const PLATFORM_COLORS: Record<Platform, string> = {
+const PLATFORM_COLORS: Record<OverviewPlatformId, string> = {
   facebook: V1_OVERVIEW_PLATFORM_COLORS.facebook,
   instagram: V1_OVERVIEW_PLATFORM_COLORS.instagram,
   tiktok: V1_OVERVIEW_PLATFORM_COLORS.tiktok,
+  linkedin: "#0A66C2",
+  x: "#172033",
+  youtube: "#FF0033",
 };
+
+const PLANNED_PLATFORMS = [
+  { id: "linkedin", status: "Planned" },
+  { id: "x", status: "Coming soon" },
+  { id: "youtube", status: "Coming soon" },
+] as const satisfies ReadonlyArray<{ id: OverviewPlatformId; status: string }>;
+
+const CHANNEL_WINDOW_SIZE = 3;
+const CHANNEL_ROTATION_MS = 4_500;
 
 type SeriesPoint = DashboardSeries["points"][number];
 
@@ -90,27 +116,87 @@ function percentValue(rate: number | null): string {
 
 function orderedPlatforms(data: OverviewDashboard) {
   return [...data.platforms].sort((left, right) => {
-    const leftIndex = left.meta.platform ? PLATFORM_DISPLAY_ORDER.indexOf(left.meta.platform) : 99;
-    const rightIndex = right.meta.platform ? PLATFORM_DISPLAY_ORDER.indexOf(right.meta.platform) : 99;
+    const leftIndex = left.meta.platform
+      ? PLATFORM_DISPLAY_ORDER.indexOf(left.meta.platform as OverviewPlatformId)
+      : 99;
+    const rightIndex = right.meta.platform
+      ? PLATFORM_DISPLAY_ORDER.indexOf(right.meta.platform as OverviewPlatformId)
+      : 99;
     return leftIndex - rightIndex;
   });
 }
 
-function PlatformIcon({ platform, size = 17 }: { platform: Platform; size?: number }) {
+function PlatformIcon({ platform, size = 17 }: { platform: OverviewPlatformId; size?: number }) {
   if (platform === "facebook") return <Facebook size={size} />;
   if (platform === "instagram") return <Instagram size={size} />;
+  if (platform === "linkedin") return <Linkedin size={size} />;
+  if (platform === "youtube") return <Youtube size={size} />;
+  if (platform === "x") return <span aria-hidden="true" className="social-x-mark">𝕏</span>;
   return <span aria-hidden="true" className="social-tiktok-mark">♪</span>;
 }
 
-function linePoints(values: number[], minimum: number, maximum: number, width = 360, height = 126): string {
+type PlotPoint = { x: number; y: number };
+
+function lineCoordinates(
+  values: number[],
+  minimum: number,
+  maximum: number,
+  width = 360,
+  height = 126,
+): PlotPoint[] {
   const spread = maximum - minimum || 1;
   return values
     .map((item, index) => {
       const x = values.length === 1 ? width / 2 : 8 + (index / (values.length - 1)) * (width - 16);
       const y = height - 8 - ((item - minimum) / spread) * (height - 16);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
+      return { x, y };
+    });
+}
+
+function monotonePath(points: PlotPoint[]): string {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M ${points[0]?.x.toFixed(1)} ${points[0]?.y.toFixed(1)}`;
+  if (points.length === 2) {
+    return `M ${points[0]?.x.toFixed(1)} ${points[0]?.y.toFixed(1)} L ${points[1]?.x.toFixed(1)} ${points[1]?.y.toFixed(1)}`;
+  }
+
+  const slopes = points.slice(0, -1).map((point, index) => {
+    const next = points[index + 1] as PlotPoint;
+    return (next.y - point.y) / (next.x - point.x);
+  });
+  const tangents = points.map((_point, index) => {
+    if (index === 0) return slopes[0] ?? 0;
+    if (index === points.length - 1) return slopes.at(-1) ?? 0;
+    const previous = slopes[index - 1] ?? 0;
+    const next = slopes[index] ?? 0;
+    if (previous === 0 || next === 0 || previous * next <= 0) return 0;
+    const previousWidth = (points[index] as PlotPoint).x - (points[index - 1] as PlotPoint).x;
+    const nextWidth = (points[index + 1] as PlotPoint).x - (points[index] as PlotPoint).x;
+    const firstWeight = 2 * nextWidth + previousWidth;
+    const secondWeight = nextWidth + 2 * previousWidth;
+    return (firstWeight + secondWeight) / (firstWeight / previous + secondWeight / next);
+  });
+
+  return points.slice(0, -1).reduce((path, point, index) => {
+    const next = points[index + 1] as PlotPoint;
+    const width = next.x - point.x;
+    const firstControl = {
+      x: point.x + width / 3,
+      y: point.y + (tangents[index] ?? 0) * width / 3,
+    };
+    const secondControl = {
+      x: next.x - width / 3,
+      y: next.y - (tangents[index + 1] ?? 0) * width / 3,
+    };
+    return `${path} C ${firstControl.x.toFixed(1)} ${firstControl.y.toFixed(1)}, ${secondControl.x.toFixed(1)} ${secondControl.y.toFixed(1)}, ${next.x.toFixed(1)} ${next.y.toFixed(1)}`;
+  }, `M ${points[0]?.x.toFixed(1)} ${points[0]?.y.toFixed(1)}`);
+}
+
+function areaPath(points: PlotPoint[], baseline: number): string {
+  const first = points[0];
+  const last = points.at(-1);
+  if (!first || !last || points.length < 2) return "";
+  return `${monotonePath(points)} L ${last.x.toFixed(1)} ${baseline.toFixed(1)} L ${first.x.toFixed(1)} ${baseline.toFixed(1)} Z`;
 }
 
 function MiniSparkline({ points, color }: { points: SeriesPoint[]; color: string }) {
@@ -119,7 +205,7 @@ function MiniSparkline({ points, color }: { points: SeriesPoint[]; color: string
   const values = points.map((point) => point.value);
   const minimum = Math.min(...values);
   const maximum = Math.max(...values);
-  const coordinates = linePoints(values, minimum, maximum, 180, 44);
+  const coordinates = lineCoordinates(values, minimum, maximum, 180, 44);
   return (
     <svg aria-hidden="true" className="overview-mini-sparkline" preserveAspectRatio="none" viewBox="0 0 180 44">
       <defs>
@@ -128,8 +214,8 @@ function MiniSparkline({ points, color }: { points: SeriesPoint[]; color: string
           <stop offset="100%" stopColor={color} stopOpacity={V1_TREND_FILL_BOTTOM_OPACITY} />
         </linearGradient>
       </defs>
-      {values.length > 1 && <polygon className="overview-mini-area" fill={`url(#${gradientId})`} points={`${coordinates} 172,36 8,36`} />}
-      <polyline fill="none" points={coordinates} stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={V1_TREND_STROKE_WIDTH} vectorEffect="non-scaling-stroke" />
+      {values.length > 1 && <path className="overview-mini-area" d={areaPath(coordinates, 36)} fill={`url(#${gradientId})`} />}
+      <path className="overview-mini-line" d={monotonePath(coordinates)} fill="none" stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={V1_TREND_STROKE_WIDTH} vectorEffect="non-scaling-stroke" />
       {values.length === 1 && <circle cx="90" cy="22" fill={color} r="1.8" />}
     </svg>
   );
@@ -213,37 +299,6 @@ function KpiCard({ definition }: { definition: KpiDefinition }) {
   );
 }
 
-function healthSummary(metrics: DashboardMetric[], engagementDeltaPp: number | null) {
-  const signals = [
-    metric(metrics, "followers")?.delta_pct ?? null,
-    metric(metrics, "reach")?.delta_pct ?? null,
-    metric(metrics, "interactions")?.delta_pct ?? null,
-    engagementDeltaPp,
-  ].filter((item): item is number => item !== null);
-  if (signals.length < 2) {
-    return { label: "Limited Data", tone: "limited", detail: "Not enough comparable signals in this period." };
-  }
-  const improving = signals.filter((item) => item >= 0).length;
-  if (improving >= Math.ceil(signals.length * 0.75)) {
-    return { label: "Healthy", tone: "healthy", detail: `${improving} of ${signals.length} core signals are stable or improving.` };
-  }
-  if (improving >= Math.ceil(signals.length / 2)) {
-    return { label: "Stable", tone: "stable", detail: `${improving} of ${signals.length} core signals are stable or improving.` };
-  }
-  return { label: "Needs Attention", tone: "attention", detail: `${signals.length - improving} of ${signals.length} core signals declined.` };
-}
-
-function HealthCard({ metrics, engagementDeltaPp }: { metrics: DashboardMetric[]; engagementDeltaPp: number | null }) {
-  const health = healthSummary(metrics, engagementDeltaPp);
-  return (
-    <article className={`social-kpi-card overview-health-card health-${health.tone}`} title="Health summarizes comparable audience, reach, interaction and engagement trends.">
-      <span className="social-kpi-label">Overall Organic Health</span>
-      <div className="overview-health-value"><span><Heart size={26} /></span><strong>{health.label}</strong></div>
-      <p>{health.detail}</p>
-    </article>
-  );
-}
-
 type ChangeSignal = {
   platform: Platform;
   label: string;
@@ -302,12 +357,47 @@ function channelStatus(platformData: OverviewDashboard["platforms"][number]) {
 }
 
 function ChannelHealth({ data }: { data: OverviewDashboard }) {
+  const platforms = useMemo(() => orderedPlatforms(data), [data]);
+  const platformKey = platforms.map((item) => item.meta.platform ?? "unknown").join("|");
+  const [windowStart, setWindowStart] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const rotates = platforms.length > CHANNEL_WINDOW_SIZE;
+
+  useEffect(() => setWindowStart(0), [platformKey]);
+  useEffect(() => {
+    if (!rotates || paused) return undefined;
+    const timer = window.setInterval(
+      () => setWindowStart((current) => (current + 1) % platforms.length),
+      CHANNEL_ROTATION_MS,
+    );
+    return () => window.clearInterval(timer);
+  }, [paused, platforms.length, rotates]);
+
+  const visiblePlatforms = rotates
+    ? Array.from(
+      { length: CHANNEL_WINDOW_SIZE },
+      (_item, offset) => platforms[(windowStart + offset) % platforms.length],
+    )
+    : platforms;
+
   return (
-    <article className="overview-card overview-channel-health">
-      <div className="overview-card-title"><h2>Channel Health</h2><span>Current period</span></div>
-      <div className="overview-channel-grid">
-        {orderedPlatforms(data).map((platformData) => {
-          const platform = platformData.meta.platform;
+    <article
+      className="overview-card overview-channel-health"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false);
+      }}
+      onFocus={() => setPaused(true)}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <div className="overview-card-title">
+        <h2>Channel Health</h2>
+        <span>{rotates ? `${windowStart + 1} / ${platforms.length} · rotates every 4.5s` : "Current period"}</span>
+      </div>
+      <div aria-label="Connected channel health" className="overview-channel-grid">
+        {visiblePlatforms.map((platformData) => {
+          if (!platformData) return null;
+          const platform = platformData.meta.platform as OverviewPlatformId | null;
           if (!platform) return null;
           const status = channelStatus(platformData);
           const followers = metric(platformData.metrics, "followers");
@@ -324,6 +414,23 @@ function ChannelHealth({ data }: { data: OverviewDashboard }) {
           );
         })}
       </div>
+      {rotates && (
+        <div aria-label="Channel carousel position" className="overview-channel-dots" role="group">
+          {platforms.map((platformData, index) => {
+            const platform = platformData.meta.platform as OverviewPlatformId | null;
+            if (!platform) return null;
+            return (
+              <button
+                aria-label={`Show ${PLATFORM_NAMES[platform]} first`}
+                className={index === windowStart ? "active" : ""}
+                key={platform}
+                onClick={() => setWindowStart(index)}
+                type="button"
+              />
+            );
+          })}
+        </div>
+      )}
     </article>
   );
 }
@@ -382,32 +489,48 @@ function PerformanceTrend({ data }: { data: OverviewDashboard }) {
                 ))}
               </defs>
               {lines.map((line) => {
-                const coordinates = linePoints(line.points.map((point) => point.value), minimum, maximum, 620, 180);
+                const coordinates = lineCoordinates(
+                  line.points.map((point) => point.value),
+                  minimum,
+                  maximum,
+                  620,
+                  180,
+                );
                 return (
-                  <polygon
+                  <path
                     className="overview-performance-area"
                     data-series={line.name.toLowerCase()}
+                    d={areaPath(coordinates, 172)}
                     fill={`url(#${gradientSeed}-${line.name})`}
                     key={`${line.name}-area`}
-                    points={`${coordinates} 612,172 8,172`}
                   />
                 );
               })}
               {[18, 54, 90, 126, 162].map((y) => <line key={y} x1="8" x2="612" y1={y} y2={y} />)}
-              {lines.map((line) => (
-                <polyline
-                  className="overview-performance-line"
-                  data-series={line.name.toLowerCase()}
-                  fill="none"
-                  key={line.name}
-                  points={linePoints(line.points.map((point) => point.value), minimum, maximum, 620, 180)}
-                  stroke={line.color}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={V1_TREND_STROKE_WIDTH}
-                  vectorEffect="non-scaling-stroke"
-                />
-              ))}
+              {lines.map((line) => {
+                const coordinates = lineCoordinates(
+                  line.points.map((point) => point.value),
+                  minimum,
+                  maximum,
+                  620,
+                  180,
+                );
+                return (
+                  <path
+                    className="overview-performance-line"
+                    data-curve="monotone"
+                    data-series={line.name.toLowerCase()}
+                    d={monotonePath(coordinates)}
+                    fill="none"
+                    key={line.name}
+                    stroke={line.color}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={V1_TREND_STROKE_WIDTH}
+                    vectorEffect="non-scaling-stroke"
+                  />
+                );
+              })}
             </svg>
           </div>
           <div className="overview-chart-axis"><span>{labels[0] ?? ""}</span><span>{labels[Math.floor((labels.length - 1) / 2)] ?? ""}</span><span>{labels.at(-1) ?? ""}</span></div>
@@ -686,10 +809,14 @@ function AiSummaryCard({
 }
 
 function PlatformSummary({ data }: { data: OverviewDashboard }) {
+  const platforms = orderedPlatforms(data);
+  const connectedPlatforms = new Set(
+    platforms.flatMap((item) => item.meta.platform ? [item.meta.platform as OverviewPlatformId] : []),
+  );
   return (
     <section aria-label="Platform summary" className="social-platform-grid overview-platform-summary">
-      {orderedPlatforms(data).map((platformData) => {
-        const platform = platformData.meta.platform;
+      {platforms.map((platformData) => {
+        const platform = platformData.meta.platform as OverviewPlatformId | null;
         if (!platform) return null;
         const followers = metric(platformData.metrics, "followers");
         const engagement = platformEngagementRate(platformData);
@@ -703,6 +830,22 @@ function PlatformSummary({ data }: { data: OverviewDashboard }) {
           </Link>
         );
       })}
+      {PLANNED_PLATFORMS.filter((platform) => !connectedPlatforms.has(platform.id)).map((platform) => (
+        <article
+          aria-label={`${PLATFORM_NAMES[platform.id]} ${platform.status}`}
+          className="social-platform-card overview-platform-card overview-planned-platform unavailable"
+          key={platform.id}
+        >
+          <div className="overview-platform-card-heading">
+            <span className={`overview-platform-icon platform-${platform.id}`}>
+              <PlatformIcon platform={platform.id} size={18} />
+            </span>
+            <strong>{PLATFORM_NAMES[platform.id]}</strong>
+            <span className="overview-planned-badge">{platform.status}</span>
+          </div>
+          <p>Integration will appear here when the channel is connected.</p>
+        </article>
+      ))}
     </section>
   );
 }
@@ -804,7 +947,6 @@ export function AccumulateSocialOverview({
       {data.meta.data_status !== "available" && <CoverageNotice status={data.meta.data_status} warnings={data.meta.warnings} />}
 
       <section aria-label="Key performance indicators" className="social-kpi-grid overview-kpi-grid">
-        <HealthCard engagementDeltaPp={engagementDeltaPp} metrics={data.metrics} />
         {kpis.map((definition) => <KpiCard definition={definition} key={definition.label} />)}
       </section>
 

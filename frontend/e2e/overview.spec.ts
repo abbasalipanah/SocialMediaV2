@@ -2,22 +2,25 @@ import { expect, test } from "@playwright/test";
 
 import { mockR5Api } from "./r5-fixtures";
 
-test("Overview matches the approved executive information architecture with three supported platforms", async ({ page }, testInfo) => {
+test("Overview scales from three connected to six displayed platform slots", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.startsWith("desktop"), "desktop overview assertion");
   await mockR5Api(page);
   await page.goto("/overview");
 
   await expect(page.getByRole("heading", { name: "Social Media Overview" })).toBeVisible();
   await expect(page.locator(".social-kpi-label")).toHaveText([
-    "Overall Organic Health",
     "Total Audience",
     "Total Reach",
     "Total Impressions",
     "Total Interactions",
     "Avg. Engagement",
   ]);
-  await expect(page.locator(".social-kpi-card")).toHaveCount(6);
-  await expect(page.locator(".social-platform-card")).toHaveCount(3);
+  await expect(page.locator(".social-kpi-card")).toHaveCount(5);
+  await expect(page.getByText("Overall Organic Health", { exact: true })).toHaveCount(0);
+  await expect(page.locator(".social-platform-card")).toHaveCount(6);
+  await expect(page.getByLabel("LinkedIn Planned")).toBeVisible();
+  await expect(page.getByLabel("X Coming soon")).toBeVisible();
+  await expect(page.getByLabel("YouTube Coming soon")).toBeVisible();
 
   for (const heading of [
     "What Changed?",
@@ -29,6 +32,10 @@ test("Overview matches the approved executive information architecture with thre
   ]) {
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
   }
+  const channelHealth = page.locator(".overview-channel-health");
+  await expect(channelHealth.locator(".overview-channel-card")).toHaveCount(3);
+  await expect(channelHealth.locator(".overview-channel-dots")).toHaveCount(0);
+  await expect(channelHealth.getByText("Current period", { exact: true })).toBeVisible();
 
   const performanceChart = page.getByRole("img", { name: "Performance trend by platform" });
   await expect(performanceChart.locator(".overview-performance-area")).toHaveCount(3);
@@ -37,6 +44,9 @@ test("Overview matches the approved executive information architecture with thre
   await expect(performanceChart.locator('.overview-performance-line[data-series="facebook"]')).toHaveAttribute("stroke", "#2563eb");
   await expect(performanceChart.locator('.overview-performance-line[data-series="tiktok"]')).toHaveAttribute("stroke", "#111827");
   await expect(performanceChart.locator(".overview-performance-line").first()).toHaveAttribute("stroke-width", "1.25");
+  await expect(performanceChart.locator(".overview-performance-line").first()).toHaveAttribute("data-curve", "monotone");
+  await expect(performanceChart.locator(".overview-performance-line").first()).toHaveAttribute("d", / C /);
+  await expect(page.locator(".overview-mini-line").first()).toHaveAttribute("d", / C /);
 
   await expect(page.getByText("No AI Summary has been generated for this Brand yet.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Open", exact: true })).toBeVisible();
