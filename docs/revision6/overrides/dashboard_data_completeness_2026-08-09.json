@@ -34,7 +34,28 @@
     "all_performing_content": true,
     "stories_history": true,
     "internal_vertical_scroll": true,
-    "sticky_header": true
+    "sticky_header": true,
+    "all_performing_content_contract": {
+      "columns": [
+        "rank",
+        "content",
+        "type",
+        "date",
+        "views",
+        "reach",
+        "likes",
+        "comments",
+        "shares",
+        "interactions"
+      ],
+      "type_source": "DashboardContent.content_type",
+      "link_source": "DashboardContent.permalink",
+      "allowed_link_protocols": ["https", "http"],
+      "credential_bearing_urls_allowed": false,
+      "missing_or_invalid_permalink": "non_clickable",
+      "link_target": "_blank",
+      "link_rel": ["noopener", "noreferrer"]
+    }
   },
   "tiktok_performance_trends": {
     "must_match_selected_period": true,

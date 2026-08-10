@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R22 Overview platform ölçekleme ve yumuşak trendler V2 loopback'ta doğrulandı; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
+| Durum | Revizyon 6 — R23 All Performing Content type ve permalink navigation V2 loopback'ta doğrulandı; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -116,6 +116,11 @@ TikTok, baseline veya faz-kapanış ifadelerini hükümsüz kılar:
     sıfır `0` olarak ayrıştırılır.
 30. All Performing Content ve Stories History tabloları sayfayı sınırsız uzatamaz; sabit azami
     yükseklik, tablo içi dikey scroll ve scroll sırasında görünür kalan başlık satırı kullanır.
+    All Performing Content sırası `#, Content, Type, Date, Views, Reach, Likes, Comments, Shares,
+    Interactions` sütunlarını kullanır. Type yalnız typed `content_type` alanından, içerik hedefi
+    yalnız gerçek `permalink` alanından gelir. Yalnız credential içermeyen `http/https`
+    permalink yeni sekmede `noopener noreferrer` ile açılır; eksik/geçersiz permalink için URL
+    tahmin edilmez ve içerik hücresi tıklanabilir gösterilmez.
 31. TikTok Performance Trends seçili Date Period ile aynı başlangıç/bitiş günlerini kapsar;
     Last 30 Days seçiliyken yedi/ondan az günlük cumulative content fallback'i kullanılamaz.
 32. Maddeler 26-31 veri completeness ürün kararıdır ve yeni açık kullanıcı kararı olmadan geri
@@ -2874,6 +2879,37 @@ kaldığı test edildi. İzole release `/opt/social-media-v2/releases/20260810T1
 API/web health ve source/build artifact SHA parity kontrollerini geçti. Collection service/timer
 inactive/disabled kaldı; korunan projeler ve public routing değişmedi. Kanıt:
 `docs/revision6/r22/REVISION6_R22_OVERVIEW_PLATFORM_SCALING_REPORT.md`.
+
+### R23 — All Performing Content type ve permalink navigation (tamamlandı)
+
+2026-08-10 kullanıcı kararıyla Facebook, Instagram ve TikTok'un paylaştığı All Performing
+Content tablosunda içerik türü ve gerçek içeriğe erişim bağlayıcıdır:
+
+1. tablo başlıkları tam olarak `#, Content, Type, Date, Views, Reach, Likes, Comments, Shares,
+   Interactions` sırasını kullanır;
+2. Type değeri typed `DashboardContent.content_type` alanından okunur ve mevcut type chip
+   görünümünde insan-okunur biçimde gösterilir;
+3. kapak, başlık ve dış içerik kimliğinden oluşan Content hücresi yalnız typed
+   `DashboardContent.permalink` geçerli olduğunda tıklanabilir;
+4. hedef URL yalnız credentials içermeyen `http` veya `https` adresi olabilir; bağlantı yeni
+   sekmede `noopener noreferrer` ile açılır;
+5. permalink eksik veya geçersizse URL tahmin edilmez, içerik aynı görsel düzenle fakat
+   tıklanamaz gösterilir;
+6. değişiklik shared component üzerinden Facebook, Instagram ve TikTok'a birlikte uygulanır;
+   backend schema/collector, sidebar, topbar, footer, DB, provider, korunan projeler, DNS/TLS,
+   shared Nginx ve public route değişmez.
+
+Çıkış kapısı: typecheck/build, shared canonical ve product component testleri, geçerli/eksik
+permalink negatif-pozitif sözleşmesi, desktop/mobile Playwright matrisi, source guard ve izole V2
+release doğrulaması birlikte geçer.
+
+Durum (2026-08-10): tamamlandı. Kod commit `97e47a0` ile `main`e alınmıştır. Frontend
+`35 passed`, production typecheck/build ve tam Playwright matrisi `17 passed / 5` bilinçli project
+skip ile geçti. Geçerli permalink'in hedefe bağlandığı ve boş permalink'in link üretmediği test
+edildi. İzole release `/opt/social-media-v2/releases/20260810T132946Z-r23content` API/web health,
+artifact SHA parity ve journal kontrolünü geçti. Collection service/timer inactive/disabled kaldı;
+korunan projeler ve public routing değişmedi. Kanıt:
+`docs/revision6/r23/REVISION6_R23_PERFORMING_CONTENT_LINKS_REPORT.md`.
 
 ### 22.1 Revizyon 6 stop koşulları
 
