@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R23 All Performing Content type ve permalink navigation V2 loopback'ta doğrulandı; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
+| Durum | Revizyon 6 — R24 tam uygulama sertifikasyonu yürütülüyor; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -2910,6 +2910,45 @@ edildi. İzole release `/opt/social-media-v2/releases/20260810T132946Z-r23conten
 artifact SHA parity ve journal kontrolünü geçti. Collection service/timer inactive/disabled kaldı;
 korunan projeler ve public routing değişmedi. Kanıt:
 `docs/revision6/r23/REVISION6_R23_PERFORMING_CONTENT_LINKS_REPORT.md`.
+
+### R24 — Tam uygulama ve veri sertifikasyonu (devam ediyor)
+
+2026-08-10 kullanıcı kararıyla R22 sonrasında bütün V2 ürününü kapsayan final sertifikasyon turu
+bağlayıcıdır. R22 tarihsel release/commit kanıtı yeniden yazılmaz; genişletilmiş çalışma R24
+olarak izlenir:
+
+1. Overview, Facebook, Instagram, Instagram Stories ve TikTok'un bütün görünür kart, grafik ve
+   tabloları V2 DB'deki gerçek Pine Beach Belek snapshot verisiyle tek tek doğrulanır;
+2. desteklenen bütün tarih aralıkları, Brand Family/child Brand ve platform account seçimleri;
+   exact Brand ile rollup scope'un veri izolasyonu, toplama ve fail-closed davranışı test edilir;
+3. Overview ile her platformun Cover/Page/Content/Stories/Audience odak yüzeyinden XLSX üretilir;
+   Report Info, logo, scope/tarih metadatası, sheet seti, grafik, ham veri ve toplamların kaynak
+   API projection'ı ile eşleşmesi kontrol edilir;
+4. Super Admin, Agency Admin, Viewer ve Accumulate signed app-role Operator matrisi; navigation,
+   route ve backend endpoint seviyesinde olumlu/olumsuz vakalarla doğrulanır;
+5. Settings, Integrations, haftalık AI Summary ve SSO launch/callback/session/expiry/logout akışları
+   yeniden test edilir; AI Summary mevcut key/provider yapılandırmasını kullanır ve secret
+   kopyalanmaz ya da loglanmaz;
+6. demo literal/veri, beklenmeyen boş kart, yanlış metric/dimension, yanlış yüzde/`pp`, unavailable
+   değeri sıfır sayma ve frontend/backend contract uyuşmazlığı statik ve runtime taranır;
+7. backend unit/integration/Postgres testleri, frontend unit/component/typecheck/build,
+   desktop/mobile Playwright, OpenAPI/vocabulary/source/secret/import-boundary güvenlik kapıları
+   ve dependency audit'leri birlikte çalıştırılır;
+8. yalnız V2 loopback servislerinde restart ve doğrulanmış önceki release'e rollback, ardından
+   yeni release'e forward provası yapılır; V2 collection timer disabled ve public route değişmeden
+   kalır;
+9. bulunan eksikler önem derecesiyle kaydedilir, tek tek V2 içinde düzeltilir ve yalnız açık
+   kritik/yüksek bulgu sıfır olduğunda final R24 raporu tamamlanır.
+
+Çıkış kapısı: bütün R24 kabul matrisi kanıt üretir; gerçek Pine Beach veri karşılaştırmalarında
+açıklanamayan sapma, açık kritik/yüksek güvenlik veya veri doğruluğu bulgusu, yetkisiz erişim,
+kalıcı XLSX artifact'i, demo fallback veya başarısız rollback bulunmaz. Orta/düşük bulgu varsa
+etki, gerekçe ve takip kararı raporda ayrı tutulur. Korunan projeler salt okunur kalır; DNS/TLS,
+shared Nginx ve public cutover bu fazın parçası değildir. Makine-okunur kapsam:
+`docs/revision6/overrides/final_certification_2026-08-10.json`.
+
+Durum (2026-08-10): devam ediyor. Uygulama, gerçek veri, export, yetki/güvenlik, dependency ve
+operasyon prova kanıtları tamamlanmadan R24 kapatılamaz.
 
 ### 22.1 Revizyon 6 stop koşulları
 

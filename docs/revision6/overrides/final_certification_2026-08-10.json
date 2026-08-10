@@ -1,0 +1,81 @@
+{
+  "decision_id": "final-certification-2026-08-10",
+  "date": "2026-08-10",
+  "status": "binding_in_progress",
+  "revision": "R24",
+  "scope": "social_media_v2_only",
+  "protected_projects": [
+    "/home/api/colab_scripts/SocialMedia",
+    "/home/api/colab_scripts/Accumulate",
+    "/home/api/colab_scripts/performance_marketing"
+  ],
+  "surfaces": [
+    "overview",
+    "facebook.cover",
+    "facebook.page",
+    "facebook.content",
+    "facebook.audience",
+    "instagram.cover",
+    "instagram.page",
+    "instagram.content",
+    "instagram.stories",
+    "instagram.audience",
+    "tiktok.cover",
+    "tiktok.account",
+    "tiktok.content",
+    "tiktok.audience",
+    "settings",
+    "integrations",
+    "ai_summary",
+    "sso_session"
+  ],
+  "data_source": "v2_local_pine_beach_snapshot",
+  "scope_matrix": {
+    "all_supported_date_ranges": true,
+    "brand_family": true,
+    "child_brand": true,
+    "platform_account": true,
+    "exact_brand": true,
+    "rollup": true,
+    "cross_scope_fail_closed": true
+  },
+  "xlsx": {
+    "every_dashboard_surface": true,
+    "verify_report_info": true,
+    "verify_canonical_logo": true,
+    "verify_charts": true,
+    "verify_raw_data": true,
+    "verify_totals_against_api_projection": true,
+    "persistent_artifacts_allowed": false
+  },
+  "roles": [
+    "super_admin",
+    "agency_admin",
+    "viewer",
+    "viewer_app_role_operator"
+  ],
+  "flows": [
+    "settings",
+    "integrations",
+    "weekly_ai_summary",
+    "sso_launch_callback_session_expiry_logout"
+  ],
+  "quality_gates": [
+    "real_data_surface_audit",
+    "demo_and_empty_state_scan",
+    "frontend_backend_contract_scan",
+    "backend_full_suite",
+    "frontend_full_suite",
+    "desktop_mobile_playwright",
+    "openapi_vocabulary_source_secret_import_guards",
+    "dependency_audits",
+    "v2_only_restart",
+    "v2_only_rollback_forward"
+  ],
+  "exit_gate": {
+    "open_critical_findings": 0,
+    "open_high_findings": 0,
+    "dns_tls_public_cutover_allowed": false
+  },
+  "change_control": "Requires a new explicit user decision."
+}

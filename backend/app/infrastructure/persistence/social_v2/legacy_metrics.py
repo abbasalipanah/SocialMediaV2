@@ -291,7 +291,7 @@ def project_legacy_metrics(
             priority=30,
         )
 
-    for (account_id, brand_id, observed_on, metric_id), value in tiktok_totals.items():
+    for (account_id, brand_id, observed_on, metric_id), total_value in tiktok_totals.items():
         keep(
             ReportingMetric(
                 account_id=account_id,
@@ -299,7 +299,7 @@ def project_legacy_metrics(
                 platform=PlatformId.TIKTOK,
                 observed_on=observed_on,
                 metric_id=metric_id,
-                value=value,
+                value=total_value,
             ),
             priority=20,
         )

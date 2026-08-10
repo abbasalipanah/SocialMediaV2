@@ -689,6 +689,58 @@ def test_instagram_structured_stories_preserve_content_level_metrics(
     assert dashboard.stories.items[0].data_status is DataStatus.AVAILABLE
 
 
+@pytest.mark.asyncio
+async def test_instagram_content_tab_excludes_stories_from_every_content_projection(
+    phase6_fixture,
+) -> None:
+    authority, reporting, media_root = phase6_fixture
+    reporting.content += (
+        ReportingContent(
+            21,
+            "101",
+            PlatformId.INSTAGRAM,
+            "ig-story-focused-scope",
+            "story",
+            "https://example.test/ig-story-focused-scope",
+            "Focused story",
+            "",
+            datetime(2026, 7, 2, 11, tzinfo=UTC),
+            3,
+            2,
+            1,
+            views_count=120,
+            reach_count=90,
+        ),
+    )
+    app = create_app(authority, reporting, media_root)
+    cookies = {COOKIE_NAME: authority.raw_session}
+    params = {
+        "brand_id": "101",
+        "start_date": "2026-07-01",
+        "end_date": "2026-07-02",
+    }
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test", cookies=cookies
+    ) as client:
+        cover = await client.get(
+            "/api/dashboards/instagram", params={**params, "tab": "cover"}
+        )
+        content = await client.get(
+            "/api/dashboards/instagram", params={**params, "tab": "content"}
+        )
+        stories = await client.get(
+            "/api/dashboards/instagram", params={**params, "tab": "stories"}
+        )
+
+    assert cover.status_code == content.status_code == stories.status_code == 200
+    assert {item["content_type"] for item in cover.json()["content"]} == {"image", "story"}
+    assert [item["content_type"] for item in content.json()["content"]] == ["image"]
+    assert [item["name"] for item in content.json()["content_summary"]["by_type"]] == [
+        "Image"
+    ]
+    assert [item["content_type"] for item in stories.json()["content"]] == ["story"]
+
+
 def test_phase6_openapi_publishes_typed_response_contracts() -> None:
     schema = create_app().openapi()
     expected = {

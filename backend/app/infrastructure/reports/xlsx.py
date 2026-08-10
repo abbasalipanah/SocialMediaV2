@@ -10,7 +10,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Any
 
-import xlsxwriter
+import xlsxwriter  # type: ignore[import-untyped]
 
 from app.application.services.report_exports import ReportArtifact
 from app.domain.metrics import MetricId
@@ -976,11 +976,15 @@ def build_overview_xlsx(
         "Connected channel performance for the selected Brand scope",
     )
     platform_rows = []
-    for platform in dashboard.platforms:
-        lookup = _metric_lookup(platform.metrics)
+    for platform_dashboard in dashboard.platforms:
+        lookup = _metric_lookup(platform_dashboard.metrics)
         platform_rows.append(
             [
-                platform.meta.platform.value.title() if platform.meta.platform else "",
+                (
+                    platform_dashboard.meta.platform.value.title()
+                    if platform_dashboard.meta.platform
+                    else ""
+                ),
                 *[
                     _metric_value(lookup.get(metric_id))
                     for metric_id in (
@@ -991,7 +995,7 @@ def build_overview_xlsx(
                         MetricId.ENGAGEMENT_RATE.value,
                     )
                 ],
-                platform.meta.data_status.value,
+                platform_dashboard.meta.data_status.value,
             ]
         )
     renderer._table(
@@ -1027,7 +1031,7 @@ def _render_page(renderer: _WorkbookRenderer, dashboard: PlatformDashboard, titl
     sheet = renderer.sheet(title)
     renderer.heading(
         sheet,
-        f"{dashboard.meta.platform.value.title()} {title}",
+        f"{_platform_title(dashboard)} {title}",
         "Account performance, follower movement and delivery sources",
     )
     lookup = _metric_lookup(dashboard.metrics)
@@ -1105,7 +1109,7 @@ def _render_content(renderer: _WorkbookRenderer, dashboard: PlatformDashboard) -
     sheet = renderer.sheet("Content")
     renderer.heading(
         sheet,
-        f"{dashboard.meta.platform.value.title()} Content",
+        f"{_platform_title(dashboard)} Content",
         "Content performance, interaction mix and format distribution",
     )
     lookup = _metric_lookup(dashboard.metrics)
@@ -1242,7 +1246,7 @@ def _render_audience(renderer: _WorkbookRenderer, dashboard: PlatformDashboard) 
     sheet = renderer.sheet("Audience")
     renderer.heading(
         sheet,
-        f"{dashboard.meta.platform.value.title()} Audience",
+        f"{_platform_title(dashboard)} Audience",
         "Audience growth, geography, demographics and activity",
     )
     lookup = _metric_lookup(dashboard.metrics)
@@ -1273,6 +1277,7 @@ def _render_audience(renderer: _WorkbookRenderer, dashboard: PlatformDashboard) 
 
 
 def _platform_sections(platform: PlatformId | None, tab: str) -> tuple[str, ...]:
+    all_sections: tuple[str, ...]
     if platform is PlatformId.TIKTOK:
         all_sections = ("Account", "Content", "Audience")
         normalized = "Account" if tab == "account" else tab.title()
@@ -1287,6 +1292,13 @@ def _platform_sections(platform: PlatformId | None, tab: str) -> tuple[str, ...]
         if tab == "cover"
         else tuple(item for item in all_sections if item == normalized)
     )
+
+
+def _platform_title(dashboard: PlatformDashboard) -> str:
+    platform = dashboard.meta.platform
+    if platform is None:
+        raise ValueError("platform_dashboard_requires_platform")
+    return platform.value.title()
 
 
 def _metric_lookup(metrics: Iterable[DashboardMetric]) -> dict[str, DashboardMetric]:

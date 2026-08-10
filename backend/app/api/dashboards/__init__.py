@@ -82,6 +82,11 @@ def create_dashboard_router(
                 date_range=date_range,
                 account_id=account_id,
                 content_type=content_type,
+                excluded_content_types=(
+                    ("story",)
+                    if normalized_tab == "content" and platform is PlatformId.INSTAGRAM
+                    else ()
+                ),
             )
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc

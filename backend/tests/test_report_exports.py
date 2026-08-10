@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import date
+from datetime import UTC, date, datetime
 from io import BytesIO
 from pathlib import Path
 from threading import Event
@@ -12,6 +12,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.api.auth import COOKIE_NAME
+from app.application.ports.reporting import ReportingContent
 from app.application.queries import DashboardQuery, build_platform_dashboard
 from app.application.services.report_exports import (
     ReportArtifact,
@@ -170,6 +171,24 @@ async def test_xlsx_api_queues_reports_and_removes_first_download(
     media.write_bytes(b"fixture")
     authority = MemoryAuthority()
     reporting = MemoryReporting(media)
+    reporting.content += (
+        ReportingContent(
+            21,
+            "101",
+            PlatformId.INSTAGRAM,
+            "ig-story-report-scope",
+            "story",
+            "https://example.test/ig-story-report-scope",
+            "Report-only story",
+            "",
+            datetime(2026, 7, 2, 11, tzinfo=UTC),
+            3,
+            2,
+            1,
+            views_count=120,
+            reach_count=90,
+        ),
+    )
     app = create_app(authority, reporting, tmp_path)
     cookies = {COOKIE_NAME: authority.raw_session}
     try:
@@ -189,7 +208,7 @@ async def test_xlsx_api_queues_reports_and_removes_first_download(
                 "/api/reports/xlsx",
                 params={
                     "surface": "instagram",
-                    "tab": "cover",
+                        "tab": "content",
                     "brand_id": "101",
                     "start_date": "2026-07-01",
                     "end_date": "2026-07-02",
@@ -227,9 +246,13 @@ async def test_xlsx_api_queues_reports_and_removes_first_download(
             assert download.content.startswith(b"PK")
             assert download.headers["cache-control"] == "no-store"
             assert (
-                'filename="accumulate-child-a-instagram-cover-2026-07-02.xlsx"'
+                    'filename="accumulate-child-a-instagram-content-2026-07-02.xlsx"'
                 in download.headers["content-disposition"]
             )
+            with ZipFile(BytesIO(download.content)) as archive:
+                shared_strings = archive.read("xl/sharedStrings.xml").decode()
+            assert "ig-post" in shared_strings
+            assert "ig-story-report-scope" not in shared_strings
 
             gone = await client.get(f"/api/reports/xlsx/{job['job_id']}")
             assert gone.status_code == 404

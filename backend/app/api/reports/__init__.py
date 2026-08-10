@@ -97,6 +97,11 @@ def create_reports_router(
             date_range=date_range,
             account_id=account_id,
             content_type="story" if normalized_tab == "stories" else None,
+            excluded_content_types=(
+                ("story",)
+                if normalized_tab == "content" and platform is PlatformId.INSTAGRAM
+                else ()
+            ),
         )
         brand = next(
             (

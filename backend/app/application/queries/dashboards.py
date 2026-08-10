@@ -55,6 +55,7 @@ class DashboardQuery:
     date_range: ReportingRange
     account_id: int | None = None
     content_type: str | None = None
+    excluded_content_types: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.requested_brand_id or not self.resolved_brand_ids:
@@ -66,6 +67,24 @@ class DashboardQuery:
             or len(self.content_type) > 32
         ):
             raise ValueError("dashboard_content_type_invalid")
+        if any(
+            not value
+            or not value.replace("_", "").replace("-", "").isalnum()
+            or len(value) > 32
+            for value in self.excluded_content_types
+        ):
+            raise ValueError("dashboard_content_type_invalid")
+        if len(set(self.excluded_content_types)) != len(self.excluded_content_types):
+            raise ValueError("dashboard_content_type_invalid")
+        if self.content_type in self.excluded_content_types:
+            raise ValueError("dashboard_content_scope_invalid")
+
+
+def _exclude_content_types(rows, excluded: tuple[str, ...]):
+    if not excluded:
+        return rows
+    normalized = {value.strip().lower() for value in excluded}
+    return tuple(row for row in rows if row.content_type.strip().lower() not in normalized)
 
 
 def build_platform_dashboard(
@@ -112,7 +131,7 @@ def build_platform_dashboard(
         for sample in previous_window_samples
         if sample.observed_on >= previous_range.start_on
     )
-    content_rows = (
+    content_rows = _exclude_content_types(
         store.list_content(
             account_ids=account_ids,
             start_on=query.date_range.start_on,
@@ -120,9 +139,10 @@ def build_platform_dashboard(
             content_type=query.content_type,
         )
         if account_ids
-        else ()
+        else (),
+        query.excluded_content_types,
     )
-    previous_content_rows = (
+    previous_content_rows = _exclude_content_types(
         store.list_content(
             account_ids=account_ids,
             start_on=previous_range.start_on,
@@ -130,7 +150,8 @@ def build_platform_dashboard(
             content_type=query.content_type,
         )
         if account_ids
-        else ()
+        else (),
+        query.excluded_content_types,
     )
     comment_rows = (
         store.list_comments(
