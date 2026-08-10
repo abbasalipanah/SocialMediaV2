@@ -1,8 +1,8 @@
 # Social Media V2 — Bağımsız Runtime Runbook
 
-Tarih: `2026-08-07`
+Tarih: `2026-08-10`
 
-Durum: **REPOSITORY ARTIFACT — UYGULANMADI**
+Durum: **V2 LOOPBACK STAGING ACTIVE — PUBLIC ROUTE KAPALI**
 
 Bu runbook yalnız Social Media V2 kaynaklarını kapsar. Mevcut Social Media, Accumulate veya başka
 bir service/timer durdurulmaz, restart edilmez ve onların veritabanı, media alanı, process'i veya
@@ -18,9 +18,12 @@ routing'i kullanılmaz. Bu dosyanın varlığı staging/production işlem yetkis
 - migration: `social-media-v2-migrate.service`, explicit one-shot
 - API: `social-media-v2-api.service`
 - collector: `social-media-v2-collection.service/.timer`
-- public adres: `https://social.theaccumulate.com`
+- loopback web: `127.0.0.1:3026`
+- public adres: henüz atanmadı; ayrı V2 hostname, DNS ve TLS gerekir
 
-Repository'deki hiçbir service, timer veya Nginx dosyası otomatik kurulmaz ya da etkinleşmez.
+`https://social.theaccumulate.com` mevcut canlı Social Media V1'e gider. V2 deploy'u bu siteyi,
+shared Nginx'i veya V1 upstream'i değiştirmez. Repository'deki service, timer ve Nginx dosyaları
+yalnız açık operasyon adımıyla uygulanır.
 
 ## Güvenli ilk başlangıç
 
@@ -41,10 +44,26 @@ Bu durumda SSO consume dahil bütün local mutation'lar, provider activation/egr
 schedule fail-closed kalır. Production `active` moda geçiş R7/R8 kapıları, ayrı kullanıcı/on-call
 onayı, V2-owned credential ve staging kanıtı olmadan yapılamaz.
 
-## Operations tarafından uygulanacak sıra
+## Mevcut loopback staging durumu
 
-Aşağıdaki adımlar bu repository çalışması sırasında uygulanmaz; yetkili Operations ekibi ayrı
-change kaydıyla yürütür:
+- active release: `/opt/social-media-v2/releases/20260810T072209Z`
+- önceki rollback release: `/opt/social-media-v2/releases/20260810T071423Z`
+- ayrı staging DB: `social_media_v2_staging`
+- migration seviyesi: `0001`–`0004`
+- `social-media-v2-api.service` ve `social-media-v2-web.service`: active/enabled
+- collection service/timer: inactive/disabled
+- AI Summary: V2 secret env içinde açık ve credential mevcut; değer Git/log/dokümana yazılmaz
+
+Güncelleme `scripts/deploy/upgrade_local_staging.sh` ile immutable release oluşturur, frontend'i
+build eder, backend'i hash-locked dependency'lerle temiz venv'e kurar, symlinkleri atomik değiştirir,
+migration one-shot'ını ve yalnız iki V2 servisini çalıştırır. Health/readiness/web kontrolü başarısız
+olursa symlinkleri önceki release'e döndürüp yalnız V2 servislerini yeniden başlatır. Script env,
+shared Nginx, provider gate veya collection timer değiştirmez.
+
+## Public standalone için uygulanacak sıra
+
+Loopback staging tamamlandı. Aşağıdaki dış adımlar yetkili Operations ekibi tarafından ayrı change
+kaydıyla yürütülür:
 
 1. Ayrı Linux user/group, klasör ve V2-owned PostgreSQL DB/role oluşturulur.
 2. Immutable backend/frontend artifact'i kurulur. Secretlar chat, log, image veya Git'e yazılmaz.
@@ -63,6 +82,10 @@ change kaydıyla yürütür:
 10. Canlı browser SSO doğrulandıktan sonra `SSO_LIVE_VERIFIED` değerlendirilebilir. Provider
     collection ve worker timer platform bazlı ayrı onayla en son açılır.
 
+Public cutover öncesinde mevcut V1 hostname'inden farklı bir V2 hostname seçilmeli, DNS bu hosta
+yöneltilmeli ve ona ait TLS sertifikası kurulmalıdır. Bu üç girdi olmadan repository'deki public
+Nginx şablonu uygulanmaz.
+
 ## Health, readiness ve log
 
 - API liveness `/api/health` üzerinde `status=ok` döndürmelidir.
@@ -80,8 +103,9 @@ Rollback yalnız V2-owned yüzeyleri hedefler:
 1. Yeni Accumulate SSO launch'ları Operations ekibince durdurulur veya link kendi tarafında geri
    alınır.
 2. Yalnız `social-media-v2-collection.timer` disable/stop edilir.
-3. Yalnız `social-media-v2-api.service` durdurulur.
-4. Yalnız V2 Nginx site yönlendirmesi geri alınır.
+3. Release kaynaklı rollback'te `/opt/social-media-v2/backend` ve `frontend` symlinkleri önceki
+   release'e atomik döndürülür ve yalnız V2 API/web servisleri restart edilir.
+4. Public route varsa yalnız V2 Nginx site yönlendirmesi geri alınır.
 5. V2 DB/media hemen silinmez; inceleme ve kontrollü restore için korunur.
 
 Rollback sırasında başka Social Media/Accumulate service, timer, DB, media veya dosyasına

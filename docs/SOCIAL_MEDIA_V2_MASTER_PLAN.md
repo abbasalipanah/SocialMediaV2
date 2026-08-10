@@ -2607,6 +2607,36 @@ logout `204` ve sıfır browser/API error doğrulandı. Geçici V2-only test run
 production secret/deploy değiştirilmedi. Kanıt:
 `docs/revision6/r15/REVISION6_R15_AI_SUMMARY_REPORT.md`.
 
+### R16 — İzole loopback staging release ve public cutover kapısı (devam ediyor)
+
+2026-08-10 kullanıcı onayıyla yalnız V2-owned `/opt`, `/etc`, staging DB ve systemd yüzeyleri
+üzerinde kontrollü release aktivasyonu başlatılmıştır:
+
+1. mevcut V2 release/symlink, service/timer, redacted env anahtarları ve migration seviyesi
+   değişiklik öncesi snapshot'lanır;
+2. güncel backend/frontend ayrı immutable release'e temiz build edilir; hash-locked backend venv,
+   frontend typecheck ve production build geçmeden aktif symlink değiştirilmez;
+3. kullanıcı tarafından onaylanan mevcut AI credential yalnız root-owned V2 secret env'e inject
+   edilir; değer stdout, Git, docs veya release artifact'ine yazılmaz;
+4. V2 migration'ları explicit one-shot ile uygulanır, symlinkler atomik değiştirilir ve yalnız
+   `social-media-v2-api.service` ile `social-media-v2-web.service` restart edilir;
+5. health, readiness, deployed OpenAPI/frontend, exact signed Accumulate viewer/operator rol kapısı,
+   logout, journal ve test-fixture cleanup doğrulanır;
+6. önceki release ve env backup rollback için korunur; collection service/timer kapalı kalır;
+7. mevcut `social.theaccumulate.com` V1 upstream'i, shared Nginx ve korunan projeler değişmez;
+8. public cutover yalnız ayrı V2 hostname, DNS ve TLS sağlandıktan sonra yeni bir operasyon kapısıyla
+   yapılır.
+
+Ara durum (2026-08-10): loopback staging kısmı tamamlandı. Active release
+`/opt/social-media-v2/releases/20260810T072209Z`; önceki release
+`/opt/social-media-v2/releases/20260810T071423Z` rollback için korunuyor. API `8026`, web `3026`
+sağlıklı; `social_media_v2_staging` migration seviyesi `0001`–`0004`; AI config enabled/key-present;
+imzalı viewer/operator SSO, Settings hidden, Integrations visible, AI limit/provider configured ve
+logout doğrulandı. Smoke fixture tamamen temizlendi. Backend `141 passed, 18 skipped`, frontend
+`29 passed`, production build, Ruff, secret/vocabulary/source guards geçti. Public adım ayrı V2
+hostname/DNS/TLS olmadığı için bekliyor; canlı V1 route'u değişmedi. Kanıt:
+`docs/revision6/r16/REVISION6_R16_LOOPBACK_RELEASE_REPORT.md`.
+
 ### 22.1 Revizyon 6 stop koşulları
 
 Aşağıdakilerden biri oluşursa faz durur ve kullanıcı kararı istenir:

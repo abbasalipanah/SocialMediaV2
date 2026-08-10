@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import ast
 import json
-import sys
 from pathlib import Path
 
 
@@ -145,6 +144,21 @@ def check_safe_artifacts(root: Path) -> None:
         fail("migration unit must be an explicit non-installable one-shot")
     if "--scheduled" not in collector_unit or "social-media-v2-collection.service" not in timer_unit:
         fail("collector/timer artifacts are incomplete")
+
+    upgrade_script = (root / "scripts/deploy/upgrade_local_staging.sh").read_text(
+        encoding="utf-8"
+    )
+    for required in (
+        "social_media_v2_staging",
+        "systemctl is-enabled --quiet social-media-v2-collection.timer",
+        "restore_symlinks",
+        'mv -Tf "$INSTALL_ROOT/.backend.next" "$INSTALL_ROOT/backend"',
+        "systemctl start social-media-v2-migrate.service",
+        "http://127.0.0.1:8026/api/operations/readiness",
+        "http://127.0.0.1:3026/",
+    ):
+        if required not in upgrade_script:
+            fail(f"V2 staging upgrade safety contract is missing: {required}")
 
     nginx = (root / "deploy/nginx/social-media-v2.conf").read_text(encoding="utf-8")
     if "127.0.0.1:8026" not in nginx or "root /opt/social-media-v2/frontend/dist" not in nginx:

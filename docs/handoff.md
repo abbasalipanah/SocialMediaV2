@@ -33,11 +33,19 @@ DB write veya timer müdahalesi yapılmaz.
   kararıyla mevcut onaylı OpenRouter credential'ı V2'nin Git-ignored `0600` local runtime
   secret'ına inject edilmiştir; yeni key zorunlu değildir. Korunan proje dosyası/runtime'ı
   değiştirilmemiştir. Gerçek local canary completed olmuş ve Brand'in haftalık hakkını kapatmıştır.
+- Bağımsız loopback staging runtime'ı `/opt/social-media-v2/releases/20260810T072209Z` release'ine
+  yükseltilmiştir. API `127.0.0.1:8026`, web `127.0.0.1:3026` üzerinde sağlıklıdır; staging DB
+  `0001`–`0004` migration seviyesindedir. V2 AI credential'ı yalnız root-owned
+  `/etc/social-media-v2/production.env` secret'ına inject edilmiş, imzalı viewer/operator SSO ve
+  AI limit rol kapısı çalışan release üzerinde doğrulanmıştır.
+- Önceki `/opt/social-media-v2/releases/20260810T071423Z` release'i rollback için korunmaktadır.
+  Collection service/timer inactive/disabled kalmıştır. Shared Nginx ve canlı V1 upstream'i
+  değiştirilmemiştir.
 - Meta ve TikTok self-service OAuth credential’ları V2 vault’unda şifreli tutulur.
 - V2’ye ait Meta/TikTok collector, media persistence, sync health ve schedule komutu hazırdır.
 - TikTok ilk bağlantı doğrulaması normal schedule’dan ayrıdır.
-- Güvenli `standalone_ready` production env, ayrı migration/API/collector/timer ve Nginx
-  şablonları repository artifact'i olarak hazırdır; kurulmamış veya etkinleştirilmemiştir.
+- Güvenli `standalone_ready` production env ve public Nginx şablonları repository artifact'i
+  olarak hazırdır. Loopback staging kuruludur; public production route etkin değildir.
 - Kaynak canlı projelerde hiçbir servis işlemi yapılmamıştır.
 - Son Overview/AI Summary kararı ve test kanıtları `docs/revision6/r14/` ve
   `docs/revision6/r15/` altındadır; bağlayıcı yapı
@@ -45,9 +53,10 @@ DB write veya timer müdahalesi yapılmaz.
 
 ## Henüz yapılmayan dış işler
 
-- V2 production DB/user/secret ve TLS sertifikasının operasyon ekibince oluşturulması.
+- V2 için canlı V1'den farklı public hostname seçimi, DNS kaydı ve TLS sertifikası.
+- Public production DB/user/secret setinin staging'den ayrı olarak operasyon ekibince oluşturulması.
 - Meta/TikTok provider panelinde exact callback ve rotated secret doğrulaması.
-- V2 production deploy provası ve kontrollü production provider canary testi.
+- Public production deploy provası ve kontrollü production provider canary testi.
 - Accumulate ekibinin yalnız Social Media menü linki + SSO token üretimini bağlaması.
 - Bu işlemlerden sonra browser E2E ve kontrollü worker schedule aktivasyonu.
 
