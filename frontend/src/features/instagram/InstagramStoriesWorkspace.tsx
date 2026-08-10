@@ -23,7 +23,7 @@ import {
 import { useEffect, useMemo, useState, type ComponentType } from "react";
 
 import type { DashboardStories, DashboardStoryItem, PlatformDashboard } from "../../api";
-import { PulseEmpty, PulseTrendCard } from "../facebook/FacebookPulseDashboard";
+import { PulseEmpty, PulsePieVisualization, PulseTrendCard } from "../facebook/FacebookPulseDashboard";
 import { formatNumber } from "../dashboard/format";
 
 function storyValue(value: number | null): string {
@@ -255,21 +255,22 @@ function Behaviour({ data }: { data: DashboardStories }) {
     { label: "Tap Back", value: data.navigation.taps_back, color: "#f59e0b" },
     { label: "Exits", value: data.navigation.exits, color: "#ec4899" },
   ];
-  const total = navigation.reduce((sum, item) => sum + (item.value ?? 0), 0);
+  const navigationRows = navigation.flatMap((item) => item.value === null ? [] : [{
+    color: item.color,
+    label: item.label,
+    value: item.value,
+  }]);
   return (
     <article className="instagram-story-surface instagram-story-behaviour">
       <header className="instagram-story-section-heading"><div><h3>Behaviour</h3><small>Totals across the selected date range</small></div></header>
       <h4>Navigation Split</h4>
-      {total > 0 ? (
-        <>
-          <div aria-label="Story navigation split" className="instagram-story-navigation-bar" role="img">
-            {navigation.map((item) => item.value === null || item.value <= 0 ? null : <i key={item.label} style={{ background: item.color, width: `${(item.value / total) * 100}%` }} />)}
-          </div>
-          <div className="instagram-story-navigation-legend">
-            {navigation.map((item) => <span key={item.label}><i style={{ background: item.color }} />{item.label}<b>{item.value === null ? "—" : `${((item.value / total) * 100).toFixed(1)}%`}</b></span>)}
-          </div>
-        </>
-      ) : <PulseEmpty copy="No navigation data for this period." />}
+      <div className="instagram-story-navigation-pie">
+        <PulsePieVisualization
+          emptyCopy="No navigation data for this period."
+          rows={navigationRows}
+          title="Story Navigation Split"
+        />
+      </div>
       <h4>Period Action Totals</h4>
       <StoryActionGrid values={data.actions} />
     </article>

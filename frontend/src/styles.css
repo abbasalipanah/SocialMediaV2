@@ -1697,12 +1697,9 @@ body { background: var(--sm-bg); }
 .instagram-story-health-grid .tone-amber { color: #d97706; background: #fffbeb; }
 
 .instagram-story-behaviour h4 { margin: 17px 0 9px; color: #334155; font-size: .64rem; }
-.instagram-story-navigation-bar { display: flex; height: 15px; overflow: hidden; border-radius: 6px; background: #f1f5f9; }
-.instagram-story-navigation-bar i { display: block; min-width: 2px; }
-.instagram-story-navigation-legend { display: flex; flex-wrap: wrap; gap: 9px 14px; margin-top: 9px; }
-.instagram-story-navigation-legend span { display: flex; align-items: center; gap: 5px; color: #64748b; font-size: .52rem; }
-.instagram-story-navigation-legend span > i { width: 6px; height: 6px; border-radius: 50%; }
-.instagram-story-navigation-legend b { color: #334155; }
+.instagram-story-navigation-pie { display: grid; min-height: 260px; grid-template-columns: minmax(0, 1fr); align-items: center; gap: 5px; }
+.instagram-story-navigation-pie .facebook-pie-wrap { min-height: 204px; }
+.instagram-story-navigation-pie .facebook-pie-legend { width: min(290px, 100%); margin: 0 auto; }
 .instagram-story-action-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; margin-top: 18px; }
 .instagram-story-action-grid > div { display: grid; min-width: 0; min-height: 83px; place-items: center; align-content: center; gap: 4px; padding: 7px 3px; border: 1px solid #e8edf5; border-radius: 9px; text-align: center; }
 .instagram-story-action-grid > div > span { width: 29px; height: 29px; }

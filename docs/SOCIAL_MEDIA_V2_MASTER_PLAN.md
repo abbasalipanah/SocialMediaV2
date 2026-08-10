@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R27 pie etkileşimi ve R28 Stories hero hizası tamamlandı; protected-source baseline ve DNS/TLS/public cutover kullanıcı kararıyla bloklu |
+| Durum | Revizyon 6 — R29 Stories Navigation Split donut parity uygulanıyor; protected-source baseline ve DNS/TLS/public cutover kullanıcı kararıyla bloklu |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -3097,6 +3097,30 @@ yüzde sözleşmesini doğruladı; console/request/API 5xx sıfırdı. Frontend-
 `/opt/social-media-v2/releases/20260810T153903Z-r28storieshero/frontend`, R27 rollback ve R28
 forward provasıyla aktif edildi. Backend/DB/collection ve public routing değişmedi. Kanıt:
 `docs/revision6/r28/REVISION6_R28_STORIES_HERO_ALIGNMENT_REPORT.md`.
+
+### R29 — Stories Navigation Split dinamik donut parity (devam ediyor)
+
+2026-08-10 kullanıcı kararıyla Instagram Stories Behaviour kartındaki Navigation Split için
+aşağıdaki sözleşme bağlayıcıdır:
+
+1. düz yatay stacked bar kullanılmaz; Tap Forward, Swipe Forward, Tap Back ve Exits provider
+   toplamları donut dilimleri olarak gösterilir;
+2. donut, R27 ortak `PulsePieVisualization` renderer'ını kullanır; ayrı veya daha zayıf bir
+   interaction implementasyonu oluşturulmaz;
+3. hover/focus/touch ile aktif dilim dışarı taşınır; tooltip label, gerçek toplam ve toplam içindeki
+   yüzdeyi gösterir;
+4. center total yalnız sağlanan navigation değerlerinin toplamıdır; null provider metriği sıfır
+   tahmin edilmez ve pie row olarak eklenmez;
+5. dört legend label/yüzdesi dar Behaviour kartında da görünür kalır; donut ortalanır, legend
+   altına tam genişlikte yerleşir;
+6. Period Action Totals, History, backend schema, aggregation, DB, XLSX ve provider verisi
+   değişmez.
+
+Çıkış kapısı: eski `.instagram-story-navigation-bar` DOM'da yoktur; dört sağlanan dilim ortak
+SVG renderer ile görünür; active transform ve yüzde tooltip component, desktop/mobile Playwright
+ve gerçek Pine runtime testlerinde geçer.
+
+Durum (2026-08-10): devam ediyor. Tam regresyon ve V2-only release tamamlanmadan R29 kapatılamaz.
 
 ### 22.1 Revizyon 6 stop koşulları
 

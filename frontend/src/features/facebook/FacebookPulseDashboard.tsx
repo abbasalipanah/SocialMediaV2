@@ -64,7 +64,7 @@ export type PulseKpi = {
   unit?: "count" | "ratio";
 };
 
-type PieRow = { label: string; value: number; color: string };
+export type PieRow = { label: string; value: number; color: string };
 
 type ContentSortKey =
   | "caption"
@@ -503,7 +503,17 @@ function pieCenterLabel(title: string): string {
   return "Total";
 }
 
-export function PulsePieCard({ legendColumns = 2, title, subtitle, rows }: { legendColumns?: 2 | 3; title: string; subtitle?: string; rows: PieRow[] }) {
+export function PulsePieVisualization({
+  emptyCopy = "No distribution data in selected range.",
+  legendColumns = 2,
+  rows,
+  title,
+}: {
+  emptyCopy?: string;
+  legendColumns?: 2 | 3;
+  rows: PieRow[];
+  title: string;
+}) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const total = rows.reduce((sum, row) => sum + Math.max(0, row.value), 0);
   const segments = pieSegments(rows, total);
@@ -511,10 +521,7 @@ export function PulsePieCard({ legendColumns = 2, title, subtitle, rows }: { leg
     ? null
     : rows[activeIndex] ?? null;
   const activePercentage = activeRow === null ? 0 : (activeRow.value / total) * 100;
-  return (
-    <article className="facebook-pulse-card facebook-pie-card">
-      <PulseCardHeading action={<span className="facebook-pie-heading-icon"><PieChartIcon size={17} /></span>} subtitle={subtitle} title={title} />
-      {total <= 0 ? <PulseEmpty copy="No distribution data in selected range." /> : (
+  return total <= 0 ? <PulseEmpty copy={emptyCopy} /> : (
         <>
           <div className="facebook-pie-wrap">
             <div className="facebook-pie-graphic" onMouseLeave={() => setActiveIndex(null)}>
@@ -577,7 +584,14 @@ export function PulsePieCard({ legendColumns = 2, title, subtitle, rows }: { leg
             </button>
           ))}</div>
         </>
-      )}
+      );
+}
+
+export function PulsePieCard({ legendColumns = 2, title, subtitle, rows }: { legendColumns?: 2 | 3; title: string; subtitle?: string; rows: PieRow[] }) {
+  return (
+    <article className="facebook-pulse-card facebook-pie-card">
+      <PulseCardHeading action={<span className="facebook-pie-heading-icon"><PieChartIcon size={17} /></span>} subtitle={subtitle} title={title} />
+      <PulsePieVisualization legendColumns={legendColumns} rows={rows} title={title} />
     </article>
   );
 }

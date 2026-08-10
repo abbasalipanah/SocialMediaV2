@@ -372,6 +372,10 @@ describe("Revision 6 shared canonical fixture", () => {
     expect(periodActions).toHaveTextContent("Period Action TotalsReplies5Shares9Profile Visits16Follows3");
     expect(within(selectedActions as HTMLElement).getAllByText("Not provided")).toHaveLength(2);
     expect(within(periodActions as HTMLElement).getAllByText("Not provided")).toHaveLength(2);
+
+    const navigationChart = screen.getByRole("img", { name: "Story Navigation Split chart" });
+    expect(within(navigationChart).getAllByRole("button")).toHaveLength(4);
+    expect(document.querySelector(".instagram-story-navigation-bar")).not.toBeInTheDocument();
   });
 
   it("locks the R11 three-series follower-flow contract for every platform", () => {

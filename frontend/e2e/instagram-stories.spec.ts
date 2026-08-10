@@ -13,6 +13,17 @@ test("Instagram Stories follows the approved responsive workspace", async ({ pag
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
   }
 
+  const behaviour = page.getByRole("heading", { name: "Behaviour", exact: true })
+    .locator("xpath=ancestor::article[1]");
+  const navigationChart = behaviour.getByRole("img", { name: "Story Navigation Split chart" });
+  await expect(navigationChart.getByRole("button")).toHaveCount(4);
+  const forwardSlice = navigationChart.getByRole("button", { name: "Tap Forward: 90, 71%" });
+  await forwardSlice.hover({ position: { x: 148, y: 78 } });
+  await expect(forwardSlice).toHaveClass(/is-active/);
+  await expect(behaviour.getByRole("status")).toContainText("Tap Forward9071%");
+  await page.mouse.move(0, 0);
+  await expect(behaviour.getByRole("status")).toHaveCount(0);
+
   await page.getByRole("button", { name: "Story 2: Poolside serenity" }).click();
   await expect(page.getByRole("button", { name: "Story 2: Poolside serenity" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText("408", { exact: true }).first()).toBeVisible();

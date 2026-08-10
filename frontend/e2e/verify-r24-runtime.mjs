@@ -297,6 +297,23 @@ async function assertEveryProductSurface(page) {
           /\d+(?:\.\d+)?%/u,
           "story_completion_rate_missing",
         );
+        assert.equal(await page.locator(".instagram-story-navigation-bar").count(), 0, "story_navigation_bar_visible");
+        const behaviour = page.getByRole("heading", { name: "Behaviour", exact: true })
+          .locator("xpath=ancestor::article[1]");
+        const navigationChart = behaviour.getByRole("img", { name: "Story Navigation Split chart" });
+        assert.ok(await navigationChart.getByRole("button").count() > 0, "story_navigation_pie_empty");
+        const navigationSlice = navigationChart.getByRole("button").first();
+        await navigationSlice.focus();
+        assert.ok(
+          (await navigationSlice.getAttribute("class"))?.includes("is-active"),
+          "story_navigation_slice_inactive",
+        );
+        assert.match(
+          (await behaviour.getByRole("status").textContent()) ?? "",
+          /\d+(?:\.\d+)?%/u,
+          "story_navigation_tooltip_percentage",
+        );
+        await navigationSlice.evaluate((element) => element.blur());
         assert.ok(await page.locator(".instagram-story-history tbody tr").count() > 0);
       } else {
         assert.equal(
