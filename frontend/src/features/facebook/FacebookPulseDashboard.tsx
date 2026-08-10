@@ -13,6 +13,7 @@ import {
   Target,
   ThumbsUp,
   Users,
+  Video,
   type LucideIcon,
 } from "lucide-react";
 import { useId, useMemo, useState, type ReactNode } from "react";
@@ -170,6 +171,17 @@ function SortableContentHeader({
         {label}
       </button>
     </th>
+  );
+}
+
+function ContentTypeChip({ contentType }: { contentType: string }) {
+  const isVideo = /(?:reel|video)/u.test(contentType.trim().toLowerCase());
+  const Icon = isVideo ? Video : Activity;
+  return (
+    <span className={`facebook-type-chip ${isVideo ? "is-video" : "is-post"}`}>
+      <Icon aria-hidden="true" size={12} strokeWidth={1.8} />
+      {humanize(contentType)}
+    </span>
   );
 }
 
@@ -647,7 +659,7 @@ export function PerformingContentTable({ content }: { content: DashboardContent[
                   : caption}
               </td>
               <td title={item.published_at ?? undefined}>{contentDateLabel(item.published_at)}</td>
-              <td><span className="facebook-type-chip">{humanize(item.content_type)}</span></td>
+              <td><ContentTypeChip contentType={item.content_type} /></td>
               <td>{item.views === null ? "—" : formatNumber(item.views)}</td>
               <td>{item.reach === null ? "—" : formatNumber(item.reach)}</td>
               <td>{formatNumber(item.likes_count)}</td>

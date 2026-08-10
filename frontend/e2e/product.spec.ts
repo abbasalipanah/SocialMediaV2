@@ -25,6 +25,9 @@ test("dashboard tabs, URL state, ranges and report exports follow the R1 contrac
     "https://example.test/video-1",
   );
   await expect(contentTable.getByText("10.2%")).toBeVisible();
+  const videoType = contentTable.getByText("Video");
+  await expect(videoType).toHaveClass(/is-video/);
+  await expect(videoType.locator("svg")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Content Winners by Objective" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Unanswered Comments Queue" })).toHaveCount(0);
 

@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R25 V1 All Performing Content tablo parity tamamlandı; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
+| Durum | Revizyon 6 — R26 V1 Type pill ikon parity uygulanıyor; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -3001,6 +3001,26 @@ formatı ve linkleri geçti; browser console/request/API 5xx sıfırdı. Fronten
 forward provasıyla aktif edildi. Backend R24 release'inde, collection kapalı ve loopback sınırı
 korundu; korunan projeler ve public routing değişmedi. Kanıt:
 `docs/revision6/r25/REVISION6_R25_PERFORMING_CONTENT_V1_PARITY_REPORT.md`.
+
+### R26 — V1 All Performing Content Type pill ikon parity (devam ediyor)
+
+2026-08-10 kullanıcı kararıyla R25 Type sütununda V1'in ikonlu pill dili bağlayıcıdır:
+
+1. `reel` ve `video` türleri pembe video-camera ikonu; diğer post/image türleri mavi-gri
+   activity/post ikonu kullanır;
+2. ikon ve label aynı rounded neutral pill içinde, V1'e yakın boşluk ve yoğunlukta gösterilir;
+3. ikon dekoratiftir (`aria-hidden`); Type metni erişilebilir ad olarak kalır;
+4. mapping shared component üzerinden Facebook, Instagram ve TikTok'a birlikte uygulanır;
+5. Type değeri backend'in typed `content_type` alanından gelir; URL, demo veya caption'dan tür
+   tahmini yapılmaz;
+6. component/e2e ikon-positive contract, typecheck/build, desktop/mobile görsel regression,
+   gerçek Pine runtime ve V2-only release/rollback birlikte geçer;
+7. backend, DB, XLSX, provider, collection, shell, korunan projeler ve public routing değişmez.
+
+Çıkış kapısı: Reel/Video ve Post/Image sınıfları doğru ikon variant'ını render eder; mevcut R25
+sıralama, engagement, link ve scroll davranışları gerilemez; bütün frontend kapıları geçer.
+
+Durum (2026-08-10): devam ediyor. Kod ve release doğrulaması tamamlanmadan R26 kapatılamaz.
 
 ### 22.1 Revizyon 6 stop koşulları
 

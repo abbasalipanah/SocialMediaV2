@@ -1540,7 +1540,10 @@ body { background: var(--sm-bg); }
 .facebook-content-cover img { width: 100%; height: 100%; object-fit: cover; }
 .facebook-content-cover-link:hover .facebook-content-cover { border-color: #a5b4fc; transform: translateY(-1px); }
 .facebook-caption { display: block; min-width: 210px; overflow: hidden; color: #0f172a; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.facebook-type-chip { display: inline-flex; padding: 4px 7px; color: #4f46e5; border: 1px solid #e0e7ff; border-radius: 99px; background: #eef2ff; font-size: .58rem; font-weight: 700; }
+.facebook-type-chip { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; color: #334155; border: 1px solid #e8edf3; border-radius: 999px; background: #f4f7fa; font-size: .58rem; font-weight: 700; line-height: 1; white-space: nowrap; }
+.facebook-type-chip svg { flex: 0 0 auto; }
+.facebook-type-chip.is-video svg { color: #f43f5e; }
+.facebook-type-chip.is-post svg { color: #64748b; }
 .facebook-comment-card { display: flex; min-height: 250px; flex-direction: column; }
 .facebook-comment-card .facebook-table-scroll { flex: 1; }
 .facebook-comment-card .facebook-table-scroll table { min-width: 760px; }

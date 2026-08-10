@@ -300,7 +300,9 @@ describe("Phase 8 product surfaces", () => {
       "href",
       "https://example.test/post-1",
     );
-    expect(screen.getByText("Image")).toHaveClass("facebook-type-chip");
+    const imageType = screen.getByText("Image");
+    expect(imageType).toHaveClass("facebook-type-chip", "is-post");
+    expect(imageType.querySelector("svg")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Content Winners by Objective" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Unanswered Comments Queue" })).not.toBeInTheDocument();
   });
@@ -358,6 +360,9 @@ describe("Phase 8 product surfaces", () => {
     expect(screen.getByRole("heading", { name: "Age & Gender" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Audience by Country" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Content Type" })).toBeInTheDocument();
+    const reelType = screen.getByText("Reel");
+    expect(reelType).toHaveClass("facebook-type-chip", "is-video");
+    expect(reelType.querySelector("svg")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Content Winners by Objective" })).not.toBeInTheDocument();
   });
 

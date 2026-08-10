@@ -434,7 +434,8 @@ describe("Revision 6 shared canonical fixture", () => {
     expect(within(contentTable).getByRole("button", { name: "Sort by Date" }).closest("th")).toHaveAttribute("aria-sort", "descending");
     expect(within(contentTable).getAllByText("Image")).toHaveLength(2);
     within(contentTable).getAllByText("Image").forEach((item) => {
-      expect(item).toHaveClass("facebook-type-chip");
+      expect(item).toHaveClass("facebook-type-chip", "is-post");
+      expect(item.querySelector("svg")).toBeInTheDocument();
     });
     expect(within(contentTable).getByRole("link", { name: "Open content: Canonical summer story #travel" })).toHaveAttribute(
       "href",
