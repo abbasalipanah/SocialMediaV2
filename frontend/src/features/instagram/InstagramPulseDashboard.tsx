@@ -23,6 +23,11 @@ import type {
 } from "../../api";
 import { AudienceDemographicsCard } from "../dashboard/AudienceDemographicsCard";
 import {
+  V1_CHART_COLORS,
+  V1_FOLLOWER_FLOW_KEYS,
+  followerFlowSubtitle,
+} from "../dashboard/visualPalette";
+import {
   CommunityTables,
   KpiGrid,
   PerformingContentTable,
@@ -96,7 +101,7 @@ function contentKpis(data: PlatformDashboard): PulseKpi[] {
   return [
     { id: "post_views", label: "Views", value: views, delta: null, icon: Eye, color: "#ec4899" },
     { id: "post_reach", label: "Reach", value: reach, delta: null, icon: Target, color: "#38bdf8" },
-    { id: "like_reactions", label: "Likes", value: totals.likes, delta: null, icon: Heart, color: "#ef4444" },
+    { id: "like_reactions", label: "Likes", value: totals.likes, delta: null, icon: Heart, color: V1_CHART_COLORS.likes },
     { id: "comments", label: "Comments", value: totals.comments, delta: null, icon: MessageCircle, color: "#3b82f6" },
     { id: "shares", label: "Shares", value: totals.shares, delta: null, icon: Share2, color: "#22c55e" },
     { id: "engagement_rate", label: "Engagement Rate", value: views && views > 0 ? totals.interactions / views : null, delta: null, icon: Activity, color: "#6366f1", unit: "ratio" },
@@ -117,9 +122,9 @@ function audienceKpis(data: PlatformDashboard): PulseKpi[] {
 function engagementRows(content: DashboardContent[]): PieRow[] {
   const totals = derivedContentTotals(content);
   return [
-    { label: "Like", value: totals.likes, color: "#3b82f6" },
-    { label: "Comments", value: totals.comments, color: "#6366f1" },
-    { label: "Shares", value: totals.shares, color: "#22c55e" },
+    { label: "Likes", value: totals.likes, color: V1_CHART_COLORS.likes },
+    { label: "Comments", value: totals.comments, color: V1_CHART_COLORS.comments },
+    { label: "Shares", value: totals.shares, color: V1_CHART_COLORS.shares },
   ].filter((item) => item.value > 0);
 }
 
@@ -127,27 +132,23 @@ function reachRows(data: PlatformDashboard): PieRow[] {
   const source = data.source_breakdown?.reach;
   const organic = source?.organic ?? metric(data, "reach_organic")?.value ?? null;
   const paid = source?.paid ?? metric(data, "reach_paid")?.value ?? null;
-  return [
-    organic === null ? null : { label: "Organic Reach", value: organic, color: "#22c55e" },
-    paid === null ? null : { label: "Paid Reach", value: paid, color: "#ef4444" },
-  ].filter((item): item is PieRow => item !== null);
+  const rows: Array<PieRow | null> = [
+    organic === null ? null : { label: "Organic Reach", value: organic, color: V1_CHART_COLORS.organic },
+    paid === null ? null : { label: "Paid Reach", value: paid, color: V1_CHART_COLORS.paid },
+  ];
+  return rows.filter((item): item is PieRow => item !== null);
 }
 
 function pageViewRows(data: PlatformDashboard): PieRow[] {
   const source = data.source_breakdown?.views;
   const organic = source?.organic ?? metric(data, "views_organic")?.value ?? null;
   const paid = source?.paid ?? metric(data, "views_paid")?.value ?? null;
-  return [
-    organic === null ? null : { label: "Organic", value: organic, color: "#ec4899" },
-    paid === null ? null : { label: "Paid", value: paid, color: "#8b5cf6" },
-  ].filter((item): item is PieRow => item !== null);
+  const rows: Array<PieRow | null> = [
+    organic === null ? null : { label: "Organic", value: organic, color: V1_CHART_COLORS.organic },
+    paid === null ? null : { label: "Paid", value: paid, color: V1_CHART_COLORS.paid },
+  ];
+  return rows.filter((item): item is PieRow => item !== null);
 }
-
-const FOLLOWER_FLOW_KEYS = [
-  { id: "follows", label: "Follows", color: "#3b82f6" },
-  { id: "unfollows", label: "Unfollows", color: "#ec4899" },
-  { id: "followers_net", label: "Net", color: "#14b8a6" },
-] as const;
 
 function findBreakdown(breakdowns: DashboardBreakdown[], hints: string[]): DashboardBreakdown | undefined {
   return breakdowns.find((item) => {
@@ -231,17 +232,17 @@ function PageSection({ data, withTitle }: { data: PlatformDashboard; withTitle: 
       {withTitle && <SectionTitle>Overview</SectionTitle>}
       <KpiGrid rows={overviewKpis(data)} />
       <div className="facebook-two-grid">
-        <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: "#38bdf8" }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
-        <PulseTrendCard data={data} keys={[...FOLLOWER_FLOW_KEYS]} subtitle="Follows, unfollows and net movement" title="New Followers Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: V1_CHART_COLORS.followers }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
+        <PulseTrendCard data={data} keys={[...V1_FOLLOWER_FLOW_KEYS]} subtitle={followerFlowSubtitle(data)} title="New Followers Trend" />
       </div>
-      <PulseTrendCard bar data={data} keys={[{ id: "reach", label: "Page Reach", color: "#8b5cf6" }, { id: "views", label: "Page Views", color: "#5eead4" }]} subtitle="Page Reach and Page Views trend" title="Performance Trends" wide />
+      <PulseTrendCard bar data={data} keys={[{ id: "reach", label: "Page Reach", color: V1_CHART_COLORS.reach }, { id: "views", label: "Page Views", color: V1_CHART_COLORS.views }]} subtitle="Page Reach and Page Views trend" title="Performance Trends" wide />
       <div className="facebook-one-three-grid">
         <PulsePieCard rows={pageViewRows(data)} subtitle="Organic vs paid views" title="Page View Type" />
-        <PulseTrendCard data={data} keys={[{ id: "views_organic", label: "Organic Views", color: "#3b82f6" }, { id: "views_paid", label: "Paid Views", color: "#f59e0b" }]} subtitle="Organic Views + Paid Views" title="Views Source Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "views_organic", label: "Organic Views", color: V1_CHART_COLORS.organicViews }, { id: "views_paid", label: "Paid Views", color: V1_CHART_COLORS.paid }]} subtitle="Organic Views + Paid Views" title="Views Source Trend" />
       </div>
       <div className="facebook-one-three-grid">
         <PulsePieCard rows={reachRows(data)} subtitle="Organic vs paid Reach" title="Reach Distribution" />
-        <PulseTrendCard data={data} keys={[{ id: "reach_paid", label: "Paid Reach", color: "#ef4444" }, { id: "reach_organic", label: "Organic Reach", color: "#22c55e" }]} subtitle="Paid Reach + Organic Reach" title="Reach Source Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "reach_paid", label: "Paid Reach", color: V1_CHART_COLORS.paid }, { id: "reach_organic", label: "Organic Reach", color: V1_CHART_COLORS.organicReach }]} subtitle="Paid Reach + Organic Reach" title="Reach Source Trend" />
       </div>
     </section>
   );
@@ -261,7 +262,7 @@ function ContentSection({ data, withTitle }: { data: PlatformDashboard; withTitl
       <KpiGrid rows={contentKpis(contentData)} />
       <div className="facebook-one-three-grid">
         <PulsePieCard rows={summaryPieRows(data.content_summary.by_type)} subtitle="Content type breakdown" title="Content Type" />
-        <PulseTrendCard data={data} keys={[{ id: "views", label: "Page Views", color: "#ec4899" }, { id: "reach", label: "Page Reach", color: "#8b5cf6" }]} subtitle="Daily page views and reach" title="Views & Reach Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "views", label: "Page Views", color: V1_CHART_COLORS.views }, { id: "reach", label: "Page Reach", color: V1_CHART_COLORS.reach }]} subtitle="Daily page views and reach" title="Views & Reach Trend" />
       </div>
       <div className="facebook-two-three-grid">
         <PulseTrendCard data={data} keys={[{ id: "interactions", label: "Interactions", color: "#f59e0b" }]} subtitle="Likes, comments and shares over time" title="Interaction Trend" />
@@ -284,8 +285,8 @@ function AudienceSection({ data, withTitle }: { data: PlatformDashboard; withTit
       {withTitle && <SectionTitle>Audience</SectionTitle>}
       <KpiGrid rows={audienceKpis(data)} />
       <div className="facebook-two-grid">
-        <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: "#38bdf8" }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
-        <PulseTrendCard data={data} keys={[...FOLLOWER_FLOW_KEYS]} subtitle="Follows, unfollows and net movement" title="New Followers Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: V1_CHART_COLORS.followers }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
+        <PulseTrendCard data={data} keys={[...V1_FOLLOWER_FLOW_KEYS]} subtitle={followerFlowSubtitle(data)} title="New Followers Trend" />
       </div>
       <div className="facebook-two-grid">
         <AudienceDemographicsCard breakdowns={data.breakdowns} />
@@ -293,7 +294,7 @@ function AudienceSection({ data, withTitle }: { data: PlatformDashboard; withTit
       </div>
       <div className="facebook-two-grid">
         <PulseHeatmapCard breakdowns={data.breakdowns} />
-        <PulseTrendCard data={data} keys={[{ id: "reach_organic", label: "Organic Reach", color: "#22c55e" }]} subtitle="Organic delivery trend" title="Organic Reach Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "reach_organic", label: "Organic Reach", color: "#8b5cf6" }]} subtitle="Organic delivery trend" title="Organic Reach Trend" />
       </div>
       <div className="facebook-two-grid">
         <SimplePulseTable columns={["#", "Country", "Value"]} rows={breakdownRows(data.breakdowns, "country")} subtitle="Country ranking" title="Top Countries" />
@@ -301,7 +302,7 @@ function AudienceSection({ data, withTitle }: { data: PlatformDashboard; withTit
       </div>
       <div className="facebook-two-grid">
         <PulsePieCard rows={reachRows(data)} subtitle="Reach delivery split" title="Reach Source (Organic vs Paid)" />
-        <PulseTrendCard data={data} keys={[{ id: "reach_paid", label: "Paid Reach", color: "#ef4444" }]} subtitle="Paid delivery trend" title="Paid Reach Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "reach_paid", label: "Paid Reach", color: V1_CHART_COLORS.paid }]} subtitle="Paid delivery trend" title="Paid Reach Trend" />
       </div>
       <CommunityTables data={data} platform="instagram" />
     </section>

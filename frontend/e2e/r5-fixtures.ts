@@ -87,6 +87,19 @@ const points = (metric_id: string, semantic_type: "snapshot" | "flow" | "cumulat
   methodology: "provider_reported",
 });
 
+const followerFlowPoints = (metric_id: "follows" | "unfollows" | "followers_net") => ({
+  metric_id,
+  semantic_type: "flow" as const,
+  points: [
+    { observed_on: "2026-06-15", value: metric_id === "follows" ? 7 : metric_id === "unfollows" ? 2 : 5 },
+    { observed_on: "2026-06-22", value: metric_id === "follows" ? 4 : metric_id === "unfollows" ? 5 : -1 },
+    { observed_on: "2026-06-29", value: metric_id === "follows" ? 9 : metric_id === "unfollows" ? 3 : 6 },
+    { observed_on: "2026-07-06", value: metric_id === "follows" ? 6 : metric_id === "unfollows" ? 7 : -1 },
+    { observed_on: "2026-07-14", value: metric_id === "follows" ? 8 : metric_id === "unfollows" ? 4 : 4 },
+  ],
+  methodology: "provider_reported",
+});
+
 const story = {
   content_id: "story-1",
   title: "Morning on the coast",
@@ -220,11 +233,15 @@ export function dashboardFor(platform: Platform) {
       metric("reach_paid", 1500),
     ],
     series: tiktok ? [
-      points("followers", "snapshot"), points("new_followers"), points("reach"),
+      points("followers", "snapshot"), points("new_followers"),
+      followerFlowPoints("follows"), followerFlowPoints("unfollows"), followerFlowPoints("followers_net"),
+      points("reach"),
       points("video_views_total", "cumulative"), points("video_likes_total", "cumulative"),
       points("video_comments_total", "cumulative"), points("video_shares_total", "cumulative"),
     ] : [
-      points("followers", "snapshot"), points("new_followers"), points("views"), points("reach"),
+      points("followers", "snapshot"), points("new_followers"),
+      followerFlowPoints("follows"), followerFlowPoints("unfollows"), followerFlowPoints("followers_net"),
+      points("views"), points("reach"),
       points("interactions"), points("views_organic"), points("views_paid"), points("reach_organic"), points("reach_paid"),
     ],
     breakdowns: [

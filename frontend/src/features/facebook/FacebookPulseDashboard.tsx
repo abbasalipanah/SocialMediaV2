@@ -39,6 +39,17 @@ import type {
 } from "../../api";
 import { FollowerAvatarStack } from "../../ui";
 import { formatDate, formatNumber, humanize } from "../dashboard/format";
+import {
+  V1_BAR_FILL_OPACITY,
+  V1_CHART_COLORS,
+  V1_FOLLOWER_FLOW_KEYS,
+  V1_TREND_FILL_BOTTOM_OPACITY,
+  V1_TREND_FILL_TOP_OPACITY,
+  V1_TREND_STROKE_WIDTH,
+  displayTrendValue,
+  followerFlowSubtitle,
+  type TrendKey,
+} from "../dashboard/visualPalette";
 
 type FacebookTab = "cover" | "page" | "content" | "audience";
 
@@ -128,7 +139,7 @@ function contentKpis(data: PlatformDashboard): PulseKpi[] {
   return [
     { id: "post_views", label: "Views", value: views, delta: null, icon: Eye, color: "#ec4899" },
     { id: "post_reach", label: "Reach", value: reach, delta: null, icon: Target, color: "#38bdf8" },
-    { id: "like_reactions", label: "Likes", value: totals.likes, delta: null, icon: ThumbsUp, color: "#ef4444" },
+    { id: "like_reactions", label: "Likes", value: totals.likes, delta: null, icon: ThumbsUp, color: V1_CHART_COLORS.likes },
     { id: "comments", label: "Comments", value: totals.comments, delta: null, icon: MessageCircle, color: "#3b82f6" },
     { id: "shares", label: "Shares", value: totals.shares, delta: null, icon: Share2, color: "#22c55e" },
     { id: "engagement_rate", label: "Engagement Rate", value: views && views > 0 ? totals.interactions / views : null, delta: null, icon: Activity, color: "#6366f1", unit: "ratio" },
@@ -172,16 +183,16 @@ export function KpiGrid({ rows }: { rows: PulseKpi[] }) {
   return <div className="facebook-pulse-kpi-grid">{rows.map((item) => <PulseKpiCard item={item} key={item.id} />)}</div>;
 }
 
-type TrendKey = { id: MetricId; label: string; color: string };
-
-const FOLLOWER_FLOW_KEYS: TrendKey[] = [
-  { id: "follows", label: "Follows", color: "#3b82f6" },
-  { id: "unfollows", label: "Unfollows", color: "#ec4899" },
-  { id: "followers_net", label: "Net", color: "#14b8a6" },
-];
-
 function seriesFor(data: PlatformDashboard, id: MetricId): DashboardSeries | undefined {
   return data.series.find((item) => item.metric_id === id);
+}
+
+function PulseChartLegend({ lines }: { lines: readonly TrendKey[] }) {
+  return (
+    <div className="facebook-chart-legend">
+      {lines.map((line) => <span key={line.id}><i style={{ background: line.color }} />{line.label}</span>)}
+    </div>
+  );
 }
 
 export function PulseCardHeading({ action, subtitle, title }: { action?: ReactNode; subtitle?: string; title: string }) {
@@ -246,7 +257,13 @@ export function PulseTrendCard({
   const gradientSeed = useId().replace(/[^a-zA-Z0-9]/g, "");
   const lines = keys.flatMap((key) => {
     const series = seriesFor(data, key.id);
-    return series ? [{ ...key, points: series.points }] : [];
+    return series ? [{
+      ...key,
+      points: series.points.map((point) => ({
+        ...point,
+        value: displayTrendValue(key, point.value),
+      })),
+    }] : [];
   });
   const values = lines.flatMap((line) => line.points.map((point) => point.value));
   const rawMinimum = values.length > 0 ? Math.min(...values) : 0;
@@ -277,16 +294,16 @@ export function PulseTrendCard({
                 <XAxis axisLine={false} dataKey="observed_on" minTickGap={52} tick={{ fill: "#94a3b8", fontSize: 10 }} tickFormatter={chartDate} tickLine={false} />
                 <YAxis axisLine={false} domain={[minimum, maximum]} tick={{ fill: "#7c8aa0", fontSize: 10 }} tickFormatter={(value) => compact(Number(value))} tickLine={false} width={46} />
                 <Tooltip labelFormatter={(value) => chartDate(String(value))} />
-                <Legend iconType="circle" verticalAlign="top" wrapperStyle={{ color: "#64748b", fontSize: "10px", paddingBottom: "10px" }} />
-                {lines.map((line) => <Bar barSize={10} dataKey={line.id} fill={line.color} fillOpacity={0.7} key={line.id} name={line.label} radius={[4, 4, 0, 0]} />)}
+                <Legend content={<PulseChartLegend lines={lines} />} verticalAlign="top" />
+                {lines.map((line) => <Bar barSize={10} dataKey={line.id} fill={line.color} fillOpacity={V1_BAR_FILL_OPACITY} key={line.id} name={line.label} radius={[4, 4, 0, 0]} />)}
               </BarChart>
             ) : (
               <AreaChart data={chartData} margin={{ bottom: 2, left: -12, right: 10, top: 4 }}>
                 <defs>
                   {lines.map((line) => (
                     <linearGradient id={`${gradientSeed}-${line.id}`} key={line.id} x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor={line.color} stopOpacity="0.28" />
-                      <stop offset="95%" stopColor={line.color} stopOpacity="0.01" />
+                      <stop offset="0%" stopColor={line.color} stopOpacity={V1_TREND_FILL_TOP_OPACITY} />
+                      <stop offset="100%" stopColor={line.color} stopOpacity={V1_TREND_FILL_BOTTOM_OPACITY} />
                     </linearGradient>
                   ))}
                 </defs>
@@ -294,9 +311,9 @@ export function PulseTrendCard({
                 <XAxis axisLine={false} dataKey="observed_on" minTickGap={52} tick={{ fill: "#94a3b8", fontSize: 10 }} tickFormatter={chartDate} tickLine={false} />
                 <YAxis axisLine={false} domain={[minimum, maximum]} tick={{ fill: "#7c8aa0", fontSize: 10 }} tickFormatter={(value) => compact(Number(value))} tickLine={false} width={46} />
                 <Tooltip labelFormatter={(value) => chartDate(String(value))} />
-                <Legend iconType="circle" verticalAlign="top" wrapperStyle={{ color: "#64748b", fontSize: "10px", paddingBottom: "10px" }} />
-                {lines.map((line) => (
-                  <Area activeDot={{ r: 3 }} connectNulls={false} dataKey={line.id} dot={false} fill={`url(#${gradientSeed}-${line.id})`} key={line.id} name={line.label} stroke={line.color} strokeWidth={1.45} type="monotone" />
+                <Legend content={<PulseChartLegend lines={lines} />} verticalAlign="top" />
+                {lines.map((line, index) => (
+                  <Area activeDot={{ r: 3 }} connectNulls={false} dataKey={line.id} dot={false} fill={index === 0 ? `url(#${gradientSeed}-${line.id})` : "transparent"} key={line.id} name={line.label} stroke={line.color} strokeWidth={V1_TREND_STROKE_WIDTH} type="monotone" />
                 ))}
               </AreaChart>
             )}
@@ -370,20 +387,22 @@ function pageViewRows(data: PlatformDashboard): PieRow[] {
   const source = data.source_breakdown?.views;
   const organic = source?.organic ?? metric(data.metrics, "views_organic")?.value ?? null;
   const paid = source?.paid ?? metric(data.metrics, "views_paid")?.value ?? null;
-  return [
-    organic === null ? null : { label: "Organic", value: organic, color: "#8b5cf6" },
-    paid === null ? null : { label: "Paid", value: paid, color: "#ec4899" },
-  ].filter((item): item is PieRow => item !== null);
+  const rows: Array<PieRow | null> = [
+    organic === null ? null : { label: "Organic", value: organic, color: V1_CHART_COLORS.organic },
+    paid === null ? null : { label: "Paid", value: paid, color: V1_CHART_COLORS.paid },
+  ];
+  return rows.filter((item): item is PieRow => item !== null);
 }
 
 function reachTypeRows(data: PlatformDashboard): PieRow[] {
   const source = data.source_breakdown?.reach;
   const organic = source?.organic ?? metric(data.metrics, "reach_organic")?.value ?? null;
   const paid = source?.paid ?? metric(data.metrics, "reach_paid")?.value ?? null;
-  return [
-    organic === null ? null : { label: "Organic", value: organic, color: "#8b5cf6" },
-    paid === null ? null : { label: "Paid", value: paid, color: "#ec4899" },
-  ].filter((item): item is PieRow => item !== null);
+  const rows: Array<PieRow | null> = [
+    organic === null ? null : { label: "Organic", value: organic, color: V1_CHART_COLORS.organic },
+    paid === null ? null : { label: "Paid", value: paid, color: V1_CHART_COLORS.paid },
+  ];
+  return rows.filter((item): item is PieRow => item !== null);
 }
 
 export function hashtagRows(data: PlatformDashboard): Array<Array<string | number>> {
@@ -404,9 +423,9 @@ export function summaryPieRows(
 function engagementRows(content: DashboardContent[]): PieRow[] {
   const totals = derivedContentTotals(content);
   return [
-    { label: "Likes", value: totals.likes, color: "#ef4444" },
-    { label: "Comments", value: totals.comments, color: "#3b82f6" },
-    { label: "Shares", value: totals.shares, color: "#22c55e" },
+    { label: "Likes", value: totals.likes, color: V1_CHART_COLORS.likes },
+    { label: "Comments", value: totals.comments, color: V1_CHART_COLORS.comments },
+    { label: "Shares", value: totals.shares, color: V1_CHART_COLORS.shares },
   ].filter((item) => item.value > 0);
 }
 
@@ -529,17 +548,17 @@ function PageSection({ data, withTitle }: { data: PlatformDashboard; withTitle: 
       {withTitle && <SectionTitle>Overview</SectionTitle>}
       <KpiGrid rows={pageKpis(data)} />
       <div className="facebook-two-grid">
-        <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: "#38bdf8" }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
-        <PulseTrendCard data={data} keys={FOLLOWER_FLOW_KEYS} subtitle="Follows, unfollows and net movement" title="New Followers Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: V1_CHART_COLORS.followers }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
+        <PulseTrendCard data={data} keys={[...V1_FOLLOWER_FLOW_KEYS]} subtitle={followerFlowSubtitle(data)} title="New Followers Trend" />
       </div>
-      <PulseTrendCard bar data={data} keys={[{ id: "reach", label: "Page Reach", color: "#8b5cf6" }, { id: "views", label: "Page Views", color: "#5eead4" }]} subtitle="Page Reach and Page Views trend" title="Performance Trends" wide />
+      <PulseTrendCard bar data={data} keys={[{ id: "reach", label: "Page Reach", color: V1_CHART_COLORS.reach }, { id: "views", label: "Page Views", color: V1_CHART_COLORS.views }]} subtitle="Page Reach and Page Views trend" title="Performance Trends" wide />
       <div className="facebook-one-three-grid">
         <PulsePieCard rows={pageViewRows(data)} subtitle="Organic vs paid views" title="Page View Type" />
-        <PulseTrendCard data={data} keys={[{ id: "views_organic", label: "Organic Views", color: "#3b82f6" }, { id: "views_paid", label: "Paid Views", color: "#f59e0b" }]} subtitle="Organic and paid view delivery" title="Views Source Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "views_organic", label: "Organic Views", color: V1_CHART_COLORS.organicViews }, { id: "views_paid", label: "Paid Views", color: V1_CHART_COLORS.paid }]} subtitle="Organic and paid view delivery" title="Views Source Trend" />
       </div>
       <div className="facebook-one-three-grid">
         <PulsePieCard rows={reachTypeRows(data)} subtitle="Organic vs paid Reach" title="Reach Distribution" />
-        <PulseTrendCard data={data} keys={[{ id: "reach_paid", label: "Paid Reach", color: "#ef4444" }, { id: "reach_organic", label: "Organic Reach", color: "#22c55e" }]} subtitle="Paid Reach and Organic Reach" title="Reach Source Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "reach_paid", label: "Paid Reach", color: V1_CHART_COLORS.paid }, { id: "reach_organic", label: "Organic Reach", color: V1_CHART_COLORS.organicReach }]} subtitle="Paid Reach and Organic Reach" title="Reach Source Trend" />
       </div>
     </section>
   );
@@ -552,7 +571,7 @@ function ContentSection({ data, withTitle }: { data: PlatformDashboard; withTitl
       <KpiGrid rows={contentKpis(data)} />
       <div className="facebook-one-three-grid">
         <PulsePieCard rows={summaryPieRows(data.content_summary.by_type)} subtitle="Content mix by format" title="Content Type" />
-        <PulseTrendCard data={data} keys={[{ id: "views", label: "Page Views", color: "#ec4899" }, { id: "reach", label: "Page Reach", color: "#8b5cf6" }]} subtitle="Daily page views and reach" title="Views & Reach Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "views", label: "Page Views", color: V1_CHART_COLORS.views }, { id: "reach", label: "Page Reach", color: V1_CHART_COLORS.reach }]} subtitle="Daily page views and reach" title="Views & Reach Trend" />
       </div>
       <div className="facebook-two-three-grid">
         <PulseTrendCard data={data} keys={[{ id: "interactions", label: "Interactions", color: "#f59e0b" }]} subtitle="Likes, comments and shares over time" title="Interaction Trend" />
@@ -574,8 +593,8 @@ function AudienceSection({ data, withTitle }: { data: PlatformDashboard; withTit
       {withTitle && <SectionTitle>Audience</SectionTitle>}
       <KpiGrid rows={audienceKpis(data)} />
       <div className="facebook-two-grid">
-        <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: "#38bdf8" }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
-        <PulseTrendCard data={data} keys={FOLLOWER_FLOW_KEYS} subtitle="Follows, unfollows and net movement" title="New Followers Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: V1_CHART_COLORS.followers }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
+        <PulseTrendCard data={data} keys={[...V1_FOLLOWER_FLOW_KEYS]} subtitle={followerFlowSubtitle(data)} title="New Followers Trend" />
       </div>
       <div className="facebook-two-grid">
         <PulsePieCard
@@ -590,8 +609,8 @@ function AudienceSection({ data, withTitle }: { data: PlatformDashboard; withTit
         <SimplePulseTable columns={["#", "City", "Value"]} rows={breakdownRows(data.breakdowns, "city")} subtitle="City ranking" title="Top Cities" />
       </div>
       <div className="facebook-two-grid">
-        <PulseTrendCard data={data} keys={[{ id: "reach_paid", label: "Paid Reach", color: "#ef4444" }]} subtitle="Paid delivery trend" title="Paid Reach Trend" />
-        <PulseTrendCard data={data} keys={[{ id: "reach_organic", label: "Organic Reach", color: "#22c55e" }]} subtitle="Organic delivery trend" title="Organic Reach Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "reach_paid", label: "Paid Reach", color: V1_CHART_COLORS.paid }]} subtitle="Paid delivery trend" title="Paid Reach Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "reach_organic", label: "Organic Reach", color: "#8b5cf6" }]} subtitle="Organic delivery trend" title="Organic Reach Trend" />
       </div>
     </section>
   );
