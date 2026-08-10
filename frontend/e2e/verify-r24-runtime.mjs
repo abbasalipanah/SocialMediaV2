@@ -307,6 +307,13 @@ async function assertRole(page, expected) {
   assert.equal(me.app_role, expected.appRole);
   assert.equal(me.settings_visible, expected.settings);
   assert.equal(me.integrations_visible, expected.integrations);
+  await page.getByRole("link", { name: "Home", exact: true }).waitFor();
+  if (expected.settings) {
+    await page.getByRole("link", { name: "Settings", exact: true }).waitFor();
+  }
+  if (expected.integrations) {
+    await page.getByRole("link", { name: "Integrations", exact: true }).waitFor();
+  }
   assert.equal(
     await page.getByRole("link", { name: "Settings", exact: true }).count(),
     expected.settings ? 1 : 0,
