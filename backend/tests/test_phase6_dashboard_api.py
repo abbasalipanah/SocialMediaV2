@@ -8,6 +8,7 @@ from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+import jwt
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -89,6 +90,7 @@ class FakeAiSummary:
 class MemoryAuthority:
     def __init__(self, raw_session: str = "phase6-session") -> None:
         self.raw_session = raw_session
+        self.jtis: set[str] = set()
         self.sessions = {
             sha256_text(raw_session): {
                 "user_id": "user-1",
@@ -181,6 +183,25 @@ class MemoryAuthority:
 
     def get_session(self, session_hash: str) -> Mapping[str, Any] | None:
         return self.sessions.get(session_hash)
+
+    def create_from_jti(
+        self,
+        *,
+        jti_hash: str,
+        session_hash: str,
+        payload: Mapping[str, Any],
+        expires_at: datetime,
+    ) -> bool:
+        del expires_at
+        if jti_hash in self.jtis:
+            return False
+        self.jtis.add(jti_hash)
+        self.sessions[session_hash] = dict(payload)
+        return True
+
+    def revoke_session(self, session_hash: str) -> None:
+        if session_hash in self.sessions:
+            self.sessions[session_hash]["revoked"] = True
 
     def get_projection(self, entity_key: str) -> Mapping[str, Any] | None:
         return self.projections.get(entity_key)
@@ -887,6 +908,84 @@ async def test_ai_summary_generation_requires_exact_viewer_operator_authority(
         assert (
             await client.get("/api/insights/limit", params={"brand_id": "101"})
         ).status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_signed_accumulate_viewer_operator_sso_reaches_ai_summary_limit(
+    phase6_fixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    authority, reporting, media_root = phase6_fixture
+    secret = "phase6-signed-sso-secret-with-32-bytes"
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("SOCIAL_RUNTIME_MODE", "development")
+    monkeypatch.setenv("SOCIAL_WRITES_ENABLED", "true")
+    monkeypatch.setenv("SOCIAL_DB_HOST", "127.0.0.1")
+    monkeypatch.setenv("SOCIAL_DB_NAME", "social_media_v2_test")
+    monkeypatch.setenv("SOCIAL_SSO_HS256_SECRET", secret)
+    now = datetime.now(UTC)
+    token = jwt.encode(
+        {
+            "iss": "accumulate",
+            "sub": "signed-viewer-operator",
+            "aud": "social_media",
+            "token_type": "app_sso",
+            "jti": "signed-viewer-operator-jti",
+            "exp": int((now + timedelta(hours=1)).timestamp()),
+            "sso_contract": {
+                "version": "v1",
+                "issued_at": now.isoformat(),
+                "user_id": "signed-viewer-operator",
+                "email": "viewer.operator@example.test",
+                "brand_id": "101",
+                "brand_name": "Child A",
+                "brand_status": "active",
+                "role": "viewer",
+                "platform_role": "viewer",
+                "effective_role": "operator",
+                "app_role": "operator",
+                "app_id": "social_media",
+                "entitlement_status": "enabled",
+                "access_mode": "read",
+                "access_start_at": None,
+                "access_expires_at": None,
+                "allowed_apps": ["social_media"],
+                "is_internal_staff": False,
+                "settings_visible": False,
+                "platform_branch_scope_mode": "all",
+                "platform_branches": [],
+            },
+        },
+        secret,
+        algorithm="HS256",
+    )
+    runtime = FakeAiSummary()
+    app = create_app(authority, reporting, media_root, ai_summary=runtime)
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        follow_redirects=False,
+    ) as client:
+        consumed = await client.get("/sso/consume", params={"token": token})
+        assert consumed.status_code == 303
+        me = await client.get("/api/auth/me")
+        assert me.status_code == 200
+        assert me.json()["role"] == "viewer"
+        assert me.json()["app_role"] == "operator"
+        assert me.json()["settings_visible"] is False
+        assert me.json()["integrations_visible"] is True
+        limit = await client.get("/api/insights/limit", params={"brand_id": "101"})
+        assert limit.status_code == 200
+        assert limit.json()["can_generate"] is True
+        generated = await client.post(
+            "/api/insights/generate",
+            params={"brand_id": "101", "range": "last_30_days"},
+            headers={"Origin": "http://test"},
+        )
+        assert generated.status_code == 200
+        assert runtime.generated == [
+            ("101", "signed-viewer-operator", "last_30_days")
+        ]
 
 
 @pytest.mark.asyncio

@@ -2593,7 +2593,7 @@ AI Summary iş akışına dönüştürür:
 PostgreSQL weekly-limit provası, production build, Overview Playwright, Pine Beach local browser
 smoke, secret/vocabulary guard ve protected source baseline birlikte yeşildir.
 
-Durum (2026-08-09): tamamlandı. Backend `140 passed` (`18` environment-gated skip), disposable
+Durum (2026-08-10): tamamlandı. Backend `141 passed` (`18` environment-gated skip), disposable
 PostgreSQL paketi `3 passed`, frontend `29 passed`, production build ve desktop Overview
 Playwright geçti. Pine Beach local browser'da completed history'nin tüm structured bölümleri,
 mini/performance stroke değerleri `1.15/1.35` ve sıfır application HTTP/console hatası doğrulandı.
@@ -2601,7 +2601,10 @@ mini/performance stroke değerleri `1.15/1.35` ve sıfır application HTTP/conso
 secret'ına inject edildi. Pine Beach için `2026-07-11`–`2026-08-09` gerçek-provider özeti completed
 oldu; 3 channel analysis, 2 anomaly, 4 recommendation ve 3 platform evaluation kaydedildi.
 History iki completed kayıt gösterdi; haftalık durum `weekly_limit_reached`, kalan hak `0` oldu.
-Production secret/deploy değiştirilmedi. Kanıt:
+Exact signed Accumulate `viewer + app_role=operator` browser gate'inde `/sso/consume` → `/overview`,
+Settings hidden, Integrations visible, Generate Summary visible/weekly-disabled, iki history kaydı,
+logout `204` ve sıfır browser/API error doğrulandı. Geçici V2-only test runtime'ı kapatıldı;
+production secret/deploy değiştirilmedi. Kanıt:
 `docs/revision6/r15/REVISION6_R15_AI_SUMMARY_REPORT.md`.
 
 ### 22.1 Revizyon 6 stop koşulları

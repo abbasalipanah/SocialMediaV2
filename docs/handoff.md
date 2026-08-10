@@ -26,6 +26,9 @@ DB write veya timer müdahalesi yapılmaz.
   signed `app_role=operator`, exact session Brand ve non-rollup scope için açıktır. Brand başına
   rolling 7x24 saatte bir başarılı özet hakkı backend transaction lock ile uygulanır; failed
   deneme hakkı tüketmez.
+- Exact signed viewer/operator SSO yerel browser gate'i tamamlandı: consume sonrası Overview,
+  Settings hidden, Integrations visible, generation weekly-disabled, iki history kaydı ve logout
+  doğrulandı. Bu kanıt production/public-origin SSO doğrulaması yerine geçmez.
 - V2 AI provider config'i bağımsızdır ve repository default'u kapalıdır. 2026-08-10 açık kullanıcı
   kararıyla mevcut onaylı OpenRouter credential'ı V2'nin Git-ignored `0600` local runtime
   secret'ına inject edilmiştir; yeni key zorunlu değildir. Korunan proje dosyası/runtime'ı

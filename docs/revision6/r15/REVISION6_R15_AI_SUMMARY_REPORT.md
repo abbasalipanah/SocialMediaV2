@@ -80,10 +80,16 @@ Real local Chromium verified:
 - no generation button for the local agency-admin demo session;
 - zero application HTTP or console errors.
 
+A separate temporary V2-only runtime then consumed a real signed Accumulate-format
+`viewer + app_role=operator` token in Chromium. It redirected to `/overview`, hid Settings,
+showed Integrations, displayed the Generate Summary control as weekly-disabled, showed both
+history records, returned `204` on logout, and produced zero browser/API errors. The temporary
+`8001/3011` runtime was shut down after the check; the primary local runtime remained healthy.
+
 ## Verification
 
 - Backend Ruff: passed.
-- Backend pytest: `140 passed`, `18` environment-gated PostgreSQL tests skipped.
+- Backend pytest: `141 passed`, `18` environment-gated PostgreSQL tests skipped.
 - Disposable isolated PostgreSQL adapter/weekly-limit suite: `3 passed`.
 - Frontend Vitest: `29 passed`.
 - Frontend TypeScript and production build: passed.
