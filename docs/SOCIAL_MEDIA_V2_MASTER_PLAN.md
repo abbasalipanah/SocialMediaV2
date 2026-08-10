@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R27 V1 dinamik pie/donut etkileşim parity uygulanıyor; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
+| Durum | Revizyon 6 — R28 Stories hero KPI/gallery hizası uygulanıyor; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -3058,6 +3058,31 @@ chart'larda segment/tooltip sözleşmesi doğrulanır. Backend, DB, XLSX, provid
 projeler ve public routing değişmez.
 
 Durum (2026-08-10): devam ediyor. Kod, görsel ve runtime doğrulaması tamamlanmadan R27 kapatılamaz.
+
+### R28 — Stories hero KPI karşılaştırma ve gallery hizası (devam ediyor)
+
+2026-08-10 kullanıcı kararıyla Instagram Stories üst kartı için aşağıdaki sunum sözleşmesi
+bağlayıcıdır:
+
+1. Story Views, Reach, Completion Rate ve Interactions KPI kartlarının altındaki `vs previous
+   story` yüzde/puan karşılaştırma satırları gösterilmez;
+2. Completion Rate'in kendi provider metriği yüzde olarak korunur; kaldırılan değer metrik değil,
+   yalnız önceki story karşılaştırmasıdır;
+3. Selected story actions seçili story'ye özel kalır ve altı aksiyon metriğinin hiçbiri
+   değiştirilmez;
+4. Story gallery sağ detay kolonunun içine sıkıştırılmaz; kapak ve detay kolonlarının altında
+   tam genişlikte ayrı grid satırı olur ve hero kartının sol içerik hizasından başlar;
+5. gallery yatay scroll, seçili story outline'ı, sıra numaraları, tıklama davranışı ve mobil
+   responsive akış korunur;
+6. backend schema, story aggregation, yüzde formülleri, DB, XLSX ve provider verisi değişmez;
+   değişiklik yalnız V2 frontend sunumudur.
+
+Çıkış kapısı: comparison metni DOM'da bulunmaz; Completion Rate gerçek yüzde değeri görünür;
+gallery hero grid'in doğrudan tam-genişlik çocuğudur; component testi, desktop/mobile screenshot,
+tam frontend ve Playwright regresyonu geçer.
+
+Durum (2026-08-10): devam ediyor. Görsel ve tam regresyon doğrulaması tamamlanmadan R28
+kapatılamaz.
 
 ### 22.1 Revizyon 6 stop koşulları
 

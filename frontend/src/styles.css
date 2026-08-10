@@ -1643,15 +1643,12 @@ body { background: var(--sm-bg); }
 .instagram-story-metric > div > span, .instagram-story-health-grid > div > span, .instagram-story-action-grid > div > span { display: grid; place-items: center; border-radius: 9px; }
 .instagram-story-metric > div > span { width: 32px; height: 32px; }
 .instagram-story-metric small { color: #64748b; font-size: .65rem; font-weight: 650; }
-.instagram-story-metric > strong { display: block; margin: 8px 0 5px 40px; overflow: hidden; font-size: 1.35rem; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.03em; text-overflow: ellipsis; white-space: nowrap; }
-.instagram-story-metric em { display: flex; align-items: center; gap: 3px; margin-left: 40px; color: #64748b; font-size: .55rem; font-style: normal; font-weight: 700; }
-.instagram-story-metric em.positive { color: #059669; }
-.instagram-story-metric em.negative { color: #e11d48; }
+.instagram-story-metric > strong { display: block; margin: 10px 0 0 40px; overflow: hidden; font-size: 1.35rem; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.03em; text-overflow: ellipsis; white-space: nowrap; }
 .instagram-story-metric.tone-violet > div > span { color: #6d28d9; background: #f3e8ff; }
 .instagram-story-metric.tone-blue > div > span { color: #2563eb; background: #eff6ff; }
 .instagram-story-metric.tone-rose > div > span { color: #db2777; background: #fdf2f8; }
 .instagram-story-metric.tone-amber > div > span { color: #d97706; background: #fffbeb; }
-.instagram-story-gallery { margin-top: auto; padding-top: 14px; }
+.instagram-story-gallery { min-width: 0; grid-column: 1 / -1; padding-top: 2px; }
 .instagram-story-selected-actions { margin-top: 13px; }
 .instagram-story-selected-actions > h4 { margin: 0; color: #64748b; font-size: .59rem; font-weight: 750; }
 .instagram-story-selected-actions .instagram-story-action-grid { margin-top: 8px; }
@@ -1757,7 +1754,7 @@ body { background: var(--sm-bg); }
   .instagram-story-surface { padding: 15px; }
   .instagram-story-feature-layout { grid-template-columns: 1fr; }
   .instagram-story-selected-artwork { width: min(180px, 60vw); margin-inline: auto; }
-  .instagram-story-metric > strong, .instagram-story-metric em { margin-left: 0; }
+  .instagram-story-metric > strong { margin-left: 0; }
   .instagram-story-health-notes { grid-template-columns: 1fr; }
   .instagram-story-action-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .instagram-demographics-summary { align-items: flex-start; flex-direction: column; }

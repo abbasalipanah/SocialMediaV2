@@ -279,7 +279,24 @@ async function assertEveryProductSurface(page) {
       await page.getByRole("heading", { name: heading, exact: true }).waitFor();
       assert.equal(await page.locator(".dashboard-error").count(), 0);
       if (tab === "stories") {
-        assert.ok(await page.locator(".instagram-story-gallery button").count() > 0);
+        const storyGallery = page.locator(".instagram-story-gallery");
+        assert.ok(await storyGallery.locator("button").count() > 0);
+        assert.equal(await page.getByText(/vs previous story/i).count(), 0, "story_comparison_visible");
+        assert.equal(
+          await storyGallery.evaluate((element) => getComputedStyle(element).gridColumnStart),
+          "1",
+          "story_gallery_not_left_aligned",
+        );
+        assert.equal(
+          await storyGallery.evaluate((element) => getComputedStyle(element).gridColumnEnd),
+          "-1",
+          "story_gallery_not_full_width",
+        );
+        assert.match(
+          (await page.locator(".instagram-story-metric").filter({ hasText: "Completion Rate" }).textContent()) ?? "",
+          /\d+(?:\.\d+)?%/u,
+          "story_completion_rate_missing",
+        );
         assert.ok(await page.locator(".instagram-story-history tbody tr").count() > 0);
       } else {
         assert.equal(

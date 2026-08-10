@@ -17,7 +17,6 @@ import {
   Sparkles,
   Target,
   TrendingDown,
-  TrendingUp,
   UserPlus,
   UserRound,
 } from "lucide-react";
@@ -26,8 +25,6 @@ import { useEffect, useMemo, useState, type ComponentType } from "react";
 import type { DashboardStories, DashboardStoryItem, PlatformDashboard } from "../../api";
 import { PulseEmpty, PulseTrendCard } from "../facebook/FacebookPulseDashboard";
 import { formatNumber } from "../dashboard/format";
-
-type Tone = "positive" | "negative" | "neutral";
 
 function storyValue(value: number | null): string {
   return value === null ? "—" : formatNumber(value);
@@ -71,42 +68,23 @@ function storyStatus(story: DashboardStoryItem | null, generatedAt: string) {
   return { live: remaining > 0, expires: durationLabel(remaining) };
 }
 
-function comparison(
-  current: number | null,
-  previous: number | null,
-  points = false,
-): { label: string; tone: Tone } {
-  if (current === null || previous === null || (!points && previous === 0)) {
-    return { label: "Previous story unavailable", tone: "neutral" };
-  }
-  const delta = points ? current - previous : ((current - previous) / Math.abs(previous)) * 100;
-  return {
-    label: `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}${points ? "pp" : "%"} vs previous story`,
-    tone: delta > 0 ? "positive" : delta < 0 ? "negative" : "neutral",
-  };
-}
-
 function StoryMetric({
   icon: Icon,
   label,
   value,
-  comparisonValue,
   percentageValue = false,
   tone,
 }: {
   icon: ComponentType<{ size?: number }>;
   label: string;
   value: number | null;
-  comparisonValue: number | null;
   percentageValue?: boolean;
   tone: "violet" | "blue" | "rose" | "amber";
 }) {
-  const delta = comparison(value, comparisonValue, percentageValue);
   return (
     <article className={`instagram-story-metric tone-${tone}`}>
       <div><span><Icon size={18} /></span><small>{label}</small></div>
       <strong>{percentageValue ? percentage(value) : storyValue(value)}</strong>
-      <em className={delta.tone}>{delta.tone === "negative" ? <TrendingDown size={12} /> : delta.tone === "positive" ? <TrendingUp size={12} /> : null}{delta.label}</em>
     </article>
   );
 }
@@ -163,7 +141,6 @@ function LatestStoryPanel({
   onSelect: (index: number) => void;
 }) {
   const active = stories[selected] ?? null;
-  const previous = stories[selected + 1] ?? null;
   return (
     <article className="instagram-story-surface instagram-story-feature">
       <header className="instagram-story-card-header">
@@ -175,32 +152,32 @@ function LatestStoryPanel({
           <div className="instagram-story-selected-artwork"><StoryArtwork story={active} /></div>
           <div className="instagram-story-feature-details">
             <div className="instagram-story-metric-grid">
-              <StoryMetric comparisonValue={previous?.views ?? null} icon={Eye} label="Story Views" tone="violet" value={active.views} />
-              <StoryMetric comparisonValue={previous?.reach ?? null} icon={Target} label="Reach" tone="blue" value={active.reach} />
-              <StoryMetric comparisonValue={previous?.completion_rate ?? null} icon={Activity} label="Completion Rate" percentageValue tone="rose" value={active.completion_rate} />
-              <StoryMetric comparisonValue={previous?.interactions ?? null} icon={Heart} label="Interactions" tone="amber" value={active.interactions} />
+              <StoryMetric icon={Eye} label="Story Views" tone="violet" value={active.views} />
+              <StoryMetric icon={Target} label="Reach" tone="blue" value={active.reach} />
+              <StoryMetric icon={Activity} label="Completion Rate" percentageValue tone="rose" value={active.completion_rate} />
+              <StoryMetric icon={Heart} label="Interactions" tone="amber" value={active.interactions} />
             </div>
             <div className="instagram-story-selected-actions">
               <h4>Selected story actions</h4>
               <StoryActionGrid values={active} />
             </div>
-            <div className="instagram-story-gallery">
-              <h4>Story gallery</h4>
-              <div>
-                {stories.map((story, index) => (
-                  <button
-                    aria-label={`Story ${index + 1}: ${story.title || "Untitled"}`}
-                    aria-pressed={selected === index}
-                    className={selected === index ? "selected" : ""}
-                    key={story.content_id}
-                    onClick={() => onSelect(index)}
-                    type="button"
-                  >
-                    <StoryArtwork compact story={story} />
-                    <small>{index + 1}</small>
-                  </button>
-                ))}
-              </div>
+          </div>
+          <div className="instagram-story-gallery">
+            <h4>Story gallery</h4>
+            <div>
+              {stories.map((story, index) => (
+                <button
+                  aria-label={`Story ${index + 1}: ${story.title || "Untitled"}`}
+                  aria-pressed={selected === index}
+                  className={selected === index ? "selected" : ""}
+                  key={story.content_id}
+                  onClick={() => onSelect(index)}
+                  type="button"
+                >
+                  <StoryArtwork compact story={story} />
+                  <small>{index + 1}</small>
+                </button>
+              ))}
             </div>
           </div>
         </div>

@@ -358,8 +358,12 @@ describe("Revision 6 shared canonical fixture", () => {
     expect(screen.getByRole("heading", { name: "Behaviour" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "History" })).toBeInTheDocument();
     expect(screen.getAllByText("446").length).toBeGreaterThan(0);
-    expect(screen.getByText("+11.5% vs previous story")).toBeInTheDocument();
-    expect(screen.getByText("+3.4pp vs previous story")).toBeInTheDocument();
+    expect(screen.queryByText(/vs previous story/i)).not.toBeInTheDocument();
+
+    const featureLayout = document.querySelector(".instagram-story-feature-layout");
+    const gallery = document.querySelector(".instagram-story-gallery");
+    if (!featureLayout || !gallery) throw new Error("Missing Stories hero layout");
+    expect(gallery.parentElement).toBe(featureLayout);
 
     const selectedActions = document.querySelector(".instagram-story-selected-actions");
     const periodActions = document.querySelector(".instagram-story-behaviour");
