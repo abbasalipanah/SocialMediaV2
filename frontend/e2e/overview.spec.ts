@@ -30,6 +30,14 @@ test("Overview matches the approved executive information architecture with thre
     await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
   }
 
+  const performanceChart = page.getByRole("img", { name: "Performance trend by platform" });
+  await expect(performanceChart.locator(".overview-performance-area")).toHaveCount(3);
+  await expect(performanceChart.locator(".overview-performance-line")).toHaveCount(3);
+  await expect(performanceChart.locator('.overview-performance-line[data-series="instagram"]')).toHaveAttribute("stroke", "#ec4899");
+  await expect(performanceChart.locator('.overview-performance-line[data-series="facebook"]')).toHaveAttribute("stroke", "#2563eb");
+  await expect(performanceChart.locator('.overview-performance-line[data-series="tiktok"]')).toHaveAttribute("stroke", "#111827");
+  await expect(performanceChart.locator(".overview-performance-line").first()).toHaveAttribute("stroke-width", "1.25");
+
   await expect(page.getByText("No AI Summary has been generated for this Brand yet.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Open", exact: true })).toBeVisible();
 

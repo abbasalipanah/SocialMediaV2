@@ -238,6 +238,7 @@ export function dashboardFor(platform: Platform) {
       points("reach"),
       points("video_views_total", "cumulative"), points("video_likes_total", "cumulative"),
       points("video_comments_total", "cumulative"), points("video_shares_total", "cumulative"),
+      points("video_engagements_total", "cumulative"),
     ] : [
       points("followers", "snapshot"), points("new_followers"),
       followerFlowPoints("follows"), followerFlowPoints("unfollows"), followerFlowPoints("followers_net"),

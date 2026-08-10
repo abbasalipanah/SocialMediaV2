@@ -15,7 +15,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 
 import type {
   DashboardContent,
@@ -33,6 +33,12 @@ import { CoverageNotice } from "../dashboard/DashboardFrame";
 import { ExportPng } from "../dashboard/ExportPng";
 import { RANGE_OPTIONS, type RangeKey } from "../dashboard/catalog";
 import { formatDate, formatNumber, humanize } from "../dashboard/format";
+import {
+  V1_TREND_FILL_BOTTOM_OPACITY,
+  V1_TREND_FILL_TOP_OPACITY,
+  V1_TREND_STROKE_WIDTH,
+  V1_OVERVIEW_PLATFORM_COLORS,
+} from "../dashboard/visualPalette";
 
 const PLATFORM_DISPLAY_ORDER: Platform[] = ["instagram", "facebook", "tiktok"];
 
@@ -43,9 +49,9 @@ const PLATFORM_NAMES: Record<Platform, string> = {
 };
 
 const PLATFORM_COLORS: Record<Platform, string> = {
-  facebook: "#2563eb",
-  instagram: "#ec4899",
-  tiktok: "#111827",
+  facebook: V1_OVERVIEW_PLATFORM_COLORS.facebook,
+  instagram: V1_OVERVIEW_PLATFORM_COLORS.instagram,
+  tiktok: V1_OVERVIEW_PLATFORM_COLORS.tiktok,
 };
 
 type SeriesPoint = DashboardSeries["points"][number];
@@ -108,6 +114,7 @@ function linePoints(values: number[], minimum: number, maximum: number, width = 
 }
 
 function MiniSparkline({ points, color }: { points: SeriesPoint[]; color: string }) {
+  const gradientId = `overview-mini-${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
   if (points.length === 0) return <span className="overview-sparkline-empty">No trend data</span>;
   const values = points.map((point) => point.value);
   const minimum = Math.min(...values);
@@ -115,7 +122,14 @@ function MiniSparkline({ points, color }: { points: SeriesPoint[]; color: string
   const coordinates = linePoints(values, minimum, maximum, 180, 44);
   return (
     <svg aria-hidden="true" className="overview-mini-sparkline" preserveAspectRatio="none" viewBox="0 0 180 44">
-      <polyline fill="none" points={coordinates} stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.15" />
+      <defs>
+        <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={V1_TREND_FILL_TOP_OPACITY} />
+          <stop offset="100%" stopColor={color} stopOpacity={V1_TREND_FILL_BOTTOM_OPACITY} />
+        </linearGradient>
+      </defs>
+      {values.length > 1 && <polygon className="overview-mini-area" fill={`url(#${gradientId})`} points={`${coordinates} 172,36 8,36`} />}
+      <polyline fill="none" points={coordinates} stroke={color} strokeLinecap="round" strokeLinejoin="round" strokeWidth={V1_TREND_STROKE_WIDTH} vectorEffect="non-scaling-stroke" />
       {values.length === 1 && <circle cx="90" cy="22" fill={color} r="1.8" />}
     </svg>
   );
@@ -333,6 +347,7 @@ function performanceLines(data: OverviewDashboard, mode: TrendMode): ChartLine[]
 
 function PerformanceTrend({ data }: { data: OverviewDashboard }) {
   const [mode, setMode] = useState<TrendMode>("performance");
+  const gradientSeed = useId().replace(/[^a-zA-Z0-9]/g, "");
   const lines = performanceLines(data, mode);
   const allValues = lines.flatMap((line) => line.points.map((point) => point.value));
   const minimum = allValues.length > 0 ? Math.min(...allValues) : 0;
@@ -358,16 +373,39 @@ function PerformanceTrend({ data }: { data: OverviewDashboard }) {
           <div className="overview-performance-plot">
             <span>{mode === "engagement" ? `${maximum.toFixed(1)}%` : formatNumber(maximum)}</span>
             <svg aria-label={`${humanize(mode)} trend by platform`} preserveAspectRatio="none" role="img" viewBox="0 0 620 180">
+              <defs>
+                {lines.map((line) => (
+                  <linearGradient id={`${gradientSeed}-${line.name}`} key={line.name} x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor={line.color} stopOpacity={V1_TREND_FILL_TOP_OPACITY} />
+                    <stop offset="100%" stopColor={line.color} stopOpacity={V1_TREND_FILL_BOTTOM_OPACITY} />
+                  </linearGradient>
+                ))}
+              </defs>
+              {lines.map((line) => {
+                const coordinates = linePoints(line.points.map((point) => point.value), minimum, maximum, 620, 180);
+                return (
+                  <polygon
+                    className="overview-performance-area"
+                    data-series={line.name.toLowerCase()}
+                    fill={`url(#${gradientSeed}-${line.name})`}
+                    key={`${line.name}-area`}
+                    points={`${coordinates} 612,172 8,172`}
+                  />
+                );
+              })}
               {[18, 54, 90, 126, 162].map((y) => <line key={y} x1="8" x2="612" y1={y} y2={y} />)}
               {lines.map((line) => (
                 <polyline
+                  className="overview-performance-line"
+                  data-series={line.name.toLowerCase()}
                   fill="none"
                   key={line.name}
                   points={linePoints(line.points.map((point) => point.value), minimum, maximum, 620, 180)}
                   stroke={line.color}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth="1.35"
+                  strokeWidth={V1_TREND_STROKE_WIDTH}
+                  vectorEffect="non-scaling-stroke"
                 />
               ))}
             </svg>

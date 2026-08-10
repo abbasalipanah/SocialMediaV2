@@ -7,6 +7,7 @@ import {
   V1_BAR_FILL_OPACITY,
   V1_CHART_COLORS,
   V1_FOLLOWER_FLOW_KEYS,
+  V1_OVERVIEW_PLATFORM_COLORS,
   V1_TREND_FILL_BOTTOM_OPACITY,
   V1_TREND_FILL_TOP_OPACITY,
   V1_TREND_STROKE_WIDTH,
@@ -60,6 +61,11 @@ describe("V1 visual theme parity", () => {
     expect(V1_TREND_FILL_TOP_OPACITY).toBe(0.22);
     expect(V1_TREND_FILL_BOTTOM_OPACITY).toBe(0);
     expect(V1_BAR_FILL_OPACITY).toBe(0.82);
+    expect(V1_OVERVIEW_PLATFORM_COLORS).toEqual({
+      instagram: "#ec4899",
+      facebook: "#2563eb",
+      tiktok: "#111827",
+    });
     expect(displayTrendValue(V1_FOLLOWER_FLOW_KEYS[1]!, 7)).toBe(-7);
     expect(displayTrendValue(V1_FOLLOWER_FLOW_KEYS[1]!, -7)).toBe(-7);
   });

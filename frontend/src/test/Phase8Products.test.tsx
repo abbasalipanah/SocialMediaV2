@@ -166,9 +166,11 @@ describe("Phase 8 product surfaces", () => {
     expect(screen.getByRole("heading", { name: "Top Performing Content" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "AI Summary" })).toBeInTheDocument();
     expect(screen.getAllByText(/Overall Organic Health|Total Audience|Total Reach|Total Impressions|Total Interactions|Avg\. Engagement/)).toHaveLength(6);
-    expect(document.querySelector(".overview-mini-sparkline polyline")).toHaveAttribute("stroke-width", "1.15");
+    expect(document.querySelector(".overview-mini-sparkline polyline")).toHaveAttribute("stroke-width", "1.25");
+    expect(document.querySelector(".overview-mini-sparkline defs")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Audience" }));
-    expect(document.querySelector(".overview-performance-plot polyline")).toHaveAttribute("stroke-width", "1.35");
+    expect(document.querySelector(".overview-performance-line")).toHaveAttribute("stroke-width", "1.25");
+    expect(document.querySelectorAll(".overview-performance-area")).toHaveLength(1);
     expect(screen.getByText("Scale short-form content")).toBeInTheDocument();
     expect(screen.queryByText("Publish more of the strongest short-form format.")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Open/ }));

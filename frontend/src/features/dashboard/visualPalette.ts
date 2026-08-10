@@ -18,6 +18,12 @@ export const V1_CHART_COLORS = {
   contentTypeReach: "#f59e0b",
 } as const;
 
+export const V1_OVERVIEW_PLATFORM_COLORS = {
+  instagram: "#ec4899",
+  facebook: "#2563eb",
+  tiktok: "#111827",
+} as const;
+
 export const V1_TREND_STROKE_WIDTH = 1.25;
 export const V1_TREND_FILL_TOP_OPACITY = 0.22;
 export const V1_TREND_FILL_BOTTOM_OPACITY = 0;
