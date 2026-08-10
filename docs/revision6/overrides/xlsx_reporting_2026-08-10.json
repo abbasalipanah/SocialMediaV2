@@ -17,6 +17,11 @@
   },
   "data_source": "canonical_dashboard_projection",
   "cover_sheet": "Report Info",
+  "report_logo": {
+    "canonical_source": "docs/accumulate-sidebar-logo.svg",
+    "xlsx_derivative": "frontend/public/branding/accumulate-sidebar-logo.png",
+    "legacy_accumulate_dark_forbidden": true
+  },
   "large_tables_get_dedicated_sheets": true,
   "one_small_card_per_sheet": false,
   "forbidden": [

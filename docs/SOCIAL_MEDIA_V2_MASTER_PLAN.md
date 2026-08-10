@@ -2808,8 +2808,10 @@ verisini taşıyan profesyonel XLSX raporlaması zorunludur:
 2. üretim bounded in-process kuyrukta çalışır; UI durum ve `0-100` ilerleme yüzdesini poll eder;
 3. tamamlanan workbook yalnız memory'de en fazla on dakika tutulur ve indirme cevabından sonra
    silinir; DB/repository/kalıcı filesystem XLSX artifact'i oluşmaz;
-4. `Report Info` standart gömülü Accumulate logosu ve tam export bağlamını içerir; `#VALUE!`,
-   `#REF!`, macro, external link veya formül enjeksiyonu bulunamaz;
+4. `Report Info` yalnız `docs/accumulate-sidebar-logo.svg` kaynağından üretilen sabit şeffaf PNG
+   türevini gömülü Accumulate logosu olarak ve tam export bağlamını içerir; eski
+   `accumulate-dark.png` rapor logosu olarak kullanılamaz; `#VALUE!`, `#REF!`, macro, external link
+   veya formül enjeksiyonu bulunamaz;
 5. Overview ve platform/tab raporları aynı dashboard query/projection verisini kullanır; Cover
    ilgili canonical bölüm sheet'lerini, büyük tablolar ayrı filtreli/freeze-pane data sheet'lerini
    üretir;
@@ -2825,8 +2827,8 @@ Durum (2026-08-10): backend session/scope bağlı bounded queue, memory-only TTL
 döngüsü, canonical XLSX renderer, PNG/XLSX menüsü ve yüzde ilerleme arayüzü tamamlandı. Backend
 `151 passed`, frontend `34 passed`; OpenAPI, wheel/build, OOXML, secret/vocabulary/source guard
 geçti. Pine Beach Belek gerçek V2 verisiyle Stories ve Cover workbook'ları bellek içinde
-doğrulandı. Kod commit `38440a1` ile `main`e alındı. İzole release
-`20260810T122500Z-r21xlsx-final` API/web health probunu geçti; collection
+doğrulandı. Kod commit `38440a1`, canonical SVG logo düzeltmesi `cb2354a` ile `main`e alındı.
+İzole release `20260810T125436Z-r21logo` API/web health probunu geçti; collection
 timer/service kapalı kaldı. Kanıt:
 `docs/revision6/r21/REVISION6_R21_XLSX_REPORTING_REPORT.md`.
 

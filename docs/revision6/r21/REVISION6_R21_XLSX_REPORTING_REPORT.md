@@ -4,8 +4,9 @@ Date: `2026-08-10`
 
 Status: `COMPLETE — V2 loopback certified`
 
-Release: `/opt/social-media-v2/releases/20260810T122500Z-r21xlsx-final`
+Release: `/opt/social-media-v2/releases/20260810T125436Z-r21logo`
 Code commit: `38440a1`
+Canonical logo correction commit: `cb2354a`
 
 ## Outcome
 
@@ -51,9 +52,12 @@ undownloaded result. No runtime `.xlsx` is written to DB, repository or filesyst
 
 ## Workbook structure
 
-All exports start with `Report Info`, containing the standard Accumulate PNG logo, Brand,
-account, surface, active tab, scope, reporting/comparison periods, generated/last-sync times,
-freshness, coverage, data status and export version.
+All exports start with `Report Info`, containing the standard Accumulate logo derived exactly
+from `docs/accumulate-sidebar-logo.svg`, Brand, account, surface, active tab, scope,
+reporting/comparison periods, generated/last-sync times, freshness, coverage, data status and
+export version. XlsxWriter cannot embed SVG directly, so the workbook packages the pinned
+transparent PNG derivative at `frontend/public/branding/accumulate-sidebar-logo.png`; the legacy
+`accumulate-dark.png` asset is not a report-logo fallback.
 
 - Overview: Overview cards/chart, per-platform summary, top content, community and dictionary.
 - Platform Cover: Page/Account, Content, optional Instagram Stories, Audience and their raw data
@@ -95,6 +99,7 @@ download. Queue saturation, size limit and generation errors have bounded user-f
 | Backend wheel build | pass; report modules included |
 | Secret/vocabulary guards | pass |
 | Protected-source write guard | pass |
+| Canonical/deployed logo SHA-256 | `46e27509774512dccdc506ccd74ff80c9cd38d4d5096ebe31034480b54e801a7` |
 | V2 API/web health | active and healthy; no warning/error journal entries during release |
 | Unauthenticated runtime report create | `401`, fail-closed |
 
@@ -117,8 +122,8 @@ frontend symlinks, restarted only the two V2 loopback services and passed all he
 
 Rollback inputs remain intact:
 
-- immediate rollback backend: `/opt/social-media-v2/releases/20260810T121500Z-r21xlsx/backend`
-- immediate rollback frontend: `/opt/social-media-v2/releases/20260810T121500Z-r21xlsx/frontend`
+- immediate rollback backend: `/opt/social-media-v2/releases/20260810T122500Z-r21xlsx-final/backend`
+- immediate rollback frontend: `/opt/social-media-v2/releases/20260810T122500Z-r21xlsx-final/frontend`
 - pre-R21 backend: `/opt/social-media-v2/releases/20260810T090500Z-4fb9529/backend`
 - pre-R21 frontend: `/opt/social-media-v2/releases/20260810T112200Z-c2dd2fc/frontend`
 
