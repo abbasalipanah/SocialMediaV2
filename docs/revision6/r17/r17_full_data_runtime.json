@@ -1,0 +1,51 @@
+{
+  "artifact": "revision6_r17_full_data_runtime",
+  "date": "2026-08-10",
+  "status": "full_data_loopback_verified",
+  "public_cutover_authorized": false,
+  "release": {
+    "commit": "4fb9529",
+    "path": "/opt/social-media-v2/releases/20260810T090500Z-4fb9529",
+    "api": "http://127.0.0.1:8026",
+    "web": "http://127.0.0.1:3026"
+  },
+  "data": {
+    "database": "social_media_v2_shadow_20260810_0745",
+    "brands": 67,
+    "assets": 91,
+    "metrics": 1493502,
+    "content": 6234,
+    "comments": 3362,
+    "media": 6101,
+    "linked_accounts": 97,
+    "connections": 71,
+    "meta_accounts": 358,
+    "ai_summaries": 6
+  },
+  "coverage": {
+    "platform_metric_pairs": 168,
+    "raw_metric_ids": 124,
+    "breakdown_dimensions": 15,
+    "platform_dashboards": 201,
+    "overviews": 67,
+    "browser_failures": 0
+  },
+  "runtime": {
+    "api_active": true,
+    "web_active": true,
+    "collector_active": false,
+    "collector_enabled": false,
+    "timer_active": false,
+    "timer_enabled": false,
+    "provider_account_gates_enabled": false,
+    "provider_collection_gates_enabled": false,
+    "worker_schedule_enabled": false,
+    "rollback_verified": true,
+    "forward_recovery_verified": true,
+    "soak_probes": 12
+  },
+  "protected_systems_changed": false,
+  "dns_changed": false,
+  "tls_changed": false,
+  "shared_nginx_changed": false
+}

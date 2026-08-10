@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — 67 marka full shadow migration/parity ve disposable runtime E2E tamamlandı; izole loopback promotion/rollback/soak bekleniyor |
+| Durum | Revizyon 6 — R17 full-data loopback promotion/rollback/soak doğrulandı; DNS/TLS/public cutover ayrı kullanıcı onayını bekliyor |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
