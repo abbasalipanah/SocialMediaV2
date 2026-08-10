@@ -317,6 +317,20 @@ async function assertEveryProductSurface(page) {
         );
         const engagement = (await contentTable.locator("tbody tr").first().locator("td").last().textContent())?.trim();
         assert.match(engagement ?? "", /^(?:\d+\.\d%|—)$/u, `${platform}:${tab}:engagement_format`);
+        const engagementPie = page.getByRole("heading", { name: "Engagement Split", exact: true })
+          .locator("xpath=ancestor::article[1]");
+        const activeSlice = engagementPie.locator(".facebook-pie-segment").first();
+        await activeSlice.focus();
+        assert.ok((await activeSlice.getAttribute("class"))?.includes("is-active"), `${platform}:${tab}:pie_slice_inactive`);
+        assert.notEqual(
+          await activeSlice.getAttribute("transform"),
+          "translate(0.00 0.00)",
+          `${platform}:${tab}:pie_slice_not_lifted`,
+        );
+        const pieTooltip = engagementPie.getByRole("status");
+        await pieTooltip.waitFor();
+        assert.match((await pieTooltip.textContent()) ?? "", /\d+(?:\.\d+)?%/u, `${platform}:${tab}:pie_tooltip_percentage`);
+        await activeSlice.evaluate((element) => element.blur());
       }
     }
   }

@@ -28,6 +28,15 @@ test("dashboard tabs, URL state, ranges and report exports follow the R1 contrac
   const videoType = contentTable.getByText("Video");
   await expect(videoType).toHaveClass(/is-video/);
   await expect(videoType.locator("svg")).toBeVisible();
+  const engagementPie = page.getByRole("heading", { name: "Engagement Split" })
+    .locator("xpath=ancestor::article[1]");
+  const engagementSlice = engagementPie.locator(".facebook-pie-segment").first();
+  await engagementSlice.hover({ position: { x: 148, y: 78 } });
+  await expect(engagementSlice).toHaveClass(/is-active/);
+  await expect(engagementSlice).not.toHaveAttribute("transform", "translate(0.00 0.00)");
+  await expect(engagementPie.getByRole("status")).toContainText("Likes");
+  await expect(engagementPie.getByRole("status")).toContainText("250");
+  await expect(engagementPie.getByRole("status")).toContainText("79%");
   await expect(page.getByRole("heading", { name: "Content Winners by Objective" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Unanswered Comments Queue" })).toHaveCount(0);
 

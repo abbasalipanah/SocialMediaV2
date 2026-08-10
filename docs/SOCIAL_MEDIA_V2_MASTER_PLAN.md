@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R26 V1 Type pill ikon parity tamamlandı; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
+| Durum | Revizyon 6 — R27 V1 dinamik pie/donut etkileşim parity uygulanıyor; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -3030,6 +3030,34 @@ API 5xx sıfırdı. Frontend-only release
 `/opt/social-media-v2/releases/20260810T145042Z-r26typeicons/frontend`, R25 rollback ve R26
 forward provasıyla aktif edildi. Backend/DB/collection ve public routing değişmedi. Kanıt:
 `docs/revision6/r26/REVISION6_R26_TYPE_ICON_PARITY_REPORT.md`.
+
+### R27 — V1 dinamik pie/donut hover ve tooltip parity (devam ediyor)
+
+2026-08-10 kullanıcı kararıyla platform dashboard'larındaki bütün shared pie/donut grafikler için
+V1'in active-slice etkileşimi bağlayıcıdır:
+
+1. pointer ile üzerine gelinen pozitif dilim kendi orta açısı yönünde dışarı taşınır, shadow ile
+   öne çıkar; bütün donut'ı birlikte büyüten eski davranış kullanılamaz;
+2. aktif dilim tooltip'i renk noktası, gerçek label, formatlanmış değer ve toplam içindeki yüzdeyi
+   birlikte gösterir;
+3. legend hover/focus aynı dilimi ve tooltip'i aktive eder; pointer ayrılınca geçici durum kapanır;
+4. SVG dilimleri klavye ile focus alır, Enter/Space ve click/tap ile açılıp kapanır; her dilimin
+   label/değer/yüzde accessible name'i ve `aria-pressed` durumu vardır;
+5. center total/label ve canonical chart renkleri korunur; zero/unavailable veri için mevcut dürüst
+   empty state kalır, negatif/zero dilim çizilmez;
+6. ortak `PulsePieCard` üzerinden Facebook, Instagram ve TikTok'taki Page View Type, Reach
+   Distribution, Content Type, Engagement Split, Content Type Reach ve diğer bütün çağrılar aynı
+   davranışı alır;
+7. chart değeri backend typed row'lardan gelir; frontend ayrı aggregation veya demo üretmez;
+   component interaction/a11y, desktop/mobile screenshot, Playwright, gerçek Pine runtime,
+   V2-only release ve rollback/forward kapıları birlikte geçer.
+
+Çıkış kapısı: hover edilen dilim tek başına kalkar; tooltip label/değer/yüzdeyi doğru gösterir;
+mouse, legend, keyboard ve single-segment vakaları test edilir; üç platformdaki bütün gerçek pie
+chart'larda segment/tooltip sözleşmesi doğrulanır. Backend, DB, XLSX, provider, collection, korunan
+projeler ve public routing değişmez.
+
+Durum (2026-08-10): devam ediyor. Kod, görsel ve runtime doğrulaması tamamlanmadan R27 kapatılamaz.
 
 ### 22.1 Revizyon 6 stop koşulları
 

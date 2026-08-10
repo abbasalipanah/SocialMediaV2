@@ -1487,16 +1487,27 @@ body { background: var(--sm-bg); }
 .facebook-pie-card { min-height: 340px; }
 .facebook-pie-heading-icon { display: grid; width: 36px; height: 36px; flex: 0 0 auto; place-items: center; color: #6366f1; border-radius: 11px; background: #eef2ff; }
 .facebook-pie-wrap { display: grid; flex: 1; place-items: center; }
-.facebook-pie { display: grid; width: 178px; height: 178px; place-items: center; border-radius: 50%; transition: transform .2s ease; }
-.facebook-pie:hover { transform: scale(1.02); }
-.facebook-pie > span { display: grid; width: 126px; height: 126px; place-content: center; border-radius: 50%; background: white; text-align: center; }
-.facebook-pie strong, .facebook-pie small { display: block; }
-.facebook-pie strong { color: #0f172a; font-size: 1.15rem; }
-.facebook-pie small { margin-top: 2px; color: #94a3b8; font-size: .53rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+.facebook-pie-graphic { position: relative; width: 200px; height: 200px; }
+.facebook-pie-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.facebook-pie-segment { stroke: white; stroke-width: 1.4; cursor: pointer; transform-box: fill-box; transform-origin: center; transition: filter .18s ease, opacity .18s ease, transform .18s ease; }
+.facebook-pie-segment:hover, .facebook-pie-segment:focus-visible, .facebook-pie-segment.is-active { filter: drop-shadow(0 5px 6px rgb(15 23 42 / 18%)); opacity: 1; outline: none; }
+.facebook-pie-segment:not(.is-active) { opacity: .96; }
+.facebook-pie-center { position: absolute; inset: 0; display: grid; place-content: center; pointer-events: none; text-align: center; }
+.facebook-pie-center strong, .facebook-pie-center small { display: block; }
+.facebook-pie-center strong { color: #0f172a; font-size: 1.15rem; }
+.facebook-pie-center small { margin-top: 2px; color: #94a3b8; font-size: .53rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+.facebook-pie-tooltip { position: absolute; z-index: 3; top: 61%; left: 52%; display: grid; min-width: 122px; gap: 8px; padding: 11px 13px; color: #475569; border: 1px solid #eef2f7; border-radius: 10px; background: rgb(255 255 255 / 97%); box-shadow: 0 10px 24px rgb(15 23 42 / 15%); pointer-events: none; transform: translate(-50%, -50%); }
+.facebook-pie-tooltip > span { display: flex; align-items: center; gap: 7px; font-size: .66rem; font-weight: 650; white-space: nowrap; }
+.facebook-pie-tooltip > span i { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; }
+.facebook-pie-tooltip > div { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.facebook-pie-tooltip > div strong { color: #111827; font-size: 1rem; font-weight: 750; }
+.facebook-pie-tooltip > div small { color: #64748b; font-size: .68rem; font-weight: 700; }
 .facebook-pie-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3px 9px; margin-top: 8px; }
 .facebook-pie-legend.columns-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.facebook-pie-legend > div { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 5px; color: #64748b; font-size: .6rem; }
-.facebook-pie-legend > div > span { display: flex; min-width: 0; align-items: center; gap: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.facebook-pie-legend > button { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 6px; padding: 5px; color: #64748b; border: 0; border-radius: 7px; background: transparent; font: inherit; font-size: .6rem; text-align: left; cursor: pointer; transition: background .15s ease, color .15s ease; }
+.facebook-pie-legend > button:hover, .facebook-pie-legend > button:focus-visible, .facebook-pie-legend > button.is-active { color: #334155; outline: none; background: #f8fafc; }
+.facebook-pie-legend > button:disabled { cursor: default; opacity: .55; }
+.facebook-pie-legend > button > span { display: flex; min-width: 0; align-items: center; gap: 5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .facebook-pie-legend i { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; }
 .facebook-pie-legend strong { color: #0f172a; }
 .facebook-simple-table { padding: 0; overflow: hidden; }

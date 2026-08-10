@@ -445,16 +445,51 @@ export function UnavailableInsightCard({
   );
 }
 
-function pieBackground(rows: PieRow[]): string {
-  const total = rows.reduce((sum, row) => sum + row.value, 0);
-  if (total <= 0) return "#e2e8f0";
+type PieSegment = PieRow & {
+  endAngle: number;
+  index: number;
+  percentage: number;
+  startAngle: number;
+};
+
+function polarPoint(radius: number, angle: number): { x: number; y: number } {
+  const radians = ((angle - 90) * Math.PI) / 180;
+  return {
+    x: 100 + radius * Math.cos(radians),
+    y: 100 + radius * Math.sin(radians),
+  };
+}
+
+function donutSegmentPath(startAngle: number, endAngle: number): string {
+  const safeEnd = Math.min(endAngle, startAngle + 359.999);
+  const outerStart = polarPoint(78, startAngle);
+  const outerEnd = polarPoint(78, safeEnd);
+  const innerEnd = polarPoint(52, safeEnd);
+  const innerStart = polarPoint(52, startAngle);
+  const largeArc = safeEnd - startAngle > 180 ? 1 : 0;
+  return [
+    `M ${outerStart.x} ${outerStart.y}`,
+    `A 78 78 0 ${largeArc} 1 ${outerEnd.x} ${outerEnd.y}`,
+    `L ${innerEnd.x} ${innerEnd.y}`,
+    `A 52 52 0 ${largeArc} 0 ${innerStart.x} ${innerStart.y}`,
+    "Z",
+  ].join(" ");
+}
+
+function pieSegments(rows: PieRow[], total: number): PieSegment[] {
   let cursor = 0;
-  return `conic-gradient(${rows.map((row) => {
-    const end = cursor + (row.value / total) * 100;
-    const part = `${row.color} ${cursor}% ${end}%`;
-    cursor = end;
-    return part;
-  }).join(",")})`;
+  return rows.flatMap((row, index) => {
+    if (row.value <= 0) return [];
+    const startAngle = cursor;
+    const percentage = (row.value / total) * 100;
+    cursor += percentage * 3.6;
+    return [{ ...row, endAngle: cursor, index, percentage, startAngle }];
+  });
+}
+
+function activeSegmentOffset(segment: PieSegment): { x: number; y: number } {
+  const radians = ((((segment.startAngle + segment.endAngle) / 2) - 90) * Math.PI) / 180;
+  return { x: Math.cos(radians) * 7, y: Math.sin(radians) * 7 };
 }
 
 function pieCenterLabel(title: string): string {
@@ -469,14 +504,78 @@ function pieCenterLabel(title: string): string {
 }
 
 export function PulsePieCard({ legendColumns = 2, title, subtitle, rows }: { legendColumns?: 2 | 3; title: string; subtitle?: string; rows: PieRow[] }) {
-  const total = rows.reduce((sum, row) => sum + row.value, 0);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const total = rows.reduce((sum, row) => sum + Math.max(0, row.value), 0);
+  const segments = pieSegments(rows, total);
+  const activeRow = activeIndex === null || (rows[activeIndex]?.value ?? 0) <= 0
+    ? null
+    : rows[activeIndex] ?? null;
+  const activePercentage = activeRow === null ? 0 : (activeRow.value / total) * 100;
   return (
     <article className="facebook-pulse-card facebook-pie-card">
       <PulseCardHeading action={<span className="facebook-pie-heading-icon"><PieChartIcon size={17} /></span>} subtitle={subtitle} title={title} />
       {total <= 0 ? <PulseEmpty copy="No distribution data in selected range." /> : (
         <>
-          <div className="facebook-pie-wrap"><div className="facebook-pie" style={{ background: pieBackground(rows) }}><span><strong>{formatNumber(total)}</strong><small>{pieCenterLabel(title)}</small></span></div></div>
-          <div className={`facebook-pie-legend columns-${legendColumns}`}>{rows.map((row) => <div key={row.label}><span><i style={{ background: row.color }} />{row.label}</span><strong>{((row.value / total) * 100).toFixed(0)}%</strong></div>)}</div>
+          <div className="facebook-pie-wrap">
+            <div className="facebook-pie-graphic" onMouseLeave={() => setActiveIndex(null)}>
+              <svg aria-label={`${title} chart`} className="facebook-pie-svg" role="img" viewBox="0 0 200 200">
+                {segments.map((segment) => {
+                  const active = activeIndex === segment.index;
+                  const offset = active ? activeSegmentOffset(segment) : { x: 0, y: 0 };
+                  return (
+                    <path
+                      aria-label={`${segment.label}: ${formatNumber(segment.value)}, ${segment.percentage.toFixed(0)}%`}
+                      aria-pressed={active}
+                      className={`facebook-pie-segment${active ? " is-active" : ""}`}
+                      d={donutSegmentPath(segment.startAngle, segment.endAngle)}
+                      fill={segment.color}
+                      key={`${segment.label}-${segment.index}`}
+                      onBlur={() => setActiveIndex(null)}
+                      onFocus={() => setActiveIndex(segment.index)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setActiveIndex((current) => current === segment.index ? null : segment.index);
+                        }
+                      }}
+                      onMouseEnter={() => setActiveIndex(segment.index)}
+                      onPointerUp={(event) => {
+                        if (event.pointerType !== "mouse") {
+                          setActiveIndex((current) => current === segment.index ? null : segment.index);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      transform={`translate(${offset.x.toFixed(2)} ${offset.y.toFixed(2)})`}
+                    />
+                  );
+                })}
+              </svg>
+              <span className="facebook-pie-center"><strong>{formatNumber(total)}</strong><small>{pieCenterLabel(title)}</small></span>
+              {activeRow ? (
+                <div className="facebook-pie-tooltip" role="status">
+                  <span><i style={{ background: activeRow.color }} />{activeRow.label}</span>
+                  <div><strong>{formatNumber(activeRow.value)}</strong><small>{activePercentage.toFixed(0)}%</small></div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <div className={`facebook-pie-legend columns-${legendColumns}`}>{rows.map((row, index) => (
+            <button
+              aria-label={`Highlight ${row.label}`}
+              aria-pressed={activeIndex === index}
+              className={activeIndex === index ? "is-active" : ""}
+              disabled={row.value <= 0}
+              key={`${row.label}-${index}`}
+              onBlur={() => setActiveIndex(null)}
+              onFocus={() => row.value > 0 && setActiveIndex(index)}
+              onMouseEnter={() => row.value > 0 && setActiveIndex(index)}
+              onMouseLeave={() => setActiveIndex(null)}
+              type="button"
+            >
+              <span><i style={{ background: row.color }} />{row.label}</span><strong>{((Math.max(0, row.value) / total) * 100).toFixed(0)}%</strong>
+            </button>
+          ))}</div>
         </>
       )}
     </article>
