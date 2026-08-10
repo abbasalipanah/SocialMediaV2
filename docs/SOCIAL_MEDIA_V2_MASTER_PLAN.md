@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R29 Stories Navigation Split donut parity uygulanıyor; protected-source baseline ve DNS/TLS/public cutover kullanıcı kararıyla bloklu |
+| Durum | Revizyon 6 — R29 Stories Navigation Split donut parity tamamlandı; protected-source baseline ve DNS/TLS/public cutover kullanıcı kararıyla bloklu |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -3098,7 +3098,7 @@ yüzde sözleşmesini doğruladı; console/request/API 5xx sıfırdı. Frontend-
 forward provasıyla aktif edildi. Backend/DB/collection ve public routing değişmedi. Kanıt:
 `docs/revision6/r28/REVISION6_R28_STORIES_HERO_ALIGNMENT_REPORT.md`.
 
-### R29 — Stories Navigation Split dinamik donut parity (devam ediyor)
+### R29 — Stories Navigation Split dinamik donut parity (tamamlandı)
 
 2026-08-10 kullanıcı kararıyla Instagram Stories Behaviour kartındaki Navigation Split için
 aşağıdaki sözleşme bağlayıcıdır:
@@ -3120,7 +3120,15 @@ aşağıdaki sözleşme bağlayıcıdır:
 SVG renderer ile görünür; active transform ve yüzde tooltip component, desktop/mobile Playwright
 ve gerçek Pine runtime testlerinde geçer.
 
-Durum (2026-08-10): devam ediyor. Tam regresyon ve V2-only release tamamlanmadan R29 kapatılamaz.
+Durum (2026-08-10): tamamlandı. Düz stacked bar kaldırıldı; dört provider navigation metriği
+ortak R27 SVG renderer ile dinamik donut olarak gösteriliyor. Frontend `37 passed`, typecheck/build
+`2.537` modül, Stories ve Instagram Cover desktop/mobile snapshot'ları ile tam Playwright
+`17 passed / 5` bilinçli project skip geçti. Gerçek Pine Beach signed runtime eski bar count `0`,
+pie segment, active transform ve yüzde tooltip sözleşmesini doğruladı; console/request/API 5xx
+sıfırdı. Frontend-only release
+`/opt/social-media-v2/releases/20260810T160812Z-r29navigationdonut/frontend`, R28 rollback ve R29
+forward provasıyla aktif edildi. Backend/DB/collection ve public routing değişmedi. Kanıt:
+`docs/revision6/r29/REVISION6_R29_STORY_NAVIGATION_DONUT_REPORT.md`.
 
 ### 22.1 Revizyon 6 stop koşulları
 
