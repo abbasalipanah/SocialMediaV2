@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R18 V1 renk ve tipografi parity loopback'ta doğrulandı; DNS/TLS/public cutover beklemede |
+| Durum | Revizyon 6 — R19 V1 veri-görselleştirme palette parity loopback'ta doğrulandı; DNS/TLS/public cutover beklemede |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -194,6 +194,21 @@ TikTok, baseline veya faz-kapanış ifadelerini hükümsüz kılar:
     rollback ve soak kapıları bitmeden başlatılamaz. Bu kapılar geçse bile public trafik değişimi
     ayrı ve açık kullanıcı onayı gerektirir. Onay verilene kadar canlı SocialMedia, Accumulate ve
     diğer projeler kesintisiz ve değişmeden çalışır.
+51. Facebook, Instagram ve TikTok dashboard veri-görselleştirmeleri tek ortak V1 palette
+    sözleşmesini kullanır. Followers `#38bdf8`; Follows `#3b82f6`; Unfollows `#f59e0b`; Net
+    `#14b8a6`; Views `#5eead4`; Reach `#ec4899`; Organic `#8357f6`; Paid `#f59e0b`;
+    Organic Views `#3b82f6`; Organic Reach `#6366f1`; Likes `#ef5da8`; Comments `#3b82f6` ve
+    Shares `#22c55e` değerlerinden ürün kararı olmadan sapamaz.
+52. Platform dashboard ana trend çizgileri V1 gibi `1.25` stroke width kullanır. Alan dolgusu
+    ilk seri için üstte `0.22` opacity'den altta `0` değerine iner; bar opacity `0.82` olur.
+    Followers flow legend sırası tam olarak `Follows`, `Unfollows`, `Net` kalır.
+53. Provider/persistence katmanındaki `unfollows` günlük sayımı pozitif ham count olarak korunur;
+    yalnız grafik sunumunda `-abs(value)` ile sıfırın altında çizilir. Subtitle'da Unfollows
+    mutlak toplamı, Net ise gerçek `followers_net` toplamı gösterilir. Frontend bu amaçla API
+    payload'ını veya V2 DB verisini mutasyona uğratamaz.
+54. Maddeler 51-53 bütün üç platform ve hem Cover hem Audience tekrarları için bağlayıcıdır.
+    Platforma özel pembe/kırmızı Unfollows, kalın çizgi veya farklı legend sırası ancak yeni ve
+    açık kullanıcı kararıyla değiştirilebilir.
 
 ### 0.1 Zorunlu çalışma sırası
 
@@ -2693,6 +2708,33 @@ manuel incelendi. Commit `5066eb7` ile `main`e gönderilen frontend, yalnız loo
 Artifact parity, frontend-only rollback/forward recovery ve 5/5 API/web probu geçti. Backend
 release'i, V2 DB/media, collector/timer, protected projeler, DNS, TLS, shared Nginx ve public route
 değişmedi. Kanıt: `docs/revision6/r18/REVISION6_R18_VISUAL_PARITY_REPORT.md`.
+
+### R19 — V1 veri-görselleştirme palette parity (tamamlandı)
+
+2026-08-10 kullanıcı düzeltmesiyle R18'in yalnız sayfa tokenları değil; trendline, area fill,
+legend, bar ve donut veri-serisi renkleri de güncel V1'in salt-okunur davranışına bağlanmıştır:
+
+1. Facebook, Instagram ve TikTok için tek V2-owned `visualPalette.ts` kaynağı kullanılır;
+2. Follows mavi, Unfollows turuncu, Net turkuazdır; Unfollows yalnız presentation katmanında
+   negatif eksende çizilir ve legend sırası `Follows → Unfollows → Net` olur;
+3. Followers, Performance, Views/Reach, organic/paid source ve engagement görselleri §0.0
+   maddeler 51-54'teki canonical renklere bağlanır;
+4. platform dashboard çizgileri `1.25`, ilk-seri alan dolgusu `0.22 → 0`, bar opacity `0.82`
+   değerlerinde sabitlenir;
+5. contract/unit testi, üç platform desktop/mobile DOM palette testi, gerçek Pine Beach görsel
+   incelemesi, production build ve full Playwright regression birlikte geçer;
+6. yalnız V2 loopback frontend release'i değiştirilir; backend, DB/media, provider gate,
+   collector/timer, korunan projeler, DNS, TLS, shared Nginx ve public route değişmez.
+
+Durum (2026-08-10): tamamlandı. Kod commit `e7f74bb` ile `main`e gönderildi ve yalnız V2 frontend
+`/opt/social-media-v2/releases/20260810T111200Z-e7f74bb/frontend` release'ine atomik alındı.
+Frontend `33 passed`; typecheck/build `2.536` modül ve `24` artifact ile geçti; Playwright
+`17 passed / 5` beklenen project-conditional skip verdi. Build/release SHA parity, imzalı full-data
+SSO browser kontrolü, frontend-only rollback/forward ve son `5/5` API/web probu geçti; web journal
+warning sayısı sıfırdı. Aktif backend aynı
+`/opt/social-media-v2/releases/20260810T090500Z-4fb9529/backend` release'inde kaldı; collection
+service/timer inactive/disabled kaldı. Kanıt:
+`docs/revision6/r19/REVISION6_R19_CHART_PALETTE_PARITY_REPORT.md`.
 
 ### 22.1 Revizyon 6 stop koşulları
 
