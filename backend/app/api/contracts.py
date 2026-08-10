@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Literal
 
 from app.application.ports.ai_summary import AiSummaryLimitStatus
 from app.application.ports.reporting import (
@@ -250,6 +251,18 @@ class OperationsReadinessResponse:
 
 
 @dataclass(frozen=True)
+class ReportJobResponse:
+    job_id: str
+    state: Literal["queued", "running", "ready", "failed"]
+    progress: int
+    stage: str
+    filename: str | None
+    created_at: datetime
+    expires_at: datetime | None
+    error_code: str | None
+
+
+@dataclass(frozen=True)
 class WorkspaceCapabilitiesResponse:
     scope: BrandScope
     platforms: tuple[CapabilityPlatform, ...]
@@ -273,6 +286,7 @@ __all__ = [
     "PlatformAccountsResponse",
     "RuntimeCapabilities",
     "ReadinessPlatform",
+    "ReportJobResponse",
     "SettingsBrandItem",
     "SettingsBrandsResponse",
     "SocialAccountsResponse",

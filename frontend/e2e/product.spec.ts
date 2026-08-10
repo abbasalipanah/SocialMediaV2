@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { mockR5Api } from "./r5-fixtures";
 
-test("dashboard tabs, URL state, ranges and raw JSON export follow the R1 contract", async ({ page }, testInfo) => {
+test("dashboard tabs, URL state, ranges and report exports follow the R1 contract", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.startsWith("desktop"), "desktop product assertion");
   await mockR5Api(page);
   await page.goto("/facebook?tab=content");
@@ -23,10 +23,11 @@ test("dashboard tabs, URL state, ranges and raw JSON export follow the R1 contra
   await expect(page.getByLabel("Date period").locator("option")).toHaveText([
     "Last 7 Days", "Last 30 Days", "Last 90 Days", "Last 365 Days",
   ]);
-  const pendingDownload = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download dashboard data" }).click();
-  const report = await pendingDownload;
-  expect(report.suggestedFilename()).toBe("facebook-dashboard-2026-07-14.json");
+  await page.getByRole("button", { name: "Download report" }).click();
+  const exportDialog = page.getByRole("dialog", { name: "Download report" });
+  await expect(exportDialog.getByRole("button", { name: /PNG snapshot/i })).toBeVisible();
+  await expect(exportDialog.getByRole("button", { name: /Excel workbook/i })).toBeVisible();
+  await expect(exportDialog).toContainText("Charts and card data by sheet");
 });
 
 test("Settings keeps the Performance-style table-first workspace", async ({ page }, testInfo) => {

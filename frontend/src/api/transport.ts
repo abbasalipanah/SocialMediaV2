@@ -67,6 +67,24 @@ export async function apiMutation<T>(
   return schema.parse(await response.json());
 }
 
+export async function apiBlob(
+  path: string,
+  init: RequestInit,
+): Promise<{ blob: Blob; filename: string | null }> {
+  const response = await fetch(apiUrl(path), {
+    ...init,
+    credentials: "include",
+    headers: {
+      Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ...init.headers,
+    },
+  });
+  if (!response.ok) throw await responseError(response);
+  const disposition = response.headers.get("Content-Disposition") ?? "";
+  const filename = /filename="([^"]+)"/i.exec(disposition)?.[1] ?? null;
+  return { blob: await response.blob(), filename };
+}
+
 export function queryString(
   values: Record<string, boolean | number | string | undefined>,
 ): string {

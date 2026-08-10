@@ -30,7 +30,7 @@ import type {
 import { Link } from "../../routing";
 import { Dialog } from "../../ui";
 import { CoverageNotice } from "../dashboard/DashboardFrame";
-import { ExportPng } from "../dashboard/ExportPng";
+import { ReportExport } from "../dashboard/ReportExport";
 import { RANGE_OPTIONS, type RangeKey } from "../dashboard/catalog";
 import { formatDate, formatNumber, humanize } from "../dashboard/format";
 import {
@@ -787,7 +787,17 @@ export function AccumulateSocialOverview({
               <Link key={platformData.meta.platform} to={`/${platformData.meta.platform}`}><PlatformIcon platform={platformData.meta.platform} size={14} />{PLATFORM_NAMES[platformData.meta.platform]}</Link>
             ))}
           </nav>
-          <ExportPng metrics={data.metrics} subtitle={`${brandName} · ${data.meta.date_range.start_on} to ${data.meta.date_range.end_on}`} title="Social Media Overview" />
+          <ReportExport
+            brandId={data.meta.requested_brand_id}
+            endDate={data.meta.date_range.end_on}
+            metrics={data.metrics}
+            rollup={data.meta.rollup}
+            startDate={data.meta.date_range.start_on}
+            subtitle={`${brandName} · ${data.meta.date_range.start_on} to ${data.meta.date_range.end_on}`}
+            surface="overview"
+            tab="overview"
+            title="Social Media Overview"
+          />
         </div>
       </header>
 

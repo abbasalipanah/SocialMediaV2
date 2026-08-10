@@ -5,14 +5,17 @@
   "provider_capability_contract": "docs/contracts/social-media-v2-provider-capabilities.json",
   "metric_sources": {
     "facebook": [
-      "frontend/src/features/facebook/FacebookPulseDashboard.tsx"
+      "frontend/src/features/facebook/FacebookPulseDashboard.tsx",
+      "frontend/src/features/dashboard/visualPalette.ts"
     ],
     "instagram": [
       "frontend/src/features/instagram/InstagramPulseDashboard.tsx",
-      "frontend/src/features/instagram/InstagramStoriesWorkspace.tsx"
+      "frontend/src/features/instagram/InstagramStoriesWorkspace.tsx",
+      "frontend/src/features/dashboard/visualPalette.ts"
     ],
     "tiktok": [
-      "frontend/src/features/tiktok/TikTokPulseDashboard.tsx"
+      "frontend/src/features/tiktok/TikTokPulseDashboard.tsx",
+      "frontend/src/features/dashboard/visualPalette.ts"
     ],
     "overview": [
       "frontend/src/features/overview/AccumulateSocialOverview.tsx"

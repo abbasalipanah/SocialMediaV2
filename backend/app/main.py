@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
@@ -12,6 +13,7 @@ from app.api import create_api_router
 from app.application.ports import AiSummaryService, AuthorityStore, ReportingStore
 from app.application.services.ai_summary import AiSummaryCoordinator
 from app.application.services.meta_activation import MetaActivationCoordinator
+from app.application.services.report_exports import ReportJobManager
 from app.application.services.tiktok_activation import TikTokActivationCoordinator
 from app.core import WritePolicy, load_settings
 from app.domain.metrics import bootstrap_metric_catalog
@@ -35,13 +37,24 @@ def create_app(
 ) -> FastAPI:
     settings = load_settings()
     policy = WritePolicy.from_settings(settings)
+    report_jobs = ReportJobManager()
+
+    @asynccontextmanager
+    async def lifespan(_application: FastAPI):
+        try:
+            yield
+        finally:
+            report_jobs.close()
+
     application = FastAPI(
         title="Social Media V2",
         version="0.1.0",
         redirect_slashes=False,
+        lifespan=lifespan,
     )
     application.state.settings = settings
     application.state.write_policy = policy
+    application.state.report_jobs = report_jobs
 
     @application.middleware("http")
     async def auth_cache_policy(
@@ -58,6 +71,7 @@ def create_app(
             or request.url.path == "/api/social/meta/oauth/callback"
             or request.url.path.startswith("/api/integrations/meta/")
             or request.url.path.startswith("/api/insights")
+            or request.url.path.startswith("/api/reports/")
         ):
             response.headers["Cache-Control"] = "no-store"
             response.headers["Referrer-Policy"] = "no-referrer"
@@ -122,6 +136,7 @@ def create_app(
             tiktok_activation=tiktok_activation,
             meta_activation=meta_activation,
             ai_summary=ai_summary,
+            report_jobs=report_jobs,
         )
     )
     return application

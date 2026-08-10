@@ -635,6 +635,19 @@ export const metaLinkResponseSchema = z.object({
   connection_state: z.literal("connected"),
 });
 
+export const reportJobSchema = z.object({
+  job_id: z.string().min(1),
+  state: z.enum(["queued", "running", "ready", "failed"]),
+  progress: z.number().int().min(0).max(100),
+  stage: z.string(),
+  filename: z.string().nullable(),
+  created_at: z.string(),
+  expires_at: z.string().nullable(),
+  error_code: z.string().nullable(),
+});
+export type ReportJob = z.infer<typeof reportJobSchema> &
+  components["schemas"]["ReportJobResponse"];
+
 export const apiProblemSchema = z.object({
   detail: z.unknown().optional(),
 });

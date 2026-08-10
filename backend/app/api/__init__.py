@@ -13,11 +13,13 @@ from app.api.insights import create_insights_router
 from app.api.media import create_media_router
 from app.api.operations import create_operations_router
 from app.api.platforms import create_platform_router
+from app.api.reports import create_reports_router
 from app.api.scope import resolve_request_scope
 from app.api.settings import create_settings_router
 from app.api.workspace import create_workspace_router
 from app.application.ports import AiSummaryService, AuthorityStore, ReportingStore
 from app.application.services.meta_activation import MetaActivationCoordinator
+from app.application.services.report_exports import ReportJobManager
 from app.application.services.tiktok_activation import TikTokActivationCoordinator
 from app.capabilities import bootstrap_registry
 from app.core import AppSettings, Boundary, WritePolicy, mark_boundary
@@ -35,10 +37,12 @@ def create_api_router(
     tiktok_activation: TikTokActivationCoordinator | None = None,
     meta_activation: MetaActivationCoordinator | None = None,
     ai_summary: AiSummaryService | None = None,
+    report_jobs: ReportJobManager | None = None,
 ) -> APIRouter:
     router = APIRouter()
     capabilities = bootstrap_registry(settings)
     metric_catalog = bootstrap_metric_catalog()
+    resolved_report_jobs = report_jobs or ReportJobManager()
 
     @router.get("/api/health", tags=["health"], summary="Health probe")
     @mark_boundary(Boundary.QUERY)
@@ -123,6 +127,9 @@ def create_api_router(
         )
     )
     router.include_router(create_dashboard_router(store, reporting_store, metric_catalog))
+    router.include_router(
+        create_reports_router(store, reporting_store, metric_catalog, resolved_report_jobs)
+    )
     router.include_router(create_platform_router(store, reporting_store))
     router.include_router(
         create_settings_router(

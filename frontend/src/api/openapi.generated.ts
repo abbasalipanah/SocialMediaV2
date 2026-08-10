@@ -429,6 +429,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/reports/xlsx": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Report */
+        post: operations["create_report_api_reports_xlsx_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/xlsx/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Report Status */
+        get: operations["report_status_api_reports_xlsx__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/reports/xlsx/{job_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Download Report */
+        post: operations["download_report_api_reports_xlsx__job_id__download_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings/audit": {
         parameters: {
             query?: never;
@@ -1305,6 +1356,31 @@ export interface components {
             /** Pending Job Count */
             pending_job_count: number;
             platform: components["schemas"]["PlatformId"];
+        };
+        /** ReportJobResponse */
+        ReportJobResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error Code */
+            error_code: string | null;
+            /** Expires At */
+            expires_at: string | null;
+            /** Filename */
+            filename: string | null;
+            /** Job Id */
+            job_id: string;
+            /** Progress */
+            progress: number;
+            /** Stage */
+            stage: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "queued" | "running" | "ready" | "failed";
         };
         /** ReportingAccount */
         ReportingAccount: {
@@ -2470,6 +2546,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlatformAccountsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_report_api_reports_xlsx_post: {
+        parameters: {
+            query: {
+                surface: "overview" | "facebook" | "instagram" | "tiktok";
+                tab?: string;
+                brand_id?: string | null;
+                rollup?: boolean;
+                range?: string;
+                start_date?: string | null;
+                end_date?: string | null;
+                account_id?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_status_api_reports_xlsx__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReportJobResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_report_api_reports_xlsx__job_id__download_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

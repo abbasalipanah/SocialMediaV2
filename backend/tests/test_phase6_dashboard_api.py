@@ -710,6 +710,7 @@ def test_phase6_openapi_publishes_typed_response_contracts() -> None:
         "/api/insights": "InsightsResponse",
         "/api/insights/limit": "AiSummaryLimitResponse",
         "/api/operations/readiness": "OperationsReadinessResponse",
+        "/api/reports/xlsx/{job_id}": "ReportJobResponse",
         "/api/workspace/capabilities": "WorkspaceCapabilitiesResponse",
     }
     for path, model in expected.items():

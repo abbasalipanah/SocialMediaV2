@@ -1245,6 +1245,102 @@ body { background: var(--sm-bg); }
 .platform-dashboard-toolbar .export-button { width: 44px; min-width: 44px; min-height: 44px; padding: 0; border-radius: 12px; }
 .dashboard-download-button { display: grid; width: 44px; min-width: 44px; min-height: 44px; place-items: center; padding: 0; color: #64748b; border: 1px solid #e2e8f0; border-radius: 12px; background: white; box-shadow: 0 1px 3px rgb(15 23 42 / 5%); cursor: pointer; }
 .dashboard-download-button:hover { color: #4f46e5; border-color: #c7d2fe; background: #eef2ff; }
+
+.report-export { position: relative; z-index: 20; }
+.report-export-panel {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 9px);
+  right: 0;
+  width: min(330px, calc(100vw - 32px));
+  padding: 14px;
+  color: #14213d;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 45px rgb(20 33 61 / 16%);
+}
+.report-export-heading { display: grid; gap: 3px; padding: 2px 3px 12px; }
+.report-export-heading strong { font-size: 14px; }
+.report-export-heading span { color: #64748b; font-size: 11px; }
+.report-export-options { display: grid; gap: 8px; }
+.report-export-options > button {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 10px;
+  color: #14213d;
+  text-align: left;
+  border: 1px solid #e2e8f0;
+  border-radius: 11px;
+  background: #fff;
+  cursor: pointer;
+}
+.report-export-options > button:hover { border-color: #c7d2fe; background: #f7f7ff; }
+.report-export-options > button:disabled { cursor: wait; opacity: .6; }
+.report-export-options > button > span:first-child {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  color: #5b3df5;
+  border-radius: 10px;
+  background: #f2efff;
+}
+.report-export-options > button > span:last-child { display: grid; gap: 3px; }
+.report-export-options strong { font-size: 12px; }
+.report-export-options small { color: #64748b; font-size: 10px; }
+.report-export-progress { display: grid; gap: 11px; padding: 12px; border-radius: 11px; background: #f7f9fc; }
+.report-export-progress > div {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+.report-export-progress svg { color: #5b3df5; }
+.report-export-progress span { display: grid; gap: 2px; min-width: 0; }
+.report-export-progress strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.report-export-progress small { color: #64748b; font-size: 9px; }
+.report-export-progress b { color: #5b3df5; font-size: 12px; }
+.report-export-progress progress {
+  width: 100%;
+  height: 7px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 99px;
+  accent-color: #5b3df5;
+  background: #e9e7fb;
+}
+.report-export-progress progress::-webkit-progress-bar { border-radius: 99px; background: #e9e7fb; }
+.report-export-progress progress::-webkit-progress-value { border-radius: 99px; background: #5b3df5; transition: width .2s ease; }
+.report-export-progress progress::-moz-progress-bar { border-radius: 99px; background: #5b3df5; }
+.report-export-error {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 8px;
+  align-items: start;
+  margin-top: 10px;
+  padding: 10px;
+  color: #9f3129;
+  font-size: 10px;
+  border-radius: 9px;
+  background: #fff1ef;
+}
+.report-export-error button {
+  grid-column: 2;
+  justify-self: start;
+  padding: 0;
+  color: #5b3df5;
+  font: inherit;
+  font-weight: 700;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.report-export-spinner { animation: report-export-spin .8s linear infinite; }
+@keyframes report-export-spin { to { transform: rotate(360deg); } }
 .platform-dashboard-page .metric-grid { gap: 16px; }
 .platform-dashboard-page .metric-card { min-height: 146px; padding: 20px; border-color: rgb(226 232 240 / 65%); border-radius: 16px; box-shadow: 0 1px 3px rgb(15 23 42 / 5%); }
 .platform-dashboard-page .metric-label { min-height: 36px; align-items: flex-start; color: #94a3b8; font-size: .66rem; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; }

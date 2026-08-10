@@ -1,4 +1,4 @@
-import { CalendarDays, Download } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "../../routing";
 
@@ -14,6 +14,7 @@ import {
 } from "./DashboardFrame";
 import { PLATFORM_DESCRIPTIONS, PLATFORM_LABELS, RANGE_OPTIONS, platformTabs, type DashboardTab, type RangeKey } from "./catalog";
 import { useChannelDashboard } from "./useDashboard";
+import { ReportExport } from "./ReportExport";
 
 function TabContent({ platform, tab, data }: {
   platform: Platform;
@@ -35,7 +36,7 @@ function tabFromSearch(search: string, tabs: DashboardTab[]): DashboardTab["id"]
 }
 
 export function PlatformPage({ platform }: { platform: Platform }) {
-  const { capabilities, selectedBrand } = useBrandScope();
+  const { capabilities, selectedBrand, selectedBrandId, rollup } = useBrandScope();
   const location = useLocation();
   const navigate = useNavigate();
   const audienceAvailable = capabilities?.platforms
@@ -69,17 +70,6 @@ export function PlatformPage({ platform }: { platform: Platform }) {
     else params.set("tab", nextTab);
     const search = params.toString();
     navigate({ pathname: location.pathname, search: search ? `?${search}` : "" });
-  };
-
-  const downloadDashboard = () => {
-    if (!query.data) return;
-    const blob = new Blob([JSON.stringify(query.data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${platform}-dashboard-${query.data.meta.date_range.end_on}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
   };
 
   if (query.isPending) return <DashboardLoading title={PLATFORM_LABELS[platform]} />;
@@ -118,15 +108,18 @@ export function PlatformPage({ platform }: { platform: Platform }) {
             <span><CalendarDays size={18} /></span>
             <span><small>{storyView ? "Date Range" : "Date Period"}</small><select aria-label={storyView ? "Date range" : "Date period"} onChange={(event) => setRange(event.target.value as RangeKey)} value={range}>{RANGE_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></span>
           </label>
-          <button
-            aria-label="Download dashboard data"
-            className="dashboard-download-button"
-            onClick={downloadDashboard}
-            title={`${selectedBrand?.name ?? "Selected Brand"} · ${data.meta.date_range.start_on} to ${data.meta.date_range.end_on}`}
-            type="button"
-          >
-            <Download size={19} />
-          </button>
+          <ReportExport
+            accountId={data.meta.resolved_account_ids.length === 1 ? data.meta.resolved_account_ids[0] : undefined}
+            brandId={selectedBrandId}
+            endDate={data.meta.date_range.end_on}
+            metrics={data.metrics}
+            rollup={rollup}
+            startDate={data.meta.date_range.start_on}
+            subtitle={`${selectedBrand?.name ?? "Selected Brand"} · ${data.meta.date_range.start_on} to ${data.meta.date_range.end_on}`}
+            surface={platform}
+            tab={tab}
+            title={storyView ? "Instagram Stories" : `${PLATFORM_LABELS[platform]} Dashboard`}
+          />
         </div>
       </header>
       <CoverageNotice status={data.meta.data_status} warnings={data.meta.warnings} />
