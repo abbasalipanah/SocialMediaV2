@@ -293,6 +293,11 @@ describe("Phase 8 product surfaces", () => {
     expect(screen.queryByRole("heading", { name: "Age & Gender" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("heading", { name: "Followers Trend" })).toHaveLength(2);
     expect(screen.getAllByText("A quiet morning by the pool.")).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "Open content: A quiet morning by the pool." })).toHaveAttribute(
+      "href",
+      "https://example.test/post-1",
+    );
+    expect(screen.getByText("Image")).toHaveClass("facebook-type-chip");
     expect(screen.queryByRole("heading", { name: "Content Winners by Objective" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Unanswered Comments Queue" })).not.toBeInTheDocument();
   });

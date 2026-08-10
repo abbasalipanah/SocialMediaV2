@@ -10,6 +10,14 @@ test("dashboard tabs, URL state, ranges and report exports follow the R1 contrac
   await expect(page.getByRole("heading", { name: "Facebook Dashboard", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Content" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("heading", { name: "All Performing Content" })).toBeVisible();
+  const contentTable = page.getByRole("heading", { name: "All Performing Content" }).locator("xpath=ancestor::article[1]");
+  await expect(contentTable.getByRole("columnheader")).toHaveText([
+    "#", "Content", "Type", "Date", "Views", "Reach", "Likes", "Comments", "Shares", "Interactions",
+  ]);
+  await expect(contentTable.getByRole("link", { name: /Open content: Coastal sunrise/ })).toHaveAttribute(
+    "href",
+    "https://example.test/video-1",
+  );
   await expect(page.getByRole("heading", { name: "Content Winners by Objective" })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Unanswered Comments Queue" })).toHaveCount(0);
 

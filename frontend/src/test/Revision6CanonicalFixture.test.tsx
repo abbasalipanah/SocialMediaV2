@@ -429,8 +429,17 @@ describe("Revision 6 shared canonical fixture", () => {
     const contentTable = screen.getByRole("heading", { name: "All Performing Content" }).closest("article");
     if (!contentTable) throw new Error("Missing All Performing Content panel");
     expect(within(contentTable).getAllByRole("columnheader").map((item) => item.textContent)).toEqual([
-      "#", "Video", "Date", "Views", "Reach", "Likes", "Comments", "Shares", "Interactions",
+      "#", "Content", "Type", "Date", "Views", "Reach", "Likes", "Comments", "Shares", "Interactions",
     ]);
+    expect(within(contentTable).getAllByText("Image")).toHaveLength(2);
+    within(contentTable).getAllByText("Image").forEach((item) => {
+      expect(item).toHaveClass("facebook-type-chip");
+    });
+    expect(within(contentTable).getByRole("link", { name: "Open content: Canonical summer story #travel" })).toHaveAttribute(
+      "href",
+      "https://example.invalid/content/fixture-video-1",
+    );
+    expect(within(contentTable).queryByRole("link", { name: "Open content: Canonical evening #hotel" })).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Content Winners by Objective" })).not.toBeInTheDocument();
 
     rerender(<FacebookPulseDashboard data={facebook} tab="audience" />);

@@ -85,6 +85,18 @@ function compact(value: number | null): string {
     : new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value);
 }
 
+function safeContentUrl(rawUrl: string): string | null {
+  if (!rawUrl.trim()) return null;
+  try {
+    const url = new URL(rawUrl);
+    return ["https:", "http:"].includes(url.protocol) && !url.username && !url.password
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function derivedContentTotals(content: DashboardContent[]) {
   return content.reduce(
     (current, item) => ({
@@ -499,20 +511,32 @@ export function PerformingContentTable({ content }: { content: DashboardContent[
   return (
     <article className="facebook-pulse-table-card">
       <PulseTableHeading action={`${rows.length} items`} subtitle="Content ranked by collected interactions" title="All Performing Content" />
-      <div className="facebook-table-scroll"><table><thead><tr><th>#</th><th>Video</th><th>Date</th><th>Views</th><th>Reach</th><th>Likes</th><th>Comments</th><th>Shares</th><th>Interactions</th></tr></thead><tbody>
-        {rows.length === 0 ? <tr><td colSpan={9}>No videos were collected in this period.</td></tr> : rows.map((item, index) => (
-          <tr key={`${item.account_id}-${item.external_content_id}`}>
-            <td>{index + 1}</td>
-            <td>
-              <span className="facebook-content-title-cell">
+      <div className="facebook-table-scroll"><table><thead><tr><th>#</th><th>Content</th><th>Type</th><th>Date</th><th>Views</th><th>Reach</th><th>Likes</th><th>Comments</th><th>Shares</th><th>Interactions</th></tr></thead><tbody>
+        {rows.length === 0 ? <tr><td colSpan={10}>No content was collected in this period.</td></tr> : rows.map((item, index) => {
+          const contentUrl = safeContentUrl(item.permalink);
+          const title = item.message || `Untitled ${humanize(item.content_type).toLowerCase()}`;
+          const contentLabel = (
+            <>
                 <span className="facebook-content-cover">{item.cover_url || item.thumbnail_url || item.media_url ? <img alt="" src={item.cover_url || item.thumbnail_url || item.media_url} /> : <ImageIcon size={17} />}</span>
-                <span><b title={item.message}>{item.message || "Untitled video"}</b><small>{item.external_content_id}</small></span>
-              </span>
-            </td>
-            <td>{item.published_at ? formatDate(item.published_at) : "—"}</td>
-            <td>{item.views === null ? "—" : formatNumber(item.views)}</td><td>{item.reach === null ? "—" : formatNumber(item.reach)}</td><td>{formatNumber(item.likes_count)}</td><td>{formatNumber(item.comments_count)}</td><td>{formatNumber(item.shares_count)}</td><td><span className="facebook-table-score">{formatNumber(item.interactions)}</span></td>
-          </tr>
-        ))}
+              <span><b title={title}>{title}</b><small>{item.external_content_id}</small></span>
+            </>
+          );
+          return (
+            <tr key={`${item.account_id}-${item.external_content_id}`}>
+              <td>{index + 1}</td>
+              <td>
+                {contentUrl ? (
+                  <a aria-label={`Open content: ${title}`} className="facebook-content-title-cell" href={contentUrl} rel="noopener noreferrer" target="_blank">
+                    {contentLabel}
+                  </a>
+                ) : <span className="facebook-content-title-cell">{contentLabel}</span>}
+              </td>
+              <td><span className="facebook-type-chip">{humanize(item.content_type)}</span></td>
+              <td>{item.published_at ? formatDate(item.published_at) : "—"}</td>
+              <td>{item.views === null ? "—" : formatNumber(item.views)}</td><td>{item.reach === null ? "—" : formatNumber(item.reach)}</td><td>{formatNumber(item.likes_count)}</td><td>{formatNumber(item.comments_count)}</td><td>{formatNumber(item.shares_count)}</td><td><span className="facebook-table-score">{formatNumber(item.interactions)}</span></td>
+            </tr>
+          );
+        })}
       </tbody></table></div>
     </article>
   );

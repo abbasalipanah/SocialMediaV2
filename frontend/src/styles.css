@@ -1385,6 +1385,8 @@ body { background: var(--sm-bg); }
 .facebook-pulse-kpi { position: relative; min-width: 0; min-height: 148px; padding: 20px; border: 1px solid rgb(226 232 240 / 65%); border-radius: 16px; background: white; box-shadow: 0 1px 3px rgb(15 23 42 / 5%); transition: box-shadow .2s ease, transform .2s ease; }
 .facebook-pulse-kpi:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgb(15 23 42 / 7%); }
 .facebook-content-title-cell { display: flex; min-width: 230px; align-items: center; gap: 11px; }
+.facebook-content-title-cell:is(a) { border-radius: 8px; text-decoration: none; }
+.facebook-content-title-cell:is(a):hover b { color: #4f46e5; text-decoration: underline; text-underline-offset: 2px; }
 .facebook-content-title-cell > span:last-child { display: grid; min-width: 0; gap: 3px; }
 .facebook-content-title-cell b { max-width: 260px; overflow: hidden; color: #334155; font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; }
 .facebook-content-title-cell small { color: #94a3b8; font-size: .65rem; }
@@ -1519,7 +1521,7 @@ body { background: var(--sm-bg); }
 .facebook-heatmap-scale i { width: 76px; height: 7px; border-radius: 99px; background: linear-gradient(90deg, hsl(203 72% 93%), hsl(125 72% 51%)); }
 .facebook-pulse-table-card { min-width: 0; overflow: hidden; border: 1px solid rgb(226 232 240 / 65%); border-radius: 16px; background: white; box-shadow: 0 1px 3px rgb(15 23 42 / 5%); }
 .facebook-pulse-table-card .facebook-table-scroll { max-height: 520px; overflow: auto; }
-.facebook-pulse-table-card .facebook-table-scroll table { min-width: 1120px; }
+.facebook-pulse-table-card .facebook-table-scroll table { min-width: 1210px; }
 .facebook-pulse-table-card .facebook-table-scroll th { position: sticky; z-index: 1; top: 0; }
 .facebook-table-title { display: flex; min-height: 61px; align-items: center; justify-content: space-between; gap: 14px; padding: 16px 24px; border-bottom: 1px solid #f1f5f9; }
 .facebook-table-title > span { padding: 7px 11px; color: white; border-radius: 8px; background: #4f46e5; font-size: .62rem; font-weight: 750; }
