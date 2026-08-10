@@ -291,11 +291,25 @@ async function assertEveryProductSurface(page) {
       }
       if (tab === "content" || tab === "cover") {
         await page.getByRole("heading", { name: "All Performing Content", exact: true }).waitFor();
+        const contentTable = page.getByRole("heading", { name: "All Performing Content", exact: true })
+          .locator("xpath=ancestor::article[1]");
+        assert.deepEqual(
+          await contentTable.getByRole("columnheader").allTextContents(),
+          ["#", "Cover", "Caption", "Date", "Type", "Post Views", "Post Reach", "Likes", "Comments", "Shares", "Engagement"],
+          `${platform}:${tab}:content_headers`,
+        );
+        assert.equal(
+          await contentTable.getByRole("button", { name: "Sort by Date" })
+            .locator("xpath=ancestor::th[1]").getAttribute("aria-sort"),
+          "descending",
+          `${platform}:${tab}:default_sort`,
+        );
         assert.ok(
-          await page.getByRole("heading", { name: "All Performing Content", exact: true })
-            .locator("xpath=ancestor::article[1]").getByRole("link").count() > 0,
+          await contentTable.getByRole("link").count() > 0,
           `${platform}:${tab}:content_links_empty`,
         );
+        const engagement = (await contentTable.locator("tbody tr").first().locator("td").last().textContent())?.trim();
+        assert.match(engagement ?? "", /^(?:\d+\.\d%|—)$/u, `${platform}:${tab}:engagement_format`);
       }
     }
   }

@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R25 V1 All Performing Content tablo parity uygulanıyor; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
+| Durum | Revizyon 6 — R25 V1 All Performing Content tablo parity tamamlandı; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -2961,7 +2961,7 @@ kritik/yüksek bulgu `0/0`dır. Collection service/timer kapalı ve loopback sı
 Korunan projeler, DNS/TLS/shared Nginx/public route değişmemiştir. Kanıt:
 `docs/revision6/r24/REVISION6_R24_FINAL_CERTIFICATION_REPORT.md`.
 
-### R25 — V1 All Performing Content tablo parity (devam ediyor)
+### R25 — V1 All Performing Content tablo parity (tamamlandı)
 
 2026-08-10 kullanıcı kararıyla Facebook, Instagram ve TikTok'un shared All Performing Content
 tablosunda V1'in daha okunaklı tablo yapısı yeniden bağlayıcıdır:
@@ -2989,7 +2989,18 @@ Caption sıralaması, engagement hesabı, link pozitif/negatif vakaları, sticky
 desktop/mobile render testle kanıtlanır. Korunan projeler, DNS/TLS/shared Nginx/public route
 değişmez.
 
-Durum (2026-08-10): devam ediyor. Kod ve doğrulama kapıları tamamlanmadan R25 kapatılamaz.
+Durum (2026-08-10): tamamlandı. Shared tablo V1'in ayrı Cover/Caption düzenine ve 11 canonical
+sütuna taşındı. Date descending başlangıcı, dokuz sortable başlık, typed interactions/reach
+engagement yüzdesi, reach-unavailable `—`, ayrı güvenli Cover/Caption permalinkleri, sticky header
+ve bounded internal scroll component/runtime testleriyle doğrulandı. Frontend `35 passed`,
+typecheck/build `2.537` modül ve tam Playwright `17 passed / 5` bilinçli project skip ile geçti;
+altı desktop/mobile canonical snapshot onaylı tablo görünümüne güncellendi. Gerçek Pine Beach
+signed runtime turunda üç platformun Cover/Content tablosu, exact header/default sort, engagement
+formatı ve linkleri geçti; browser console/request/API 5xx sıfırdı. Frontend-only release
+`/opt/social-media-v2/releases/20260810T143909Z-r25table/frontend`, R24 frontend rollback ve R25
+forward provasıyla aktif edildi. Backend R24 release'inde, collection kapalı ve loopback sınırı
+korundu; korunan projeler ve public routing değişmedi. Kanıt:
+`docs/revision6/r25/REVISION6_R25_PERFORMING_CONTENT_V1_PARITY_REPORT.md`.
 
 ### 22.1 Revizyon 6 stop koşulları
 

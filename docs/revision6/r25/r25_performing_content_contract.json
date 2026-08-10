@@ -1,0 +1,62 @@
+{
+  "artifact": "revision6_r25_performing_content_contract",
+  "date": "2026-08-10",
+  "status": "passed",
+  "columns": [
+    "#",
+    "Cover",
+    "Caption",
+    "Date",
+    "Type",
+    "Post Views",
+    "Post Reach",
+    "Likes",
+    "Comments",
+    "Shares",
+    "Engagement"
+  ],
+  "default_sort": {
+    "column": "Date",
+    "direction": "descending"
+  },
+  "sortable_columns": [
+    "Caption",
+    "Date",
+    "Type",
+    "Post Views",
+    "Post Reach",
+    "Likes",
+    "Comments",
+    "Shares",
+    "Engagement"
+  ],
+  "engagement": {
+    "formula": "interactions / reach * 100",
+    "precision": 1,
+    "zero_or_missing_reach": "—"
+  },
+  "links": {
+    "cover": true,
+    "caption": true,
+    "allowed_protocols": ["http", "https"],
+    "credential_bearing_url_allowed": false,
+    "target": "_blank",
+    "rel": "noopener noreferrer"
+  },
+  "platforms": ["facebook", "instagram", "tiktok"],
+  "frontend_tests": 35,
+  "playwright": {
+    "passed": 17,
+    "conditional_skipped": 5
+  },
+  "runtime": {
+    "pine_beach": "passed",
+    "console_errors": 0,
+    "request_failures": 0,
+    "api_5xx": 0
+  },
+  "release": "/opt/social-media-v2/releases/20260810T143909Z-r25table/frontend",
+  "artifact_sha256": "15e4862df2daaa0688a4958299f959898c1e90c77ea29b41860b6b65bc095867",
+  "rollback_forward": "passed",
+  "dns_tls_public_cutover": false
+}
