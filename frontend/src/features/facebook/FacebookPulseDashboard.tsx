@@ -15,7 +15,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { useId, useMemo, type ReactNode } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import {
   Area,
   AreaChart,
@@ -65,6 +65,18 @@ export type PulseKpi = {
 
 type PieRow = { label: string; value: number; color: string };
 
+type ContentSortKey =
+  | "caption"
+  | "date"
+  | "type"
+  | "views"
+  | "reach"
+  | "likes"
+  | "comments"
+  | "shares"
+  | "engagement";
+type ContentSortDirection = "asc" | "desc";
+
 const PALETTE = ["#8b5cf6", "#ec4899", "#38bdf8", "#f59e0b", "#14b8a6", "#6366f1"];
 
 function metric(metrics: DashboardMetric[], id: MetricId): DashboardMetric | undefined {
@@ -95,6 +107,70 @@ function safeContentUrl(rawUrl: string): string | null {
   } catch {
     return null;
   }
+}
+
+function contentEngagement(item: DashboardContent): number | null {
+  return item.reach !== null && item.reach > 0
+    ? (item.interactions / item.reach) * 100
+    : null;
+}
+
+function contentPublishedAt(item: DashboardContent): number | null {
+  if (!item.published_at) return null;
+  const timestamp = Date.parse(item.published_at);
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function contentDateLabel(value: string | null): string {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime())
+    ? "—"
+    : new Intl.DateTimeFormat("en-US", {
+      day: "numeric",
+      month: "short",
+      timeZone: "UTC",
+    }).format(parsed);
+}
+
+function contentSortValue(item: DashboardContent, key: ContentSortKey): string | number | null {
+  if (key === "caption") return item.message || `Untitled ${humanize(item.content_type).toLowerCase()}`;
+  if (key === "date") return contentPublishedAt(item);
+  if (key === "type") return humanize(item.content_type);
+  if (key === "views") return item.views;
+  if (key === "reach") return item.reach;
+  if (key === "likes") return item.likes_count;
+  if (key === "comments") return item.comments_count;
+  if (key === "shares") return item.shares_count;
+  return contentEngagement(item);
+}
+
+function defaultContentSortDirection(key: ContentSortKey): ContentSortDirection {
+  return key === "caption" || key === "type" ? "asc" : "desc";
+}
+
+function SortableContentHeader({
+  activeDirection,
+  label,
+  onSort,
+}: {
+  activeDirection: ContentSortDirection | null;
+  label: string;
+  onSort: () => void;
+}) {
+  return (
+    <th aria-sort={activeDirection === null ? "none" : activeDirection === "asc" ? "ascending" : "descending"}>
+      <button
+        aria-label={`Sort by ${label}`}
+        className="facebook-content-sort"
+        data-sort={activeDirection ?? "none"}
+        onClick={onSort}
+        type="button"
+      >
+        {label}
+      </button>
+    </th>
+  );
 }
 
 export function derivedContentTotals(content: DashboardContent[]) {
@@ -507,33 +583,77 @@ export function PulseHeatmapCard({ breakdowns }: { breakdowns: DashboardBreakdow
 }
 
 export function PerformingContentTable({ content }: { content: DashboardContent[] }) {
-  const rows = [...content].sort((left, right) => right.interactions - left.interactions);
+  const [sort, setSort] = useState<{ direction: ContentSortDirection; key: ContentSortKey }>({
+    direction: "desc",
+    key: "date",
+  });
+  const rows = useMemo(() => [...content].sort((left, right) => {
+    const leftValue = contentSortValue(left, sort.key);
+    const rightValue = contentSortValue(right, sort.key);
+    if (leftValue === null && rightValue === null) return left.external_content_id.localeCompare(right.external_content_id);
+    if (leftValue === null) return 1;
+    if (rightValue === null) return -1;
+    const compared = typeof leftValue === "number" && typeof rightValue === "number"
+      ? leftValue - rightValue
+      : String(leftValue).localeCompare(String(rightValue), undefined, { sensitivity: "base" });
+    if (compared !== 0) return sort.direction === "asc" ? compared : -compared;
+    return left.external_content_id.localeCompare(right.external_content_id);
+  }), [content, sort]);
+  const sortBy = (key: ContentSortKey) => {
+    setSort((current) => current.key === key
+      ? { key, direction: current.direction === "asc" ? "desc" : "asc" }
+      : { key, direction: defaultContentSortDirection(key) });
+  };
+  const sortDirection = (key: ContentSortKey) => sort.key === key ? sort.direction : null;
   return (
     <article className="facebook-pulse-table-card">
-      <PulseTableHeading action={`${rows.length} items`} subtitle="Content ranked by collected interactions" title="All Performing Content" />
-      <div className="facebook-table-scroll"><table><thead><tr><th>#</th><th>Content</th><th>Type</th><th>Date</th><th>Views</th><th>Reach</th><th>Likes</th><th>Comments</th><th>Shares</th><th>Interactions</th></tr></thead><tbody>
-        {rows.length === 0 ? <tr><td colSpan={10}>No content was collected in this period.</td></tr> : rows.map((item, index) => {
+      <PulseTableHeading title="All Performing Content" />
+      <div className="facebook-table-scroll"><table className="facebook-performing-content-table"><thead><tr>
+        <th>#</th>
+        <th>Cover</th>
+        <SortableContentHeader activeDirection={sortDirection("caption")} label="Caption" onSort={() => sortBy("caption")} />
+        <SortableContentHeader activeDirection={sortDirection("date")} label="Date" onSort={() => sortBy("date")} />
+        <SortableContentHeader activeDirection={sortDirection("type")} label="Type" onSort={() => sortBy("type")} />
+        <SortableContentHeader activeDirection={sortDirection("views")} label="Post Views" onSort={() => sortBy("views")} />
+        <SortableContentHeader activeDirection={sortDirection("reach")} label="Post Reach" onSort={() => sortBy("reach")} />
+        <SortableContentHeader activeDirection={sortDirection("likes")} label="Likes" onSort={() => sortBy("likes")} />
+        <SortableContentHeader activeDirection={sortDirection("comments")} label="Comments" onSort={() => sortBy("comments")} />
+        <SortableContentHeader activeDirection={sortDirection("shares")} label="Shares" onSort={() => sortBy("shares")} />
+        <SortableContentHeader activeDirection={sortDirection("engagement")} label="Engagement" onSort={() => sortBy("engagement")} />
+      </tr></thead><tbody>
+        {rows.length === 0 ? <tr><td colSpan={11}>No content was collected in this period.</td></tr> : rows.map((item, index) => {
           const contentUrl = safeContentUrl(item.permalink);
           const title = item.message || `Untitled ${humanize(item.content_type).toLowerCase()}`;
-          const contentLabel = (
-            <>
-                <span className="facebook-content-cover">{item.cover_url || item.thumbnail_url || item.media_url ? <img alt="" src={item.cover_url || item.thumbnail_url || item.media_url} /> : <ImageIcon size={17} />}</span>
-              <span><b title={title}>{title}</b><small>{item.external_content_id}</small></span>
-            </>
+          const cover = (
+            <span className="facebook-content-cover">
+              {item.cover_url || item.thumbnail_url || item.media_url
+                ? <img alt="" src={item.cover_url || item.thumbnail_url || item.media_url} />
+                : <ImageIcon size={17} />}
+            </span>
           );
+          const caption = <b className="facebook-content-caption" title={title}>{title}</b>;
+          const engagement = contentEngagement(item);
           return (
             <tr key={`${item.account_id}-${item.external_content_id}`}>
               <td>{index + 1}</td>
               <td>
-                {contentUrl ? (
-                  <a aria-label={`Open content: ${title}`} className="facebook-content-title-cell" href={contentUrl} rel="noopener noreferrer" target="_blank">
-                    {contentLabel}
-                  </a>
-                ) : <span className="facebook-content-title-cell">{contentLabel}</span>}
+                {contentUrl
+                  ? <a aria-label={`Open cover: ${title}`} className="facebook-content-cover-link" href={contentUrl} rel="noopener noreferrer" target="_blank">{cover}</a>
+                  : cover}
               </td>
+              <td>
+                {contentUrl
+                  ? <a aria-label={`Open content: ${title}`} className="facebook-content-caption-link" href={contentUrl} rel="noopener noreferrer" target="_blank">{caption}</a>
+                  : caption}
+              </td>
+              <td title={item.published_at ?? undefined}>{contentDateLabel(item.published_at)}</td>
               <td><span className="facebook-type-chip">{humanize(item.content_type)}</span></td>
-              <td>{item.published_at ? formatDate(item.published_at) : "—"}</td>
-              <td>{item.views === null ? "—" : formatNumber(item.views)}</td><td>{item.reach === null ? "—" : formatNumber(item.reach)}</td><td>{formatNumber(item.likes_count)}</td><td>{formatNumber(item.comments_count)}</td><td>{formatNumber(item.shares_count)}</td><td><span className="facebook-table-score">{formatNumber(item.interactions)}</span></td>
+              <td>{item.views === null ? "—" : formatNumber(item.views)}</td>
+              <td>{item.reach === null ? "—" : formatNumber(item.reach)}</td>
+              <td>{formatNumber(item.likes_count)}</td>
+              <td>{formatNumber(item.comments_count)}</td>
+              <td>{formatNumber(item.shares_count)}</td>
+              <td>{engagement === null ? "—" : <span className="facebook-engagement-score">{engagement.toFixed(1)}%</span>}</td>
             </tr>
           );
         })}

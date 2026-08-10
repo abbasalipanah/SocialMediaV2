@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -429,8 +429,9 @@ describe("Revision 6 shared canonical fixture", () => {
     const contentTable = screen.getByRole("heading", { name: "All Performing Content" }).closest("article");
     if (!contentTable) throw new Error("Missing All Performing Content panel");
     expect(within(contentTable).getAllByRole("columnheader").map((item) => item.textContent)).toEqual([
-      "#", "Content", "Type", "Date", "Views", "Reach", "Likes", "Comments", "Shares", "Interactions",
+      "#", "Cover", "Caption", "Date", "Type", "Post Views", "Post Reach", "Likes", "Comments", "Shares", "Engagement",
     ]);
+    expect(within(contentTable).getByRole("button", { name: "Sort by Date" }).closest("th")).toHaveAttribute("aria-sort", "descending");
     expect(within(contentTable).getAllByText("Image")).toHaveLength(2);
     within(contentTable).getAllByText("Image").forEach((item) => {
       expect(item).toHaveClass("facebook-type-chip");
@@ -439,7 +440,19 @@ describe("Revision 6 shared canonical fixture", () => {
       "href",
       "https://example.invalid/content/fixture-video-1",
     );
+    expect(within(contentTable).getByRole("link", { name: "Open cover: Canonical summer story #travel" })).toHaveAttribute(
+      "href",
+      "https://example.invalid/content/fixture-video-1",
+    );
     expect(within(contentTable).queryByRole("link", { name: "Open content: Canonical evening #hotel" })).not.toBeInTheDocument();
+    expect(within(contentTable).getByText("12.3%")).toHaveClass("facebook-engagement-score");
+    expect(within(contentTable).getByText("11.2%")).toHaveClass("facebook-engagement-score");
+    fireEvent.click(within(contentTable).getByRole("button", { name: "Sort by Caption" }));
+    expect([...contentTable.querySelectorAll("tbody tr")].map((row) => row.textContent)).toEqual([
+      expect.stringContaining("Canonical evening #hotel"),
+      expect.stringContaining("Canonical summer story #travel"),
+    ]);
+    expect(within(contentTable).getByRole("button", { name: "Sort by Caption" }).closest("th")).toHaveAttribute("aria-sort", "ascending");
     expect(screen.queryByRole("heading", { name: "Content Winners by Objective" })).not.toBeInTheDocument();
 
     rerender(<FacebookPulseDashboard data={facebook} tab="audience" />);

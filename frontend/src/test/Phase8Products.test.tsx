@@ -288,6 +288,9 @@ describe("Phase 8 product surfaces", () => {
     expect(screen.getByRole("heading", { name: "Audience" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Performance Trends" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "All Performing Content" })).toBeInTheDocument();
+    const performingContent = screen.getByRole("heading", { name: "All Performing Content" }).closest("article");
+    if (!performingContent) throw new Error("Missing All Performing Content panel");
+    expect(performingContent.querySelector("tbody tr td:last-child")).toHaveTextContent("—");
     expect(screen.getByRole("heading", { name: "Top Countries" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Page Like Types (Organic vs Paid)" })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Age & Gender" })).not.toBeInTheDocument();

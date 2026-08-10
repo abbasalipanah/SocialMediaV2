@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R24 tam uygulama sertifikasyonu tamamlandı; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
+| Durum | Revizyon 6 — R25 V1 All Performing Content tablo parity uygulanıyor; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -2960,6 +2960,36 @@ başarılıdır; aktif release `/opt/social-media-v2/releases/20260810T140721Z-r
 kritik/yüksek bulgu `0/0`dır. Collection service/timer kapalı ve loopback sınırı korunmuştur.
 Korunan projeler, DNS/TLS/shared Nginx/public route değişmemiştir. Kanıt:
 `docs/revision6/r24/REVISION6_R24_FINAL_CERTIFICATION_REPORT.md`.
+
+### R25 — V1 All Performing Content tablo parity (devam ediyor)
+
+2026-08-10 kullanıcı kararıyla Facebook, Instagram ve TikTok'un shared All Performing Content
+tablosunda V1'in daha okunaklı tablo yapısı yeniden bağlayıcıdır:
+
+1. sütun sırası `#, Cover, Caption, Date, Type, Post Views, Post Reach, Likes, Comments, Shares,
+   Engagement` olur; Cover ve Caption tek Content hücresinde birleştirilemez;
+2. Caption, Date, Type, Post Views, Post Reach, Likes, Comments, Shares ve Engagement başlıkları
+   gerçek client-side sıralama uygular; varsayılan sıralama Date descending'dir ve aktif yön hem
+   görsel ok hem `aria-sort` ile gösterilir;
+3. Engagement yalnız typed `DashboardContent.interactions / DashboardContent.reach × 100`
+   formülüyle, bir ondalık yüzde olarak hesaplanır; reach yok/sıfır ise `—` gösterilir ve demo,
+   sıfıra bölme veya alternatif payda kullanılmaz;
+4. canonical güvenli permalink mevcutsa Cover ve Caption ayrı ayrı aynı gerçek provider içeriğine
+   yeni sekmede `noopener noreferrer` ile bağlanır; geçersiz/credential-bearing/non-HTTP(S) URL
+   için link üretilmez;
+5. V1 satır yoğunluğu, Caption alanı ve yeşil Engagement pill'i korunur; tablo maksimum yükseklik,
+   sticky header, iç dikey/yatay scroll ve klavye focus görünürlüğüne sahip olur;
+6. değişiklik shared component üzerinden Facebook, Instagram ve TikTok'a birlikte uygulanır;
+   backend schema/query, gerçek veri, XLSX, shell, DB, provider ve collection değişmez;
+7. component contract, gerçek sorting/engagement hesabı, desktop/mobile Playwright, typecheck/build,
+   source/secret/vocabulary guard ve V2-only release/rollback doğrulaması birlikte geçer.
+
+Çıkış kapısı: üç platform tablosu aynı V1 sütun düzenini kullanır; Date descending başlangıcı,
+Caption sıralaması, engagement hesabı, link pozitif/negatif vakaları, sticky internal scroll ve
+desktop/mobile render testle kanıtlanır. Korunan projeler, DNS/TLS/shared Nginx/public route
+değişmez.
+
+Durum (2026-08-10): devam ediyor. Kod ve doğrulama kapıları tamamlanmadan R25 kapatılamaz.
 
 ### 22.1 Revizyon 6 stop koşulları
 
