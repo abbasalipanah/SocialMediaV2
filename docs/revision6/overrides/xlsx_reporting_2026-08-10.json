@@ -1,0 +1,31 @@
+{
+  "decision_id": "xlsx_reporting_2026-08-10",
+  "status": "binding",
+  "prototype_role": "design_reference_only",
+  "surfaces": ["overview", "facebook", "instagram", "tiktok"],
+  "generation": {
+    "mode": "bounded_in_process_queue",
+    "progress_percent": true,
+    "retention": "memory_only_until_first_download_or_ttl",
+    "ttl_seconds": 600,
+    "persistent_artifact": false
+  },
+  "authorization": {
+    "session_bound_job": true,
+    "brand_scope_revalidated": true,
+    "job_id_is_not_authority": true
+  },
+  "data_source": "canonical_dashboard_projection",
+  "cover_sheet": "Report Info",
+  "large_tables_get_dedicated_sheets": true,
+  "one_small_card_per_sheet": false,
+  "forbidden": [
+    "demo_runtime_data",
+    "separate_metric_aggregation",
+    "persistent_xlsx_storage",
+    "macro",
+    "external_link",
+    "formula_injection",
+    "dns_tls_or_public_route_change"
+  ]
+}

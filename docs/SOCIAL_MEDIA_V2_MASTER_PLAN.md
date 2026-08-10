@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R20 Overview trend/area parity loopback'ta doğrulandı; DNS/TLS/public cutover beklemede |
+| Durum | Revizyon 6 — R21 kuyruklu/geçici XLSX raporlama V2 loopback'ta doğrulandı; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -212,6 +212,37 @@ TikTok, baseline veya faz-kapanış ifadelerini hükümsüz kılar:
 54. Maddeler 51-53 bütün üç platform ve hem Cover hem Audience tekrarları için bağlayıcıdır.
     Platforma özel pembe/kırmızı Unfollows, kalın çizgi veya farklı legend sırası ancak yeni ve
     açık kullanıcı kararıyla değiştirilebilir.
+55. 2026-08-10 kullanıcı kararıyla dashboard indirme yüzeyi PNG yanında gerçek veri taşıyan
+    profesyonel XLSX üretir. Verilen `Accumulate_Instagram_Report_Prototype_v2.xlsx` yalnız
+    görünür yapı/tasarım referansıdır; demo değeri, formülü, grafik teması veya hatalı hücresi
+    runtime kaynak kabul edilemez.
+56. XLSX üretimi aynı yetkili Brand/account/range/tab dashboard query sözleşmesinden yapılır;
+    frontend payload'ı, demo veri, ikinci SQL hesaplama yolu veya uydurulmuş availability değeri
+    kaynak olamaz. Overview, Facebook, Instagram ve TikTok raporları aktif sayfa/sekme kapsamına
+    özel görünür sheet'ler üretir; Cover ilgili platformun bütün canonical bölümlerini kapsar.
+57. Küçük her KPI/kart için ayrı sheet üretilmez. İlk `Report Info` sheet'i standart gömülü
+    Accumulate logosu, Brand/account, platform, aktif tab, tarih ve karşılaştırma dönemi,
+    generated/last-sync zamanı, freshness, coverage ve export sürümünü taşır. Bölüm sheet'leri
+    kartları aynı sayfada bloklar halinde; büyük content/history/community tabloları ayrı,
+    filtrelenebilir ve freeze-pane'li data sheet'lerinde gösterir.
+58. XLSX grafik ve KPI görünümü frontend'in canonical palette, legend, sayı/yüzde formatı,
+    unavailable/partial semantiği ve metodolojisini kullanır. Özellikle follower flow sırası
+    `Follows → Unfollows → Net`, çizgi kalınlığı `1.25` ve maddeler 51-54'teki renklerdir. Export
+    hesaplaması dashboard ile aynı typed projection'dan gelir; Excel formülüyle ikinci kez
+    türetilmez.
+59. XLSX üretimi kısa ömürlü, kullanıcı oturumuna bağlı bir in-process job kuyruğudur. UI
+    `queued/running/ready/failed` durumu ile `0-100` ilerleme yüzdesini gösterir. Hazır workbook
+    yalnız memory'de, dar boyut/job sınırı ve en fazla on dakikalık TTL ile tutulur; ilk indirme
+    cevabı tamamlandıktan sonra silinir. Runtime XLSX dosyası DB'ye, repository'ye veya kalıcı
+    filesystem'e yazılmaz.
+60. Job ID tek başına yetki taşımaz. Status/download istekleri aktif session, aynı session hash'i
+    ve yeniden doğrulanan Brand scope ile fail-closed korunur. Workbook macro, external link veya
+    formül enjeksiyonu içeremez; kullanıcı/provider metni literal string olarak yazılır.
+61. Export endpoint'i provider çağrısı, collection, sync, DB write veya AI generation tetiklemez.
+    Mevcut AI özeti rapora eklenirse yalnız daha önce tamamlanmış kayıt okunur ve haftalık AI
+    hakkı tüketilmez. Maddeler 55-61 yeni açık kullanıcı kararı olmadan kalıcı artifact depolama,
+    senkron üretim veya ayrı metrik hesaplama yoluna çevrilemez. Makine-okunur karar
+    `docs/revision6/overrides/xlsx_reporting_2026-08-10.json` dosyasındadır.
 
 ### 0.1 Zorunlu çalışma sırası
 
@@ -2766,6 +2797,38 @@ contract'ı doğrulandı. Build/release SHA parity, imzalı full-data SSO browse
 frontend-only rollback/forward ve son `5/5` API/web probu geçti; web journal warning sayısı
 sıfırdı. Backend release, V2 DB/media ve collection service/timer değişmedi. Kanıt:
 `docs/revision6/r20/REVISION6_R20_OVERVIEW_TREND_PARITY_REPORT.md`.
+
+### R21 — Kuyruklu ve geçici XLSX raporlama (tamamlandı)
+
+2026-08-10 kullanıcı kararıyla PNG/JSON indirme davranışına ek olarak dashboard'un gerçek typed
+verisini taşıyan profesyonel XLSX raporlaması zorunludur:
+
+1. authenticated create/status/download API'leri job ID yanında aktif session ve yeniden
+   doğrulanan Brand scope ile korunur;
+2. üretim bounded in-process kuyrukta çalışır; UI durum ve `0-100` ilerleme yüzdesini poll eder;
+3. tamamlanan workbook yalnız memory'de en fazla on dakika tutulur ve indirme cevabından sonra
+   silinir; DB/repository/kalıcı filesystem XLSX artifact'i oluşmaz;
+4. `Report Info` standart gömülü Accumulate logosu ve tam export bağlamını içerir; `#VALUE!`,
+   `#REF!`, macro, external link veya formül enjeksiyonu bulunamaz;
+5. Overview ve platform/tab raporları aynı dashboard query/projection verisini kullanır; Cover
+   ilgili canonical bölüm sheet'lerini, büyük tablolar ayrı filtreli/freeze-pane data sheet'lerini
+   üretir;
+6. grafik renkleri, legend ve sayı biçimleri R19/R20 palette sözleşmesine bağlanır; demo grafik,
+   ayrı aggregation veya unavailable değerini sıfır kabul eden fallback yoktur;
+7. backend unit/API/XLSX OOXML testleri; frontend state/poll/download testleri; typecheck/build,
+   Playwright, secret/vocabulary/source guard ve izole V2 release/rollback doğrulaması birlikte
+   geçer;
+8. V1/Accumulate/performance_marketing, provider, collection, DB migration/data, DNS, TLS,
+   shared Nginx ve public route değişmez.
+
+Durum (2026-08-10): backend session/scope bağlı bounded queue, memory-only TTL/consume yaşam
+döngüsü, canonical XLSX renderer, PNG/XLSX menüsü ve yüzde ilerleme arayüzü tamamlandı. Backend
+`151 passed`, frontend `34 passed`; OpenAPI, wheel/build, OOXML, secret/vocabulary/source guard
+geçti. Pine Beach Belek gerçek V2 verisiyle Stories ve Cover workbook'ları bellek içinde
+doğrulandı. Kod commit `38440a1` ile `main`e alındı. İzole release
+`20260810T122500Z-r21xlsx-final` API/web health probunu geçti; collection
+timer/service kapalı kaldı. Kanıt:
+`docs/revision6/r21/REVISION6_R21_XLSX_REPORTING_REPORT.md`.
 
 ### 22.1 Revizyon 6 stop koşulları
 
