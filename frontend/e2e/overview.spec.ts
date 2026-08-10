@@ -33,6 +33,27 @@ test("Overview matches the approved executive information architecture with thre
   await expect(page.getByText("No AI Summary has been generated for this Brand yet.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Open", exact: true })).toBeVisible();
 
+  const visualTheme = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    const body = getComputedStyle(document.body);
+    return {
+      background: root.getPropertyValue("--sm-bg").trim(),
+      copy: root.getPropertyValue("--sm-copy").trim(),
+      muted: root.getPropertyValue("--sm-muted").trim(),
+      primary: root.getPropertyValue("--sm-primary").trim(),
+      bodyColor: body.color,
+      bodyFont: body.fontFamily,
+    };
+  });
+  expect(visualTheme).toEqual({
+    background: "#f8fafc",
+    copy: "#172033",
+    muted: "#78849a",
+    primary: "#5b4cf0",
+    bodyColor: "rgb(23, 32, 51)",
+    bodyFont: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  });
+
   const sidebar = page.getByRole("complementary", { name: "Primary navigation" });
   await expect(sidebar.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
   await expect(sidebar.getByRole("link", { name: "Overview" })).toHaveCount(0);

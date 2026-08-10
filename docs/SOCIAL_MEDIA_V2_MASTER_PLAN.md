@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R17 full-data loopback promotion/rollback/soak doğrulandı; DNS/TLS/public cutover ayrı kullanıcı onayını bekliyor |
+| Durum | Revizyon 6 — R18 V1 renk ve tipografi parity doğrulaması sürüyor; DNS/TLS/public cutover beklemede |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -2660,6 +2660,29 @@ V2-local snapshot'ı kaynak transaction-read-only ve hedef-empty zorunlulukları
 Summary. Çalışan release'te dört dashboard API'si, media endpoint'i ve gerçek Chromium SSO
 `/overview` akışı dolu veriyle geçti; test session/JTI kayıtları temizlendi. Kanıt:
 `docs/revision6/r16/REVISION6_R16_LOOPBACK_RELEASE_REPORT.md`.
+
+### R18 — V1 renk ve tipografi parity (devam ediyor)
+
+2026-08-10 kullanıcı kararıyla DNS/TLS/public cutover ertelenmiş ve V2 frontendinin görsel dili,
+korunan V1/Accumulate kaynakları yalnız salt okunarak eşleştirme kapsamına alınmıştır:
+
+1. Sidebar, topbar, footer ve onaylı dashboard/kart yerleşimleri yapısal olarak değiştirilmez;
+2. Accumulate/V1'in kullandığı Inter `300/400/500/600/700` font ailesi V2 document seviyesinde
+   açıkça yüklenir; böylece sistem-font fallback'inden doğan tipografi farkı kaldırılır;
+3. canonical Social Media çekirdek tokenları `#f8fafc` arka plan, `#ffffff` kart,
+   `rgba(226, 232, 240, .75)` sınır, `#172033` ana metin, `#78849a` ikincil metin,
+   `#5b4cf0` primary ve `#f1efff` primary-soft olarak sabitlenir;
+4. ana metinlerde saf `#000000`/`black` kullanılmaz. Siyah görünen UI metinleri V1'in
+   yumuşak lacivert-siyah `#172033`/`#0f172a` tonlarında; TikTok marka yüzeyleri `#111827`
+   tonunda kalır;
+5. V1, Accumulate, Performance Marketing, production route, DNS, TLS ve shared Nginx üzerinde
+   hiçbir write veya reload yapılmaz;
+6. statik visual-token contract testi, mevcut frontend component testleri, typecheck/build,
+   tarayıcı görsel doğrulaması, secret guard ve protected source write guard birlikte geçer.
+
+Çıkış kapısı: V2, Inter fontunu gerçekten yükler; canonical tokenlar testle kilitlidir; saf siyah
+UI rengi bulunmaz; onaylı layout ve işlevlerde regresyon yoktur; protected kaynak baseline'ı
+değişmemiştir. DNS/TLS/public routing bu fazın parçası değildir ve beklemede kalır.
 
 ### 22.1 Revizyon 6 stop koşulları
 
