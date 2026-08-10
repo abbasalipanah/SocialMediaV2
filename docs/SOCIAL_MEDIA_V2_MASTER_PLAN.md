@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R28 Stories hero KPI/gallery hizası uygulanıyor; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
+| Durum | Revizyon 6 — R27 pie etkileşimi ve R28 Stories hero hizası tamamlandı; protected-source baseline ve DNS/TLS/public cutover kullanıcı kararıyla bloklu |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -3031,7 +3031,7 @@ API 5xx sıfırdı. Frontend-only release
 forward provasıyla aktif edildi. Backend/DB/collection ve public routing değişmedi. Kanıt:
 `docs/revision6/r26/REVISION6_R26_TYPE_ICON_PARITY_REPORT.md`.
 
-### R27 — V1 dinamik pie/donut hover ve tooltip parity (devam ediyor)
+### R27 — V1 dinamik pie/donut hover ve tooltip parity (tamamlandı)
 
 2026-08-10 kullanıcı kararıyla platform dashboard'larındaki bütün shared pie/donut grafikler için
 V1'in active-slice etkileşimi bağlayıcıdır:
@@ -3057,9 +3057,16 @@ mouse, legend, keyboard ve single-segment vakaları test edilir; üç platformda
 chart'larda segment/tooltip sözleşmesi doğrulanır. Backend, DB, XLSX, provider, collection, korunan
 projeler ve public routing değişmez.
 
-Durum (2026-08-10): devam ediyor. Kod, görsel ve runtime doğrulaması tamamlanmadan R27 kapatılamaz.
+Durum (2026-08-10): tamamlandı. Ortak `PulsePieCard` SVG dilim, active transform, tooltip,
+legend, klavye ve touch sözleşmesini uygular. Frontend `37 passed`, typecheck/build `2.537`
+modül ve tam Playwright `17 passed / 5` bilinçli project skip ile geçti. Gerçek Pine Beach signed
+runtime Facebook, Instagram ve TikTok Cover/Content pie'larında active transform ve yüzde
+tooltip'ini doğruladı; console/request/API 5xx sıfırdı. Frontend-only release
+`/opt/social-media-v2/releases/20260810T150721Z-r27piehover/frontend`, R26 rollback ve R27 forward
+provasıyla doğrulandı. Backend/DB/collection ve public routing değişmedi. Kanıt:
+`docs/revision6/r27/REVISION6_R27_INTERACTIVE_PIE_PARITY_REPORT.md`.
 
-### R28 — Stories hero KPI karşılaştırma ve gallery hizası (devam ediyor)
+### R28 — Stories hero KPI karşılaştırma ve gallery hizası (tamamlandı)
 
 2026-08-10 kullanıcı kararıyla Instagram Stories üst kartı için aşağıdaki sunum sözleşmesi
 bağlayıcıdır:
@@ -3081,8 +3088,15 @@ bağlayıcıdır:
 gallery hero grid'in doğrudan tam-genişlik çocuğudur; component testi, desktop/mobile screenshot,
 tam frontend ve Playwright regresyonu geçer.
 
-Durum (2026-08-10): devam ediyor. Görsel ve tam regresyon doğrulaması tamamlanmadan R28
-kapatılamaz.
+Durum (2026-08-10): tamamlandı. Dört comparison satırı kaldırıldı, Completion Rate provider
+yüzdesi korundu ve gallery hero grid'in `1 / -1` tam-genişlik satırına taşındı. Frontend
+`37 passed`, typecheck/build `2.537` modül, Stories desktop/mobile ve Instagram Cover
+desktop/mobile snapshot'ları ile tam Playwright `17 passed / 5` bilinçli project skip geçti.
+Gerçek Pine Beach signed runtime comparison count `0`, gallery full-width ve Completion Rate
+yüzde sözleşmesini doğruladı; console/request/API 5xx sıfırdı. Frontend-only release
+`/opt/social-media-v2/releases/20260810T153903Z-r28storieshero/frontend`, R27 rollback ve R28
+forward provasıyla aktif edildi. Backend/DB/collection ve public routing değişmedi. Kanıt:
+`docs/revision6/r28/REVISION6_R28_STORIES_HERO_ALIGNMENT_REPORT.md`.
 
 ### 22.1 Revizyon 6 stop koşulları
 
