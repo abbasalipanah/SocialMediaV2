@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R19 V1 veri-görselleştirme palette parity loopback'ta doğrulandı; DNS/TLS/public cutover beklemede |
+| Durum | Revizyon 6 — R20 Overview trend/area parity loopback'ta doğrulandı; DNS/TLS/public cutover beklemede |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -169,9 +169,12 @@ TikTok, baseline veya faz-kapanış ifadelerini hükümsüz kılar:
     yapılandırılmadığında geçmiş okunur, yeni üretim dürüstçe unavailable kalır. Stored çıktı
     strategic summary, channel analysis, anomalies, recommended actions, platform evaluations ve
     model alanlarını kapsar.
-44. Overview mini trend çizgileri `1.15`, Performance Trend çizgileri `1.35` SVG stroke width
-    kullanır; grid çizgileri `0.55` ve düşük kontrastlıdır. Referanstaki ince çizgi yoğunluğu yeni
-    açık kullanıcı kararı olmadan kalınlaştırılamaz.
+44. 2026-08-10 kullanıcı düzeltmesiyle Overview mini trend ve Performance Trend çizgilerinin
+    ikisi de `1.25` SVG stroke width ve non-scaling stroke kullanır; önceki `1.15/1.35` ayrımı
+    geçersizdir. Grid çizgileri `0.55` ve düşük kontrastlıdır. Mini trendlerde ve Performance
+    Trend'in her platform serisinde üstte `0.22`, altta `0` opacity'ye inen seri-rengi gradient
+    alan dolgusu bulunur. Performance palette Instagram `#ec4899`, Facebook `#2563eb`, TikTok
+    `#111827` olarak sabittir.
 45. Maddeler 37-44 yeni açık kullanıcı kararı olmadan geri alınamaz. Makine-okunur karar
     `docs/revision6/overrides/overview_surface_2026-08-09.json` dosyasındadır.
 46. V2 full-data migration kapsamı tek müşteri değildir. Kaynakta bulunan 67 Brand, 91 social
@@ -2735,6 +2738,34 @@ warning sayısı sıfırdı. Aktif backend aynı
 `/opt/social-media-v2/releases/20260810T090500Z-4fb9529/backend` release'inde kaldı; collection
 service/timer inactive/disabled kaldı. Kanıt:
 `docs/revision6/r19/REVISION6_R19_CHART_PALETTE_PARITY_REPORT.md`.
+
+### R20 — Overview trend/area görsel parity (tamamlandı)
+
+2026-08-10 kullanıcı kararıyla Overview grafiklerinin R19 platform dashboard görsel diliyle aynı
+tip, renk, çizgi yoğunluğu ve area-fill davranışını kullanması bağlayıcı hale gelmiştir:
+
+1. Overview KPI mini sparklines ve Channel Health mini trendleri kendi seri renginde `0.22 → 0`
+   gradient alan dolgusu kullanır;
+2. Performance Trend'de görünür her Instagram, Facebook ve TikTok serisinin altında kendi
+   renginde gradient alan bulunur;
+3. mini ve büyük Overview çizgileri aynı `1.25` non-scaling stroke kullanır; eski `1.15/1.35`
+   ayrımı geçersizdir;
+4. Performance renkleri Instagram `#ec4899`, Facebook `#2563eb`, TikTok `#111827` olarak ortak
+   palette contract'ında testle kilitlenir;
+5. mevcut Inter tipografisi, near-black metinler, kart yerleşimi, sekmeler, sidebar, topbar ve
+   footer yapısal olarak değişmez;
+6. yalnız V2 frontend release'i değişir; backend, DB/media, provider gate, collector/timer,
+   korunan projeler, DNS, TLS, shared Nginx ve public route değişmez.
+
+Durum (2026-08-10): tamamlandı. Kod commit `c2dd2fc` ile `main`e gönderildi ve yalnız V2 frontend
+`/opt/social-media-v2/releases/20260810T112200Z-c2dd2fc/frontend` release'ine atomik alındı.
+Frontend `33 passed`; typecheck/build `2.536` modül ve `24` artifact ile geçti; Playwright
+`17 passed / 5` beklenen project-conditional skip verdi. Gerçek Pine Beach Performance Trend
+görseli manuel incelendi; üç platform çizgi rengi, seri altı gradient ve `1.25` stroke DOM
+contract'ı doğrulandı. Build/release SHA parity, imzalı full-data SSO browser kontrolü,
+frontend-only rollback/forward ve son `5/5` API/web probu geçti; web journal warning sayısı
+sıfırdı. Backend release, V2 DB/media ve collection service/timer değişmedi. Kanıt:
+`docs/revision6/r20/REVISION6_R20_OVERVIEW_TREND_PARITY_REPORT.md`.
 
 ### 22.1 Revizyon 6 stop koşulları
 

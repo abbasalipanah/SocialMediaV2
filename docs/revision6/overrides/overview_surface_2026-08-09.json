@@ -1,6 +1,7 @@
 {
   "decision_id": "overview-surface-2026-08-09",
   "date": "2026-08-09",
+  "amended_on": "2026-08-10",
   "status": "binding",
   "scope": "social_media_v2_overview_main_content",
   "overrides": [
@@ -8,7 +9,8 @@
     "SOCIAL_MEDIA_V2_MASTER_PLAN.md §6.2 no-new-visible-navigation restriction",
     "SOCIAL_MEDIA_V2_MASTER_PLAN.md §6.5 root Settings fallback",
     "Earlier R14 seven-section Accumulate dashboard layout",
-    "Earlier R14 stored-read-only AI opportunities restriction"
+    "Earlier R14 stored-read-only AI opportunities restriction",
+    "Earlier R15 overview mini/performance line-weight split"
   ],
   "routes": {
     "home": "/",
@@ -80,9 +82,21 @@
     "provider_configuration": "independent V2-owned configuration; an explicitly approved shared OpenRouter credential may be injected into a Git-ignored 0600 V2 runtime secret; a new key is not required"
   },
   "line_weights": {
-    "mini_sparkline": 1.15,
-    "performance_trend": 1.35,
-    "chart_grid": 0.55
+    "mini_sparkline": 1.25,
+    "performance_trend": 1.25,
+    "chart_grid": 0.55,
+    "non_scaling_stroke": true
+  },
+  "trend_fill": {
+    "enabled_for_mini_sparklines": true,
+    "enabled_for_each_performance_platform_series": true,
+    "gradient_top_opacity": 0.22,
+    "gradient_bottom_opacity": 0
+  },
+  "performance_platform_palette": {
+    "instagram": "#ec4899",
+    "facebook": "#2563eb",
+    "tiktok": "#111827"
   },
   "runtime_boundaries": {
     "protected_projects_read_only": true,
