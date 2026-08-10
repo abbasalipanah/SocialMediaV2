@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R18 V1 renk ve tipografi parity doğrulaması sürüyor; DNS/TLS/public cutover beklemede |
+| Durum | Revizyon 6 — R18 V1 renk ve tipografi parity loopback'ta doğrulandı; DNS/TLS/public cutover beklemede |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -2661,7 +2661,7 @@ Summary. Çalışan release'te dört dashboard API'si, media endpoint'i ve gerç
 `/overview` akışı dolu veriyle geçti; test session/JTI kayıtları temizlendi. Kanıt:
 `docs/revision6/r16/REVISION6_R16_LOOPBACK_RELEASE_REPORT.md`.
 
-### R18 — V1 renk ve tipografi parity (devam ediyor)
+### R18 — V1 renk ve tipografi parity (tamamlandı)
 
 2026-08-10 kullanıcı kararıyla DNS/TLS/public cutover ertelenmiş ve V2 frontendinin görsel dili,
 korunan V1/Accumulate kaynakları yalnız salt okunarak eşleştirme kapsamına alınmıştır:
@@ -2683,6 +2683,16 @@ korunan V1/Accumulate kaynakları yalnız salt okunarak eşleştirme kapsamına 
 Çıkış kapısı: V2, Inter fontunu gerçekten yükler; canonical tokenlar testle kilitlidir; saf siyah
 UI rengi bulunmaz; onaylı layout ve işlevlerde regresyon yoktur; protected kaynak baseline'ı
 değişmemiştir. DNS/TLS/public routing bu fazın parçası değildir ve beklemede kalır.
+
+Durum (2026-08-10): tamamlandı. V1/Accumulate'ın Inter `300`–`700` font kaynağı ve Social Media
+renk tokenları V2'ye bağlandı; saf siyah guard'ı eklendi. Sidebar/topbar/footer ve dashboard/kart
+yerleşimleri yapısal olarak değişmedi. Frontend `32 passed`, production build ve Playwright
+`17 passed / 5` proje-koşullu skip sonucu verdi; yenilenen desktop/mobile visual snapshot'lar
+manuel incelendi. Commit `5066eb7` ile `main`e gönderilen frontend, yalnız loopback web symlink'i
+üzerinden `/opt/social-media-v2/releases/20260810T104500Z-5066eb7/frontend` release'ine alındı.
+Artifact parity, frontend-only rollback/forward recovery ve 5/5 API/web probu geçti. Backend
+release'i, V2 DB/media, collector/timer, protected projeler, DNS, TLS, shared Nginx ve public route
+değişmedi. Kanıt: `docs/revision6/r18/REVISION6_R18_VISUAL_PARITY_REPORT.md`.
 
 ### 22.1 Revizyon 6 stop koşulları
 
