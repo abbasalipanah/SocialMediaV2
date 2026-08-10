@@ -1,6 +1,6 @@
 # Revision 6 / R15 — Thin Overview trends and weekly V2 AI Summary
 
-Date: `2026-08-09`
+Date: `2026-08-10`
 
 ## Outcome
 
@@ -49,9 +49,10 @@ only these V2-owned fields and Brand/status indexes. Raw provider input is not p
 ## Provider and privacy boundary
 
 The V2 OpenRouter adapter is independently configured, endpoint/model allowlisted, and disabled by
-default. No secret was copied from a protected project. The V2 environment currently has no AI
-provider key, so a real new-generation provider call was intentionally not made; the limit route
-reports provider unavailability while saved summaries remain readable.
+default in the repository. By the user's explicit 2026-08-10 decision, the already approved shared
+OpenRouter credential may be reused; a new key is not required. It is injected only into V2's
+Git-ignored `0600` local runtime secret. The protected source file and runtime remain read-only,
+and no credential is committed to source, Git, or documentation.
 
 The provider payload is restricted to aggregate metrics, data availability, selected period, and
 de-identified numeric statistics for at most five top content records. It excludes comments,
@@ -61,13 +62,19 @@ messages, content copy, usernames, permalinks, credentials, and raw persisted pr
 
 The read-only importer applied migration `0004_ai_summary.sql` to the isolated V2 database and
 refreshed Pine Beach Belek with `80,519` metrics, `395` content rows, `611` comments, `389` verified
-media rows, and `1` completed structured AI Summary. Source PostgreSQL access stayed
+media rows, and the legacy completed structured AI Summary. Source PostgreSQL access stayed
 `transaction_read_only=on`; only non-secret structured output was copied.
+
+Using the approved shared credential, a controlled real-provider canary generated a second Pine
+Beach summary for `2026-07-11` through `2026-08-09`. It completed with `3` channel analyses, `2`
+anomalies, `4` recommendations, and `3` platform evaluations. The backend then reported
+`weekly_limit_reached`, `remaining=0`, and a next-available timestamp, proving that the successful
+canary consumed exactly the Brand's rolling weekly allowance.
 
 Real local Chromium verified:
 
 - one AI Summary card and accessible history drawer;
-- one completed previous summary;
+- two completed previous summaries, with the new period selected first;
 - Strategic Summary, Channel Analysis, Anomalies, Recommended Actions, and Platform Evaluations;
 - mini/performance line strokes `1.15` and `1.35`;
 - no generation button for the local agency-admin demo session;
@@ -86,5 +93,5 @@ Real local Chromium verified:
 - Secret-leak and canonical-vocabulary guards: passed.
 - Protected source Git/content baseline guard: passed.
 
-The independent V2 provider key and a controlled real-provider canary remain external deployment
-inputs; they are not silently borrowed from any live project.
+The local real-provider canary is complete. Production secret injection and a controlled
+production canary remain explicit deployment inputs; no production runtime was changed.

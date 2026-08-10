@@ -77,7 +77,7 @@
     },
     "stored_output_fields": ["strategic_summary", "connector_analysis", "anomalies", "action_recommendations", "platform_evaluations", "llm_model"],
     "excluded_fields": ["raw_metrics_snapshot", "provider secret/configuration", "user comments/messages", "permalinks"],
-    "provider_configuration": "independent V2-owned configuration; disabled until a V2 key is supplied"
+    "provider_configuration": "independent V2-owned configuration; an explicitly approved shared OpenRouter credential may be injected into a Git-ignored 0600 V2 runtime secret; a new key is not required"
   },
   "line_weights": {
     "mini_sparkline": 1.15,
@@ -86,6 +86,7 @@
   },
   "runtime_boundaries": {
     "protected_projects_read_only": true,
+    "local_provider_egress_canary": true,
     "production_provider_egress": false,
     "production_database_write": false,
     "worker_or_schedule_activation": false

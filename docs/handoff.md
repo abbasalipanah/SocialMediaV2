@@ -1,6 +1,6 @@
 # Social Media V2 — Güncel Handoff
 
-Tarih: `2026-08-09`
+Tarih: `2026-08-10`
 
 ## Değişmez kural
 
@@ -19,15 +19,17 @@ DB write veya timer müdahalesi yapılmaz.
   Performance Trend, Content Snapshot, Top Performing Content, AI Summary
   ve üç platform summary kartını gerçek V2 verisiyle gösterir.
 - Pine Beach Belek V2-local snapshot'ı 80.519 metric, 395 content, 611 comment, 389 doğrulanmış
-  media ve bir completed AI Summary içerir. Bu kaydın yalnız non-secret structured output alanları
+  media ve iki completed AI Summary içerir. Legacy kaydın yalnız non-secret structured output alanları
   V2-local DB'ye alınmıştır; raw metric snapshot/provider configuration/secret kopyalanmamış ve
   kaynak PostgreSQL read-only kalmıştır.
 - Önceki AI Summary'ler Brand kapsamında okunur. Yeni üretim yalnız Accumulate exact `viewer` +
   signed `app_role=operator`, exact session Brand ve non-rollup scope için açıktır. Brand başına
   rolling 7x24 saatte bir başarılı özet hakkı backend transaction lock ile uygulanır; failed
   deneme hakkı tüketmez.
-- V2 AI provider ayarı bağımsızdır ve default kapalıdır. V2'ye ait ayrı provider anahtarı
-  verilmeden yeni üretim unavailable kalır; korunan projelerden secret alınmaz.
+- V2 AI provider config'i bağımsızdır ve repository default'u kapalıdır. 2026-08-10 açık kullanıcı
+  kararıyla mevcut onaylı OpenRouter credential'ı V2'nin Git-ignored `0600` local runtime
+  secret'ına inject edilmiştir; yeni key zorunlu değildir. Korunan proje dosyası/runtime'ı
+  değiştirilmemiştir. Gerçek local canary completed olmuş ve Brand'in haftalık hakkını kapatmıştır.
 - Meta ve TikTok self-service OAuth credential’ları V2 vault’unda şifreli tutulur.
 - V2’ye ait Meta/TikTok collector, media persistence, sync health ve schedule komutu hazırdır.
 - TikTok ilk bağlantı doğrulaması normal schedule’dan ayrıdır.
@@ -42,7 +44,7 @@ DB write veya timer müdahalesi yapılmaz.
 
 - V2 production DB/user/secret ve TLS sertifikasının operasyon ekibince oluşturulması.
 - Meta/TikTok provider panelinde exact callback ve rotated secret doğrulaması.
-- V2 deploy provası ve gerçek provider sandbox/canary testi.
+- V2 production deploy provası ve kontrollü production provider canary testi.
 - Accumulate ekibinin yalnız Social Media menü linki + SSO token üretimini bağlaması.
 - Bu işlemlerden sonra browser E2E ve kontrollü worker schedule aktivasyonu.
 

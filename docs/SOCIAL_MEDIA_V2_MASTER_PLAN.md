@@ -160,12 +160,15 @@ TikTok, baseline veya faz-kapanış ifadelerini hükümsüz kılar:
     başka app role bu üretme yetkisini devralmaz. Backend rolling 7x24 saat içinde Brand başına
     yalnız bir tamamlanmış üretime izin verir; active pending istek concurrent üretimi engeller,
     başarısız deneme haftalık hakkı tüketmez. POST same-origin ve backend-authoritative'dir.
-43. V2 AI provider ayarı ve anahtarı yalnız bu bağımsız projeye ait olur; korunan projeden secret
-    kopyalanmaz. Provider'a yalnız privacy-minimized aggregate metrikler ve kimliksiz sayısal top
-    content verisi gönderilir; kullanıcı yorumları/mesajları/permalink veya raw prompt snapshot'ı
-    persist edilmez. Provider yapılandırılmadığında geçmiş okunur, yeni üretim dürüstçe unavailable
-    kalır. Stored çıktı strategic summary, channel analysis, anomalies, recommended actions,
-    platform evaluations ve model alanlarını kapsar.
+43. V2 AI provider yapılandırması bağımsız kalır. 2026-08-10 açık kullanıcı kararıyla mevcut
+    onaylı OpenRouter credential'ı yeniden kullanılabilir; yeni key zorunlu değildir. Credential
+    yalnız V2'nin Git-ignored, `0600` runtime secret dosyasına inject edilir; source code, Git
+    veya dokümana yazılmaz ve korunan projenin dosya/runtime'ı değiştirilmez. Provider'a
+    yalnız privacy-minimized aggregate metrikler ve kimliksiz sayısal top content verisi gönderilir;
+    kullanıcı yorumları/mesajları/permalink veya raw prompt snapshot'ı persist edilmez. Provider
+    yapılandırılmadığında geçmiş okunur, yeni üretim dürüstçe unavailable kalır. Stored çıktı
+    strategic summary, channel analysis, anomalies, recommended actions, platform evaluations ve
+    model alanlarını kapsar.
 44. Overview mini trend çizgileri `1.15`, Performance Trend çizgileri `1.35` SVG stroke width
     kullanır; grid çizgileri `0.55` ve düşük kontrastlıdır. Referanstaki ince çizgi yoğunluğu yeni
     açık kullanıcı kararı olmadan kalınlaştırılamaz.
@@ -2578,8 +2581,9 @@ AI Summary iş akışına dönüştürür:
    Brand ve non-rollup scope içindir; backend aynı kuralı bağımsız uygular;
 5. Brand-wide rolling 7x24 saat içinde bir completed özet sınırı PostgreSQL advisory transaction
    lock ile atomik uygulanır; active pending eşzamanlı isteği engeller, failed deneme hakkı tüketmez;
-6. GET yalnız geçmiş/limit okur; generation POST same-origin'dir. Provider config/key V2-owned,
-   allowlisted ve default kapalıdır. Korunan projeden secret kopyalanmaz;
+6. GET yalnız geçmiş/limit okur; generation POST same-origin'dir. Provider config V2-owned,
+   allowlisted ve default kapalıdır. Açık onayla ortak credential yalnız V2 runtime secret'ına
+   inject edilebilir; yeni key zorunlu değildir;
 7. provider girdisi aggregate/de-identified data ile sınırlıdır; raw prompt snapshot, kullanıcı
    yorumu/mesajı ve permalink persist edilmez;
 8. Pine Beach'in mevcut completed structured summary kaydı read-only kaynaktan V2-local DB'ye
@@ -2593,8 +2597,11 @@ Durum (2026-08-09): tamamlandı. Backend `140 passed` (`18` environment-gated sk
 PostgreSQL paketi `3 passed`, frontend `29 passed`, production build ve desktop Overview
 Playwright geçti. Pine Beach local browser'da completed history'nin tüm structured bölümleri,
 mini/performance stroke değerleri `1.15/1.35` ve sıfır application HTTP/console hatası doğrulandı.
-V2 AI provider anahtarı henüz provision edilmediği için yeni gerçek-provider generation default
-olarak kapalıdır; stored history çalışır. Kanıt:
+2026-08-10 karar güncellemesinde onaylı ortak credential V2'nin Git-ignored `0600` local runtime
+secret'ına inject edildi. Pine Beach için `2026-07-11`–`2026-08-09` gerçek-provider özeti completed
+oldu; 3 channel analysis, 2 anomaly, 4 recommendation ve 3 platform evaluation kaydedildi.
+History iki completed kayıt gösterdi; haftalık durum `weekly_limit_reached`, kalan hak `0` oldu.
+Production secret/deploy değiştirilmedi. Kanıt:
 `docs/revision6/r15/REVISION6_R15_AI_SUMMARY_REPORT.md`.
 
 ### 22.1 Revizyon 6 stop koşulları
