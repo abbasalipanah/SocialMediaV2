@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SCAN_ROOTS = (
     ROOT / "backend" / "app",
+    ROOT / "backend" / "scripts",
     ROOT / "frontend" / "src",
     ROOT / "frontend" / "public",
     ROOT / "deploy",

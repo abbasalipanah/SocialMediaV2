@@ -7,7 +7,6 @@ import ast
 import json
 from pathlib import Path
 
-
 EXPECTED_RUNTIME_MODES = (
     "development",
     "dormant",
@@ -32,7 +31,10 @@ def iter_files(root: Path, suffixes: tuple[str, ...]) -> tuple[Path, ...]:
         for path in root.rglob("*")
         if path.is_file()
         and path.suffix in suffixes
-        and not any(part in {"__pycache__", "node_modules", "dist", "build"} for part in path.parts)
+        and not any(
+            part in {"__pycache__", "node_modules", "dist", "build"}
+            for part in path.parts
+        )
     )
 
 
@@ -58,7 +60,9 @@ def check_runtime_source(root: Path) -> int:
     files = tuple(
         path
         for surface in surfaces
-        for path in iter_files(surface, (".py", ".ts", ".tsx", ".service", ".timer", ".conf", ".example"))
+        for path in iter_files(
+            surface, (".py", ".ts", ".tsx", ".service", ".timer", ".conf", ".example")
+        )
     )
     for path in files:
         text = path.read_text(encoding="utf-8")
@@ -84,7 +88,9 @@ def check_runtime_source(root: Path) -> int:
         for node in ast.walk(tree):
             if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
                 if node.value.id == "sys" and node.attr == "path":
-                    fail(f"runtime sys.path mutation surface in {path.relative_to(root)}")
+                    fail(
+                        f"runtime sys.path mutation surface in {path.relative_to(root)}"
+                    )
     return len(files)
 
 
@@ -97,12 +103,17 @@ def check_contract(root: Path) -> None:
     if runtime_modes != EXPECTED_RUNTIME_MODES:
         fail(f"OpenAPI runtime modes differ: {runtime_modes!r}")
 
-    frontend_contract = (root / "frontend/src/api/contracts.ts").read_text(encoding="utf-8")
+    frontend_contract = (root / "frontend/src/api/contracts.ts").read_text(
+        encoding="utf-8"
+    )
     generated_contract = (root / "frontend/src/api/openapi.generated.ts").read_text(
         encoding="utf-8"
     )
     for mode in EXPECTED_RUNTIME_MODES:
-        if f'"{mode}"' not in frontend_contract or f'"{mode}"' not in generated_contract:
+        if (
+            f'"{mode}"' not in frontend_contract
+            or f'"{mode}"' not in generated_contract
+        ):
             fail(f"frontend runtime contract is missing {mode}")
 
 
@@ -128,13 +139,15 @@ def check_safe_artifacts(root: Path) -> None:
         if env.get(key) != value:
             fail(f"unsafe production env example: expected {key}={value}")
 
-    api_unit = (root / "deploy/systemd/social-media-v2-api.service").read_text(encoding="utf-8")
+    api_unit = (root / "deploy/systemd/social-media-v2-api.service").read_text(
+        encoding="utf-8"
+    )
     migrate_unit = (root / "deploy/systemd/social-media-v2-migrate.service").read_text(
         encoding="utf-8"
     )
-    collector_unit = (root / "deploy/systemd/social-media-v2-collection.service").read_text(
-        encoding="utf-8"
-    )
+    collector_unit = (
+        root / "deploy/systemd/social-media-v2-collection.service"
+    ).read_text(encoding="utf-8")
     timer_unit = (root / "deploy/systemd/social-media-v2-collection.timer").read_text(
         encoding="utf-8"
     )
@@ -142,7 +155,10 @@ def check_safe_artifacts(root: Path) -> None:
         fail("API unit must not apply migrations automatically")
     if "apply_migrations.py" not in migrate_unit or "[Install]" in migrate_unit:
         fail("migration unit must be an explicit non-installable one-shot")
-    if "--scheduled" not in collector_unit or "social-media-v2-collection.service" not in timer_unit:
+    if (
+        "--scheduled" not in collector_unit
+        or "social-media-v2-collection.service" not in timer_unit
+    ):
         fail("collector/timer artifacts are incomplete")
 
     upgrade_script = (root / "scripts/deploy/upgrade_local_staging.sh").read_text(
@@ -160,9 +176,9 @@ def check_safe_artifacts(root: Path) -> None:
         if required not in upgrade_script:
             fail(f"V2 staging upgrade safety contract is missing: {required}")
 
-    snapshot_script = (root / "scripts/deploy/copy_local_snapshot_to_staging.py").read_text(
-        encoding="utf-8"
-    )
+    snapshot_script = (
+        root / "scripts/deploy/copy_local_snapshot_to_staging.py"
+    ).read_text(encoding="utf-8")
     for required in (
         'source.database != "social_media_v2_local"',
         'target.database != "social_media_v2_staging"',
@@ -174,8 +190,107 @@ def check_safe_artifacts(root: Path) -> None:
         if required not in snapshot_script:
             fail(f"V2 staging snapshot safety contract is missing: {required}")
 
+    full_import_script = (
+        root / "backend/scripts/import_legacy_all_brands.py"
+    ).read_text(encoding="utf-8")
+    for required in (
+        'source.database != "socialmedia_adv"',
+        'startswith("social_media_v2_shadow_")',
+        'isolation_level="REPEATABLE READ"',
+        'source_connection.execute(text("SET TRANSACTION READ ONLY"))',
+        "target_tables_must_be_empty",
+        "_secure_media_tree",
+        "shutil.chown",
+        "path.chmod(0o750 if path.is_dir() else 0o640)",
+        "credentials and ephemeral OAuth/job state are intentionally handled by separate",
+    ):
+        if required not in full_import_script:
+            fail(f"full legacy import safety contract is missing: {required}")
+    for forbidden in (
+        "access_token_enc",
+        "refresh_token_enc",
+        "tiktok_oauth_states",
+    ):
+        if forbidden in full_import_script:
+            fail(f"full legacy import must exclude credential/OAuth state: {forbidden}")
+
+    parity_script = (root / "backend/scripts/verify_legacy_full_import.py").read_text(
+        encoding="utf-8"
+    )
+    for required in (
+        'source.database != "socialmedia_adv"',
+        'startswith("social_media_v2_shadow_")',
+        'isolation_level="REPEATABLE READ"',
+        'source.execute(text("SET TRANSACTION READ ONLY"))',
+        'target.execute(text("SET TRANSACTION READ ONLY"))',
+        "legacy_full_import_parity=verified",
+    ):
+        if required not in parity_script:
+            fail(f"full legacy parity safety contract is missing: {required}")
+
+    credential_script = (
+        root / "backend/scripts/migrate_legacy_credentials_to_v2.py"
+    ).read_text(encoding="utf-8")
+    for required in (
+        'source.database != "socialmedia_adv"',
+        'startswith("social_media_v2_shadow_")',
+        'isolation_level="REPEATABLE READ"',
+        'source.execute(text("SET TRANSACTION READ ONLY"))',
+        "target_credential_projection_state_must_be_empty",
+        "PROVIDER_DISABLED_SETTINGS",
+        "hide_parameters=True",
+        "legacy_credential_migration=verified",
+    ):
+        if required not in credential_script:
+            fail(f"credential migration safety contract is missing: {required}")
+    for forbidden in ("print(access", "print(refresh", "print(token", "echo=True"):
+        if forbidden in credential_script:
+            fail(f"credential migration contains a secret logging surface: {forbidden}")
+
+    credential_verifier = (
+        root / "backend/scripts/verify_legacy_credentials_v2.py"
+    ).read_text(encoding="utf-8")
+    for required in (
+        'source.execute(text("SET TRANSACTION READ ONLY"))',
+        'target.execute(text("SET TRANSACTION READ ONLY"))',
+        "hide_parameters=True",
+        "credential_plaintext_parity=",
+        "legacy_credential_parity=verified",
+    ):
+        if required not in credential_verifier:
+            fail(f"credential parity safety contract is missing: {required}")
+
+    dashboard_verifier = (
+        root / "backend/scripts/verify_shadow_dashboard_coverage.py"
+    ).read_text(encoding="utf-8")
+    for required in (
+        'startswith("social_media_v2_shadow_")',
+        '"-c default_transaction_read_only=on"',
+        'connection.execute(text("SHOW transaction_read_only"))',
+        "KNOWN_LEGACY_METRIC_IDS_BY_PLATFORM",
+        "KNOWN_LEGACY_BREAKDOWN_KEYS",
+        "shadow_dashboard_coverage=verified",
+    ):
+        if required not in dashboard_verifier:
+            fail(f"shadow dashboard verifier contract is missing: {required}")
+
+    browser_verifier = (
+        root / "frontend/e2e/verify-shadow-runtime.mjs"
+    ).read_text(encoding="utf-8")
+    for required in (
+        "_must_remain_disabled",
+        "shadow_browser_roles=viewer_operator,agency_admin,super_admin",
+        "shadow_browser_console_and_api_errors=0",
+        "shadow_browser_e2e=verified",
+    ):
+        if required not in browser_verifier:
+            fail(f"shadow browser verifier contract is missing: {required}")
+
     nginx = (root / "deploy/nginx/social-media-v2.conf").read_text(encoding="utf-8")
-    if "127.0.0.1:8026" not in nginx or "root /opt/social-media-v2/frontend/dist" not in nginx:
+    if (
+        "127.0.0.1:8026" not in nginx
+        or "root /opt/social-media-v2/frontend/dist" not in nginx
+    ):
         fail("Nginx artifact does not target the standalone V2 runtime")
     if "location = /sso/consume" not in nginx or "access_log off" not in nginx:
         fail("SSO consume query logging is not disabled")
@@ -192,12 +307,16 @@ def check_docs(root: Path) -> None:
     if "ARCHIVED / SUPERSEDED" not in fase2.read_text(encoding="utf-8"):
         fail("historical provisioning report is not archived")
     archive = root / "docs/fase9/ARCHIVED_SUPERSEDED.md"
-    if not archive.is_file() or "Accumulate_final_cutover.patch" not in archive.read_text(
-        encoding="utf-8"
+    if (
+        not archive.is_file()
+        or "Accumulate_final_cutover.patch" not in archive.read_text(encoding="utf-8")
     ):
         fail("historical cutover artifacts are not explicitly archived")
     handoff = (root / "docs/ACCUMULATE_SSO_HANDOFF.md").read_text(encoding="utf-8")
-    if "DRAFT — GÖNDERİLMEDİ" not in handoff or "social-media-v2-sso-only.md" not in handoff:
+    if (
+        "DRAFT — GÖNDERİLMEDİ" not in handoff
+        or "social-media-v2-sso-only.md" not in handoff
+    ):
         fail("Accumulate handoff is not safely gated to the SSO-only contract")
 
 

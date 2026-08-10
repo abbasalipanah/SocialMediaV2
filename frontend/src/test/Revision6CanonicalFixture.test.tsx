@@ -339,7 +339,7 @@ describe("Revision 6 shared canonical fixture", () => {
     expect(screen.getByRole("heading", { name: "Evolution" })).toBeInTheDocument();
 
     rerender(<TikTokPulseDashboard data={adapt(materialize("partial_metrics"))} tab="account" />);
-    expect(screen.queryByText("Follower Growth")).not.toBeInTheDocument();
+    expect(screen.getByText("Follower Growth")).toBeInTheDocument();
   });
 
   it("validates and renders the structured R1 Stories contract", () => {

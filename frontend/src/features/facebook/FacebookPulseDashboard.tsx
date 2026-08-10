@@ -169,8 +169,7 @@ function PulseKpiCard({ item }: { item: PulseKpi }) {
 }
 
 export function KpiGrid({ rows }: { rows: PulseKpi[] }) {
-  const visibleRows = rows.filter((item) => item.value !== null);
-  return <div className="facebook-pulse-kpi-grid">{visibleRows.map((item) => <PulseKpiCard item={item} key={item.id} />)}</div>;
+  return <div className="facebook-pulse-kpi-grid">{rows.map((item) => <PulseKpiCard item={item} key={item.id} />)}</div>;
 }
 
 type TrendKey = { id: MetricId; label: string; color: string };

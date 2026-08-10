@@ -338,7 +338,7 @@ describe("Phase 8 product surfaces", () => {
     expect(screen.getByRole("heading", { name: "Audience" })).toBeInTheDocument();
     expect(screen.getAllByText("Engagement Rate").length).toBeGreaterThan(0);
     expect(screen.getAllByText("8.9%").length).toBeGreaterThan(0);
-    expect(screen.queryByText("Follower Growth")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Follower Growth")).toHaveLength(2);
     expect(screen.getByRole("heading", { name: "Performance Trends" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Video View Type" })).toBeInTheDocument();
 

@@ -19,10 +19,10 @@ from app.application.ports.reporting import (
     ReportingMetric,
     ReportingSyncJob,
 )
-from app.domain.metrics import MetricId
 from app.domain.platforms import PlatformId
 
 from ..legacy_socialmedia.platforms import normalize_platform
+from .legacy_metrics import LegacyMetricRow, project_legacy_metrics
 
 
 def _expanded(statement: str, parameter: str):
@@ -109,13 +109,13 @@ class SocialReportingStore:
                 statement,
                 {"account_ids": account_ids, "start_on": start_on, "end_on": end_on},
             ).mappings()
-            return tuple(
-                ReportingMetric(
+            return project_legacy_metrics(
+                LegacyMetricRow(
                     account_id=int(row["asset_id"]),
                     brand_id=str(row["brand_id"]),
                     platform=normalize_platform(row["platform"]),
                     observed_on=row["date"],
-                    metric_id=MetricId(str(row["metric_id"])),
+                    raw_metric_id=str(row["metric_id"]),
                     value=float(row["value_numeric"]),
                     breakdown_key=row["breakdown_key"],
                     breakdown_value=row["breakdown_value"],

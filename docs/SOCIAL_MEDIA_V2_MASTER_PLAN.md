@@ -2,8 +2,8 @@
 
 | Alan | Değer |
 |---|---|
-| Tarih | `2026-08-09` |
-| Durum | Revizyon 6 — R14 Overview parity tamamlandı; R8 dış public-origin/issuer/provider girdileri bekleniyor |
+| Tarih | `2026-08-10` |
+| Durum | Revizyon 6 — 67 marka full shadow migration/parity ve disposable runtime E2E tamamlandı; izole loopback promotion/rollback/soak bekleniyor |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -174,6 +174,26 @@ TikTok, baseline veya faz-kapanış ifadelerini hükümsüz kılar:
     açık kullanıcı kararı olmadan kalınlaştırılamaz.
 45. Maddeler 37-44 yeni açık kullanıcı kararı olmadan geri alınamaz. Makine-okunur karar
     `docs/revision6/overrides/overview_surface_2026-08-09.json` dosyasındadır.
+46. V2 full-data migration kapsamı tek müşteri değildir. Kaynakta bulunan 67 Brand, 91 social
+    asset, 1.493.502 metric row, 6.234 content, 3.362 comment, 6.101 DB-referenced media file,
+    97 linked account, 71 platform connection, 358 Meta account ve 6 mevcut AI summary ayrı
+    V2-owned shadow DB/media alanına taşınır. Kaynak DB ve medya salt-okunur kalır.
+47. Ham legacy reporting verisi migration DB'sinde birebir korunur. Dashboard okuma sınırı 168
+    platform/metric çifti, 124 benzersiz ham metric id ve 15 breakdown dimension için açıkça
+    sınıflandırılmış olmalıdır. Yeni/bilinmeyen metric dashboard'u çökerterek 500 üretemez;
+    kanonik olmayan değer sessizce başka bir anlama da çevrilemez.
+48. Facebook, Instagram ve TikTok'un her Page/Account, Content ve Audience KPI grid'i provider
+    değeri eksik olsa da altı kartlık sabit bilgi mimarisini korur. Eksik değer `—` gösterilir;
+    kartın gizlenmesi veya sahte sıfırla doldurulması yasaktır.
+49. Full-data runtime kabulü en az viewer+app-role operator, agency admin parent rollup, super
+    admin, verili Brand, boş Brand, üç platform, Instagram Stories, AI geçmişi/rolling haftalık
+    limit ve local media endpoint E2E kanıtlarını; ayrıca 67 Brand için 201 platform dashboard'u
+    ve 67 Overview read-only kapsam taramasını içerir.
+50. DNS, TLS, shared Nginx veya herhangi bir public route işlemi; bütün ürün yüzeyleri, full-data
+    migration/parity, credential re-encryption, 67-Brand kapsam testi, izole V2 release,
+    rollback ve soak kapıları bitmeden başlatılamaz. Bu kapılar geçse bile public trafik değişimi
+    ayrı ve açık kullanıcı onayı gerektirir. Onay verilene kadar canlı SocialMedia, Accumulate ve
+    diğer projeler kesintisiz ve değişmeden çalışır.
 
 ### 0.1 Zorunlu çalışma sırası
 
