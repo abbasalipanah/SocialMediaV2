@@ -308,6 +308,13 @@ async function assertEveryProductSurface(page) {
           await contentTable.getByRole("link").count() > 0,
           `${platform}:${tab}:content_links_empty`,
         );
+        const typeChips = contentTable.locator(".facebook-type-chip");
+        assert.ok(await typeChips.count() > 0, `${platform}:${tab}:type_chips_empty`);
+        assert.equal(
+          await typeChips.locator("svg").count(),
+          await typeChips.count(),
+          `${platform}:${tab}:type_icons_missing`,
+        );
         const engagement = (await contentTable.locator("tbody tr").first().locator("td").last().textContent())?.trim();
         assert.match(engagement ?? "", /^(?:\d+\.\d%|—)$/u, `${platform}:${tab}:engagement_format`);
       }

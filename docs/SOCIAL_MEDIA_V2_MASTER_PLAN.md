@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R26 V1 Type pill ikon parity uygulanıyor; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
+| Durum | Revizyon 6 — R26 V1 Type pill ikon parity tamamlandı; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -3002,7 +3002,7 @@ forward provasıyla aktif edildi. Backend R24 release'inde, collection kapalı v
 korundu; korunan projeler ve public routing değişmedi. Kanıt:
 `docs/revision6/r25/REVISION6_R25_PERFORMING_CONTENT_V1_PARITY_REPORT.md`.
 
-### R26 — V1 All Performing Content Type pill ikon parity (devam ediyor)
+### R26 — V1 All Performing Content Type pill ikon parity (tamamlandı)
 
 2026-08-10 kullanıcı kararıyla R25 Type sütununda V1'in ikonlu pill dili bağlayıcıdır:
 
@@ -3020,7 +3020,16 @@ korundu; korunan projeler ve public routing değişmedi. Kanıt:
 Çıkış kapısı: Reel/Video ve Post/Image sınıfları doğru ikon variant'ını render eder; mevcut R25
 sıralama, engagement, link ve scroll davranışları gerilemez; bütün frontend kapıları geçer.
 
-Durum (2026-08-10): devam ediyor. Kod ve release doğrulaması tamamlanmadan R26 kapatılamaz.
+Durum (2026-08-10): tamamlandı. Shared Type pill `reel/video → pembe Video`, diğer
+`post/image → mavi-gri Activity` mapping'ini typed `content_type` üzerinden uygular. İkonlar
+`aria-hidden`, label erişilebilir kaldı. Frontend `35 passed`, typecheck/build `2.537` modül ve
+tam Playwright `17 passed / 5` bilinçli project skip ile geçti; üç desktop canonical snapshot
+ikonlu tasarıma güncellendi. Gerçek Pine Beach signed runtime turunda Facebook, Instagram ve
+TikTok Cover/Content tablolarındaki bütün Type pill'lerinde bir SVG ikon bulundu; console/request/
+API 5xx sıfırdı. Frontend-only release
+`/opt/social-media-v2/releases/20260810T145042Z-r26typeicons/frontend`, R25 rollback ve R26
+forward provasıyla aktif edildi. Backend/DB/collection ve public routing değişmedi. Kanıt:
+`docs/revision6/r26/REVISION6_R26_TYPE_ICON_PARITY_REPORT.md`.
 
 ### 22.1 Revizyon 6 stop koşulları
 
