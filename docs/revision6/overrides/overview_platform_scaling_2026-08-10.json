@@ -1,0 +1,55 @@
+{
+  "decision_id": "overview-platform-scaling-2026-08-10",
+  "date": "2026-08-10",
+  "status": "binding",
+  "scope": "social_media_v2_overview_main_content",
+  "supersedes": [
+    "overview-surface-2026-08-09 kpis",
+    "overview-surface-2026-08-09 platforms",
+    "R14 six-KPI and three-platform-summary limits"
+  ],
+  "kpis": [
+    "Total Audience",
+    "Total Reach",
+    "Total Impressions",
+    "Total Interactions",
+    "Avg. Engagement"
+  ],
+  "removed_kpis": ["Overall Organic Health"],
+  "platform_summary": {
+    "connected_now": ["instagram", "facebook", "tiktok"],
+    "planned_slots": ["linkedin", "x", "youtube"],
+    "replace_planned_slot_when_connected": true,
+    "duplicates_allowed": false
+  },
+  "channel_health": {
+    "source": "overview_dashboard.platforms",
+    "visible_connected_cards": 3,
+    "rotation_starts_above": 3,
+    "rotation_interval_ms": 4500,
+    "step": 1,
+    "wrap_around": true,
+    "pause_on_hover_or_focus": true,
+    "planned_or_demo_cards_allowed": false
+  },
+  "trend_rendering": {
+    "curve": "monotone",
+    "presentation_only": true,
+    "mutates_samples": false,
+    "stroke_width": 1.25,
+    "gradient_top_opacity": 0.22,
+    "gradient_bottom_opacity": 0
+  },
+  "unchanged": [
+    "sidebar",
+    "topbar",
+    "footer",
+    "brand_date_account_scope",
+    "dashboard_api",
+    "database",
+    "provider",
+    "collector_timer",
+    "protected_projects",
+    "dns_tls_public_routing"
+  ]
+}

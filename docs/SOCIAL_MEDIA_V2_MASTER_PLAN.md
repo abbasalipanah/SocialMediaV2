@@ -3,7 +3,7 @@
 | Alan | Değer |
 |---|---|
 | Tarih | `2026-08-10` |
-| Durum | Revizyon 6 — R21 kuyruklu/geçici XLSX raporlama V2 loopback'ta doğrulandı; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
+| Durum | Revizyon 6 — R22 Overview platform ölçekleme ve yumuşak trendler V2 loopback'ta doğrulandı; DNS/TLS/public cutover kullanıcı kararıyla bloklu |
 | Hedef proje | `/home/api/colab_scripts/SocialMediadownstream` |
 | Canonical GitHub repository | `https://github.com/abbasalipanah/SocialMediaV2.git` |
 | Ürün kimliği | `social_media` |
@@ -142,18 +142,21 @@ TikTok, baseline veya faz-kapanış ifadelerini hükümsüz kılar:
     navigation girişidir. Social Media ağacına ayrıca `Overview` satırı eklenemez. `/overview`
     yalnız doğrudan deep-link olarak aynı çalışma alanını açabilir. Bu madde önceki R14 görünür
     Overview satırı kararını geçersiz kılar.
-38. Overview ana içerik bilgi mimarisi, salt-okunur Accumulate
-    `SocialMediaDashboard.tsx` yüzeyindeki altı KPI ve yedi bölüm sırasını kullanır. Sidebar,
-    topbar ve footer'ın genel tasarımı değiştirilemez.
+38. Overview ana içerik bilgi mimarisi beş KPI ve yedi bölüm kullanır. `Overall Organic Health`
+    kaldırılmıştır ve geri eklenemez. Sidebar, topbar ve footer'ın genel tasarımı değiştirilemez.
 39. Overview KPI sırası tam olarak Total Audience, Total Reach, Total Impressions, Total
-    Interactions, Avg. Engagement ve Activity Score'dur. Total Impressions mevcut normalize
-    `views` slotunun görünür aliasıdır; yeni provider gerçeği olarak sunulamaz.
+    Interactions ve Avg. Engagement'dır. Total Impressions mevcut normalize `views` slotunun
+    görünür aliasıdır; yeni provider gerçeği olarak sunulamaz.
 40. Overview bölümleri What Changed?, Channel Health, Performance Trend, Content Snapshot,
     Top Performing Content, AI Summary ve Platform Summary sırasını korur. Platform Summary
-    yalnız Facebook, Instagram ve TikTok'u gösterir; LinkedIn veya dördüncü platform eklenmez.
-41. Avg. Engagement `interactions / reach`; Activity Score
-    `clamp(round(avg_engagement_percent * 6 + reach_delta_pct * 0.4), 0, 100)` formülüdür.
-    Geçersiz payda veya eksik veri sıfır olarak uydurulmaz.
+    bağlı Instagram, Facebook ve TikTok yanında planlanan LinkedIn, X ve YouTube slotlarını da
+    en altta gösterir. Planlanan slot gerçek bağlantı eklendiğinde aynı platformun canlı kartıyla
+    otomatik yer değiştirir; duplicate kart üretilemez. Channel Health en fazla üç bağlı kartı
+    aynı anda gösterir; bağlı platform sayısı üçü aşınca her `4500 ms` bir platform ileri kayan,
+    wrap-around çalışan ve kullanıcı etkileşiminde duran carousel olur. Üç veya daha az platformda
+    otomatik hareket bulunmaz.
+41. Avg. Engagement `interactions / reach` formülüdür. Geçersiz payda veya eksik veri sıfır olarak
+    uydurulmaz.
 42. Overview kartının canonical adı `AI Summary`'dir. Tamamlanmış geçmiş özetler Brand kapsamında
     okunur. Yeni özet üretme yetkisi yalnız Accumulate kaynaklı exact `viewer` + signed
     `app_role=operator`, exact session Brand ve non-rollup scope içindir; agency/super admin veya
@@ -174,9 +177,12 @@ TikTok, baseline veya faz-kapanış ifadelerini hükümsüz kılar:
     geçersizdir. Grid çizgileri `0.55` ve düşük kontrastlıdır. Mini trendlerde ve Performance
     Trend'in her platform serisinde üstte `0.22`, altta `0` opacity'ye inen seri-rengi gradient
     alan dolgusu bulunur. Performance palette Instagram `#ec4899`, Facebook `#2563eb`, TikTok
-    `#111827` olarak sabittir.
+    `#111827` olarak sabittir. Çizgi ve alan sınırı platform dashboard'larındaki `monotone` görsel
+    eğriyle eşleşir; bu yalnız presentation interpolasyonudur ve API/DB sample değerlerini
+    değiştiremez veya yeni veri noktası üretemez.
 45. Maddeler 37-44 yeni açık kullanıcı kararı olmadan geri alınamaz. Makine-okunur karar
-    `docs/revision6/overrides/overview_surface_2026-08-09.json` dosyasındadır.
+    `docs/revision6/overrides/overview_platform_scaling_2026-08-10.json` dosyasındadır ve eski
+    `overview_surface_2026-08-09.json` KPI/platform sınırlamasını geçersiz kılar.
 46. V2 full-data migration kapsamı tek müşteri değildir. Kaynakta bulunan 67 Brand, 91 social
     asset, 1.493.502 metric row, 6.234 content, 3.362 comment, 6.101 DB-referenced media file,
     97 linked account, 71 platform connection, 358 Meta account ve 6 mevcut AI summary ayrı
@@ -2831,6 +2837,43 @@ doğrulandı. Kod commit `38440a1`, canonical SVG logo düzeltmesi `cb2354a` ile
 İzole release `20260810T125436Z-r21logo` API/web health probunu geçti; collection
 timer/service kapalı kaldı. Kanıt:
 `docs/revision6/r21/REVISION6_R21_XLSX_REPORTING_REPORT.md`.
+
+### R22 — Overview platform ölçekleme ve yumuşak trendler (tamamlandı)
+
+2026-08-10 kullanıcı kararıyla Overview'ın üç mevcut ve üç gelecekteki platformu temiz biçimde
+taşıması bağlayıcıdır:
+
+1. `Overall Organic Health` KPI kartı tamamen kaldırılır; Overview yalnız Total Audience, Total
+   Reach, Total Impressions, Total Interactions ve Avg. Engagement olmak üzere beş KPI gösterir;
+2. en alttaki Platform Summary mevcut Instagram, Facebook ve TikTok kartları yanında LinkedIn,
+   X ve YouTube planned/coming-soon slotlarını ayrı kartlar olarak gösterir; gerçek platform
+   bağlandığında planned kart aynı kimlikteki canlı kartla otomatik değiştirilir;
+3. Channel Health aynı anda en fazla üç bağlı platform gösterir. Bağlı platform sayısı üçü
+   aşmadıkça sabit kalır; aştığında `4500 ms` aralıkla bir platform ilerler, son platformdan sonra
+   başa döner ve hover/focus sırasında durur;
+4. carousel backend'in gerçek `data.platforms` listesinden beslenir; planned kart veya demo veri
+   Channel Health içine sokulamaz;
+5. Overview KPI mini trendleri, Channel Health mini trendleri ve Performance Trend düz kırıklı
+   polyline yerine platform dashboard'larıyla uyumlu monotone SVG path kullanır. Stroke `1.25`,
+   gradient `0.22 → 0` kalır; smoothing yalnız görseldir, sample değerlerini değiştirmez;
+6. sidebar, topbar, footer, Brand/date/account scope, dashboard API, DB, provider, collector/timer,
+   korunan projeler, DNS, TLS, shared Nginx ve public route değişmez;
+7. üç-platform sabit durum ve dört-platform carousel unit testi, beş KPI/altı platform-slot DOM
+   testi, desktop/mobile Playwright, typecheck/build, source guard ve izole V2 release doğrulaması
+   birlikte geçer.
+
+Çıkış kapısı: Overview'da health kartı yoktur; beş KPI ve altı alt platform slotu görünür; mevcut
+üç kanal Channel Health'i hareket ettirmez; dördüncü bağlı kanal fixture'ında pencere bir kart
+ilerleyip wrap-around çalışır; bütün trend path'leri monotone ve palette sözleşmesine uygundur.
+
+Durum (2026-08-10): tamamlandı. Kod commit `d4d2f3b` ile `main`e alınmıştır. Frontend `35 passed`,
+production typecheck/build ve tam Playwright matrisi `17 passed / 5` bilinçli project skip ile
+geçti. Dört-platform fixture'ında Channel Health'in `4500 ms` sonra bir kart ilerlediği, gerçek
+LinkedIn kartı geldiğinde planned duplicate'in kalktığı; üç-platform runtime'da carousel'in sabit
+kaldığı test edildi. İzole release `/opt/social-media-v2/releases/20260810T131931Z-r22overview`
+API/web health ve source/build artifact SHA parity kontrollerini geçti. Collection service/timer
+inactive/disabled kaldı; korunan projeler ve public routing değişmedi. Kanıt:
+`docs/revision6/r22/REVISION6_R22_OVERVIEW_PLATFORM_SCALING_REPORT.md`.
 
 ### 22.1 Revizyon 6 stop koşulları
 
