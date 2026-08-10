@@ -38,6 +38,11 @@ DB write veya timer müdahalesi yapılmaz.
   `0001`–`0004` migration seviyesindedir. V2 AI credential'ı yalnız root-owned
   `/etc/social-media-v2/production.env` secret'ına inject edilmiş, imzalı viewer/operator SSO ve
   AI limit rol kapısı çalışan release üzerinde doğrulanmıştır.
+- Pine Beach V2-local snapshot'ı bağımsız staging alanına taşınmıştır: 1 Brand, 3 hesap, 80.519
+  metric, 395 content, 611 comment, 389 doğrulanmış media dosyası ve 2 completed AI Summary.
+  Kaynak V2-local DB transaction-read-only kullanılmış, hedef tabloların boşluğu zorunlu tutulmuş
+  ve DB kopyası tek transaction'da tamamlanmıştır. Chromium'da `/overview`, Pine Beach, AI Summary,
+  Settings hidden, Integrations visible, logout `204` ve sıfır browser/API error doğrulanmıştır.
 - Önceki `/opt/social-media-v2/releases/20260810T071423Z` release'i rollback için korunmaktadır.
   Collection service/timer inactive/disabled kalmıştır. Shared Nginx ve canlı V1 upstream'i
   değiştirilmemiştir.

@@ -160,6 +160,20 @@ def check_safe_artifacts(root: Path) -> None:
         if required not in upgrade_script:
             fail(f"V2 staging upgrade safety contract is missing: {required}")
 
+    snapshot_script = (root / "scripts/deploy/copy_local_snapshot_to_staging.py").read_text(
+        encoding="utf-8"
+    )
+    for required in (
+        'source.database != "social_media_v2_local"',
+        'target.database != "social_media_v2_staging"',
+        'source.execute(text("SET TRANSACTION READ ONLY"))',
+        "source_must_contain_exact_allowlisted_brand",
+        "source_contains_non_snapshot_projection_state",
+        "target_tables_must_be_empty",
+    ):
+        if required not in snapshot_script:
+            fail(f"V2 staging snapshot safety contract is missing: {required}")
+
     nginx = (root / "deploy/nginx/social-media-v2.conf").read_text(encoding="utf-8")
     if "127.0.0.1:8026" not in nginx or "root /opt/social-media-v2/frontend/dist" not in nginx:
         fail("Nginx artifact does not target the standalone V2 runtime")

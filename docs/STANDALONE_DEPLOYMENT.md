@@ -50,6 +50,8 @@ onayı, V2-owned credential ve staging kanıtı olmadan yapılamaz.
 - önceki rollback release: `/opt/social-media-v2/releases/20260810T071423Z`
 - ayrı staging DB: `social_media_v2_staging`
 - migration seviyesi: `0001`–`0004`
+- Pine Beach snapshot: 1 Brand, 3 hesap, 80.519 metric, 395 content, 611 comment,
+  389 media ve 2 completed AI Summary
 - `social-media-v2-api.service` ve `social-media-v2-web.service`: active/enabled
 - collection service/timer: inactive/disabled
 - AI Summary: V2 secret env içinde açık ve credential mevcut; değer Git/log/dokümana yazılmaz
@@ -59,6 +61,12 @@ build eder, backend'i hash-locked dependency'lerle temiz venv'e kurar, symlinkle
 migration one-shot'ını ve yalnız iki V2 servisini çalıştırır. Health/readiness/web kontrolü başarısız
 olursa symlinkleri önceki release'e döndürüp yalnız V2 servislerini yeniden başlatır. Script env,
 shared Nginx, provider gate veya collection timer değiştirmez.
+
+Pine Beach verisi `scripts/deploy/copy_local_snapshot_to_staging.py` ile V2-local DB'den taşınır.
+Araç kaynak/hedef DB adını exact doğrular, kaynağı read-only transaction'a alır, yalnız Brand `18`
+ve `legacy-brand:18` projection'ını kabul eder, hedef uygulama tabloları boş değilse durur ve bütün
+DB kopyasını tek transaction'da yapar. Media ayrı dizinde dosya sayısı/checksum doğrulandıktan sonra
+atomik değiştirilir.
 
 ## Public standalone için uygulanacak sıra
 

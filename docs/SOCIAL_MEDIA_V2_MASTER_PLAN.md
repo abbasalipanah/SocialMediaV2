@@ -2634,7 +2634,11 @@ sağlıklı; `social_media_v2_staging` migration seviyesi `0001`–`0004`; AI co
 imzalı viewer/operator SSO, Settings hidden, Integrations visible, AI limit/provider configured ve
 logout doğrulandı. Smoke fixture tamamen temizlendi. Backend `141 passed, 18 skipped`, frontend
 `29 passed`, production build, Ruff, secret/vocabulary/source guards geçti. Public adım ayrı V2
-hostname/DNS/TLS olmadığı için bekliyor; canlı V1 route'u değişmedi. Kanıt:
+hostname/DNS/TLS olmadığı için bekliyor; canlı V1 route'u değişmedi. Ardından Pine Beach'in mevcut
+V2-local snapshot'ı kaynak transaction-read-only ve hedef-empty zorunluluklarıyla staging'e taşındı:
+1 Brand, 3 hesap, 80.519 metric, 395 content, 611 comment, 389 checksum-eşleşen media ve 2 AI
+Summary. Çalışan release'te dört dashboard API'si, media endpoint'i ve gerçek Chromium SSO
+`/overview` akışı dolu veriyle geçti; test session/JTI kayıtları temizlendi. Kanıt:
 `docs/revision6/r16/REVISION6_R16_LOOPBACK_RELEASE_REPORT.md`.
 
 ### 22.1 Revizyon 6 stop koşulları

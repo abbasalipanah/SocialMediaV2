@@ -25,6 +25,20 @@ to the root-owned V2 runtime env. It was not printed, committed, copied into a r
 written to documentation. The runtime confirmed only `ai_enabled=true` and
 `ai_key_present=true`. The pre-change env is retained as a root-only rollback backup.
 
+## Pine Beach staging snapshot
+
+The existing V2-local Pine Beach snapshot was copied into the independent staging database after
+runtime activation. The copy tool requires exact `social_media_v2_local` and
+`social_media_v2_staging` database names, opens the source transaction read-only, accepts only
+Brand `18` and the `legacy-brand:18` provenance projection, refuses non-empty target application
+tables, and performs all database inserts in one transaction.
+
+The staging result contains 1 Brand, 3 linked accounts, 80,519 metrics, 395 content items, 611
+comments, 389 media records, and 2 completed AI Summaries. The 389 V2-local media files were copied
+to a separate staging directory; file count and aggregate checksum matched before the media
+directory was atomically switched. The previous empty media directory remains as a V2-owned
+rollback backup.
+
 ## Runtime verification
 
 - health: `200`, `status=ok`;
@@ -36,11 +50,16 @@ written to documentation. The runtime confirmed only `ai_enabled=true` and
 - exact signed Accumulate `viewer` + `app_role=operator` SSO returned `303`, then authenticated;
 - Settings was hidden, Integrations visible, and AI limit reported its provider configured;
 - logout returned `204`;
-- the exact smoke Brand/session/JTI records were deleted after the test; staging returned to zero
-  Brand, projection, and AI insight rows;
+- the exact pre-snapshot smoke Brand/session/JTI records were deleted after that test; staging
+  returned to zero Brand, projection, and AI insight rows before the Pine Beach copy;
 - V2 API/web/migration journals had no warning-or-higher entries for the release window;
 - an existing release ID was explicitly refused without changing the active symlinks or release
-  count.
+  count;
+- Overview, Facebook, Instagram Stories, TikTok, insight history, AI limit, and a persisted media
+  endpoint returned `200` with non-empty Pine Beach payloads;
+- headless Chromium consumed a signed viewer/operator SSO launch on `3026`, reached `/overview`,
+  displayed Pine Beach and AI Summary, hid Settings, showed Integrations, logged out with `204`,
+  and recorded zero browser/API failures. Exact smoke session/JTI rows were removed afterward.
 
 Repository verification after deployment: backend `141 passed` with `18` environment-gated skips,
 frontend `29 passed`, TypeScript/production build, Ruff, secret leak guard, canonical vocabulary
