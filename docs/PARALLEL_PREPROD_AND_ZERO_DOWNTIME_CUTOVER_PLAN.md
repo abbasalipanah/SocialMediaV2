@@ -2,7 +2,9 @@
 
 Tarih: `2026-08-13`
 
-Durum: **FAZ A–E TAMAMLANDI — FAZ F/G VE 24 SAAT SOAK DEVAM EDİYOR**
+Durum: **FAZ A–E TAMAMLANDI — SOAK KAPANDI — FAZ F/G TIKTOK OWNERSHIP TRANSFER'İ BEKLİYOR**
+
+Son güncelleme: `2026-08-17`
 
 ## 1. Amaç
 
@@ -453,3 +455,44 @@ V1_TRAFFIC_ACTIVE=true
 V1_COLLECTION_ACTIVE=true
 V1_RETIRED=false
 ```
+
+`2026-08-17T14:21:23Z` çalışma durumu:
+
+```text
+STANDALONE_PRODUCT_COMPLETE=true
+STANDALONE_RUNTIME_COMPLETE=true
+V2_RELEASE_SOURCE_COMMITTED=true
+SOAK_24H_COMPLETE=true
+ACCUMULATE_BRANCH_PREPARED=true
+ACCUMULATE_BRAND_SCOPE_CLAIM_IN_SCOPE=false
+PARALLEL_PREPROD_FRESH=false
+EXISTING_PROVIDER_APPS_TRANSFERRED_TO_V2=false
+TIKTOK_REFRESH_FREE_READ_VERIFIED=false
+PROVIDER_COLLECTION_LIVE_VERIFIED=false
+READY_FOR_ACCUMULATE_SSO_HANDOFF=false
+SSO_LIVE_VERIFIED=false
+PUBLIC_V2_ACTIVE=false
+V1_TRAFFIC_ACTIVE=true
+V1_COLLECTION_ACTIVE=true
+V1_RETIRED=false
+```
+
+Değişen bayrakların gerekçesi:
+
+- `SOAK_24H_COMPLETE=true`: `social-media-v2-soak-probe.timer` `2026-08-13T11:16:36Z` ile
+  `2026-08-17T14:21:23Z` arasında `1.188` ardışık health/readiness/web turunu sıfır failed
+  invocation ile tamamladı. Waiver'la geçilen kapı artık gerçek süreyle de doludur.
+- `V2_RELEASE_SOURCE_COMMITTED=true`: kabul testlerini geçen release'in kaynağı commit edilmemiş
+  çalışma ağacındaydı. `2026-08-17` tarihinde dört commit'e bölünerek Git'e alındı; ağaç temiz ve
+  `ruff`, `158 passed / 18 skipped`, frontend `47/47`, TypeScript ve production build commit
+  edilmiş ağaç üzerinde yeniden doğrulandı.
+- `PARALLEL_PREPROD_FRESH=false`: parity kanıtı `2026-08-13T11:17:34Z` tarihlidir. V1 collection
+  timer'ları o tarihten beri çalışmaya devam ettiği için candidate DB bayattır; final
+  reconciliation Faz G'ye göre yeniden koşmalıdır.
+- `ACCUMULATE_BRANCH_PREPARED=true`: Accumulate tarafındaki değişiklik
+  `feature/social-media-downstream-launch` branch'inde flag kapalı olarak hazırlanmıştır. V2 ekibi
+  Accumulate'ın çalışan ortamına, servisine, env'ine veya DB'sine dokunmamıştır; branch'i deploy
+  edip etmemek Accumulate ekibinin kararıdır.
+- `ACCUMULATE_BRAND_SCOPE_CLAIM_IN_SCOPE=false`: Accumulate imzalı contract'ta `brand_scope`
+  claim'i üretmiyor ve bu cutover kapsamına alınmadı. V2 ilk sürümde tek-Brand modunda çalışacak;
+  parent rollup ve hidden-parent deneyimi ayrı bir değişikliğe bırakıldı.

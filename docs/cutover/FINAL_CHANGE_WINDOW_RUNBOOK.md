@@ -38,11 +38,31 @@ journalctl -u social-media-v2-soak-probe.service \
   --since '2026-08-13 11:16:36 UTC' --no-pager
 ```
 
-There must be no failed invocation. The substitute accelerated gate must show `120/120` successful
-health/readiness/web cycles, zero API/web error-priority rows, backend `152 passed`, frontend
-`37 passed`, and passing TypeScript checks. Operations must also perform one controlled V2-only
-API/web restart and repeat the three loopback probes before any provider or routing mutation; the
-current automation identity cannot perform that privileged restart.
+There must be no failed invocation. As of `2026-08-17T14:21:23Z` the probe had completed `1,188`
+consecutive cycles with zero failures since `2026-08-13T11:16:36Z`, so both the substitute
+accelerated gate and the original 24-hour wait are satisfied. Re-check the counter at window time
+rather than reusing this number.
+
+Operations must also perform one controlled V2-only API/web restart and repeat the three loopback
+probes before any provider or routing mutation; the current automation identity cannot perform that
+privileged restart.
+
+### Record the V1 units that are already failed
+
+A read-only audit on `2026-08-17` found these V1 units in `failed` state before any cutover action:
+
+```text
+facebook-media-refresh-morning.service
+facebook-media-refresh-night.service
+instagram-media-refresh-morning.service
+instagram-media-refresh-night.service
+social-daily-orchestration.service
+social-rolling-refresh-weekly.service
+```
+
+These are pre-existing V1 conditions and are not caused by the cutover. Capture them in the change
+record before the window starts, otherwise the closing "V1 baseline unchanged" evidence cannot be
+distinguished from damage introduced during the window.
 
 ## 2. Capture V1 timer state, then pause provider writers
 

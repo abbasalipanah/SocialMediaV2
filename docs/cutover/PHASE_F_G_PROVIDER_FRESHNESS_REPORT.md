@@ -95,6 +95,16 @@ remains enabled for additional observation. A V2-only controlled restart and the
 real-browser rerun require the privileged final window; the current automation identity could not
 perform/read those protected operations, so neither V1 nor runtime secrets were altered.
 
+### Soak closed on `2026-08-17`
+
+The probe kept running after the accelerated gate. Between `2026-08-13T11:16:36Z` and
+`2026-08-17T14:21:23Z` it completed `1,188` consecutive health/readiness/web cycles with zero failed
+invocations, so the original 24-hour wait is now satisfied by elapsed time as well as by the
+substitute gate. `SOAK_24H_COMPLETE` is therefore `true`.
+
+The privileged V2-only restart and the real-browser preflight remain outstanding; they still require
+the final window identity.
+
 ## Open readiness gates
 
 1. Audit the continuing soak and perform the privileged V2 restart/browser preflight.
@@ -117,7 +127,8 @@ META_REFRESH_FREE_READ_VERIFIED=true
 TIKTOK_REFRESH_FREE_READ_VERIFIED=false
 PROVIDER_COLLECTION_LIVE_VERIFIED=false
 PARALLEL_PREPROD_FRESH_AS_OF=2026-08-13T11:17:34Z
-SOAK_24H_COMPLETE=false
+SOAK_24H_COMPLETE=true
+SOAK_24H_CLOSED_AT=2026-08-17T14:21:23Z
 SOAK_24H_GATE_WAIVED=true
 ACCELERATED_ACCEPTANCE_COMPLETE=true
 OPEN_CRITICAL_FINDINGS=0
