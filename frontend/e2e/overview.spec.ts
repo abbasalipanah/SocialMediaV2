@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { mockR5Api } from "./r5-fixtures";
 
-test("Overview scales from three connected to six displayed platform slots", async ({ page }, testInfo) => {
+test("Overview combines inactive platforms into one coming-soon card", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.startsWith("desktop"), "desktop overview assertion");
   await mockR5Api(page);
   await page.goto("/overview");
@@ -17,10 +17,23 @@ test("Overview scales from three connected to six displayed platform slots", asy
   ]);
   await expect(page.locator(".social-kpi-card")).toHaveCount(5);
   await expect(page.getByText("Overall Organic Health", { exact: true })).toHaveCount(0);
-  await expect(page.locator(".social-platform-card")).toHaveCount(6);
-  await expect(page.getByLabel("LinkedIn Planned")).toBeVisible();
-  await expect(page.getByLabel("X Coming soon")).toBeVisible();
-  await expect(page.getByLabel("YouTube Coming soon")).toBeVisible();
+  await expect(page.locator(".social-platform-card")).toHaveCount(4);
+  const comingSoon = page.getByLabel("LinkedIn, X, YouTube Coming soon");
+  await expect(comingSoon).toBeVisible();
+  await expect(comingSoon.getByLabel("LinkedIn logo")).toBeVisible();
+  await expect(comingSoon.getByLabel("X logo")).toBeVisible();
+  await expect(comingSoon.getByLabel("YouTube logo")).toBeVisible();
+  await expect(comingSoon.getByText("Coming soon")).toBeVisible();
+
+  for (const card of await page.locator(".overview-platform-card:not(.unavailable)").all()) {
+    const engagementBox = await card.locator(".overview-platform-metrics > span").nth(1).boundingBox();
+    const deltaBox = await card.locator(":scope > .overview-delta").boundingBox();
+    expect(engagementBox).not.toBeNull();
+    expect(deltaBox).not.toBeNull();
+    expect((deltaBox?.y ?? 0) + 0.5).toBeGreaterThanOrEqual(
+      (engagementBox?.y ?? 0) + (engagementBox?.height ?? 0),
+    );
+  }
 
   for (const heading of [
     "What Changed?",

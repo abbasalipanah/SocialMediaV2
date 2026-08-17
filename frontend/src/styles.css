@@ -152,7 +152,7 @@
 .overview-ai-summary-body li { overflow: hidden; color: #334155; font-size: .57rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .overview-ai-summary-body li::before { margin-right: 6px; color: #8b5cf6; content: "✦"; }
 
-.executive-overview .overview-platform-summary { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.executive-overview .overview-platform-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
 .executive-overview .overview-platform-card { position: relative; min-height: 144px; padding: 15px; border-radius: 14px; }
 .overview-platform-card-heading { display: flex; align-items: center; gap: 8px; }
 .overview-platform-card-heading strong { color: #0f172a; font-size: .72rem; }
@@ -161,12 +161,16 @@
 .overview-platform-metrics > span > strong, .overview-platform-metrics > span > small { display: block; }
 .overview-platform-metrics > span > strong { color: #0f172a; font-size: 1rem; }
 .overview-platform-metrics > span > small { margin-top: 2px; color: #94a3b8; font-size: .51rem; }
-.overview-platform-card > .overview-delta { position: absolute; top: 57px; right: 15px; margin: 0; }
-.overview-platform-card > .overview-mini-sparkline { height: 27px; margin-top: 8px; }
-.overview-planned-platform { min-height: 144px; justify-content: flex-start; }
-.overview-planned-platform .overview-platform-card-heading { flex-wrap: wrap; }
-.overview-planned-badge { margin-left: auto; padding: 3px 6px; color: #78849a; border-radius: 99px; background: #eef2f7; font-size: .45rem; font-weight: 800; white-space: nowrap; }
-.overview-planned-platform > p { margin: 18px 0 0; color: #94a3b8; font-size: .58rem; line-height: 1.5; }
+.overview-platform-card > .overview-delta { position: static; align-self: flex-start; margin: 5px 0 0; line-height: 1.2; white-space: nowrap; }
+.overview-platform-card > .overview-mini-sparkline { height: 27px; margin-top: 5px; }
+.executive-overview .social-platform-card.overview-coming-soon-platform { display: flex; min-height: 144px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 12px; border-style: dashed; background: linear-gradient(120deg, #f8fafc, #fff); }
+.overview-coming-soon-icons { display: flex; flex: 0 0 auto; align-items: center; padding-left: 6px; }
+.overview-coming-soon-icons .overview-platform-icon { width: 36px; height: 36px; border: 2px solid white; box-shadow: 0 2px 8px rgb(15 23 42 / 8%); }
+.overview-coming-soon-icons .overview-platform-icon + .overview-platform-icon { margin-left: -6px; }
+.overview-coming-soon-copy { min-width: 0; }
+.overview-coming-soon-copy > strong { display: block; color: #334155; font-size: .76rem; }
+.overview-coming-soon-copy > p { margin: 5px 0 0; color: #94a3b8; font-size: .58rem; line-height: 1.5; }
+.overview-planned-badge { margin-left: auto; padding: 4px 8px; color: #78849a; border-radius: 99px; background: #eef2f7; font-size: .48rem; font-weight: 800; white-space: nowrap; }
 .ai-summary-dialog { min-height: 430px; }
 .ai-summary-generation { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 14px; align-items: center; padding: 16px 20px; border-bottom: .6px solid #edf0f5; background: #fbfaff; }
 .ai-summary-generation strong, .ai-summary-generation span { display: block; }
@@ -211,7 +215,7 @@
 .ai-summary-detail > footer { margin-top: 22px; padding-top: 10px; color: #94a3b8; border-top: .6px solid #edf0f5; font-size: .54rem; }
 
 @media (max-width: 1380px) {
-  .executive-overview .overview-platform-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .executive-overview .overview-platform-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .overview-analysis-grid { grid-template-columns: minmax(220px, .75fr) minmax(430px, 1.4fr); }
   .overview-performance-card { grid-column: 1 / -1; }
   .overview-content-grid { grid-template-columns: minmax(280px, .9fr) minmax(440px, 1.3fr); }
@@ -239,6 +243,8 @@
   .overview-channel-grid { grid-template-columns: 1fr; }
   .overview-channel-card { min-height: 182px; }
   .executive-overview .overview-platform-summary { grid-template-columns: 1fr; }
+  .executive-overview .social-platform-card.overview-coming-soon-platform { grid-column: auto; flex-wrap: wrap; gap: 12px; }
+  .overview-coming-soon-copy { order: 3; width: 100%; }
   .overview-trend-tabs { max-width: 100%; }
   .overview-performance-heading { display: block; }
   .overview-performance-heading .overview-trend-tabs { margin-top: 8px; }
@@ -1519,6 +1525,9 @@ body { background: var(--sm-bg); }
 .facebook-table-scroll tbody tr:last-child td { border-bottom: 0; }
 .facebook-table-scroll tbody tr:hover td { background: #f8fafc; }
 .facebook-table-scroll tbody tr:only-child td[colspan] { height: 105px; color: #94a3b8; text-align: center; }
+.country-table-label { display: inline-flex; align-items: center; gap: 9px; color: #475569; font-weight: 650; white-space: nowrap; }
+.country-flag { display: inline-flex; width: 23px; height: 23px; flex: 0 0 23px; align-items: center; justify-content: center; overflow: hidden; border: 1px solid rgba(148, 163, 184, .24); border-radius: 50%; background: #f1f5f9; box-shadow: 0 1px 2px rgba(15, 23, 42, .08); font-size: 17px; line-height: 1; }
+.country-flag > span { display: block; transform: scale(1.15); }
 .facebook-heatmap-card .facebook-pulse-empty { min-height: 190px; }
 .facebook-heatmap { display: grid; grid-template-columns: 30px minmax(0, 1fr); grid-template-rows: auto auto auto; align-content: center; column-gap: 8px; min-height: 225px; flex: 1; }
 .facebook-heatmap-days { display: grid; grid-row: 1; gap: 5px; }

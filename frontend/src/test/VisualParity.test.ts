@@ -17,6 +17,10 @@ import {
 const frontendRoot = process.cwd();
 const html = readFileSync(resolve(frontendRoot, "index.html"), "utf8");
 const styles = readFileSync(resolve(frontendRoot, "src/styles.css"), "utf8");
+const pulseDashboard = readFileSync(
+  resolve(frontendRoot, "src/features/facebook/FacebookPulseDashboard.tsx"),
+  "utf8",
+);
 
 describe("V1 visual theme parity", () => {
   it("loads the same Inter weights used by the Accumulate shell", () => {
@@ -36,6 +40,13 @@ describe("V1 visual theme parity", () => {
 
   it("does not introduce pure-black UI colors", () => {
     expect(styles).not.toMatch(/#000(?:000)?\b|rgb\(0[ ,]+0[ ,]+0(?:\s*\/[^)]*)?\)|\bblack\b/i);
+  });
+
+  it("keeps the three connected channels and coming-soon card equally sized", () => {
+    expect(styles).toContain(
+      ".executive-overview .overview-platform-summary { grid-template-columns: repeat(4, minmax(0, 1fr));",
+    );
+    expect(styles).not.toContain("overview-coming-soon-platform { grid-column: span");
   });
 
   it("keeps V1 chart colors and rendering weights as one shared contract", () => {
@@ -68,5 +79,18 @@ describe("V1 visual theme parity", () => {
     });
     expect(displayTrendValue(V1_FOLLOWER_FLOW_KEYS[1]!, 7)).toBe(-7);
     expect(displayTrendValue(V1_FOLLOWER_FLOW_KEYS[1]!, -7)).toBe(-7);
+  });
+
+  it("fills every trend series toward the zero baseline with its own line color", () => {
+    expect(pulseDashboard).toContain("<AreaChart baseValue={0}");
+    expect(pulseDashboard).toContain('fill={`url(#${gradientSeed}-${line.id})`}');
+    expect(pulseDashboard).not.toContain('fill={index === 0 ?');
+    expect(pulseDashboard).not.toContain('fill="transparent"');
+  });
+
+  it("keeps bar-chart tooltips without rendering a grey hover cursor", () => {
+    expect(pulseDashboard).toContain(
+      '<Tooltip cursor={false} labelFormatter={(value) => chartDate(String(value))} />',
+    );
   });
 });

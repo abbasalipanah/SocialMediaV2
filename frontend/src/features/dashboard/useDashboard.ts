@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   apiQuery,
@@ -29,7 +29,6 @@ export function useOverviewDashboard(range: RangeKey) {
         overviewDashboardSchema,
         signal,
       ),
-    placeholderData: keepPreviousData,
     refetchInterval: () => document.visibilityState === "visible" ? 60_000 : false,
   });
 }
@@ -57,7 +56,6 @@ export function useChannelDashboard(
         platformDashboardSchema,
         signal,
       ),
-    placeholderData: keepPreviousData,
     refetchInterval: () => document.visibilityState === "visible" ? 60_000 : false,
   });
 }

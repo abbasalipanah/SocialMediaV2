@@ -124,7 +124,7 @@ export function AudienceDemographicsCard({ breakdowns }: { breakdowns: Dashboard
                   <CartesianGrid opacity={0.5} stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
                   <XAxis axisLine={false} dataKey="age" tick={{ fill: "#64748b", fontSize: 11 }} tickLine={false} />
                   <YAxis axisLine={false} tick={{ fill: "#94a3b8", fontSize: 11 }} tickLine={false} />
-                  <Tooltip cursor={{ fill: "transparent" }} />
+                  <Tooltip cursor={false} />
                   <Legend iconType="circle" verticalAlign="top" wrapperStyle={{ fontSize: "11px" }} />
                   {barSeries.map((item) => <Bar barSize={18} dataKey={item.key} fill={item.color} key={item.key} name={item.label} radius={[6, 6, 0, 0]} />)}
                 </BarChart>

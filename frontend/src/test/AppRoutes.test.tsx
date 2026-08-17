@@ -478,6 +478,97 @@ describe("Phase 7 application shell", () => {
     expect(screen.getByRole("complementary", { name: "Primary navigation" })).toBeInTheDocument();
   });
 
+  it("never shows an old overview delta under a newly selected date period", async () => {
+    const user = userEvent.setup();
+    const followerMetric = (value: number, previousValue: number) => ({
+      metric_id: "followers",
+      value,
+      previous_value: previousValue,
+      delta_pct: ((value - previousValue) / previousValue) * 100,
+      semantic_type: "snapshot",
+      unit: "count",
+      data_status: "available",
+      methodology: "provider_reported",
+      availability_reason: null,
+    });
+    const overviewFor = (key: "last_7_days" | "last_30_days", value: number, previousValue: number) => ({
+      ...overviewDashboard,
+      meta: {
+        ...overviewDashboard.meta,
+        date_range: key === "last_7_days"
+          ? { start_on: "2026-07-08", end_on: "2026-07-14", key }
+          : { start_on: "2026-06-15", end_on: "2026-07-14", key },
+      },
+      metrics: [followerMetric(value, previousValue)],
+    });
+    let resolveSeven!: (response: Response) => void;
+    const sevenResponse = new Promise<Response>((resolve) => { resolveSeven = resolve; });
+    const fallback = mockApi();
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/api/dashboards/overview")) {
+        return url.includes("range=last_7_days")
+          ? sevenResponse
+          : Promise.resolve(json(overviewFor("last_30_days", 300, 200)));
+      }
+      return fallback(input, init);
+    });
+    renderApp("/", request);
+
+    expect(await screen.findByText("300", { selector: ".overview-kpi-card > strong" })).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Date period" }), "last_7_days");
+    expect(await screen.findByRole("main", { name: "Loading Social Media Overview" })).toBeInTheDocument();
+    expect(screen.queryByText("300", { selector: ".overview-kpi-card > strong" })).not.toBeInTheDocument();
+
+    resolveSeven(json(overviewFor("last_7_days", 700, 350)));
+    expect(await screen.findByText("700", { selector: ".overview-kpi-card > strong" })).toBeInTheDocument();
+  });
+
+  it("never shows an old platform delta under a newly selected date period", async () => {
+    const user = userEvent.setup();
+    const platformFor = (key: "last_7_days" | "last_30_days", value: number, previousValue: number) => ({
+      ...dashboard,
+      meta: {
+        ...dashboard.meta,
+        date_range: key === "last_7_days"
+          ? { start_on: "2026-07-08", end_on: "2026-07-14", key }
+          : { start_on: "2026-06-15", end_on: "2026-07-14", key },
+      },
+      metrics: [{
+        metric_id: "followers",
+        value,
+        previous_value: previousValue,
+        delta_pct: ((value - previousValue) / previousValue) * 100,
+        semantic_type: "snapshot",
+        unit: "count",
+        data_status: "available",
+        methodology: "provider_reported",
+        availability_reason: null,
+      }],
+    });
+    let resolveSeven!: (response: Response) => void;
+    const sevenResponse = new Promise<Response>((resolve) => { resolveSeven = resolve; });
+    const fallback = mockApi();
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/api/dashboards/facebook")) {
+        return url.includes("range=last_7_days")
+          ? sevenResponse
+          : Promise.resolve(json(platformFor("last_30_days", 300, 200)));
+      }
+      return fallback(input, init);
+    });
+    renderApp("/facebook", request);
+
+    expect(await screen.findAllByText("300", { selector: ".facebook-pulse-kpi > strong" })).not.toHaveLength(0);
+    await user.selectOptions(screen.getByRole("combobox", { name: "Date period" }), "last_7_days");
+    expect(await screen.findByRole("main", { name: "Loading Facebook" })).toBeInTheDocument();
+    expect(screen.queryAllByText("300", { selector: ".facebook-pulse-kpi > strong" })).toHaveLength(0);
+
+    resolveSeven(json(platformFor("last_7_days", 700, 350)));
+    expect(await screen.findAllByText("700", { selector: ".facebook-pulse-kpi > strong" })).not.toHaveLength(0);
+  });
+
   it("shows weekly AI Summary generation only to the Accumulate viewer operator", async () => {
     window.localStorage.clear();
     const request = mockApi({ operator: true });

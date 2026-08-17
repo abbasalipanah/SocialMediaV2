@@ -34,6 +34,7 @@ import {
   SimplePulseTable,
   UnavailableInsightCard,
   breakdownRows,
+  countryBreakdownRows,
   derivedContentTotals,
   hashtagRows,
   summaryPieRows,
@@ -203,7 +204,7 @@ function AudienceSection({ data, withTitle }: { data: PlatformDashboard; withTit
         <PulseTrendCard data={data} keys={[{ id: organicReachId, label: "Organic Reach", color: "#8b5cf6" }]} subtitle="Organic delivery trend" title="Organic Reach Trend" />
       </div>
       <div className="facebook-two-grid">
-        <SimplePulseTable columns={["#", "Country", "Value"]} rows={breakdownRows(data.breakdowns, "country")} subtitle="Country ranking" title="Top Countries" />
+        <SimplePulseTable columns={["#", "Country", "Value"]} rows={countryBreakdownRows(data.breakdowns)} subtitle="Country ranking" title="Top Countries" />
         <SimplePulseTable columns={["#", "Age group", "Value"]} rows={breakdownRows(data.breakdowns, "age")} subtitle="TikTok audience age ranking" title="Age Groups" />
       </div>
       <CommunityTables data={data} platform="tiktok" />

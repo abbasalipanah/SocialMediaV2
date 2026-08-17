@@ -173,9 +173,11 @@ describe("Phase 8 product surfaces", () => {
     expect(document.querySelector(".overview-performance-line")).toHaveAttribute("stroke-width", "1.25");
     expect(document.querySelector(".overview-performance-line")).toHaveAttribute("data-curve", "monotone");
     expect(document.querySelectorAll(".overview-performance-area")).toHaveLength(1);
-    expect(screen.getByLabelText("LinkedIn Planned")).toBeInTheDocument();
-    expect(screen.getByLabelText("X Coming soon")).toBeInTheDocument();
-    expect(screen.getByLabelText("YouTube Coming soon")).toBeInTheDocument();
+    const comingSoon = screen.getByLabelText("LinkedIn, X, YouTube Coming soon");
+    expect(within(comingSoon).getByLabelText("LinkedIn logo")).toBeInTheDocument();
+    expect(within(comingSoon).getByLabelText("X logo")).toBeInTheDocument();
+    expect(within(comingSoon).getByLabelText("YouTube logo")).toBeInTheDocument();
+    expect(within(comingSoon).getByText("Coming soon")).toBeInTheDocument();
     expect(screen.getByText("Scale short-form content")).toBeInTheDocument();
     expect(screen.queryByText("Publish more of the strongest short-form format.")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Open/ }));
@@ -238,7 +240,10 @@ describe("Phase 8 product surfaces", () => {
 
       expect(within(carousel).queryByText("Instagram")).not.toBeInTheDocument();
       expect(within(carousel).getByText("LinkedIn")).toBeInTheDocument();
-      expect(screen.queryByLabelText("LinkedIn Planned")).not.toBeInTheDocument();
+      const comingSoon = screen.getByLabelText("X, YouTube Coming soon");
+      expect(within(comingSoon).queryByLabelText("LinkedIn logo")).not.toBeInTheDocument();
+      expect(within(comingSoon).getByLabelText("X logo")).toBeInTheDocument();
+      expect(within(comingSoon).getByLabelText("YouTube logo")).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }
@@ -435,6 +440,15 @@ describe("Phase 8 product surfaces", () => {
     expect(screen.getByRole("heading", { name: "Most Active Commenters" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Most Liked Comments" })).toBeInTheDocument();
     expect(screen.getByText("No heatmap data in selected range.")).toBeInTheDocument();
+    const countryMap = screen.getByRole("heading", { name: "Audience by Country" })
+      .closest("article");
+    const countryTable = screen.getByRole("heading", { name: "Top Countries" })
+      .closest("article");
+    if (!countryMap || !countryTable) throw new Error("Country surfaces are missing");
+    expect(within(countryMap).getByText("Türkiye")).toBeInTheDocument();
+    expect(countryMap.querySelector(".country-flag")).not.toBeInTheDocument();
+    expect(within(countryTable).getByText("Türkiye")).toBeInTheDocument();
+    expect(countryTable.querySelector(".country-flag")).toHaveTextContent("🇹🇷");
   });
 
   it("filters the table and leaves manual sync disabled when backend mutation is unavailable", async () => {

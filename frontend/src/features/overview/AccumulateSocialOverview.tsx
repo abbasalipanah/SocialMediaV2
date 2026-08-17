@@ -71,11 +71,7 @@ const PLATFORM_COLORS: Record<OverviewPlatformId, string> = {
   youtube: "#FF0033",
 };
 
-const PLANNED_PLATFORMS = [
-  { id: "linkedin", status: "Planned" },
-  { id: "x", status: "Coming soon" },
-  { id: "youtube", status: "Coming soon" },
-] as const satisfies ReadonlyArray<{ id: OverviewPlatformId; status: string }>;
+const COMING_SOON_PLATFORMS = ["linkedin", "x", "youtube"] as const satisfies ReadonlyArray<OverviewPlatformId>;
 
 const CHANNEL_WINDOW_SIZE = 3;
 const CHANNEL_ROTATION_MS = 4_500;
@@ -813,6 +809,8 @@ function PlatformSummary({ data }: { data: OverviewDashboard }) {
   const connectedPlatforms = new Set(
     platforms.flatMap((item) => item.meta.platform ? [item.meta.platform as OverviewPlatformId] : []),
   );
+  const comingSoonPlatforms = COMING_SOON_PLATFORMS.filter((platform) => !connectedPlatforms.has(platform));
+  const comingSoonNames = comingSoonPlatforms.map((platform) => PLATFORM_NAMES[platform]);
   return (
     <section aria-label="Platform summary" className="social-platform-grid overview-platform-summary">
       {platforms.map((platformData) => {
@@ -830,22 +828,30 @@ function PlatformSummary({ data }: { data: OverviewDashboard }) {
           </Link>
         );
       })}
-      {PLANNED_PLATFORMS.filter((platform) => !connectedPlatforms.has(platform.id)).map((platform) => (
+      {comingSoonPlatforms.length > 0 && (
         <article
-          aria-label={`${PLATFORM_NAMES[platform.id]} ${platform.status}`}
-          className="social-platform-card overview-platform-card overview-planned-platform unavailable"
-          key={platform.id}
+          aria-label={`${comingSoonNames.join(", ")} Coming soon`}
+          className="social-platform-card overview-platform-card overview-coming-soon-platform unavailable"
         >
-          <div className="overview-platform-card-heading">
-            <span className={`overview-platform-icon platform-${platform.id}`}>
-              <PlatformIcon platform={platform.id} size={18} />
-            </span>
-            <strong>{PLATFORM_NAMES[platform.id]}</strong>
-            <span className="overview-planned-badge">{platform.status}</span>
+          <div className="overview-coming-soon-icons">
+            {comingSoonPlatforms.map((platform) => (
+              <span
+                aria-label={`${PLATFORM_NAMES[platform]} logo`}
+                className={`overview-platform-icon platform-${platform}`}
+                key={platform}
+                role="img"
+              >
+                <PlatformIcon platform={platform} size={20} />
+              </span>
+            ))}
           </div>
-          <p>Integration will appear here when the channel is connected.</p>
+          <div className="overview-coming-soon-copy">
+            <strong>More channels</strong>
+            <p>{comingSoonNames.join(", ")} integrations will be available here.</p>
+          </div>
+          <span className="overview-planned-badge">Coming soon</span>
         </article>
-      ))}
+      )}
     </section>
   );
 }
