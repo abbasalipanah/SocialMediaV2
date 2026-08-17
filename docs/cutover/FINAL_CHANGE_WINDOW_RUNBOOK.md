@@ -112,8 +112,16 @@ failed or stale parity result.
 
 ## 4. TikTok ownership transfer gate
 
-The refresh-free canary currently rejects both TikTok links. Provider/V1 operations must first
-confirm the current app's refresh-token rotation and rollback procedure. The ownership operation
+Both TikTok links now pass the refresh-free canary. The earlier rejection was a defect in V2's
+TikTok client, corrected on `2026-08-17`; the credentials were never invalid. What remains here is
+the ownership handover itself, not a diagnostic unknown.
+
+The provider states that calling the token or refresh API invalidates the previous token, so the
+first V2 refresh permanently ends V1's ability to collect. Do not run this step before V1 provider
+timers are stopped and their state recorded.
+
+Provider/V1 operations must first confirm the current app's refresh-token rotation and rollback
+procedure. The ownership operation
 must preserve the newly returned access and refresh token in the V2 AES-256-GCM vault before any
 V2 collection attempt, then validate exact business identity and required scopes.
 

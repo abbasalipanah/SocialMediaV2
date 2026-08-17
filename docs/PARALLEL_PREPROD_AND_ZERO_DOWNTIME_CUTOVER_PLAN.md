@@ -465,9 +465,11 @@ V2_RELEASE_SOURCE_COMMITTED=true
 SOAK_24H_COMPLETE=true
 ACCUMULATE_BRANCH_PREPARED=true
 ACCUMULATE_BRAND_SCOPE_CLAIM_IN_SCOPE=false
-PARALLEL_PREPROD_FRESH=false
+PARALLEL_PREPROD_FRESH=true
+PARALLEL_PREPROD_FRESH_AS_OF=2026-08-17T14:41Z
 EXISTING_PROVIDER_APPS_TRANSFERRED_TO_V2=false
-TIKTOK_REFRESH_FREE_READ_VERIFIED=false
+TIKTOK_REFRESH_FREE_READ_VERIFIED=true
+META_REFRESH_FREE_READ_VERIFIED=true
 PROVIDER_COLLECTION_LIVE_VERIFIED=false
 READY_FOR_ACCUMULATE_SSO_HANDOFF=false
 SSO_LIVE_VERIFIED=false
@@ -486,9 +488,21 @@ Değişen bayrakların gerekçesi:
   çalışma ağacındaydı. `2026-08-17` tarihinde dört commit'e bölünerek Git'e alındı; ağaç temiz ve
   `ruff`, `158 passed / 18 skipped`, frontend `47/47`, TypeScript ve production build commit
   edilmiş ağaç üzerinde yeniden doğrulandı.
-- `PARALLEL_PREPROD_FRESH=false`: parity kanıtı `2026-08-13T11:17:34Z` tarihlidir. V1 collection
-  timer'ları o tarihten beri çalışmaya devam ettiği için candidate DB bayattır; final
-  reconciliation Faz G'ye göre yeniden koşmalıdır.
+- `PARALLEL_PREPROD_FRESH=true`: `2026-08-13` candidate'ı bayatlamıştı; V1 o tarihten sonra
+  `1` Brand, `1` connection ve `4` linked account daha kazandı. `2026-08-17T14:41Z` itibarıyla yeni
+  candidate `social_media_v2_shadow_20260817_1441` alındı ve
+  `legacy_full_import_parity=verified` ile doğrulandı: `69` Brand, `73` connection,
+  `103` linked account, `1.654.009` metric, `7.233` content, `3.960` comment,
+  `7.133` media dosyası, `175` credential satırı ve `175` nonce. Kaynak V1
+  `REPEATABLE READ / READ ONLY` kaldı, hedef ayrı ve boş bir DB'ydi. Bu da kalıcı bir söz değil
+  kanıttır; V1 toplamaya devam ettiği için final pencerede tekrar koşmalıdır.
+- `TIKTOK_REFRESH_FREE_READ_VERIFIED=true`: `2026-08-13`'teki "provider her iki TikTok tokenını da
+  reddetti" tespiti yanlıştı. Credential'lar hiçbir zaman geçersiz değildi; V2'nin TikTok
+  istemcisindeki dört hata her token doğrulamasını düşürüyordu ve dördü de yalnız canlı API'ye
+  karşı görünüyordu. Düzeltmeler sonrası taze credential'larla iki TikTok ve iki Meta hesabı da
+  refresh üretmeyen canary'yi geçti; V1 credential ailesi rotate edilmedi. Ayrıntı
+  [`cutover/PHASE_F_G_PROVIDER_FRESHNESS_REPORT.md`](cutover/PHASE_F_G_PROVIDER_FRESHNESS_REPORT.md)
+  içindedir.
 - `ACCUMULATE_BRANCH_PREPARED=true`: Accumulate tarafındaki değişiklik
   `feature/social-media-downstream-launch` branch'inde flag kapalı olarak hazırlanmıştır. V2 ekibi
   Accumulate'ın çalışan ortamına, servisine, env'ine veya DB'sine dokunmamıştır; branch'i deploy

@@ -18,6 +18,49 @@ This is handled as a safe gate, not by refreshing while V1 is still the live col
 TikTok refresh/ownership transfer remains in the final coordinated window after V1 provider timers
 are paused. Therefore V1 continues working with its current credential family.
 
+## Correction — the TikTok rejection was ours, not the provider's (`2026-08-17`)
+
+The `2026-08-13` conclusion above, that the provider rejected both imported TikTok
+access tokens, is **wrong**. The credentials were never invalid. Four defects in V2's
+own TikTok client made every token inspection fail, and all four only appear against
+the live API:
+
+1. `tt_user/token_info/get/` answers POST only; every caller issued a GET and received
+   `405`.
+2. Business API v1.3 rejects `application/x-www-form-urlencoded` on every `tt_user`
+   endpoint with `40002`; V2 sent form bodies on token, refresh, revoke and token_info.
+3. The token_info body takes `app_id` + `access_token`, not the OAuth credential pair.
+4. The response returns the account identity as `creator_id`, not `business_id`.
+
+Separately, the approved app grants `comment.list.manage` and `biz.brand.insights`,
+which were in neither the required nor the optional scope list, so the upper-bound
+subset check would have rejected a valid token even after the four fixes.
+
+Because the same code path serves the collector and the activation runtime, V2 could
+never have collected from TikTok. The failure would have surfaced in the change window
+after V1 provider timers were paused.
+
+After the fixes, with credentials freshly migrated on `2026-08-17`:
+
+```text
+refresh_free_real_read_canaries=facebook:1:profile,instagram:11:profile,tiktok:99:token_info
+refresh_free_real_read_canaries=facebook:1:profile,instagram:11:profile,tiktok:100:token_info
+refresh_free_real_read_failures=
+provider_state_changing_post_requests=0
+provider_refresh_requests=0
+credential_fingerprint_unchanged=true
+```
+
+Both TikTok business identities and full scope sets verified. The V1 credential family
+was not rotated: connection `72` and `74` still carry their pre-canary `expires_at`
+values.
+
+The provider's own `40105` text confirms the plan's parallel-collection ban:
+refreshing invalidates the previous token, so V1 and V2 can never both refresh.
+
+`TIKTOK_REFRESH_FREE_READ_VERIFIED` is therefore `true`. The remaining TikTok work in
+the final window is the ownership handover itself, not a diagnostic unknown.
+
 ## Existing app transfer state
 
 | Provider | Existing app ID | V2 secret | Runtime ownership |
@@ -124,7 +167,8 @@ PHASE_G_COMPLETE=false
 EXISTING_PROVIDER_APPS_CONFIGURED_IN_V2=true
 EXISTING_PROVIDER_APPS_TRANSFERRED_TO_V2=false
 META_REFRESH_FREE_READ_VERIFIED=true
-TIKTOK_REFRESH_FREE_READ_VERIFIED=false
+TIKTOK_REFRESH_FREE_READ_VERIFIED=true
+TIKTOK_PROVIDER_CONTRACT_CORRECTED_AT=2026-08-17
 PROVIDER_COLLECTION_LIVE_VERIFIED=false
 PARALLEL_PREPROD_FRESH_AS_OF=2026-08-13T11:17:34Z
 SOAK_24H_COMPLETE=true
