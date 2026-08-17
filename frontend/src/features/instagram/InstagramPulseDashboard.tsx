@@ -22,6 +22,7 @@ import type {
   PlatformDashboard,
 } from "../../api";
 import { AudienceDemographicsCard } from "../dashboard/AudienceDemographicsCard";
+import { countryDisplayName, countryLookupKey } from "../dashboard/countryPresentation";
 import {
   V1_CHART_COLORS,
   V1_FOLLOWER_FLOW_KEYS,
@@ -40,6 +41,7 @@ import {
   SimplePulseTable,
   UnavailableInsightCard,
   breakdownRows,
+  countryBreakdownRows,
   derivedContentTotals,
   hashtagRows,
   summaryPieRows,
@@ -157,17 +159,8 @@ function findBreakdown(breakdowns: DashboardBreakdown[], hints: string[]): Dashb
   });
 }
 
-const COUNTRY_ALIASES: Record<string, string> = {
-  turkiye: "turkey",
-  türkiye: "turkey",
-  usa: "united states of america",
-  "united states": "united states of america",
-  uk: "united kingdom",
-};
-
 function normalizedCountry(value: string): string {
-  const normalized = value.trim().toLocaleLowerCase("en-US");
-  return COUNTRY_ALIASES[normalized] ?? normalized;
+  return countryLookupKey(value);
 }
 
 const worldTopology = countriesAtlas as unknown as Topology<{
@@ -205,7 +198,7 @@ export function WorldMapWidget({ breakdown }: { breakdown?: DashboardBreakdown }
                 const row = lookup.get(normalizedCountry(country.name));
                 const ratio = row ? row.value / maximum : 0;
                 const fill = row ? (ratio > 0.65 ? "#6366f1" : ratio > 0.25 ? "#a5b4fc" : "#c7d2fe") : "#f1f5f9";
-                return <path d={country.d} fill={fill} key={country.name} stroke="#d9e2ec" strokeWidth="0.65"><title>{row ? `${row.key}: ${formatNumber(row.value)}` : country.name}</title></path>;
+                return <path d={country.d} fill={fill} key={country.name} stroke="#d9e2ec" strokeWidth="0.65"><title>{row ? `${countryDisplayName(row.key)}: ${formatNumber(row.value)}` : country.name}</title></path>;
               })}
             </svg>
           </div>
@@ -214,7 +207,7 @@ export function WorldMapWidget({ breakdown }: { breakdown?: DashboardBreakdown }
             <div>
               {rows.map((row) => (
                 <div key={row.key}>
-                  <p><b>{row.key}</b><em>{formatNumber(row.value)}</em></p>
+                  <p><b>{countryDisplayName(row.key)}</b><em>{formatNumber(row.value)}</em></p>
                   <i><b style={{ width: `${Math.max(4, (row.value / maximum) * 100)}%` }} /></i>
                 </div>
               ))}
@@ -297,7 +290,7 @@ function AudienceSection({ data, withTitle }: { data: PlatformDashboard; withTit
         <PulseTrendCard data={data} keys={[{ id: "reach_organic", label: "Organic Reach", color: "#8b5cf6" }]} subtitle="Organic delivery trend" title="Organic Reach Trend" />
       </div>
       <div className="facebook-two-grid">
-        <SimplePulseTable columns={["#", "Country", "Value"]} rows={breakdownRows(data.breakdowns, "country")} subtitle="Country ranking" title="Top Countries" />
+        <SimplePulseTable columns={["#", "Country", "Value"]} rows={countryBreakdownRows(data.breakdowns)} subtitle="Country ranking" title="Top Countries" />
         <SimplePulseTable columns={["#", "City", "Value"]} rows={breakdownRows(data.breakdowns, "city")} subtitle="City ranking" title="Top Cities" />
       </div>
       <div className="facebook-two-grid">

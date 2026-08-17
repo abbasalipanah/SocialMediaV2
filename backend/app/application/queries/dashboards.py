@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from app.application.ports.reporting import ReportingStore
+from app.application.queries.comment_privacy import redact_dashboard_comments
 from app.application.queries.dashboard_aggregation import (
     audience_capabilities,
     community_summary,
@@ -87,7 +88,7 @@ def _exclude_content_types(rows, excluded: tuple[str, ...]):
     return tuple(row for row in rows if row.content_type.strip().lower() not in normalized)
 
 
-def build_platform_dashboard(
+def _build_platform_dashboard(
     *,
     store: ReportingStore,
     catalog: MetricCatalog,
@@ -237,6 +238,26 @@ def build_platform_dashboard(
     )
 
 
+def build_platform_dashboard(
+    *,
+    store: ReportingStore,
+    catalog: MetricCatalog,
+    platform: PlatformId,
+    query: DashboardQuery,
+    now: datetime | None = None,
+) -> PlatformDashboard:
+    dashboard = _build_platform_dashboard(
+        store=store,
+        catalog=catalog,
+        platform=platform,
+        query=query,
+        now=now,
+    )
+    redacted = redact_dashboard_comments(dashboard)
+    assert isinstance(redacted, PlatformDashboard)
+    return redacted
+
+
 def build_overview_dashboard(
     *,
     store: ReportingStore,
@@ -246,7 +267,7 @@ def build_overview_dashboard(
 ) -> OverviewDashboard:
     generated = (now or datetime.now(UTC)).astimezone(UTC)
     dashboards = tuple(
-        build_platform_dashboard(
+        _build_platform_dashboard(
             store=store,
             catalog=catalog,
             platform=platform,
@@ -298,7 +319,7 @@ def build_overview_dashboard(
         for warning in dashboard.meta.warnings
     )
     expected_days = (query.date_range.end_on - query.date_range.start_on).days + 1
-    return OverviewDashboard(
+    dashboard = OverviewDashboard(
         meta=DashboardMeta(
             dashboard_id="overview",
             platform=None,
@@ -348,6 +369,9 @@ def build_overview_dashboard(
             ),
         ),
     )
+    redacted = redact_dashboard_comments(dashboard)
+    assert isinstance(redacted, OverviewDashboard)
+    return redacted
 
 
 def _overview_metric(

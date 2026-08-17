@@ -39,6 +39,8 @@ import type {
   PlatformDashboard,
 } from "../../api";
 import { FollowerAvatarStack } from "../../ui";
+import { ANONYMOUS_COMMENT_AUTHOR, maskCommentMentions } from "../dashboard/commentPrivacy";
+import { CountryTableLabel, countryCode } from "../dashboard/countryPresentation";
 import { formatDate, formatNumber, humanize } from "../dashboard/format";
 import {
   V1_BAR_FILL_OPACITY,
@@ -393,12 +395,12 @@ export function PulseTrendCard({
                 <CartesianGrid opacity={0.55} stroke="#e8edf4" strokeDasharray="3 3" vertical={false} />
                 <XAxis axisLine={false} dataKey="observed_on" minTickGap={52} tick={{ fill: "#94a3b8", fontSize: 10 }} tickFormatter={chartDate} tickLine={false} />
                 <YAxis axisLine={false} domain={[minimum, maximum]} tick={{ fill: "#7c8aa0", fontSize: 10 }} tickFormatter={(value) => compact(Number(value))} tickLine={false} width={46} />
-                <Tooltip labelFormatter={(value) => chartDate(String(value))} />
+                <Tooltip cursor={false} labelFormatter={(value) => chartDate(String(value))} />
                 <Legend content={<PulseChartLegend lines={lines} />} verticalAlign="top" />
                 {lines.map((line) => <Bar barSize={10} dataKey={line.id} fill={line.color} fillOpacity={V1_BAR_FILL_OPACITY} key={line.id} name={line.label} radius={[4, 4, 0, 0]} />)}
               </BarChart>
             ) : (
-              <AreaChart data={chartData} margin={{ bottom: 2, left: -12, right: 10, top: 4 }}>
+              <AreaChart baseValue={0} data={chartData} margin={{ bottom: 2, left: -12, right: 10, top: 4 }}>
                 <defs>
                   {lines.map((line) => (
                     <linearGradient id={`${gradientSeed}-${line.id}`} key={line.id} x1="0" x2="0" y1="0" y2="1">
@@ -412,8 +414,8 @@ export function PulseTrendCard({
                 <YAxis axisLine={false} domain={[minimum, maximum]} tick={{ fill: "#7c8aa0", fontSize: 10 }} tickFormatter={(value) => compact(Number(value))} tickLine={false} width={46} />
                 <Tooltip labelFormatter={(value) => chartDate(String(value))} />
                 <Legend content={<PulseChartLegend lines={lines} />} verticalAlign="top" />
-                {lines.map((line, index) => (
-                  <Area activeDot={{ r: 3 }} connectNulls={false} dataKey={line.id} dot={false} fill={index === 0 ? `url(#${gradientSeed}-${line.id})` : "transparent"} key={line.id} name={line.label} stroke={line.color} strokeWidth={V1_TREND_STROKE_WIDTH} type="monotone" />
+                {lines.map((line) => (
+                  <Area activeDot={{ r: 3 }} connectNulls={false} dataKey={line.id} dot={false} fill={`url(#${gradientSeed}-${line.id})`} key={line.id} name={line.label} stroke={line.color} strokeWidth={V1_TREND_STROKE_WIDTH} type="monotone" />
                 ))}
               </AreaChart>
             )}
@@ -642,7 +644,7 @@ function engagementRows(content: DashboardContent[]): PieRow[] {
   ].filter((item) => item.value > 0);
 }
 
-export function SimplePulseTable({ title, subtitle, columns, rows, emptyCopy = "No data in selected range." }: { title: string; subtitle?: string; columns: string[]; rows: Array<Array<string | number>>; emptyCopy?: string }) {
+export function SimplePulseTable({ title, subtitle, columns, rows, emptyCopy = "No data in selected range." }: { title: string; subtitle?: string; columns: string[]; rows: Array<Array<ReactNode>>; emptyCopy?: string }) {
   return (
     <article className="facebook-pulse-card facebook-simple-table">
       <PulseCardHeading subtitle={subtitle} title={title} />
@@ -654,6 +656,15 @@ export function SimplePulseTable({ title, subtitle, columns, rows, emptyCopy = "
 export function breakdownRows(breakdowns: DashboardBreakdown[], hint: string): Array<Array<string | number>> {
   const breakdown = breakdowns.find((item) => item.dimension.toLowerCase().includes(hint));
   return breakdown?.items.slice(0, 10).map((item, index) => [index + 1, humanize(item.key), formatNumber(item.value)]) ?? [];
+}
+
+export function countryBreakdownRows(breakdowns: DashboardBreakdown[]): Array<Array<ReactNode>> {
+  const breakdown = breakdowns.find((item) => item.dimension.toLowerCase().includes("country"));
+  return breakdown?.items.filter((item) => countryCode(item.key) !== null).slice(0, 10).map((item, index) => [
+    index + 1,
+    <CountryTableLabel key={item.key} value={item.key} />,
+    formatNumber(item.value),
+  ]) ?? [];
 }
 
 export function breakdownPieRows(breakdowns: DashboardBreakdown[], hints: string[], colors: string[] = PALETTE): PieRow[] {
@@ -793,13 +804,18 @@ export function CommunityTables({ data, platform }: { data: PlatformDashboard; p
     <div className="facebook-two-grid">
       <SimplePulseTable
         columns={["#", "Username", instagram ? "Messages" : "Comments", "Likes"]}
-        rows={data.community.top_commenters.map((item, index) => [index + 1, item.name, item.comments, item.likes])}
+        rows={data.community.top_commenters.map((item, index) => [index + 1, ANONYMOUS_COMMENT_AUTHOR, item.comments, item.likes])}
         subtitle={`${instagram ? "Instagram" : "TikTok"} comment activity leaderboard`}
         title={instagram ? "Most Comments and Messages" : "Most Active Commenters"}
       />
       <SimplePulseTable
         columns={["#", "Username", "Comment", "Likes"]}
-        rows={data.community.top_liked_comments.map((item, index) => [index + 1, item.name, item.comment || "—", item.likes])}
+        rows={data.community.top_liked_comments.map((item, index) => [
+          index + 1,
+          ANONYMOUS_COMMENT_AUTHOR,
+          item.comment ? maskCommentMentions(item.comment) : "—",
+          item.likes,
+        ])}
         subtitle="Comment like leaderboard"
         title="Most Liked Comments"
       />
@@ -874,7 +890,7 @@ function AudienceSection({ data, withTitle }: { data: PlatformDashboard; withTit
         <PulseHeatmapCard breakdowns={data.audience_capabilities.activity === "available" ? data.breakdowns : []} />
       </div>
       <div className="facebook-two-grid">
-        <SimplePulseTable columns={["#", "Country", "Value"]} rows={breakdownRows(data.breakdowns, "country")} subtitle="Country ranking" title="Top Countries" />
+        <SimplePulseTable columns={["#", "Country", "Value"]} rows={countryBreakdownRows(data.breakdowns)} subtitle="Country ranking" title="Top Countries" />
         <SimplePulseTable columns={["#", "City", "Value"]} rows={breakdownRows(data.breakdowns, "city")} subtitle="City ranking" title="Top Cities" />
       </div>
       <div className="facebook-two-grid">

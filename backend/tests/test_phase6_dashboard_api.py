@@ -501,6 +501,41 @@ def test_platform_dashboard_rollup_respects_metric_semantics(phase6_fixture) -> 
     assert dashboard.community.total_comments == 1
 
 
+def test_comment_projection_hides_authors_and_masks_mentions(phase6_fixture) -> None:
+    _, reporting, _ = phase6_fixture
+    reporting.comments = (
+        replace(
+            reporting.comments[0],
+            author_name="visible-user",
+            text=(
+                "Hi @_kathistaggl_ @httpx.dilara and @okoeker2254. "
+                "Mail me@example.com"
+            ),
+        ),
+    )
+
+    dashboard = build_platform_dashboard(
+        store=reporting,
+        catalog=bootstrap_metric_catalog(),
+        platform=PlatformId.FACEBOOK,
+        query=DashboardQuery(
+            requested_brand_id="101",
+            resolved_brand_ids=("101",),
+            rollup=False,
+            date_range=ReportingRange(date(2026, 7, 1), date(2026, 7, 2), "custom"),
+        ),
+        now=NOW,
+    )
+
+    assert dashboard.community.top_commenters[0].name == "Anonymous"
+    liked = dashboard.community.top_liked_comments[0]
+    assert liked.name == "Anonymous"
+    assert liked.comment == (
+        "Hi @_***_ @h***a and @o***4. Mail me@example.com"
+    )
+    assert "visible-user" not in repr(dashboard.community)
+
+
 def test_single_day_follower_flow_uses_prior_day_anchor_without_leaking_it(
     phase6_fixture,
 ) -> None:
