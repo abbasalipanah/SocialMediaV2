@@ -1,0 +1,66 @@
+{
+  "candidate_freshness": {
+    "as_of": "2026-08-13T11:17:34Z",
+    "credential_parity": 170,
+    "full_data_parity": true,
+    "media_files": 6524,
+    "metrics_daily": 1567094
+  },
+  "existing_provider_apps": {
+    "meta_app_id": "1133669534788144",
+    "meta_secret_injected": true,
+    "meta_source_match": true,
+    "tiktok_app_id": "7657818426198474768",
+    "tiktok_secret_injected": true,
+    "tiktok_source_match": true,
+    "v2_owned_oauth_state_secrets": true
+  },
+    "provider_canary": {
+        "credential_fingerprint_unchanged": true,
+        "facebook_profile_get": "passed",
+        "instagram_profile_get": "passed",
+    "post_requests": 0,
+    "refresh_requests": 0,
+        "tiktok_link_100_token_info": "provider_rejected",
+        "tiktok_link_99_token_info": "provider_rejected"
+    },
+    "v1_read_only_provider_observation": {
+        "backfill_systemd_result": "success",
+        "backfill_systemd_result_at": "2026-08-13T11:17:01Z",
+        "no_v1_mutation_attempted": true,
+        "organic_sync_systemd_result": "success",
+        "organic_sync_systemd_result_at": "2026-08-13T04:50:46Z",
+        "proves_v2_token_info_canary": false
+    },
+  "runtime_gates": {
+    "collection_service_active": false,
+    "collection_service_enabled": false,
+    "collection_timer_active": false,
+    "collection_timer_enabled": false,
+    "provider_gates_disabled": true,
+    "scheduled_start_fail_closed": true
+  },
+    "soak": {
+        "accelerated_acceptance": {
+            "api_error_priority_rows": 0,
+            "backend": "152 passed, 18 skipped",
+            "completed_at": "2026-08-13T11:31:50Z",
+            "frontend": "37 passed",
+            "loopback_cycles": "120/120 passed",
+            "typescript": "passed",
+            "web_error_priority_rows": 0
+        },
+        "gate_24_hour_complete": false,
+        "gate_24_hour_waived_by_user": true,
+        "minimum_complete_at": "2026-08-14T11:16:36Z",
+        "probe_interval": "5 minutes",
+        "started_at": "2026-08-13T11:16:36Z",
+        "timer": "social-media-v2-soak-probe.timer"
+  },
+    "status": "PHASE_F_G_IN_PROGRESS",
+    "unresolved_gates": [
+        "privileged_v2_restart_and_runtime_browser_preflight",
+        "final_freshness_reconciliation",
+        "tiktok_provider_ownership_transfer_and_canary"
+  ]
+}

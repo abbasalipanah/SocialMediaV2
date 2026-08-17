@@ -1,0 +1,11 @@
+[Unit]
+Description=Probe Social Media V2 loopback runtime every five minutes
+
+[Timer]
+OnActiveSec=5s
+OnUnitActiveSec=5min
+AccuracySec=5s
+Unit=social-media-v2-soak-probe.service
+
+[Install]
+WantedBy=timers.target

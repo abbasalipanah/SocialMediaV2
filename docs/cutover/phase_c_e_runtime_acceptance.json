@@ -1,0 +1,83 @@
+{
+  "acceptance": {
+    "browser": {
+      "api_5xx": 0,
+      "console_errors": 0,
+      "cross_scope_denied": true,
+      "hidden_parent_verified": true,
+      "jti_replay_denied": true,
+      "request_failures": 0,
+      "roles": [
+        "super_admin",
+        "agency_admin",
+        "agency_operator",
+        "viewer",
+        "viewer+operator"
+      ],
+      "session_cookie": "secure+httponly+samesite_lax",
+      "status": "passed"
+    },
+    "xlsx": {
+      "charts": 45,
+      "persistent_artifacts": 0,
+      "sheets": 88,
+      "status": "passed",
+      "workbooks": 14
+    }
+  },
+  "active_runtime": {
+    "api_health": 200,
+        "backend_release": "/opt/social-media-v2/releases/20260813T143727Z-country-labels/backend",
+    "database": "social_media_v2_shadow_20260813_1045",
+        "frontend_release": "/opt/social-media-v2/releases/20260813T143727Z-country-labels/frontend",
+    "media_root": "/var/lib/social-media-v2/candidates/20260813_1045/media",
+    "readiness": 200,
+    "web": 200
+  },
+  "isolation": {
+    "accumulate_runtime_source_unchanged": true,
+    "accumulate_source_unchanged": true,
+    "active_public_nginx_sha256": "cd8adfd9dfea26078f534fc8b4b0a9b853359f540d6d43329b7c041acd9e3668",
+    "public_v1_status": 307,
+    "v1_source_unchanged": true
+  },
+  "quality": {
+    "backend": "158 passed, 18 environment-gated skipped",
+    "collector_fake_recovery": "50 passed",
+    "frontend": "47 passed",
+    "mypy": "141 source files, 0 errors",
+    "playwright": "17 passed, 5 project-applicability skipped",
+    "production_build": "passed",
+    "ruff": "passed"
+  },
+    "release_rehearsal": {
+        "candidate_env_rollback_forward": "passed",
+        "final_release_rollback_forward": "passed",
+        "migration_idempotency": "passed"
+    },
+    "ui_follow_up": {
+        "comment_privacy": "dashboard/API/PNG/XLSX author labels are Anonymous; standalone @mentions retain first and final username characters with exactly three stars",
+        "bar_hover_cursor": "tooltip remains visible while the grey Recharts hover cursor is disabled",
+        "country_presentation": "full country names everywhere; circular native flags only in Top Countries tables; aggregate rows excluded",
+        "deployed_release": "/opt/social-media-v2/releases/20260813T143727Z-country-labels",
+        "frontend_full_suite": "47 passed",
+        "full_layout_png": "dashboard main DOM capture without sidebar/topbar and with all below-viewport main content verified",
+        "full_layout_png_geometry": "live main client width and browser breakpoint preserved; SVG overflow cannot widen or reflow export",
+        "inactive_platforms": "one responsive Coming soon card with LinkedIn, X and YouTube logos",
+        "platform_summary_geometry": "four equal desktop columns verified at 1920x1080",
+        "metric_delta_non_overlap_geometry": "passed",
+        "period_delta_contract": "7/30/90/365 day values verified against adjacent equal-length custom previous-period queries",
+        "production_build": "passed",
+        "range_transition_stale_values": "prevented for Home and platform dashboards",
+        "real_loopback_runtime_matrix": "passed with 0 console/request/server errors",
+        "trend_area_contract": "every visible line series uses its own color fill toward the zero baseline; negative series fill above the line"
+    },
+  "sso": {
+    "accumulate_runtime_secret_match": true,
+    "expired_token_denied": true,
+    "live_sidebar_verified": false,
+    "loopback_contract_verified": true,
+    "test_session_artifacts_remaining": 0
+  },
+  "status": "PHASE_C_E_COMPLETE"
+}

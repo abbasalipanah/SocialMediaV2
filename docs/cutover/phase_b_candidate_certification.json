@@ -1,0 +1,58 @@
+{
+  "candidate": {
+    "created_at": "2026-08-13T10:45:00Z",
+    "database": "social_media_v2_shadow_20260813_1045",
+    "database_bytes": 412786023,
+    "env_sha256": "cc141fce192da3ecd9dd3cf705e87924fdd54d073621098bfd66127e9b3b1d44",
+    "media": {
+      "bytes": 1629815048,
+      "file_count": 6524,
+      "manifest_sha256": "fbd2b63549fbe5b49c8c5268e320d047dbf79bf94353f9745288b48e624aac8f",
+      "root": "/var/lib/social-media-v2/candidates/20260813_1045/media"
+    },
+    "migrations": [
+      "0001_v2_initial.sql",
+      "0002_content_story_parity.sql",
+      "0003_story_action_totals.sql",
+      "0004_ai_summary.sql"
+    ]
+  },
+  "credential_parity": {
+    "access_credentials": 168,
+    "connection_projections": 72,
+    "credential_rows": 170,
+    "meta_connection_projections": 70,
+    "nonce_claims": 170,
+    "plaintext_parity": true,
+    "refresh_credentials": 2,
+    "tiktok_connection_projections": 2
+  },
+  "data_parity": {
+    "asset_sync_state": 93,
+    "assets": 93,
+    "brand_ai_insights": 6,
+    "brands": 68,
+    "content_comments": 3608,
+    "content_items": 6624,
+    "legacy_brand_projections": 68,
+    "legacy_snapshot_jobs": 93,
+    "linked_social_accounts": 99,
+    "media_assets": 6524,
+    "meta_accounts": 358,
+    "metrics_daily": 1567094,
+    "platform_connections": 72,
+    "verified": true
+  },
+  "isolation": {
+    "accumulate_source_unchanged": true,
+    "nginx_social_config_unchanged": true,
+    "provider_and_schedule_gates_disabled": true,
+    "public_route_unchanged": true,
+    "runtime_database_still_previous_candidate": true,
+    "source_transaction_isolation": "repeatable read",
+    "source_transaction_read_only": true,
+    "v1_source_unchanged": true
+  },
+  "production_env_sha256": "0ef7c7596ff85ef58fe490d1e8ed22c51e28ccdbcc2f7d1a6bba25632ea4c6d9",
+  "status": "PHASE_B_COMPLETE"
+}

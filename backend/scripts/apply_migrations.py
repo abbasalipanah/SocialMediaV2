@@ -11,7 +11,7 @@ from sqlalchemy import create_engine, text
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.core import ConfigurationError, load_settings
+from app.core import ConfigurationError, load_settings  # noqa: E402
 
 MIGRATIONS = Path(__file__).resolve().parents[1] / "migrations"
 LOCK_ID = 724_662_202

@@ -1,0 +1,101 @@
+{
+  "captured_at": "2026-08-13T10:40:00Z",
+  "database": {
+    "v1": {
+      "assets": 366,
+      "brands": 68,
+      "content_comments": 3608,
+      "content_items": 6624,
+      "database": "socialmedia_adv",
+      "linked_social_accounts": 99,
+      "media_assets": 6524,
+      "metrics_daily": 1567094,
+      "platform_connections": 72,
+      "transaction_isolation": "repeatable read",
+      "transaction_read_only": true
+    },
+    "v2": {
+      "assets": 91,
+      "brands": 67,
+      "content_comments": 3362,
+      "content_items": 6234,
+      "database": "social_media_v2_shadow_20260810_0745",
+      "linked_social_accounts": 97,
+      "media_assets": 6101,
+      "metrics_daily": 1493502,
+      "migrations": [
+        "0001_v2_initial.sql",
+        "0002_content_story_parity.sql",
+        "0003_story_action_totals.sql",
+        "0004_ai_summary.sql"
+      ],
+      "platform_connections": 71,
+      "transaction_isolation": "repeatable read",
+      "transaction_read_only": true
+    }
+  },
+  "gates": {
+    "SOCIAL_META_ACCOUNT_ENABLED": false,
+    "SOCIAL_META_ACCOUNT_OAUTH_MODE": "disabled",
+    "SOCIAL_META_ACTIVATION_GATE_ENABLED": false,
+    "SOCIAL_META_COLLECTION_ENABLED": false,
+    "SOCIAL_TIKTOK_ACCOUNT_ENABLED": false,
+    "SOCIAL_TIKTOK_ACCOUNT_OAUTH_MODE": "disabled",
+    "SOCIAL_TIKTOK_ACTIVATION_GATE_ENABLED": false,
+    "SOCIAL_TIKTOK_ADVERTISER_ENABLED": false,
+    "SOCIAL_TIKTOK_COLLECTION_ENABLED": false,
+    "SOCIAL_WORKER_SCHEDULE_ENABLED": false
+  },
+  "media": {
+    "v1": {
+      "bytes": 1642263522,
+      "file_count": 6655,
+      "manifest_sha256": "5584b4d14ff0a159e377528fa19b284bf79aa51e8b6a3327b3d7c67951f19151",
+      "root": "/home/api/colab_scripts/SocialMedia/backend/media"
+    },
+    "v2": {
+      "bytes": 1516985160,
+      "file_count": 6101,
+      "manifest_sha256": "cf1ae2885d26f4f38a9449260bb3f140fdc3d2b1cd7e54365207afbf56a5f891",
+      "root": "/var/lib/social-media-v2-shadow-20260810_0745/media"
+    }
+  },
+  "network": {
+    "nginx_social_config_sha256": "cd8adfd9dfea26078f534fc8b4b0a9b853359f540d6d43329b7c041acd9e3668",
+    "public_root_status": 307,
+    "public_upstream": "127.0.0.1:52120",
+    "v1_local_health_status": 200,
+    "v2_api_bind": "127.0.0.1:8026",
+    "v2_api_health_status": 200,
+    "v2_readiness_status": 200,
+    "v2_web_bind": "127.0.0.1:3026",
+    "v2_web_status": 200
+  },
+  "release": {
+    "backend": "/opt/social-media-v2/releases/20260810T140721Z-r24audit/backend",
+    "frontend": "/opt/social-media-v2/releases/20260810T160812Z-r29navigationdonut/frontend"
+  },
+  "runtime": {
+    "ars-social-backend.service": {
+      "active": true,
+      "enabled": true
+    },
+    "social-media-v2-api.service": {
+      "active": true,
+      "enabled": true
+    },
+    "social-media-v2-collection.service": {
+      "active": false,
+      "enabled": false
+    },
+    "social-media-v2-collection.timer": {
+      "active": false,
+      "enabled": false
+    },
+    "social-media-v2-web.service": {
+      "active": true,
+      "enabled": true
+    },
+    "v1_provider_timers_active": true
+  }
+}

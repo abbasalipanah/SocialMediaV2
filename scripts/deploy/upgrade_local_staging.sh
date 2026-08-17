@@ -86,7 +86,7 @@ if ! getent passwd "$SERVICE_USER" >/dev/null || ! getent group "$SERVICE_GROUP"
   exit 1
 fi
 if ! grep -qE \
-  '^SOCIAL_DB_URL=.*\/social_media_v2_(staging|shadow_[0-9]{8}_[0-9]{4})$' \
+  '^SOCIAL_DB_URL=.*\/(social_media_v2_staging|social_media_v2_shadow_[0-9]{8}_[0-9]{4})$' \
   "$ENV_FILE"; then
   echo "Refusing to upgrade outside the dedicated V2 staging database." >&2
   exit 1

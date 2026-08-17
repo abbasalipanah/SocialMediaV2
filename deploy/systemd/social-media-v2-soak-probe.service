@@ -1,0 +1,19 @@
+[Unit]
+Description=Social Media V2 loopback soak probe
+After=network-online.target social-media-v2-api.service social-media-v2-web.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=social-media-v2
+Group=social-media-v2
+ExecStart=/usr/bin/curl --fail --silent --show-error --max-time 10 --output /dev/null http://127.0.0.1:8026/api/health
+ExecStart=/usr/bin/curl --fail --silent --show-error --max-time 10 --output /dev/null http://127.0.0.1:8026/api/operations/readiness
+ExecStart=/usr/bin/curl --fail --silent --show-error --max-time 10 --output /dev/null http://127.0.0.1:3026/
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+UMask=0077
+StandardOutput=journal
+StandardError=journal
