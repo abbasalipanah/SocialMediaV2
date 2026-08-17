@@ -106,11 +106,13 @@ export function ReportExport(props: ReportExportProps) {
   const exportPng = async () => {
     setError(null);
     setPngBusy(true);
+    setOpen(false);
     try {
       await exportDashboardPng(props);
-      setOpen(false);
     } catch (cause) {
-      setError(errorCopy(cause));
+      const detail = cause instanceof Error ? cause.message : "png_generation_failed";
+      setError(`The PNG snapshot could not be prepared (${detail}). Please try again.`);
+      setOpen(true);
     } finally {
       setPngBusy(false);
     }
@@ -197,7 +199,7 @@ export function ReportExport(props: ReportExportProps) {
             <div className="report-export-options">
               <button disabled={pngBusy} onClick={() => void exportPng()} type="button">
                 <span><ImageIcon size={18} /></span>
-                <span><strong>PNG snapshot</strong><small>Quick visual summary</small></span>
+                <span><strong>PNG snapshot</strong><small>Main dashboard screenshot</small></span>
               </button>
               <button disabled={pngBusy} onClick={() => void exportXlsx()} type="button">
                 <span><FileSpreadsheet size={18} /></span>

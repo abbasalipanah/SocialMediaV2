@@ -1,60 +1,59 @@
 import { Download } from "lucide-react";
+import html2canvas from "html2canvas";
 import { useState } from "react";
 
 import type { DashboardMetric } from "../../api";
-import { METRIC_LABELS } from "./catalog";
-import { formatMetric } from "./format";
 
-function drawText(
-  context: CanvasRenderingContext2D,
-  text: string,
-  x: number,
-  y: number,
-  font: string,
-  color: string,
-) {
-  context.font = font;
-  context.fillStyle = color;
-  context.fillText(text, x, y);
+const MAX_CAPTURE_PIXELS = 24_000_000;
+
+function afterNextPaint() {
+  return new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => resolve()));
+  });
+}
+
+function captureRoot(): HTMLElement {
+  const root = document.querySelector<HTMLElement>(".route-content > main")
+    ?? document.querySelector<HTMLElement>("main");
+  if (!root) throw new Error("report_capture_root_unavailable");
+  return root;
+}
+
+function captureScale(width: number, height: number): number {
+  const pixelLimitedScale = Math.sqrt(MAX_CAPTURE_PIXELS / Math.max(1, width * height));
+  return Math.max(1, Math.min(2, pixelLimitedScale));
 }
 
 export async function exportDashboardPng({
   title,
-  subtitle,
-  metrics,
 }: {
   title: string;
-  subtitle: string;
-  metrics: DashboardMetric[];
 }) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1440;
-  canvas.height = 900;
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("canvas_unavailable");
-  context.fillStyle = "#f5f7fb";
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = "#151b2b";
-  context.fillRect(0, 0, canvas.width, 150);
-  drawText(context, "ACCUMULATE · SOCIAL MEDIA", 74, 62, "700 22px system-ui", "#a9a2ff");
-  drawText(context, title, 74, 112, "700 42px system-ui", "#ffffff");
-  drawText(context, subtitle, 74, 194, "500 20px system-ui", "#69738a");
+  // Let React remove the export popover before cloning the live application.
+  await afterNextPaint();
+  await document.fonts?.ready;
 
-  metrics.slice(0, 6).forEach((metric, index) => {
-    const column = index % 3;
-    const row = Math.floor(index / 3);
-    const x = 74 + column * 444;
-    const y = 246 + row * 230;
-    context.fillStyle = "#ffffff";
-    context.beginPath();
-    context.roundRect(x, y, 406, 190, 22);
-    context.fill();
-    drawText(context, METRIC_LABELS[metric.metric_id], x + 28, y + 48, "600 20px system-ui", "#69738a");
-    drawText(context, formatMetric(metric), x + 28, y + 112, "700 42px system-ui", "#182238");
-    const comparison = metric.delta_pct === null ? "Comparison unavailable" : `${metric.delta_pct >= 0 ? "+" : ""}${metric.delta_pct.toFixed(1)}% vs previous period`;
-    drawText(context, comparison, x + 28, y + 154, "500 17px system-ui", "#69738a");
+  const root = captureRoot();
+  const bounds = root.getBoundingClientRect();
+  // Keep the same horizontal layout as the live page. Recharts deliberately
+  // exposes SVG labels outside its plot and that visual overflow must not
+  // widen the capture or trigger a different responsive breakpoint.
+  const width = Math.ceil(Math.max(1, root.clientWidth, bounds.width));
+  const height = Math.ceil(Math.max(root.scrollHeight, root.clientHeight, bounds.height));
+  const canvas = await html2canvas(root, {
+    allowTaint: false,
+    backgroundColor: "#f8fafc",
+    height,
+    ignoreElements: (element) => element.classList.contains("report-export-panel"),
+    logging: false,
+    scale: captureScale(width, height),
+    scrollX: 0,
+    scrollY: 0,
+    useCORS: true,
+    width,
+    windowHeight: Math.max(window.innerHeight, height),
+    windowWidth: window.innerWidth,
   });
-  drawText(context, "Generated from the selected Brand scope. Unavailable values are not inferred.", 74, 838, "500 17px system-ui", "#69738a");
 
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
   if (!blob) throw new Error("png_generation_failed");
@@ -63,13 +62,11 @@ export async function exportDashboardPng({
   anchor.href = url;
   anchor.download = `${title.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-")}-report.png`;
   anchor.click();
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 export function ExportPng({
   title,
-  subtitle,
-  metrics,
 }: {
   title: string;
   subtitle: string;
@@ -80,7 +77,7 @@ export function ExportPng({
   const exportReport = async () => {
     setExporting(true);
     try {
-      await exportDashboardPng({ title, subtitle, metrics });
+      await exportDashboardPng({ title });
     } finally {
       setExporting(false);
     }
