@@ -610,8 +610,8 @@ class StandaloneCollector:
             access_token = ""
         config = self.settings.tiktok
         transport = TikTokHttpTransport(
-            post_urls=(config.refresh_url,),
-            get_urls=(config.token_info_url,),
+            post_urls=(config.refresh_url, config.token_info_url),
+            get_urls=(),
             timeout_seconds=self.settings.tiktok_activation.provider_timeout_seconds,
         )
         wire = TikTokAccountsWireMapper(config)
@@ -627,9 +627,9 @@ class StandaloneCollector:
             access_token = grant.access_token
         allowed = set(config.required_scopes) | set(config.optional_scopes)
         info = parse_token_info(
-            transport.get(
+            transport.post(
                 config.token_info_url,
-                headers=wire.token_info_headers(access_token=access_token),
+                data=wire.token_info_fields(access_token=access_token),
             )
         )
         if (

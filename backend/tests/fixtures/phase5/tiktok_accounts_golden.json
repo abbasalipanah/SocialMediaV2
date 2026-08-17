@@ -36,7 +36,8 @@
     "message": "OK",
     "request_id": "request-info",
     "data": {
-      "business_id": "business-1",
+      "app_id": "7657818426198474768",
+      "creator_id": "business-1",
       "scope": [
         "user.info.basic",
         "user.info.stats",

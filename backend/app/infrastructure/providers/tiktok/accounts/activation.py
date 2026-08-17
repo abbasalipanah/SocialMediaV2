@@ -133,9 +133,9 @@ class TikTokAccountsActivationProvider:
         )
 
     def inspect(self, *, access_token: str) -> ProviderAccountGrant:
-        payload = self._transport.get(
+        payload = self._transport.post(
             self._config.token_info_url,
-            headers=self._wire.token_info_headers(access_token=access_token),
+            data=self._wire.token_info_fields(access_token=access_token),
         )
         info = parse_token_info(payload)
         return ProviderAccountGrant(business_id=info.business_id, scopes=info.scopes)

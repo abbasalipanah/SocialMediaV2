@@ -78,11 +78,23 @@ class TikTokAccountsWireMapper:
             "client_secret": self.config.app_secret,
         }
 
-    def token_info_headers(self, *, access_token: str) -> dict[str, str]:
+    def token_info_fields(self, *, access_token: str) -> dict[str, str]:
+        """JSON body for `tt_user/token_info/get/`.
+
+        Despite the `/get/` suffix the endpoint only accepts POST and reads the
+        token from the request body; a GET is answered with `405`. It performs no
+        mutation, so it stays a read even though it is issued as a POST.
+
+        Unlike the OAuth endpoints, which carry the application credential pair,
+        this one identifies the application with `app_id` and needs no secret.
+        """
         self._assert_profile()
         if not access_token:
             raise TikTokWireError("access_token_required")
-        return {"Access-Token": access_token}
+        return {
+            "app_id": self.config.app_id,
+            "access_token": access_token,
+        }
 
     def profile_fields(self, *, business_id: str) -> dict[str, str]:
         self._assert_profile()

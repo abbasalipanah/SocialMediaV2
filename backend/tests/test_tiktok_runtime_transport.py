@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import httpx
 import pytest
 
@@ -12,8 +14,15 @@ TOKEN_URL = "https://business-api.tiktok.com/token"
 INFO_URL = "https://business-api.tiktok.com/info"
 
 
-def test_tiktok_transport_posts_form_and_parses_allowlisted_json() -> None:
+def test_tiktok_transport_posts_json_and_parses_allowlisted_json() -> None:
+    """Business API v1.3 rejects form-encoded bodies on every tt_user endpoint.
+
+    A form POST is answered with `40002 header Content-Type has unexpected
+    value`, so the body must be JSON for token, refresh, revoke and token_info
+    alike.
+    """
     observed: list[tuple[str, str, str]] = []
+    bodies: list[bytes] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
         observed.append(
@@ -23,6 +32,7 @@ def test_tiktok_transport_posts_form_and_parses_allowlisted_json() -> None:
                 request.headers.get("content-type", ""),
             )
         )
+        bodies.append(request.content)
         return httpx.Response(
             200,
             json={"code": 0, "message": "OK", "request_id": "request", "data": {}},
@@ -41,8 +51,9 @@ def test_tiktok_transport_posts_form_and_parses_allowlisted_json() -> None:
 
     assert payload["code"] == 0
     assert observed == [
-        ("POST", TOKEN_URL, "application/x-www-form-urlencoded"),
+        ("POST", TOKEN_URL, "application/json"),
     ]
+    assert json.loads(bodies[0]) == {"auth_code": "opaque"}
 
 
 def test_tiktok_transport_rejects_unknown_urls_and_sanitizes_provider_failures() -> None:
@@ -96,3 +107,34 @@ def test_tiktok_transport_retries_with_retry_after_and_enforces_budget() -> None
     assert transport.remaining_requests == 0
     with pytest.raises(TikTokTransportError, match="^provider_request_budget_exhausted$"):
         transport.get(INFO_URL, headers={})
+
+
+def test_transport_allows_a_post_only_allowlist_but_still_needs_one_url() -> None:
+    """The token-inspection path declares no GET URL.
+
+    `tt_user/token_info/get/` answers POST only, so requiring a non-empty GET
+    allowlist would force callers to declare a URL they must never call.
+    """
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        return httpx.Response(
+            200,
+            json={"code": 0, "message": "OK", "request_id": "request", "data": {}},
+        )
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    transport = TikTokHttpTransport(
+        post_urls=(INFO_URL,),
+        get_urls=(),
+        timeout_seconds=5,
+        sender=client.request,
+        sleeper=lambda _: None,
+    )
+
+    assert transport.post(INFO_URL, data={"access_token": "opaque"})["code"] == 0
+    with pytest.raises(TikTokTransportError, match="^provider_url_rejected$"):
+        transport.get(INFO_URL, headers={})
+
+    with pytest.raises(TikTokTransportError, match="^provider_transport_config_invalid$"):
+        TikTokHttpTransport(post_urls=(), get_urls=(), timeout_seconds=5)

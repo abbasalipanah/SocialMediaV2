@@ -45,7 +45,10 @@ def parse_token(payload: Mapping[str, Any]) -> TikTokTokenGrant:
 def parse_token_info(payload: Mapping[str, Any]) -> TikTokTokenInfo:
     data = success_data(payload)
     return TikTokTokenInfo(
-        business_id=_text(data, "business_id"),
+        # `tt_user/token_info/get/` returns the account identity as `creator_id`,
+        # while `business/get/` takes the same opaque value as `business_id`.
+        # One identifier, two provider-side names; V2 keeps the business name.
+        business_id=_text(data, "creator_id"),
         scopes=_scopes(data.get("scope")),
     )
 
@@ -61,7 +64,10 @@ def success_data(
     if isinstance(code, bool) or not isinstance(code, int):
         raise TikTokResponseError("response_code_invalid")
     if code != 0:
-        raise TikTokResponseError("provider_rejected")
+        # The numeric code is a stable, non-sensitive enum that distinguishes an
+        # expired token from a malformed request. The message and body are still
+        # withheld, because they can echo request content back.
+        raise TikTokResponseError(f"provider_rejected:{code}")
     _text(payload, "message")
     _text(payload, "request_id")
     data = payload.get("data")
@@ -75,7 +81,12 @@ def success_data(
 def _text(payload: Mapping[str, Any], key: str) -> str:
     value = payload.get(key)
     if not isinstance(value, str) or not value.strip():
-        raise TikTokResponseError("response_field_invalid")
+        # Naming the field we expected is a contract detail, not provider data,
+        # and it is what turns "the response was wrong" into an actionable fix.
+        # The key names present are schema, never values, so contract drift is
+        # visible without echoing any response content.
+        present = ",".join(sorted(str(name) for name in payload)) or "none"
+        raise TikTokResponseError(f"response_field_invalid:{key}:present={present}")
     return value
 
 

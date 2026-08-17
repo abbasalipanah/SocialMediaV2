@@ -47,11 +47,16 @@ TIKTOK_REQUIRED_SCOPES = (
     "video.list",
     "video.insights",
 )
+# Scopes the existing approved TikTok app grants but V2 does not call. They are
+# declared so a token from that app is accepted; the upper-bound check still
+# rejects any scope outside this contract.
 TIKTOK_OPTIONAL_SCOPES = (
     "user.info.username",
     "user.info.profile",
     "user.account.type",
     "comment.list",
+    "comment.list.manage",
+    "biz.brand.insights",
 )
 
 META_APP_ID = "1133669534788144"

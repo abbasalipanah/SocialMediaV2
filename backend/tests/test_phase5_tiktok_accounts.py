@@ -135,10 +135,12 @@ def test_required_optional_and_forbidden_scope_gate() -> None:
 
 def test_account_request_mapping_is_exact_and_opaque() -> None:
     mapper = TikTokAccountsWireMapper(_config())
-    headers = mapper.token_info_headers(access_token="fixture-access-value")
+    token_info = mapper.token_info_fields(access_token="fixture-access-value")
     profile = mapper.profile_fields(business_id="business-1")
     videos = mapper.video_fields(business_id="business-1", cursor="next-page")
-    assert headers == {"Access-Token": "fixture-access-value"}
+    # token_info is POST-only upstream and reads the token from a JSON body.
+    assert token_info["access_token"] == "fixture-access-value"
+    assert set(token_info) == {"app_id", "access_token"}
     assert profile["business_id"] == "business-1"
     assert json.loads(profile["fields"])[0] == "business_id"
     assert videos["cursor"] == "next-page"
@@ -332,3 +334,82 @@ def test_malformed_response_and_account_mismatch_fail_closed(
         TikTokProfileReader(
             lambda _account_id: golden["profile"]  # type: ignore[return-value]
         ).fetch_profile(account)
+
+
+def test_token_info_is_a_body_post_not_a_header_get() -> None:
+    """`tt_user/token_info/get/` answers POST only; a GET is rejected with 405.
+
+    Regression guard for the cutover defect where every token-inspection path
+    called this endpoint with GET and an `Access-Token` header, so no TikTok
+    token could ever be validated and V2 collection could not have worked.
+    """
+    mapper = TikTokAccountsWireMapper(_config())
+
+    assert not hasattr(mapper, "token_info_headers")
+    fields = mapper.token_info_fields(access_token="fixture-access-value")
+    assert fields["access_token"] == "fixture-access-value"
+    # The OAuth endpoints carry the application credential pair; this one
+    # uses app_id and needs no secret.
+    assert set(fields) == {"app_id", "access_token"}
+
+
+def test_scope_contract_accepts_every_scope_the_approved_app_grants() -> None:
+    """The existing approved TikTok app is the only source of V2 tokens.
+
+    Its consent screen grants two scopes V2 never calls. They must still be
+    inside the accepted contract, otherwise the upper-bound subset check
+    rejects a perfectly valid token.
+    """
+    granted = {
+        "user.info.basic",
+        "user.info.username",
+        "user.info.stats",
+        "user.info.profile",
+        "user.account.type",
+        "user.insights",
+        "video.list",
+        "video.insights",
+        "comment.list",
+        "comment.list.manage",
+        "biz.brand.insights",
+    }
+    accepted = set(TIKTOK_REQUIRED_SCOPES) | set(TIKTOK_OPTIONAL_SCOPES)
+
+    assert set(TIKTOK_REQUIRED_SCOPES).issubset(granted)
+    assert granted.issubset(accepted)
+    # The upper bound still has to mean something.
+    assert not {"video.publish", "user.account.delete"} & accepted
+
+
+def test_token_info_reads_the_identity_from_creator_id() -> None:
+    """The live endpoint returns `app_id`, `creator_id` and `scope`.
+
+    It does not return `business_id`; that name only exists on `business/get/`,
+    which takes the same opaque value. Expecting the wrong key made every token
+    inspection fail with a parse error even after the token was accepted.
+    """
+    info = parse_token_info(
+        {
+            "code": 0,
+            "message": "OK",
+            "request_id": "request-info",
+            "data": {
+                "app_id": TIKTOK_APP_ID,
+                "creator_id": "business-1",
+                "scope": list(TIKTOK_REQUIRED_SCOPES),
+            },
+        }
+    )
+
+    assert info.business_id == "business-1"
+    assert set(info.scopes) == set(TIKTOK_REQUIRED_SCOPES)
+
+    with pytest.raises(TikTokResponseError, match="^response_field_invalid:creator_id:"):
+        parse_token_info(
+            {
+                "code": 0,
+                "message": "OK",
+                "request_id": "request-info",
+                "data": {"business_id": "business-1", "scope": ["user.info.basic"]},
+            }
+        )

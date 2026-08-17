@@ -1,8 +1,13 @@
 """Run bounded, refresh-free provider identity reads for explicit V2 link IDs.
 
 The command refuses to run unless every live collection/schedule gate is closed.
-It performs one GET per allowlisted link, never calls a token/refresh/revoke
-endpoint, and verifies that the encrypted credential projection is unchanged.
+It performs exactly one read per allowlisted link and verifies that the
+encrypted credential projection is unchanged afterwards.
+
+Meta reads are GET. TikTok's `tt_user/token_info/get/` answers POST only and
+mutates nothing, so it is issued as a POST that is permitted by exact URL; the
+token, refresh and revoke endpoints stay refused, so a run can never rotate or
+invalidate the credential family V1 is still using.
 """
 
 from __future__ import annotations
@@ -49,11 +54,25 @@ class CanaryError(RuntimeError):
     """A sanitized provider-read precondition or identity failure."""
 
 
-class _GetOnlyTikTokTransport:
-    def __init__(self, *, get_url: str, rejected_post_url: str, timeout_seconds: float) -> None:
+class _ReadOnlyTikTokTransport:
+    """Allows exactly one read call and no state-changing call.
+
+    `tt_user/token_info/get/` only answers POST and mutates nothing, so it is
+    permitted by exact URL. Every other POST — refresh and revoke above all —
+    is refused before it reaches the transport, so a canary run can never
+    rotate or invalidate the credential family V1 is still using.
+    """
+
+    def __init__(
+        self, *, read_post_url: str, rejected_post_urls: tuple[str, ...], timeout_seconds: float
+    ) -> None:
+        self._read_post_url = read_post_url
+        self._rejected_post_urls = frozenset(rejected_post_urls)
+        if self._read_post_url in self._rejected_post_urls:
+            raise CanaryError("provider_read_url_conflicts_with_rejected_url")
         self._transport = TikTokHttpTransport(
-            post_urls=(rejected_post_url,),
-            get_urls=(get_url,),
+            post_urls=(read_post_url,),
+            get_urls=(),
             timeout_seconds=timeout_seconds,
             max_retries=0,
             request_budget=1,
@@ -64,11 +83,13 @@ class _GetOnlyTikTokTransport:
         return self._transport.remaining_requests
 
     def get(self, url: str, *, headers, params=None):
-        return self._transport.get(url, headers=headers, params=params)
+        del url, headers, params
+        raise CanaryError("provider_get_not_supported_for_token_info")
 
     def post(self, url: str, *, data) -> dict[str, object]:
-        del url, data
-        raise CanaryError("provider_post_disabled")
+        if url != self._read_post_url:
+            raise CanaryError("provider_post_disabled")
+        return self._transport.post(url, data=data)
 
 
 def _arguments() -> argparse.Namespace:
@@ -207,6 +228,7 @@ def main() -> None:
         results: list[str] = []
         failures: list[str] = []
         provider_get_requests = 0
+        provider_read_post_requests = 0
         for target in targets:
             platform = target["platform"]
             try:
@@ -224,12 +246,16 @@ def main() -> None:
                         UTC
                     ) + timedelta(minutes=5):
                         raise CanaryError("tiktok_refresh_free_window_unavailable")
-                    transport = _GetOnlyTikTokTransport(
-                        get_url=settings.tiktok.token_info_url,
-                        rejected_post_url=settings.tiktok.refresh_url,
+                    transport = _ReadOnlyTikTokTransport(
+                        read_post_url=settings.tiktok.token_info_url,
+                        rejected_post_urls=(
+                            settings.tiktok.refresh_url,
+                            settings.tiktok.revoke_url,
+                            settings.tiktok.token_url,
+                        ),
                         timeout_seconds=settings.tiktok_activation.provider_timeout_seconds,
                     )
-                    provider_get_requests += 1
+                    provider_read_post_requests += 1
                     grant = TikTokAccountsActivationProvider(
                         config=settings.tiktok,
                         transport=transport,
@@ -274,8 +300,13 @@ def main() -> None:
                     meta.close()
                 results.append(f"{platform.value}:{target['link_id']}:profile")
             except Exception as exc:
+                # The provider layers raise sanitized, enum-like reasons that never
+                # carry a token or response body. Reporting only the class name
+                # once turned a wrong-HTTP-method defect into a false "the provider
+                # rejected our credentials" conclusion, so surface the reason too.
+                reason = str(exc).strip() or "unspecified"
                 failures.append(
-                    f"{platform.value}:{target['link_id']}:{type(exc).__name__}"
+                    f"{platform.value}:{target['link_id']}:{type(exc).__name__}:{reason}"
                 )
 
         after_hash, after_count = _credential_fingerprint(engine)
@@ -287,7 +318,10 @@ def main() -> None:
     print("refresh_free_real_read_canaries=" + ",".join(sorted(results)))
     print("refresh_free_real_read_failures=" + ",".join(sorted(failures)))
     print(f"provider_get_requests={provider_get_requests}")
-    print("provider_post_requests=0")
+    # token_info is POST-only upstream and mutates nothing; refresh, revoke and
+    # authorization-code exchange stay refused by the transport.
+    print(f"provider_read_post_requests={provider_read_post_requests}")
+    print("provider_state_changing_post_requests=0")
     print("provider_refresh_requests=0")
     print(f"credential_projection_rows={before_count}")
     print("credential_fingerprint_unchanged=true")

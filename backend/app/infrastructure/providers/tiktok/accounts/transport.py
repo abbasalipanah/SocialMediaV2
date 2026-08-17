@@ -29,9 +29,11 @@ class TikTokHttpTransport:
         request_budget: int = 500,
         sleeper: Callable[[float], None] = time.sleep,
     ) -> None:
+        # At least one URL must be allowlisted, but neither list is individually
+        # required: the token-inspection path legitimately declares no GET URL,
+        # because `tt_user/token_info/get/` answers POST only.
         if (
-            not post_urls
-            or not get_urls
+            (not post_urls and not get_urls)
             or timeout_seconds <= 0
             or max_retries < 0
             or max_retries > 10
@@ -85,7 +87,10 @@ class TikTokHttpTransport:
                 response = self._sender(
                     method,
                     url,
-                    data=data,
+                    # Business API v1.3 answers every tt_user POST with
+                    # `40002 header Content-Type has unexpected value` unless the
+                    # body is JSON, so form encoding is never correct here.
+                    json=dict(data) if data is not None else None,
                     headers=headers,
                     params=params,
                     timeout=self._timeout,

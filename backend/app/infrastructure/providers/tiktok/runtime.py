@@ -50,8 +50,12 @@ def create_tiktok_activation_runtime(
     checkpoint_store = ProjectionCheckpointStore(engine, policy)
     activation_store = ProjectionTikTokActivationStore(engine, policy)
     provider_transport = TikTokHttpTransport(
-        post_urls=(settings.tiktok.token_url, settings.tiktok.revoke_url),
-        get_urls=(settings.tiktok.token_info_url,),
+        post_urls=(
+            settings.tiktok.token_url,
+            settings.tiktok.revoke_url,
+            settings.tiktok.token_info_url,
+        ),
+        get_urls=(),
         timeout_seconds=runtime.provider_timeout_seconds,
     )
     provider = TikTokAccountsActivationProvider(
