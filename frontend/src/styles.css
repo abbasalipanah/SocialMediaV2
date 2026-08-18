@@ -1652,7 +1652,10 @@ body { background: var(--sm-bg); }
 .instagram-story-metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .instagram-story-metric { min-width: 0; min-height: 104px; padding: 14px; border: 1px solid #e8edf5; border-radius: 11px; background: #fff; }
 .instagram-story-metric > div { display: flex; align-items: center; gap: 8px; }
-.instagram-story-metric > div > span, .instagram-story-health-grid > div > span, .instagram-story-action-grid > div > span { display: grid; place-items: center; border-radius: 9px; }
+.instagram-story-metric > div > span, .instagram-story-health-layout { display: grid; grid-template-columns: minmax(0, 210px) minmax(0, 1fr); gap: 18px; align-items: center; }
+.instagram-story-health-chart { min-width: 0; }
+@media (max-width: 900px) { .instagram-story-health-layout { grid-template-columns: minmax(0, 1fr); } }
+.instagram-story-health-grid > div > span, .instagram-story-action-grid > div > span { display: grid; place-items: center; border-radius: 9px; }
 .instagram-story-metric > div > span { width: 32px; height: 32px; }
 .instagram-story-metric small { color: #64748b; font-size: .65rem; font-weight: 650; }
 .instagram-story-metric > strong { display: block; margin: 10px 0 0 40px; overflow: hidden; font-size: 1.35rem; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.03em; text-overflow: ellipsis; white-space: nowrap; }

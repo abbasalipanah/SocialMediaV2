@@ -226,23 +226,49 @@ function StoryHealth({ story, summary }: { story: DashboardStoryItem | null; sum
   const forwardRate = rate(story?.taps_forward ?? null, navigationTotal);
   const interactionRate = rate(story?.interactions ?? null, story?.views ?? null);
   const values = [
-    { label: "Completion Rate", value: completionRate, icon: Activity, tone: "rose" },
     { label: "Exit Rate", value: exitRate, icon: TrendingDown, tone: "slate" },
     { label: "Forward Rate", value: forwardRate, icon: Forward, tone: "blue" },
     { label: "Interaction Rate", value: interactionRate, icon: Sparkles, tone: "amber" },
   ] as const;
+  // Completion is the one figure here that is a share of a whole: the viewers
+  // who reached the end against those who dropped out. The other three are
+  // independent ratios, so they stay as figures rather than joining the chart.
+  const completionRows = completionRate === null ? [] : [
+    { color: "#7c3aed", label: "Completed", value: Math.max(0, completionRate) },
+    { color: "#e2e8f0", label: "Dropped off", value: Math.max(0, 100 - completionRate) },
+  ];
+  // Counts rather than the percentages already shown above: the rates say how
+  // the story performed, these say how much of it there was to measure.
+  const volumes = [
+    { icon: Eye, label: "Views", value: story?.views ?? null },
+    { icon: Target, label: "Reach", value: story?.reach ?? null },
+    { icon: MessageCircle, label: "Replies", value: story?.replies ?? null },
+  ] as const;
   return (
     <article className="instagram-story-surface instagram-story-health">
       <header className="instagram-story-section-heading"><h3>Story Health</h3><small>Selected story</small></header>
-      <div className="instagram-story-health-grid">
-        {values.map(({ icon: Icon, label, tone, value }) => (
-          <div key={label}><span className={`tone-${tone}`}><Icon size={16} /></span><p><small>{label}</small><strong>{percentage(value)}</strong></p></div>
-        ))}
+      <div className="instagram-story-health-layout">
+        <div className="instagram-story-health-chart">
+          <PulsePieVisualization
+            emptyCopy="Provider did not return a completion rate."
+            rows={completionRows}
+            title="Story Completion"
+          />
+        </div>
+        <div className="instagram-story-health-grid">
+          {values.map(({ icon: Icon, label, tone, value }) => (
+            <div key={label}><span className={`tone-${tone}`}><Icon size={16} /></span><p><small>{label}</small><strong>{percentage(value)}</strong></p></div>
+          ))}
+        </div>
       </div>
       <div className="instagram-story-health-notes">
-        <span><CheckCircle2 size={15} /><b>{completionRate === null ? "Completion unavailable" : "Completion tracked"}</b><small>{completionRate === null ? "Provider did not return a rate" : `${percentage(completionRate)} for this story`}</small></span>
-        <span><Forward size={15} /><b>{forwardRate === null ? "Forward rate unavailable" : "Navigation measured"}</b><small>{forwardRate === null ? "No navigation denominator" : `${percentage(forwardRate)} tap forward rate`}</small></span>
-        <span><MessageCircle size={15} /><b>{story?.replies == null ? "Replies unavailable" : `${story.replies} replies`}</b><small>Provider-reported reply activity</small></span>
+        {volumes.map(({ icon: Icon, label, value }) => (
+          <span key={label}>
+            <Icon size={15} />
+            <b>{storyValue(value)}</b>
+            <small>{label}</small>
+          </span>
+        ))}
       </div>
     </article>
   );
