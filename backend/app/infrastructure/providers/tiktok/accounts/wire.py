@@ -104,13 +104,12 @@ class TikTokAccountsWireMapper:
             "business_id": business_id,
             "fields": json.dumps(
                 [
-                    "business_id",
                     "display_name",
                     "username",
                     "profile_image",
                     "followers_count",
-                    "likes",
-                    "video_count",
+            "total_likes",
+            "videos_count",
                 ],
                 separators=(",", ":"),
             ),

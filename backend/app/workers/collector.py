@@ -641,19 +641,23 @@ class StandaloneCollector:
             raise PermissionError("provider_refresh_identity_rejected")
         if grant is not None:
             now = datetime.now(UTC)
-            self.credentials.put(
-                access_reference,
-                SecretToken(
-                    value=grant.access_token,
-                    expires_at=now + timedelta(seconds=grant.expires_in),
-                ),
-            )
-            self.credentials.put(
-                refresh_reference,
-                SecretToken(
-                    value=grant.refresh_token,
-                    expires_at=now + timedelta(seconds=grant.refresh_expires_in),
-                ),
+            self.credentials.put_many(
+                (
+                    (
+                        access_reference,
+                        SecretToken(
+                            value=grant.access_token,
+                            expires_at=now + timedelta(seconds=grant.expires_in),
+                        ),
+                    ),
+                    (
+                        refresh_reference,
+                        SecretToken(
+                            value=grant.refresh_token,
+                            expires_at=now + timedelta(seconds=grant.refresh_expires_in),
+                        ),
+                    ),
+                )
             )
         return TikTokAccessContext(
             access_token=access_token,

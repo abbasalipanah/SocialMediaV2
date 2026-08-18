@@ -37,7 +37,9 @@ def parse_token(payload: Mapping[str, Any]) -> TikTokTokenGrant:
         refresh_token=_text(data, "refresh_token"),
         token_type=token_type,
         expires_in=_positive_int(data, "expires_in"),
-        refresh_expires_in=_positive_int(data, "refresh_expires_in"),
+        refresh_expires_in=_positive_int_alias(
+            data, "refresh_token_expires_in", "refresh_expires_in"
+        ),
         scopes=_scopes(data.get("scope")),
     )
 
@@ -95,6 +97,13 @@ def _positive_int(payload: Mapping[str, Any], key: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
         raise TikTokResponseError("response_field_invalid")
     return value
+
+
+def _positive_int_alias(payload: Mapping[str, Any], canonical: str, legacy: str) -> int:
+    present = [key for key in (canonical, legacy) if key in payload]
+    if len(present) != 1:
+        raise TikTokResponseError("response_field_invalid")
+    return _positive_int(payload, present[0])
 
 
 def _scopes(value: object) -> tuple[str, ...]:

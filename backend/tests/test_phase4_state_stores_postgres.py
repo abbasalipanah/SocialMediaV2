@@ -156,6 +156,33 @@ def test_duplicate_nonce_retries_then_fails_without_credential_write(engine: Eng
     assert rows == 2
 
 
+def test_credential_pair_write_is_atomic(engine: Engine) -> None:
+    vault = AesGcmTokenVault(
+        active_key_id="key-1",
+        keys={"key-1": b"a" * 32},
+        nonce_source=lambda size: b"p" * size,
+    )
+    store = ProjectionCredentialStore(
+        engine,
+        policy(),
+        vault,
+        max_nonce_attempts=2,
+        clock=lambda: NOW,
+    )
+
+    with pytest.raises(CredentialError, match="credential_nonce_exhausted"):
+        store.put_many(
+            (
+                (credential_ref("pair", TokenKind.ACCESS), SecretToken("access-value")),
+                (credential_ref("pair", TokenKind.REFRESH), SecretToken("refresh-value")),
+            )
+        )
+
+    assert store.get(credential_ref("pair", TokenKind.ACCESS)) is None
+    assert store.get(credential_ref("pair", TokenKind.REFRESH)) is None
+    assert _projection_count(engine) == 0
+
+
 def test_key_rotation_dry_run_real_update_and_failed_update_rollback(engine: Engine) -> None:
     old_vault = AesGcmTokenVault(active_key_id="key-1", keys={"key-1": b"a" * 32})
     old_store = ProjectionCredentialStore(engine, policy(), old_vault, clock=lambda: NOW)

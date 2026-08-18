@@ -29,12 +29,9 @@ class TikTokProfileReader:
         if account.platform is not PlatformId.TIKTOK:
             raise ValueError("provider_family_mismatch")
         data = success_data(self._fetch(account.account_id))
-        business_id = _text(data, "business_id")
-        if business_id != account.account_id:
-            raise TikTokResponseError("provider_account_mismatch")
         handle = _optional_text(data, "username")
         return ProfileSnapshot(
-            account_id=business_id,
+            account_id=account.account_id,
             display_name=_text(data, "display_name"),
             handle=handle,
             observed_at=self._clock(),

@@ -43,19 +43,30 @@ class ProjectionCredentialStore:
         self._clock = clock
 
     def put(self, reference: CredentialRef, token: SecretToken) -> None:
+        self.put_many(((reference, token),))
+
+    def put_many(
+        self, items: tuple[tuple[CredentialRef, SecretToken], ...]
+    ) -> None:
+        if not items or len(items) > 16:
+            raise CredentialError("credential_batch_size_invalid")
+        references = [reference for reference, _token in items]
+        if len(set(references)) != len(references):
+            raise CredentialError("credential_batch_reference_duplicate")
         self._write_policy.assert_allows_mutation("credential.put")
         with self.engine.begin() as connection:
-            payload = self._seal_and_claim(connection, reference, token)
-            connection.execute(
-                text(
-                    """INSERT INTO social_projection_state
-                       (projection_key, payload_json, updated_at)
-                       VALUES (:key, CAST(:payload AS jsonb), now())
-                       ON CONFLICT (projection_key) DO UPDATE
-                       SET payload_json=EXCLUDED.payload_json, updated_at=now()"""
-                ),
-                {"key": self._key(reference), "payload": _json(payload)},
-            )
+            for reference, token in items:
+                payload = self._seal_and_claim(connection, reference, token)
+                connection.execute(
+                    text(
+                        """INSERT INTO social_projection_state
+                           (projection_key, payload_json, updated_at)
+                           VALUES (:key, CAST(:payload AS jsonb), now())
+                           ON CONFLICT (projection_key) DO UPDATE
+                           SET payload_json=EXCLUDED.payload_json, updated_at=now()"""
+                    ),
+                    {"key": self._key(reference), "payload": _json(payload)},
+                )
 
     def get(self, reference: CredentialRef) -> SecretToken | None:
         with self.engine.connect() as connection:

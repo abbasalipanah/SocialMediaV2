@@ -165,6 +165,8 @@ def _number(value: object) -> float | None:
         parsed = float(value)
     except (TypeError, ValueError):
         raise TikTokResponseError("daily_metric_value_invalid") from None
+    if parsed == -1:
+        return None
     if parsed < 0:
         raise TikTokResponseError("daily_metric_value_invalid")
     return parsed

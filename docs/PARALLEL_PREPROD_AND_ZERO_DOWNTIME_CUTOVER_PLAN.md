@@ -2,9 +2,14 @@
 
 Tarih: `2026-08-13`
 
-Durum: **FAZ A–E TAMAMLANDI — SOAK KAPANDI — FAZ F/G TIKTOK OWNERSHIP TRANSFER'İ BEKLİYOR**
+Durum: **PUBLIC V2/ACCUMULATE GEÇİŞİ KISMİ — COLLECTION KAPALI — COLLECTOR TARGET DÜZELTMESİ GEREKİYOR**
 
-Son güncelleme: `2026-08-17`
+Son güncelleme: `2026-08-18`
+
+> Bu belgenin Faz A–G sırası ilk güvenli cutover planını korur. `2026-08-18` tarihinde public
+> routing ve Accumulate downstream deploy'u bazı final provider/collection kapılarından önce
+> uygulanmıştır. Gerçek post-deploy durum, sapmalar ve bundan sonraki bağlayıcı sıra §21–§22'de
+> kayıt altındadır.
 
 ## 1. Amaç
 
@@ -510,3 +515,377 @@ Değişen bayrakların gerekçesi:
 - `ACCUMULATE_BRAND_SCOPE_CLAIM_IN_SCOPE=false`: Accumulate imzalı contract'ta `brand_scope`
   claim'i üretmiyor ve bu cutover kapsamına alınmadı. V2 ilk sürümde tek-Brand modunda çalışacak;
   parent rollup ve hidden-parent deneyimi ayrı bir değişikliğe bırakıldı.
+
+## 21. `2026-08-18` post-deploy gerçek durum
+
+Bu bölüm `2026-08-18T13:03Z` itibarıyla yalnız V2 repository, V2 runtime, public Social hostname ve
+V2-owned DB üzerinde yapılan salt-okunur denetimi kaydeder. Accumulate, V1 SocialMedia veya başka
+bir kaynak projede write, deploy, restart, DB mutation ya da timer müdahalesi yapılmamıştır.
+
+### 21.1 Public runtime ve SSO
+
+- `https://social.theaccumulate.com` frontend ve `/api/` trafiği V2'ye yönlenmektedir;
+- public root, `/api/health` ve `/api/operations/readiness` başarılıdır;
+- V2 API ve web service'leri active/enabled, soak timer active/enabled ve ardışık probe'lar
+  başarılıdır;
+- aktif release `20260818T124522Z-back-to-accumulate` kaynağını kullanmaktadır;
+- Nginx config testi başarılı ve yayınlanan static tree `www-data` tarafından okunabilirdir;
+- Accumulate downstream değişikliği kullanıcı beyanına göre deploy edilmiştir;
+- gerçek public session ile Brand `18` için auth, workspace, capabilities, Overview ve Insights
+  istekleri `200` dönmüştür;
+- başka bir Brand için gerçek public SSO/browser kanıtı henüz yoktur. Bu nedenle global
+  `SSO_LIVE_VERIFIED` tamamlanmış sayılmaz; kanıt yalnız tek Brand kapsamındadır.
+
+Public route açık olmasına rağmen runtime hâlâ `APP_ENV=staging`,
+`SOCIAL_RUNTIME_MODE=staging` ve writes enabled durumundadır. Meta/TikTok account, activation ve
+collection gate'leri ile automated worker schedule kapalıdır. Collection service/timer
+inactive/disabled kalmaktadır. Public dashboard bu nedenle mevcut V2 snapshot'ını okur; V2 henüz
+canlı veri toplama sahibi değildir.
+
+### 21.2 Brand, hesap ve veri kapsamı
+
+Aktif V2 DB `social_media_v2_shadow_20260818_1200` üzerinde salt-okunur ölçüm:
+
+| Ölçüm | Değer |
+|---|---:|
+| Brand | `69` |
+| Active Brand | `69` |
+| Platform connection | `73` |
+| Linked social account | `103` |
+| Linked hesabı olan Brand | `53` |
+| Linked hesabı olmayan Brand | `16` |
+| Metric'i olan Brand | `52` |
+| Metric'i olmayan Brand | `17` |
+| Metric | `1.720.816` |
+| Content | `7.642` |
+| Comment | `4.351` |
+| Media | `7.396` |
+
+Linked hesapların `87` tanesi `active`, `16` tanesi `disabled` durumundadır. Aktif hesapların
+`10` tanesi `permission_restricted` veya `object_inaccessible` health durumundadır. Brand
+freshness dağılımında `40` Brand'in son metric günü `2026-08-18`, `12` Brand'in verisi daha eski,
+`17` Brand'in metric'i yoktur. Hesapsız veya metricsiz Brand otomatik olarak “kapalı Brand”
+anlamına gelmez; test/demo kayıtları, bağlantısı kaldırılmış Brand'ler ve henüz provider hesabı
+bağlanmamış gerçek Brand'ler ayrı ayrı sınıflandırılmalıdır.
+
+Bütün `69` Brand V2 DB'de active'dir. Görünür Brand kapsamı DB'deki active bayrağından değil,
+imzalı SSO claim'inden çözülür. Bu cutover'da `brand_scope` üretilmediği için V2 bilinçli olarak
+tek-Brand modundadır: kullanıcı Accumulate'ta seçili Brand ile launch edilir. V2'nin claim dışı
+Brand'leri topluca göstermesi veya local olarak yetki genişletmesi yasaktır. Aynı oturumda
+parent/child ve çoklu Brand seçimi istenirse bu, Accumulate'ın optional signed `brand_scope`
+claim'ini üretmesini gerektiren ayrı kapsamdır.
+
+### 21.3 Yeni kritik collector bulgusu
+
+Full import kaynak statülerini birebir korur: kullanılabilir legacy linked hesaplar `active`,
+disabled hesaplar `disabled` durumundadır. V2-native self-service akışı ise kullanılabilir yeni
+linked hesapları `connected` olarak oluşturur.
+
+Mevcut collector target sorgusu yalnız `la.status='connected'` kabul etmektedir. Aktif DB ölçümü:
+
+```text
+collector_targets_current_query=0
+legacy_active_targets_with_projection=87
+legacy_active_targets_missing_projection=0
+```
+
+Sonuç olarak mevcut env'de collection gate ve timer açılsa bile worker import edilmiş `87` aktif
+hesabın hiçbirini seçmez. Bu durum provider veya credential hatası değildir; legacy/V2 status
+vocabulary uyumsuzluğudur. `COLLECTOR_TARGET_SELECTION_VERIFIED=false` ve bu bulgu kapanmadan
+provider collection veya timer açılamaz.
+
+Mevcut genel kalite paketi yeşildir: backend `162 passed / 18 skipped`, frontend `47/47`,
+TypeScript ve production build başarılıdır. `18` skipped test PostgreSQL bağlantısı gerektirir;
+mevcut suite legacy `active` target seçimini kapsamadığı için yeşil sonuç collector bulgusunu
+kapatmaz.
+
+### 21.4 Geçici V1 media köprüsü
+
+Public Nginx'te Accumulate'ın eski embedded yüzeyi için `/media/` isteklerini V1'e ileten geçici
+bridge hâlâ vardır. Son gözlenen bridge isteği `2026-08-18T12:46:25Z` tarihinde `200` dönmüştür.
+Accumulate downstream flag'inin açık olduğu ve embedded Social Media'nın artık istek üretmediği
+kanıtlanınca bu block kaldırılmalıdır. Bu işlem provider/collection sahipliğiyle aynı şey değildir;
+bridge kaldırılmadan V1 media yüzeyi tamamen emekliye ayrılmış sayılmaz.
+
+### 21.5 Güncel bayraklar
+
+```text
+STANDALONE_PRODUCT_COMPLETE=true
+STANDALONE_RUNTIME_COMPLETE=true
+V2_RELEASE_SOURCE_COMMITTED=true
+ACCUMULATE_DOWNSTREAM_DEPLOYED=true
+ACCUMULATE_BRAND_SCOPE_CLAIM_IN_SCOPE=false
+PUBLIC_V2_ACTIVE=true
+SSO_LIVE_SINGLE_BRAND_VERIFIED=true
+SSO_LIVE_ALL_BRANDS_VERIFIED=false
+BRANDS_IMPORTED=69
+BRANDS_ACTIVE=69
+BRANDS_WITH_LINKED_ACCOUNTS=53
+BRANDS_WITH_METRICS=52
+COLLECTOR_TARGET_SELECTION_VERIFIED=true
+
+### 2026-08-18 - Collector status uyumlulugu uygulama kaydi
+
+- `SocialCollectionTargetStore.list_connected()` hedef sorgusu, legacy importlardan kalan
+  `linked_social_accounts.status='active'` kayitlari ile canonical `connected` kayitlarini birlikte
+  kabul edecek sekilde dar kapsamli olarak guncellendi.
+- `platform_connections.status='connected'`, `asset_id IS NOT NULL` ve platform filtreleri aynen
+  korundu; disabled/pending baglantilar collector kapsamina alinmadi.
+- `backend/tests/test_collection_targets.py` regresyon testi eklendi. Test, iki hesap statusunun
+  kabul edildigini, connection gate'inin `connected` kaldigini ve hedef donusumunu dogrular;
+  `1 passed in 0.26s` sonucu alindi.
+- Degisiklik immutable `/opt/social-media-v2/releases/20260818T132044Z` release'i olarak deploy
+  edildi. Rollback hedefi
+  `/opt/social-media-v2/releases/20260818T124522Z-back-to-accumulate` olarak korundu.
+- Deploy oncesi ve sonrasi Meta collection, TikTok collection ve worker schedule env gate'leri
+  `false`; collection service `inactive`, timer `disabled` olarak dogrulandi. V1 ve Nginx'e
+  dokunulmadi.
+- Deploy edilmis store aktif V2 DB uzerinde provider egress olmadan salt-okunur calistirildi ve
+  toplam 87 hedefi hatasiz secti: 44 Facebook, 41 Instagram, 2 TikTok.
+- Bu kanitlarla `COLLECTOR_TARGET_SELECTION_VERIFIED=true` olarak kapatildi.
+
+### 2026-08-18 - 69 Brand dashboard ve 53 hesapli Brand veri/media kaydi
+
+- Ilk dashboard coverage calismasi fail-closed olarak `shadow_metric_inventory_changed` verdi.
+  Fark, 2026-08-17 tarihli tek bir TikTok profil snapshot'i olan `lifetime_likes` metriğiydi;
+  onceki 2026-08-10 envanterinde bulunmuyordu.
+- `lifetime_likes`, content-like toplami olmadigi aggregate DB kanitiyla dogrulandiktan sonra
+  canonical `video_likes_total` icin profile alias olarak tanimlandi. Oncelik sirasi
+  native canonical > profile alias > content-derived total olarak korundu.
+- Collector ve legacy metric projection odakli testler `8 passed in 0.35s` sonucu verdi.
+- Duzeltme immutable `/opt/social-media-v2/releases/20260818T132537Z` release'i olarak deploy
+  edildi; rollback hedefi `/opt/social-media-v2/releases/20260818T132044Z` olarak korundu.
+- Aktif `social_media_v2_shadow_20260818_1200` DB uzerinde 69 Brand icin 207 platform dashboard'u
+  ve 69 overview read-only uretildi. 169 platform/metric cifti, 125 metric ID ve 15 breakdown
+  dimension dogrulandi; scope genislemesi veya KPI/serialization hatasi bulunmadi.
+- 69 Brand'in 44'unde secili son-30-gun dashboard araliginda metric degeri, 36'sinda story vardir.
+- Hesap kaydi olan 53 Brand'in 50'sinde metrics, content ve media birlikte vardir. Brand `26`,
+  `34` ve `51` hesapli olmakla birlikte uc veri yuzeyinde de bostur; sonraki account-health
+  siniflandirmasinda ele alinacaktir.
+- V2 media root'undaki 7.396 dosyanin tamami (`1.865.919.886` byte) DB size ve SHA-256 degerleriyle
+  dogrulandi; eksik, fazla veya checksum hatali dosya yoktur.
+
+DASHBOARD_SCOPE_69_BRANDS_VERIFIED=true
+ACCOUNT_BRAND_DATA_MEDIA_AUDIT_COMPLETE=true
+ACCOUNT_BRANDS_WITHOUT_DATA=3
+
+### 2026-08-18 - Hesapsiz Brand ve account-health siniflandirma kaydi
+
+- Hesapsiz 16 Brand read-only olarak parent/child, veri ve aktiflik acisindan incelendi.
+- Brand `19` (`Hilton`) dogrudan hesapsizdir fakat 3 child ve 3 descendant account tasiyan gercek
+  rollup parent'tir; dogrudan hesap baglama adayi degildir.
+- Brand `21` (`Turk Eximbank`) dogrudan hesapsiz olmakla birlikte tarihsel metrics/content tasir;
+  gercek musteri reconnect adayi olarak ayrildi.
+- Acik test/demo bos-durum grubu: `27 Test Sub Brand`, `31 testetets`, `65401 Test 88`,
+  `286112 Test3`, `286115 Test2`, `286164 Test Brand`, `286221 testttt`,
+  `286284 Musteri Demo`.
+- Is sahibi karari olmadan otomatik siniflandirilmayacak grup: `32 Cherry Shop`, `52 Nike`,
+  `53 Adidas`, `286173 Digital Exchange`, `286213 Delphin Hotels & Resorts`,
+  `286227 Semih Company`.
+- Account-health sayimi LEFT JOIN ile tekrarlandiginda plan notundaki sayi dogrulandi:
+  16 disabled ve 10 active/unhealthy hesap vardir. Ilk INNER JOIN olcumu, connection kaydi olmayan
+  disabled `link_id=92` kaydini gizledigi icin 15 gostermisti.
+- `link_id=92`, `Belconti TikTok (demo)` kaydidir; disabled, nightly off, `connection_id=NULL` ve
+  projection/reference'siz orphan demo olarak tutulur.
+- Kalan 25 cleanup adayinin V2 connection projection'i ve encrypted access credential'i provider
+  egress olmadan yerel olarak acildi; 25/25 mevcut, revoke/expiry engeli gorulmedi. Token degeri
+  log veya dokumana yazilmadi.
+- Aktif ama sagliksiz 10 hesap: 3 `object_inaccessible`, 7 `permission_restricted`. Bunlar collector
+  acilmadan once Meta object ownership/role ve OAuth izinleri acisindan hesap sahiplerince
+  duzeltilmeli, ardindan bounded provider-read ile dogrulanmalidir.
+- Disabled gercek-musteri karar grubu: Belconti (`8`, `14`), Wainer (`9`, `12`), Thalure (`10`,
+  `17`) ve Limak International Hotels & Resorts (`72`, `73`). Bunlar is sahibi onayi olmadan
+  re-enable edilmez.
+- Disabled acik demo/mismatch/invalid grup: `1`, `21`, `22`, `24`, `25`, `26`, `27`, `92`.
+  Bu kayitlar collector disinda kalmaya devam eder; reauthorization uygulanmaz.
+- Bu audit DB status mutation'i, token refresh/revoke veya provider istegi yapmamistir.
+
+ACCOUNTLESS_BRAND_AUDIT_COMPLETE=true
+ACCOUNTLESS_BRAND_OWNER_DECISION_REQUIRED=0
+ACCOUNTLESS_BRANDS_WAIT_FOR_LINK=true
+DISABLED_ACCOUNT_COUNT=16
+UNHEALTHY_ACTIVE_ACCOUNT_COUNT=10
+OFFLINE_CREDENTIAL_AVAILABILITY_VERIFIED=true
+LIVE_PROVIDER_ACCESS_VERIFIED=false
+
+### 2026-08-18 - V1 writer quiescence ve final parity kaydi
+
+- Runbook'taki exact 23 V1 provider timer salt-okunur kontrol edildi; tamami `inactive`, unit-file
+  durumu `enabled` olarak goruldu. `ars-social-backend.service` aktif birakilmistir. V1 unit/env/DB
+  uzerinde mutation yapilmadi.
+- V2 API/web aktif, collection service inactive, collection timer disabled; Meta collection,
+  TikTok collection ve worker schedule env gate'leri `false` olarak tekrar dogrulandi.
+- Final full-import verifier iki DB'yi `REPEATABLE READ + READ ONLY` kullanarak karsilastirdi.
+  Brand/platform scope ve satir parity sonucu: 69 Brand, 358 meta account, 97 asset,
+  103 linked account, 73 platform connection, 97 sync state, 1.720.816 metric,
+  7.642 content, 4.351 comment, 7.396 media row ve 6 AI insight eslesti.
+- Kaynak ve V2 media koklerindeki 7.396 dosyanin size/SHA-256 degerleri ve exact dosya seti
+  eslesti. 69 legacy Brand projection'i ve 97 completed legacy snapshot job dogrulandi.
+- Credential verifier iki DB'yi read-only kullandi; 175 encrypted credential plaintext parity,
+  175 unique nonce claim, 73 connection projection, 173 access ve 2 refresh credential eslesti.
+  Dört cross-Brand link ve bir unbound link semantigi korundu; secret yazdirilmadi.
+- TikTok ownership transferi uygulanmadi. Provider owner refresh-token rotation ve rollback
+  prosedurunu onaylamadan ilk V2 refresh calistirilmayacaktir.
+
+V1_PROVIDER_TIMERS_INACTIVE=true
+FINAL_DATA_MEDIA_PARITY_VERIFIED=true
+FINAL_CREDENTIAL_PARITY_VERIFIED=true
+TIKTOK_OWNERSHIP_TRANSFERRED=true
+V2_COLLECTION_ACTIVE=false
+
+### 2026-08-18 - Is sahibi kararlari ve TikTok ownership transfer kaydi
+
+- Hesapsiz Brand'ler mevcut empty-state durumunda kalacaktir. Yeni account link edilmeden import,
+  backfill veya collection akisi baslatilmayacaktir.
+- Belconti, Wainer ve Thalure icin artik provider erisimi yoktur; mevcut account linkleri disabled
+  ve nightly off kalacak, reauthorization uygulanmayacaktir.
+- Limak International Hotels & Resorts parent seviyesindeki legacy linkler acilmayacaktir. Aktif
+  hesaplar child Brand'lerde sahiplenildigi icin parent kayitlar disabled kalir.
+- TikTok ownership onayi alindiktan sonra collector refresh yolunun access ve refresh credential'i
+  iki ayri transaction'da yazdigi tespit edildi. `ProjectionCredentialStore.put_many()` eklendi;
+  access+refresh artik tek DB transaction'inda persist edilir. Collector bu atomic yolu kullanir.
+- Ownership araci exact link allowlist (`99`, `100`), 23 V1 timer-inactive kontrolu, tum V2
+  account/provider/schedule gate'lerinin closed olmasi, encrypted recovery staging, identity/scope
+  token-info kontrolu ve atomic canonical promote kosullariyla eklendi.
+- Odakli testler 19 passed; izole gecici PostgreSQL testleri 7 passed; resmi TikTok refresh response
+  field testi dahil TikTok provider testleri 12 passed sonucunu verdi.
+- Link `99` ilk refresh response'u provider'in resmi `refresh_token_expires_in` alanini tasirken
+  eski parser `refresh_expires_in` bekledigi icin staging oncesi fail-closed durdu. Resmi TikTok
+  Business API contract'i dogrulandi, parser canonical alan + legacy fixture uyumluluguyla
+  duzeltildi. Recovery refresh'i basarili oldu; yeni token cifti encrypted staging, token-info ve
+  atomic promote adimlarini gecti.
+- Link `100` ownership transferi ilk kontrollu denemede basarili oldu. Her iki connection (`72`,
+  `74`) icin audit state `promoted`, staging credential sayisi sifir ve canonical access/refresh
+  tokenlari local vault acisindan available olarak dogrulandi.
+- Her iki transfer sonrasinda refresh-free real provider canary gecti. Canary refresh/revoke veya
+  credential mutation yapmadi; identity/scope dogrulandi ve fingerprint degismedi.
+- Son runtime release `/opt/social-media-v2/releases/20260818T134624Z`, rollback release
+  `/opt/social-media-v2/releases/20260818T134340Z` oldu. Meta/TikTok collection ve worker schedule
+  gate'leri false; V2 collection service inactive ve timer disabled kaldi.
+
+DISABLED_ACCOUNT_OWNER_CLASSIFICATION_COMPLETE=true
+DISABLED_ACCOUNT_REAUTH_REQUIRED=0
+TIKTOK_OWNERSHIP_CONNECTION_72_PROMOTED=true
+TIKTOK_OWNERSHIP_CONNECTION_74_PROMOTED=true
+TIKTOK_POST_TRANSFER_READ_CANARY_VERIFIED=true
+TIKTOK_OWNERSHIP_TRANSFERRED=true
+V2_COLLECTION_ACTIVE=false
+COLLECTOR_TARGETS_CURRENT_QUERY=0
+SOCIAL_RUNTIME_MODE=staging
+META_COLLECTION_ENABLED=false
+TIKTOK_COLLECTION_ENABLED=false
+WORKER_SCHEDULE_ENABLED=false
+EXISTING_PROVIDER_APPS_TRANSFERRED_TO_V2=false
+PROVIDER_COLLECTION_LIVE_VERIFIED=false
+FINAL_QUIESCED_PARITY_VERIFIED=false
+READY_FOR_ACCUMULATE_SSO_HANDOFF=false
+V1_RETIRED=false
+```
+
+`PUBLIC_V2_ACTIVE=true`, provider ownership veya collection'ın tamamlandığını ima etmez. Public
+read path, provider writer ownership ve SSO Brand kapsamı birbirinden bağımsız kapılardır.
+
+## 22. Bundan sonraki bağlayıcı tamamlama sırası
+
+### 22.1 V2 repository düzeltmesi — ilk iş
+
+1. Collector target eligibility tek bir açık sözleşmede birleştirilir:
+   - V2-native `connected` hesap seçilir;
+   - legacy import `active` hesap yalnız scheduled collection için geçerli legacy enablement
+     koşulunu taşıyorsa seçilir;
+   - `disabled`, eksik asset, bağlantısı connected olmayan veya credential projection'ı eksik
+     hesap her durumda dışarıda kalır.
+2. PostgreSQL regression testi en az `connected`, legacy `active`, legacy `disabled`, eksik
+   projection ve yanlış platform/Brand scope örneklerini kapsar.
+3. Test DB üzerinde target count beklenen allowlist ile exact karşılaştırılır; yalnız row count
+   kontrolü yeterli değildir.
+4. Backend, frontend, secret-leak ve production build doğrulamaları tekrar çalıştırılır.
+
+### 22.2 Provider gate'leri kapalı V2 deploy
+
+1. Düzeltme immutable V2 release olarak deploy edilir.
+2. Runtime henüz staging/write-capable kalabilir; Meta/TikTok account, activation, collection ve
+   worker schedule gate'leri kapalı tutulur.
+3. V2-only controlled restart sonrasında loopback ve public health/readiness/root/static probe'ları
+   tekrar geçer.
+4. Salt-okunur target preflight, `87` legacy active hesabı ve varsa V2-native connected hesapları
+   exact allowlist olarak raporlar; provider egress veya DB mutation üretmez.
+
+### 22.3 Brand kabul matrisi
+
+1. `69` Brand için exact dashboard scope ve cross-Brand denial testi çalıştırılır.
+2. Linked hesabı olan `53` Brand için hesap/platform/data/media görünürlüğü doğrulanır.
+3. En az bir gerçek dolu Brand, bir empty Brand, bir disabled-account Brand ve bir health sorunu
+   bulunan Brand gerçek browser canary kapsamına alınır.
+4. Gerçek Accumulate SSO her canary'de yalnız seçili Brand'i açmalıdır. Tek oturumda bütün
+   Brand'leri göstermek bu planın hedefi değildir.
+5. Hesapsız `16`, metricsiz `17`, disabled `16` hesap ve aktif fakat sağlıksız `10` hesap için
+   `expected_empty`, `reauthorize`, `relink`, `retire_test_data` veya `investigate_provider`
+   sınıflandırması üretilir.
+
+### 22.4 Dış bağımlı final ownership penceresi
+
+Bu adım V2 repository ekibinin V1'e doğrudan müdahale yetkisi değildir. V1 Operations/provider
+sahibi, [`cutover/FINAL_CHANGE_WINDOW_RUNBOOK.md`](cutover/FINAL_CHANGE_WINDOW_RUNBOOK.md)
+sırasıyla:
+
+1. V1 provider writer/timer durumunu kaydeder ve kontrollü olarak quiesce eder;
+2. final read-only V1→V2 data/media/credential parity'yi tekrar çalıştırır;
+3. TikTok refresh-token ownership transferi ve rollback prosedürünü uygular;
+4. Meta/TikTok bounded read ve tek hesaplık collection canary'lerini birlikte doğrular.
+
+Bu dış kapılar tamamlanmadan V2 schedule açılmaz. V2 ekibi Accumulate veya V1 kaynak ağacında,
+servisinde, DB'sinde ya da timer'ında değişiklik yapmaz.
+
+### 22.5 V2 production aktivasyonu
+
+Yalnız §22.1–§22.4 yeşil olduktan sonra:
+
+1. production runtime `APP_ENV=production`, `SOCIAL_RUNTIME_MODE=active` ve explicit V2 writes
+   durumuna alınır;
+2. önce tek allowlisted hesapla gerçek collection canary çalıştırılır;
+3. canary DB/media diff'i, provider request bütçesi, credential fingerprint/rotation sonucu ve
+   rollback kanıtı incelenir;
+4. Meta/TikTok collection gate'leri yalnız doğrulanmış platform/account kapsamı için açılır;
+5. V2 collection timer etkinleştirilir ve en az iki ardışık schedule turu gözlenir;
+6. `40 current / 12 stale / 17 none` freshness dağılımı yeni collection sonuçlarıyla yeniden
+   ölçülür; beklenen empty/disabled kayıtlar ayrı raporlanır.
+
+### 22.6 Kapanış
+
+1. Accumulate embedded Social Media trafiğinin bittiği kanıtlanınca geçici `/media/` V1 bridge'i
+   kaldırılır ve Nginx graceful reload sonrası media/public smoke tekrarlanır.
+2. `docs/ACCUMULATE_SSO_HANDOFF.md` artık gerçekleşen deploy'u ve düzeltilmiş TikTok sonucunu
+   yansıtacak şekilde post-deploy kayda çevrilir.
+3. Faz F/G raporu final ownership, live collection ve freshness kanıtlarıyla kapatılır.
+4. Yalnız bütün kapılar yeşilse aşağıdaki final bayraklar verilir:
+
+```text
+COLLECTOR_TARGET_SELECTION_VERIFIED=true
+FINAL_QUIESCED_PARITY_VERIFIED=true
+EXISTING_PROVIDER_APPS_TRANSFERRED_TO_V2=true
+PROVIDER_COLLECTION_LIVE_VERIFIED=true
+SSO_LIVE_ALL_REQUIRED_CANARIES_VERIFIED=true
+SOCIAL_RUNTIME_MODE=active
+PUBLIC_V2_ACTIVE=true
+V1_RETIRED=true
+```
+
+`V1_RETIRED=true`, V1 DB/media/release'in silinmesi anlamına gelmez; rollback ve audit saklama
+politikası ayrıca uygulanır.
+
+## 2026-08-18 - Tek hesaplik gercek TikTok collector canary takibi
+
+- Canary hedefi: `linked_social_accounts.id=99`, Pine Beach Belek, `asset_id=2862`, `brand_id=18`.
+- Global production env degistirilmedi. V2 collection, provider schedule ve timer gate'leri kapali tutuldu; ilk deneme yalnizca tek CLI prosesi icin gecici TikTok account/activation/collection gate'leriyle calistirildi.
+- Ilk gercek collector denemesi provider'in ilk `profile` asamasinda durdu: `/open_api/v1.3/business/get/` yaniti `provider_rejected:40002`; hic metric/content/comment/media yazilmadi.
+- Token-info ve ownership kontrolleri basarili oldugundan sorun credential transferinden ayrildi ve profil istek sozlesmesine indirildi.
+- Resmi TikTok API for Business v1.3 referansinin dogrudan dokuman API'si endpoint'in `GET`, `Access-Token`, `business_id` ve `fields` sozlesmesini dogruladi. `business_id` yalnizca zorunlu URL parametresidir ve `fields` listesine yazilamaz; lifetime begeni/video alanlari `total_likes` ve `videos_count` adlarini kullanir.
+- Duzeltme: `TikTokAccountsWireMapper.profile_fields` listesinden `business_id` cikarildi; `likes`/`video_count` alanlari `total_likes`/`videos_count` olarak degistirildi. Onceki ara `likes_count` cikarimi canary calistirilmadan resmi dokuman API'siyle duzeltildi.
+- Resmi alanlarla provider yaniti basarili geldi; ikinci engel yerel `TikTokProfileReader` parser'inin response icinde artik donmeyen `business_id` alanini zorunlu tutmasiydi. Profil kimligi, token-info ile `creator_id` uzerinden onceden dogrulanan `ProviderAccount.account_id` kaynagindan alinacak sekilde duzeltildi; wire ve identity-boundary regresyon testleri guncellendi.
+- Profil asamasi gecildikten sonra gercek yanitta `comments=-1` goruldu. TikTok'un unavailable sentinel'i olan `-1`, gunluk metrik parser'inda `None`/skip olarak normalize edildi; `-2` ve daha dusuk negatifler gecersiz kaldi. Her iki sinir icin regresyon testi eklendi.
+- Gunluk metrik asamasi sonrasinda content parser'i timezone bilgisi olmayan resmi `create_time` datetime degerini reddetti. TikTok Accounts API'nin UTC tabanli naive datetime degeri UTC olarak normalize edildi; timezone'lu ISO ve legacy epoch destegi korundu ve regresyon testi eklendi.
+- Canli `create_time` degeri epoch saniyesini string (`'1785253164'`) olarak dondurdu. Timestamp parser'i numeric-string epoch'u UTC olarak kabul edecek sekilde genisletildi; naive ISO ve numeric-string epoch regresyonlari birlikte kilitlendi.
+- Canli video pagination cevabi `has_more=true` ile integer cursor dondurdu. Opaque non-negative integer cursor decimal string'e normalize edilerek mevcut sonraki-sayfa kontratina uyarlandi; regresyon testi eklendi.
+- Ilk yazimli canary `172` metric, `196` content ve `196` media uretti; yorumlar `comments_unavailable` nedeniyle sonucu `partial` birakti. Izole trace yetki reddi olmadigini, comment `create_time` alaninin numeric-string epoch (`'1785485291'`) oldugunu gosterdi. Comment timestamp ve integer cursor parser'lari content ile ayni canli uyumluluk kurallarina getirildi; test guncellendi.
+- Durum: duzeltme deploy/canary asamasinda; canary basarili olmadan global collection veya V2 timer acilmayacak.

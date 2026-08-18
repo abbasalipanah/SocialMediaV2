@@ -43,6 +43,8 @@ class TikTokContentReader:
         if not isinstance(has_more, bool):
             raise TikTokResponseError("video_page_invalid")
         next_cursor = data.get("cursor")
+        if isinstance(next_cursor, int) and not isinstance(next_cursor, bool) and next_cursor >= 0:
+            next_cursor = str(next_cursor)
         if has_more and (not isinstance(next_cursor, str) or not next_cursor):
             raise TikTokResponseError("video_page_invalid")
         if not has_more:
@@ -135,12 +137,16 @@ def _timestamp(value: object) -> datetime | None:
     if isinstance(value, int):
         return datetime.fromtimestamp(value, tz=UTC)
     if isinstance(value, str):
+        normalized = value.strip()
+        if normalized.isdigit():
+            return datetime.fromtimestamp(int(normalized), tz=UTC)
         try:
-            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            parsed = datetime.fromisoformat(normalized.replace("Z", "+00:00"))
         except ValueError as exc:
             raise TikTokResponseError("response_field_invalid") from exc
-        if parsed.tzinfo is not None:
-            return parsed.astimezone(UTC)
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(UTC)
     raise TikTokResponseError("response_field_invalid")
 
 

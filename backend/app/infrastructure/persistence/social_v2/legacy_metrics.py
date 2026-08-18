@@ -41,7 +41,7 @@ class LegacyMetricRow:
     breakdown_value: str | None
 
 
-# Audited against the immutable 2026-08-10 full legacy snapshot.  Keeping the
+# Audited against the immutable 2026-08-18 full legacy snapshot.  Keeping the
 # platform pairs explicit makes source drift visible in tests instead of silently
 # dropping a newly introduced provider field.
 KNOWN_LEGACY_METRIC_IDS_BY_PLATFORM: dict[PlatformId, frozenset[str]] = {
@@ -111,6 +111,7 @@ KNOWN_LEGACY_METRIC_IDS_BY_PLATFORM: dict[PlatformId, frozenset[str]] = {
             MetricId.FOLLOWERS.value, MetricId.FOLLOWERS_NET.value,
             MetricId.FOLLOWING.value, MetricId.FOLLOWS.value,
             "full_video_watched_rate", MetricId.INTERACTIONS.value, "likes",
+            "lifetime_likes",
             MetricId.NEW_FOLLOWERS.value, MetricId.PROFILE_VIEWS.value,
             MetricId.REACH.value, "shares", "total_time_watched",
             MetricId.UNFOLLOWS.value, MetricId.VIEWS.value,
@@ -146,6 +147,10 @@ _TIKTOK_TOTALS: dict[str, MetricId] = {
     "shares": MetricId.VIDEO_SHARES_TOTAL,
 }
 
+_LEGACY_DIRECT_ALIASES: dict[tuple[PlatformId, str], MetricId] = {
+    (PlatformId.TIKTOK, "lifetime_likes"): MetricId.VIDEO_LIKES_TOTAL,
+}
+
 _FIXED_BREAKDOWNS: dict[tuple[PlatformId, str], tuple[MetricId, str, str]] = {
     (PlatformId.FACEBOOK, "page_like_types_organic"): (
         MetricId.FOLLOWERS, "page_like_type", "organic"
@@ -169,6 +174,8 @@ def legacy_metric_disposition(
 ) -> LegacyMetricDisposition:
     if raw_metric_id in _AUDIENCE_PROJECTIONS:
         return LegacyMetricDisposition.AUDIENCE_BREAKDOWN
+    if (platform, raw_metric_id) in _LEGACY_DIRECT_ALIASES:
+        return LegacyMetricDisposition.DIRECT
     if platform is PlatformId.TIKTOK and breakdown_key == "content_id":
         if raw_metric_id in _TIKTOK_TOTALS:
             return LegacyMetricDisposition.TIKTOK_CONTENT_TOTAL
@@ -282,13 +289,14 @@ def project_legacy_metrics(
             continue
         if disposition is not LegacyMetricDisposition.DIRECT:
             continue
-        metric_id = MetricId(raw.raw_metric_id)
-        # Native V2 rows win over compatibility projections with the same identity.
+        alias_metric_id = _LEGACY_DIRECT_ALIASES.get((raw.platform, raw.raw_metric_id))
+        metric_id = alias_metric_id or MetricId(raw.raw_metric_id)
+        # Native V2 rows win over legacy aliases, which win over content projections.
         keep(
             _reporting_metric(
                 raw, metric_id, raw.breakdown_key, raw.breakdown_value
             ),
-            priority=30,
+            priority=25 if alias_metric_id else 30,
         )
 
     for (account_id, brand_id, observed_on, metric_id), total_value in tiktok_totals.items():

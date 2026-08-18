@@ -41,8 +41,8 @@ def test_full_legacy_inventory_has_an_explicit_policy() -> None:
         for platform, metric_ids in KNOWN_LEGACY_METRIC_IDS_BY_PLATFORM.items()
         for metric_id in metric_ids
     }
-    assert len(pairs) == 168
-    assert len({metric_id for _, metric_id in pairs}) == 124
+    assert len(pairs) == 169
+    assert len({metric_id for _, metric_id in pairs}) == 125
     assert len(KNOWN_LEGACY_BREAKDOWN_KEYS) == 15
     for platform, metric_id in pairs:
         assert (
@@ -141,6 +141,25 @@ def test_native_v2_total_wins_over_legacy_tiktok_projection() -> None:
     )
     assert len(projected) == 1
     assert projected[0].metric_id is MetricId.VIDEO_VIEWS_TOTAL
+    assert projected[0].value == 900
+
+
+def test_tiktok_lifetime_likes_profile_snapshot_wins_over_content_total() -> None:
+    projected = project_legacy_metrics(
+        (
+            _row(PlatformId.TIKTOK, "lifetime_likes", 900),
+            _row(
+                PlatformId.TIKTOK,
+                "likes",
+                7,
+                breakdown_key="content_id",
+                breakdown_value="video-1",
+            ),
+        )
+    )
+
+    assert len(projected) == 1
+    assert projected[0].metric_id is MetricId.VIDEO_LIKES_TOTAL
     assert projected[0].value == 900
 
 

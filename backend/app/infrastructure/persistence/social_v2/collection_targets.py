@@ -51,7 +51,7 @@ class SocialCollectionTargetStore:
         if not platforms:
             return ()
         clauses = [
-            "la.status='connected'",
+            "la.status IN ('active', 'connected')",
             "pc.status='connected'",
             "la.asset_id IS NOT NULL",
             "la.platform = ANY(:platforms)",

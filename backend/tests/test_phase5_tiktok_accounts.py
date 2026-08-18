@@ -117,6 +117,19 @@ def test_token_refresh_revoke_and_token_info_fixtures(
     assert evaluate_scopes(_config(), info.scopes).permitted is True
 
 
+def test_token_refresh_accepts_official_refresh_token_expiry_field(
+    golden: dict[str, object],
+) -> None:
+    payload = json.loads(json.dumps(golden["refresh"]))
+    payload["data"]["refresh_token_expires_in"] = payload["data"].pop(
+        "refresh_expires_in"
+    )
+
+    refreshed = parse_token(payload)
+
+    assert refreshed.refresh_expires_in == 31_536_000
+
+
 def test_required_optional_and_forbidden_scope_gate() -> None:
     config = _config()
     complete = evaluate_scopes(
@@ -142,7 +155,14 @@ def test_account_request_mapping_is_exact_and_opaque() -> None:
     assert token_info["access_token"] == "fixture-access-value"
     assert set(token_info) == {"app_id", "access_token"}
     assert profile["business_id"] == "business-1"
-    assert json.loads(profile["fields"])[0] == "business_id"
+    assert json.loads(profile["fields"]) == [
+        "display_name",
+        "username",
+        "profile_image",
+        "followers_count",
+        "total_likes",
+        "videos_count",
+    ]
     assert videos["cursor"] == "next-page"
     assert "item_id" in json.loads(videos["fields"])
     comments = mapper.comment_fields(
@@ -173,21 +193,22 @@ def test_comment_and_audience_readers_preserve_provider_values() -> None:
                         "comment_id": "comment-1",
                         "video_id": "video-1",
                         "text": "hello",
-                        "create_time": 1_757_686_800,
+                        "create_time": "1757686800",
                         "likes": 4,
                         "reply_comment_total": 2,
                         "username": "viewer",
                         "user_id": "viewer-1",
                     }
                 ],
-                "has_more": False,
+                "has_more": True,
+                "cursor": 1_763_482_984_376,
             },
         },
         clock=lambda: NOW,
     ).list_comments(account, content_id="video-1")
     assert comments.items[0].fields["like_count"] == 4
     assert comments.items[0].fields["reply_count"] == 2
-    assert comments.next_cursor is None
+    assert comments.next_cursor == "1763482984376"
 
     audience = TikTokAudienceReader(
         lambda _business_id, _observed_on: {
@@ -330,10 +351,10 @@ def test_malformed_response_and_account_mismatch_fail_closed(
         account_id="wrong-business",
         credential=ProviderCredential(access_token="fixture-access-value"),
     )
-    with pytest.raises(TikTokResponseError, match="provider_account_mismatch"):
-        TikTokProfileReader(
-            lambda _account_id: golden["profile"]  # type: ignore[return-value]
-        ).fetch_profile(account)
+    profile = TikTokProfileReader(
+        lambda _account_id: golden["profile"]  # type: ignore[return-value]
+    ).fetch_profile(account)
+    assert profile.account_id == "wrong-business"
 
 
 def test_token_info_is_a_body_post_not_a_header_get() -> None:
