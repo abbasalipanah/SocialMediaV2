@@ -210,3 +210,30 @@ otherwise V1 cannot be retired.
 
 This bridge is deliberately absent from `deploy/nginx/social-media-v2.conf`,
 which stays the canonical post-cutover configuration.
+
+## 8. The launch URL outgrew the default header buffer (`2026-08-18`)
+
+Emitting the accessible Brand family inside the signed launch token pushed the
+`/sso/consume` request line to roughly `21 kB` for a user with `135` Brands.
+Nginx allows `8 kB` per header line by default and closes the connection rather
+than answering, which surfaced in the browser as `ERR_CONNECTION_CLOSED` with no
+server-side error to find.
+
+The canonical host now sets:
+
+```text
+large_client_header_buffers 8 64k;
+```
+
+This is a mitigation, not the design. A launch URL that grows with the Brand
+catalogue is fragile in browsers, proxies and access logs alike, and at `500`
+Brands — the contract's own ceiling — it would exceed even the raised buffer.
+
+The durable fix is to stop carrying that payload in a URL. Accumulate already
+supports a `post_form` launch transport, used today by Media Planner, which
+sends the token in a request body with no length ceiling; V2 would need to accept
+`POST /sso/consume` alongside the current `GET`.
+
+Until that lands, treat the buffer directive as load-bearing: any rebuild of the
+Social hostname configuration must keep it, and the scope size must be
+re-measured whenever the Brand catalogue grows materially.
