@@ -1,5 +1,6 @@
 import {
   Facebook,
+  Lock,
   Home,
   Instagram,
   PieChart,
@@ -57,12 +58,30 @@ function NavigationLink({
   label,
   icon: Icon,
   onClick,
+  locked = false,
 }: {
   path: string;
   label: string;
   icon: ComponentType<{ size?: number }>;
   onClick: () => void;
+  locked?: boolean;
 }) {
+  if (locked) {
+    // A channel the Brand has not connected keeps its place rather than
+    // disappearing, so the navigation reads the same for every Brand and the
+    // absence is stated instead of hidden.
+    return (
+      <span
+        aria-disabled="true"
+        className="sidebar-link locked"
+        title={`${label} is not connected for this Brand`}
+      >
+        <Icon size={20} />
+        <span>{label}</span>
+        <Lock aria-hidden="true" className="sidebar-link-lock" size={14} />
+      </span>
+    );
+  }
   return (
     <NavLink
       className={({ isActive }) => `sidebar-link${isActive ? " active" : ""}`}
@@ -79,11 +98,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const { capabilities } = useBrandScope();
   const settingsVisible = capabilities?.permissions.settings_visible === true;
   const integrationsVisible = capabilities?.permissions.integrations_visible === true;
-  const tiktokVisible = platformAvailable("tiktok", capabilities);
   const homePath = "/";
-  const visiblePlatforms = platformNavigation.filter(
-    (item) => item.platform !== "tiktok" || tiktokVisible,
-  );
 
   return (
     <>
@@ -113,10 +128,16 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </div>
           <div className="sidebar-channel-tree">
             <div className="sidebar-channel-title">Social Media</div>
-            {visiblePlatforms.map(({ icon: Icon, label, path, platform }) => (
+            {platformNavigation.map(({ icon: Icon, label, path, platform }) => (
               <div className="sidebar-channel-row" key={platform}>
                 <span aria-hidden="true" className="channel-connector" />
-                <NavigationLink icon={Icon} label={label} onClick={onClose} path={path} />
+                <NavigationLink
+                  icon={Icon}
+                  label={label}
+                  locked={!platformAvailable(platform, capabilities)}
+                  onClick={onClose}
+                  path={path}
+                />
               </div>
             ))}
           </div>

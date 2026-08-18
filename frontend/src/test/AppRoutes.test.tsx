@@ -401,8 +401,14 @@ describe("Phase 7 application shell", () => {
         "/facebook",
       ),
     );
-    expect(within(primary).getByRole("link", { name: "Instagram" })).toHaveAttribute("href", "/instagram");
-    expect(within(primary).queryByRole("link", { name: "TikTok" })).not.toBeInTheDocument();
+    // A channel the Brand has not connected keeps its place, locked, so the
+    // navigation reads the same for every Brand instead of silently varying.
+    for (const unconnected of ["Instagram", "TikTok"]) {
+      expect(within(primary).queryByRole("link", { name: unconnected })).not.toBeInTheDocument();
+      const locked = within(primary).getByTitle(`${unconnected} is not connected for this Brand`);
+      expect(locked).toHaveAttribute("aria-disabled", "true");
+      expect(locked).toHaveTextContent(unconnected);
+    }
     expect(within(primary).getAllByRole("link", { name: "Settings" })).toHaveLength(1);
     expect(within(primary).getByRole("link", { name: "Integrations" })).toHaveAttribute("href", "/integrations");
     expect(within(primary).queryByText("Support")).not.toBeInTheDocument();

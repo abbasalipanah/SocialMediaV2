@@ -993,6 +993,7 @@ body { background: var(--sm-bg); }
 .sidebar-channel-row:has(.sidebar-link.active) .channel-connector { background: #c4b5fd; }
 .sidebar-link.locked { color: #94a3b8; opacity: 1; }
 .sidebar-link.locked:hover { color: #94a3b8; background: transparent; }
+.sidebar-link-lock { margin-left: auto; flex-shrink: 0; color: #cbd5e1; }
 .link-lock { color: #cbd5e1; }
 .sidebar-footer { margin: 0 8px 8px; padding: 12px 4px 4px; border-top: 1px solid #f1f5f9; }
 .sidebar-footer .sidebar-link { padding-inline: 16px; font-weight: 500; }
