@@ -1003,20 +1003,25 @@ body { background: var(--sm-bg); }
   display: flex;
   min-height: 44px;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  gap: 10px;
   margin: 7px 4px 4px;
-  padding: 10px 14px;
-  color: white;
-  border-radius: 10px;
-  background: linear-gradient(90deg, #7c3aed, #4338ca);
-  box-shadow: 0 12px 26px rgb(109 40 217 / 23%);
+  padding: 9px 14px;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 6%);
   font-size: .82rem;
-  font-weight: 750;
+  font-weight: 600;
   text-decoration: none;
-  transition: transform .15s ease, box-shadow .15s ease;
+  transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
-.sidebar-return-link:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgb(109 40 217 / 29%); }
+.sidebar-return-link:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  box-shadow: 0 2px 6px rgb(15 23 42 / 8%);
+}
+.sidebar-return-mark { width: 22px; height: 22px; flex-shrink: 0; object-fit: contain; }
 .app-workspace { margin-left: 236px; }
 .app-topbar {
   min-height: 70px;

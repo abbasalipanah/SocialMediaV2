@@ -21,7 +21,9 @@ AI_SUMMARY_APP_ROLE = "operator"
 PLATFORM_CONNECTION_MANAGE_PERMISSION = "social.connection.manage"
 TIKTOK_CONNECTION_MANAGE_PERMISSION = "tiktok.connection.manage"
 BRAND_STATUSES = {"active", "suspended", "archived"}
-LAUNCH_TARGETS = {None: "/settings", "tiktok_owner_activation": "/settings/tiktok/connect"}
+# A normal launch lands on the dashboard the user came for. Only the signed
+# owner-activation launch goes straight to the TikTok connect screen.
+LAUNCH_TARGETS = {None: "/", "tiktok_owner_activation": "/settings/tiktok/connect"}
 REQUIRED_CONTRACT_FIELDS = {
     "version",
     "issued_at",

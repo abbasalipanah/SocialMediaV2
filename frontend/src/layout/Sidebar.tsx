@@ -1,5 +1,4 @@
 import {
-  ExternalLink,
   Facebook,
   Home,
   Instagram,
@@ -131,7 +130,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <NavigationLink icon={PlugZap} label="Integrations" onClick={onClose} path="/integrations" />
           )}
           <a className="sidebar-return-link" href={accumulateUrl}>
-            <ExternalLink size={17} />
+            <img alt="" className="sidebar-return-mark" src="/favicon.png" />
             <span>Back to Accumulate</span>
           </a>
           <div className="sidebar-product-note"><span />SocialMedia standalone</div>

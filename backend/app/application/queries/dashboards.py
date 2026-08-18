@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -86,6 +87,26 @@ def _exclude_content_types(rows, excluded: tuple[str, ...]):
         return rows
     normalized = {value.strip().lower() for value in excluded}
     return tuple(row for row in rows if row.content_type.strip().lower() not in normalized)
+
+
+def platform_warnings(
+    *,
+    has_accounts: bool,
+    metric_warnings: Sequence[str],
+    freshness_status: FreshnessStatus,
+) -> list[str]:
+    """Warnings for one platform card.
+
+    A platform the Brand never connected reports exactly that. Every per-metric
+    and freshness warning would restate the same single fact, which buried the
+    real signal under a wall of noise.
+    """
+    if not has_accounts:
+        return ["no_accounts"]
+    warnings = list(metric_warnings)
+    if freshness_status is not FreshnessStatus.FRESH:
+        warnings.append(f"freshness:{freshness_status.value}")
+    return warnings
 
 
 def _build_platform_dashboard(
@@ -179,12 +200,12 @@ def _build_platform_dashboard(
         status = DataStatus.PARTIAL
     else:
         status = DataStatus.AVAILABLE
-    warnings = list(metric_warnings)
-    if not accounts:
-        warnings.insert(0, "no_accounts")
     last_sync, freshness_status = freshness(accounts, generated)
-    if freshness_status is not FreshnessStatus.FRESH:
-        warnings.append(f"freshness:{freshness_status.value}")
+    warnings = platform_warnings(
+        has_accounts=bool(accounts),
+        metric_warnings=metric_warnings,
+        freshness_status=freshness_status,
+    )
     observed_days = len({sample.observed_on for sample in samples})
     expected_days = (query.date_range.end_on - query.date_range.start_on).days + 1
     breakdowns = metric_breakdowns(samples)

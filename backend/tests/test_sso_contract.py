@@ -80,7 +80,7 @@ def token(*, contract_overrides: Mapping[str, Any] | None = None, **top_override
 def test_valid_upstream_contract_creates_hash_only_session_and_blocks_jti_replay() -> None:
     store = MemorySessionStore()
     raw_session, verified = consume_sso(token(), SECRET, store)
-    assert verified.launch_path == "/settings"
+    assert verified.launch_path == "/"
     assert raw_session not in repr(store.sessions)
     assert resolve_session(raw_session, store) == next(iter(store.sessions.values()))
     assert resolve_session(raw_session, store)["settings_visible"] is True
