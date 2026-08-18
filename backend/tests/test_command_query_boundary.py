@@ -69,6 +69,8 @@ def test_all_routes_have_explicit_boundary_semantics() -> None:
         ("/api/workspace/brands", ("GET",)),
         ("/api/workspace/capabilities", ("GET",)),
         ("/sso/consume", ("GET",)),
+        # The same launch, with the token in a body because the URL has a ceiling.
+        ("/sso/consume", ("POST",)),
     }
     for route in routes:
         boundary = route.endpoint.__route_boundary__
@@ -77,7 +79,12 @@ def test_all_routes_have_explicit_boundary_semantics() -> None:
             "/api/social/meta/oauth/callback",
             "/api/social/tiktok/oauth/callback",
         }:
-            assert route.methods == {"GET"}
+            # The launch accepts a body as well as a URL; the provider callbacks
+            # stay GET-only.
+            if route.path == "/sso/consume":
+                assert route.methods in ({"GET"}, {"POST"})
+            else:
+                assert route.methods == {"GET"}
             assert boundary == "protocol_command"
         elif route.methods == {"GET"}:
             assert boundary == "query"
