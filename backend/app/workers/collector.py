@@ -309,14 +309,27 @@ class StandaloneCollector:
                     partial_errors.add("media_unavailable")
                     return 0
 
-            content = collect_content(
-                target=target,
-                reader=content_reader,
-                content_store=self.content,
-                checkpoint_store=self.checkpoints,
-                record_sink=persist_related,
-                max_pages=100,
-            )
+            # Guarded like comments, media and stories already are. Left bare,
+            # a provider refusal here discarded the profile, daily metrics and
+            # audience this account had already collected, and reported the run
+            # as a total failure.
+            content_count = 0
+            content_media_count = 0
+            try:
+                content = collect_content(
+                    target=target,
+                    reader=content_reader,
+                    content_store=self.content,
+                    checkpoint_store=self.checkpoints,
+                    record_sink=persist_related,
+                    max_pages=100,
+                )
+                content_count = content.content_count
+                content_media_count = content.media_count
+                if content.status is not CollectionStatus.SUCCESS:
+                    partial_errors.add("content_partial")
+            except Exception:
+                partial_errors.add("content_unavailable")
             story_content_count = 0
             story_media_count = 0
             if row.platform is PlatformId.INSTAGRAM:
@@ -359,9 +372,9 @@ class StandaloneCollector:
                     + daily.metric_count
                     + (audience.metric_count if audience is not None else 0)
                 ),
-                content_count=content.content_count + story_content_count,
+                content_count=content_count + story_content_count,
                 comment_count=comment_count,
-                media_count=content.media_count + story_media_count,
+                media_count=content_media_count + story_media_count,
                 error_code=_partial_error_code(partial_errors),
             )
         finally:
@@ -721,8 +734,17 @@ def _validate_media_url(value: str) -> None:
 
 
 def _error_code(exc: Exception) -> str:
-    value = re.sub(r"[^a-z0-9_]+", "_", type(exc).__name__.lower()).strip("_")
-    return value[:64] or "collection_failed"
+    """Record the class and the provider's sanitized reason.
+
+    The class name alone said only `metatransporterror`, which is true of a
+    refused metric, an expired token and a rate limit alike. The reason is an
+    enum-like string from our own provider layer and carries no credential or
+    response body, so keeping it turns an opaque failure into an actionable one.
+    """
+    name = re.sub(r"[^a-z0-9_]+", "_", type(exc).__name__.lower()).strip("_")
+    reason = re.sub(r"[^a-z0-9_:.-]+", "_", str(exc).strip().lower()).strip("_")
+    code = f"{name}:{reason}" if reason and reason != name else name
+    return code[:120] or "collection_failed"
 
 
 def _partial_error_code(errors: set[str]) -> str | None:
