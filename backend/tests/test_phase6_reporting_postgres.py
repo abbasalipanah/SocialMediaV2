@@ -278,7 +278,7 @@ def _seed(connection) -> None:
             (1, 101, 'facebook', 'connected', NULL, '2026-07-02T10:00:00Z', 'secret')""",
         """INSERT INTO linked_social_accounts VALUES
             (1, 101, 'facebook', 11, 1, 'active', 'healthy', 'ready', true,
-             '2026-07-02T10:00:00Z'),
+             '2026-04-07T10:00:00Z'),
             (2, 102, 'facebook', 12, NULL, 'active', 'healthy', 'ready', true,
              '2026-07-02T09:00:00Z')""",
         "INSERT INTO asset_sync_state VALUES (11, '2026-07-02T10:00:00Z', NULL)",
@@ -316,3 +316,25 @@ def _seed(connection) -> None:
     )
     for statement in statements:
         connection.execute(text(statement))
+
+
+def test_freshness_uses_the_newest_sync_not_the_first_present(
+    reporting_store: SocialReportingStore,
+) -> None:
+    """A migrated linked account can carry a stale legacy timestamp.
+
+    Reading the first non-null value reported months-old freshness for accounts
+    that had in fact synced hours earlier, which surfaced as `Freshness:Outdated`
+    on dashboards whose data was current.
+    """
+    accounts = {
+        row.account_id: row
+        for row in reporting_store.list_accounts(
+            brand_ids=("101", "102"), platform=PlatformId.FACEBOOK
+        )
+    }
+
+    # Account 11 carries an April legacy value and a July sync-state row.
+    assert accounts[11].last_synced_at == datetime(2026, 7, 2, 10, tzinfo=UTC)
+    # Account 12 has no sync-state row, so its own timestamp still stands.
+    assert accounts[12].last_synced_at == datetime(2026, 7, 2, 9, tzinfo=UTC)

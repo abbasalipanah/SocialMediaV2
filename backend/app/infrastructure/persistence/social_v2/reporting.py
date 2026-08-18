@@ -49,7 +49,11 @@ class SocialReportingStore:
                        COALESCE(la.health_status, 'unknown') AS health_status,
                        COALESCE(la.backfill_status, 'pending') AS backfill_status,
                        COALESCE(la.nightly_enabled, false) AS nightly_enabled,
-                       COALESCE(la.last_synced_at, ss.last_synced_at) AS last_synced_at
+                       -- The newest of the two, not the first non-null: the linked
+                       -- account row can carry a stale legacy timestamp while the
+                       -- sync state holds the real one, which reported fresh data
+                       -- as outdated. GREATEST ignores nulls in PostgreSQL.
+                       GREATEST(la.last_synced_at, ss.last_synced_at) AS last_synced_at
                 FROM assets AS a
                 LEFT JOIN linked_social_accounts AS la ON la.asset_id=a.id
                 LEFT JOIN platform_connections AS pc ON pc.id=la.connection_id
