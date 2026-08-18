@@ -25,6 +25,21 @@ class MetaPage:
     payload: Mapping[str, Any]
 
 
+def _error_signature(payload: Mapping[str, Any] | None) -> str:
+    """Provider error code and subcode, never the message.
+
+    Meta's numeric codes distinguish an expired token from a missing permission
+    from an unsupported field; the message can echo request content, so it is
+    left out. Without the codes every refusal read the same and the cause could
+    only be guessed at.
+    """
+    error = (payload or {}).get("error")
+    if not isinstance(error, Mapping):
+        return ""
+    parts = [str(error.get(key)) for key in ("code", "error_subcode") if error.get(key) is not None]
+    return ":".join(parts)
+
+
 class MetaTransportError(RuntimeError):
     def __init__(
         self,
@@ -134,14 +149,18 @@ class MetaTransport:
                 continue
             if response.status_code >= 400:
                 self._rate_guard.observe_limit_error(payload)
+                signature = _error_signature(payload)
                 raise MetaTransportError(
-                    "meta_provider_rejected",
+                    f"meta_provider_rejected:{response.status_code}"
+                    + (f":{signature}" if signature else ""),
                     status_code=response.status_code,
                 )
             if "error" in payload:
                 limited = self._rate_guard.observe_limit_error(payload)
+                signature = _error_signature(payload)
                 raise MetaTransportError(
-                    "meta_limit_response" if limited else "meta_error_payload",
+                    ("meta_limit_response" if limited else "meta_error_payload")
+                    + (f":{signature}" if signature else ""),
                     status_code=response.status_code,
                     retryable=limited,
                 )

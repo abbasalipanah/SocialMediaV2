@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import re
 import time
 from dataclasses import asdict, dataclass
@@ -62,6 +63,7 @@ from app.infrastructure.providers.meta.instagram.daily_metrics import (
     InstagramDailyMetricsReader,
 )
 from app.infrastructure.providers.meta.instagram.profile import InstagramProfileReader
+from app.infrastructure.providers.meta.page_token import resolve_page_access_token
 from app.infrastructure.providers.meta.rate_guard import MetaRateGuard
 from app.infrastructure.providers.meta.transport import MetaTransport
 from app.infrastructure.providers.tiktok.accounts import (
@@ -75,6 +77,8 @@ from app.infrastructure.providers.tiktok.accounts import (
     parse_token,
     parse_token_info,
 )
+
+logger = logging.getLogger(__name__)
 
 MAX_MEDIA_BYTES = 10 * 1024 * 1024
 
@@ -222,6 +226,24 @@ class StandaloneCollector:
 
     def _collect_meta(self, row: CollectionTargetRow) -> WorkerAccountResult:
         token = self._access_token(row.platform, row.credential_reference)
+        if row.platform is PlatformId.FACEBOOK:
+            # Published posts and Page insights are refused with the connected
+            # user's token even though the Page profile answers, so a healthy
+            # looking credential still collected nothing.
+            lookup = MetaTransport(
+                credential=ProviderCredential(access_token=token),
+                rate_guard=MetaRateGuard(sleeper=time.sleep),
+                base_url=self.settings.meta.graph_base_url,
+                api_version=self.settings.meta.graph_version,
+                timeout_seconds=self.settings.meta_activation.provider_timeout_seconds,
+                egress_enabled=True,
+            )
+            try:
+                token = resolve_page_access_token(
+                    lookup, page_id=row.external_id, fallback_token=token
+                )
+            finally:
+                lookup.close()
         account = ProviderAccount(
             platform=row.platform,
             account_id=row.external_id,
@@ -328,7 +350,13 @@ class StandaloneCollector:
                 content_media_count = content.media_count
                 if content.status is not CollectionStatus.SUCCESS:
                     partial_errors.add("content_partial")
-            except Exception:
+            except Exception as exc:
+                logger.warning(
+                    "content_read_failed platform=%s asset_id=%s reason=%s",
+                    row.platform.value,
+                    row.asset_id,
+                    _error_code(exc),
+                )
                 partial_errors.add("content_unavailable")
             story_content_count = 0
             story_media_count = 0
