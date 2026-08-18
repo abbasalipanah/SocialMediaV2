@@ -255,11 +255,16 @@ deployed while the previous build stayed live for that reason.
 The sequence is:
 
 ```bash
-sudo systemctl stop social-media-v2-collection.service
 sudo systemctl disable --now social-media-v2-collection.timer
+until [ "$(systemctl is-active social-media-v2-collection.service)" != "activating" ]; do sleep 30; done
 sudo bash scripts/deploy/upgrade_local_staging.sh          # never with output suppressed
 sudo systemctl enable --now social-media-v2-collection.timer
 ```
+
+Disable the timer first so no new run starts, then wait for the one in flight
+rather than stopping it. A `systemctl stop` mid-run kills the collector between
+provider pages, which loses the accounts it had not reached yet and leaves the
+paging checkpoint behind.
 
 Always confirm what is actually serving afterwards rather than trusting the exit
 line:

@@ -21,6 +21,9 @@ class CheckpointKey:
             raise ValueError("checkpoint_account_invalid")
 
 
+MAX_CURSOR_BYTES = 8192
+
+
 @dataclass(frozen=True)
 class ProviderCheckpoint:
     key: CheckpointKey
@@ -32,7 +35,11 @@ class ProviderCheckpoint:
     def __post_init__(self) -> None:
         if self.version < 1:
             raise ValueError("checkpoint_version_invalid")
-        if self.cursor is not None and len(self.cursor.encode("utf-8")) > 2048:
+        # Facebook pagination cursors on an established Page run past 2 kB, so the
+        # old bound rejected legitimate paging and abandoned the rest of the feed
+        # partway through. The bound stays, to keep a runaway cursor out of the
+        # projection, but at a size the provider actually produces.
+        if self.cursor is not None and len(self.cursor.encode("utf-8")) > MAX_CURSOR_BYTES:
             raise ValueError("checkpoint_cursor_too_large")
         if self.watermark is not None and len(self.watermark.encode("utf-8")) > 512:
             raise ValueError("checkpoint_watermark_too_large")
