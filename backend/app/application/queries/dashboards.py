@@ -321,8 +321,16 @@ def build_overview_dashboard(
     account_ids = tuple(
         sorted({value for dashboard in dashboards for value in dashboard.meta.resolved_account_ids})
     )
-    statuses = {dashboard.meta.data_status for dashboard in dashboards}
-    if statuses == {DataStatus.UNAVAILABLE}:
+    # A platform the Brand never connected is not missing coverage, it is simply
+    # not part of this Brand's setup, and it is absent from the navigation for
+    # the same reason. Judging the overview by it reported partial coverage and
+    # an unconnected-platform warning on every Brand that does not use it. Its
+    # own dashboard still says so plainly when opened.
+    connected = tuple(
+        dashboard for dashboard in dashboards if dashboard.meta.resolved_account_ids
+    )
+    statuses = {dashboard.meta.data_status for dashboard in connected}
+    if not statuses or statuses == {DataStatus.UNAVAILABLE}:
         data_status = DataStatus.UNAVAILABLE
     elif statuses == {DataStatus.AVAILABLE}:
         data_status = DataStatus.AVAILABLE
@@ -336,7 +344,7 @@ def build_overview_dashboard(
     freshness_status = _overview_freshness(dashboards)
     warnings = tuple(
         f"{dashboard.meta.dashboard_id}:{warning}"
-        for dashboard in dashboards
+        for dashboard in connected
         for warning in dashboard.meta.warnings
     )
     expected_days = (query.date_range.end_on - query.date_range.start_on).days + 1

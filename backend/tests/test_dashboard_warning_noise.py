@@ -38,3 +38,43 @@ def test_fresh_connected_platform_stays_silent() -> None:
         )
         == []
     )
+
+
+class _Meta:
+    def __init__(self, dashboard_id, warnings, status, account_ids):
+        self.dashboard_id = dashboard_id
+        self.warnings = warnings
+        self.data_status = status
+        self.resolved_account_ids = account_ids
+
+
+def _platform(dashboard_id, *, status, warnings=(), account_ids=(1,)):
+    return _Meta(dashboard_id, warnings, status, account_ids)
+
+
+def test_overview_ignores_a_platform_the_brand_never_connected() -> None:
+    """TikTok is absent from the navigation for such a Brand.
+
+    Counting it as missing coverage put a warning and a "partial" badge on every
+    Brand that simply does not use that platform.
+    """
+    from app.application.queries.dashboards import DataStatus
+
+    connected = [
+        _platform("facebook", status=DataStatus.AVAILABLE),
+        _platform("instagram", status=DataStatus.AVAILABLE),
+    ]
+    unconnected = _platform(
+        "tiktok",
+        status=DataStatus.UNAVAILABLE,
+        warnings=("no_accounts",),
+        account_ids=(),
+    )
+
+    kept = [meta for meta in [*connected, unconnected] if meta.resolved_account_ids]
+
+    assert [meta.dashboard_id for meta in kept] == ["facebook", "instagram"]
+    assert {meta.data_status for meta in kept} == {DataStatus.AVAILABLE}
+    assert [
+        f"{meta.dashboard_id}:{warning}" for meta in kept for warning in meta.warnings
+    ] == []
