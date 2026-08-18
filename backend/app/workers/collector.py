@@ -827,6 +827,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     lock_connection = _lock(engine, lock_name)
     if lock_connection is None:
+        # Another run holds the collection lock. Skipping is right — two
+        # collectors must not write the same accounts — but exiting silently
+        # made a skipped run indistinguishable from a completed one, so a
+        # scheduled tick that did nothing looked like a healthy collection.
+        logger.warning("collection_skipped_lock_held lock=%s", lock_name)
         engine.dispose()
         return 0
     collector: StandaloneCollector | None = None

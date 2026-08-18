@@ -9,6 +9,11 @@ Group=social-media-v2
 WorkingDirectory=/opt/social-media-v2/backend
 EnvironmentFile=/etc/social-media-v2/production.env
 ExecStart=/opt/social-media-v2/backend/.venv/bin/python -m app.workers collect --platform all --scheduled
+# A run that stalls on a provider back-off holds the collection advisory lock,
+# and every scheduled tick after it skips. Twenty-five minutes leaves room for a
+# full pass while still releasing the lock before the next tick but one.
+TimeoutStartSec=1500
+
 UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true
