@@ -1,4 +1,5 @@
 import {
+  ExternalLink,
   Facebook,
   Home,
   Instagram,
@@ -11,6 +12,7 @@ import type { ComponentType } from "react";
 import { NavLink } from "../routing";
 
 import type { Platform } from "../api";
+import { accumulateUrl } from "../app/accumulateLink";
 import { useBrandScope } from "../app/BrandScopeProvider";
 
 type SidebarProps = {
@@ -128,6 +130,10 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           {integrationsVisible && (
             <NavigationLink icon={PlugZap} label="Integrations" onClick={onClose} path="/integrations" />
           )}
+          <a className="sidebar-return-link" href={accumulateUrl}>
+            <ExternalLink size={17} />
+            <span>Back to Accumulate</span>
+          </a>
           <div className="sidebar-product-note"><span />SocialMedia standalone</div>
         </nav>
       </aside>

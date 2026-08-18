@@ -1,12 +1,9 @@
 import { ArrowRight, ShieldCheck } from "lucide-react";
 import { Navigate } from "../routing";
 
+import { accumulateUrl } from "../app/accumulateLink";
 import { useAuth } from "../auth";
 import { ScreenState } from "../ui";
-
-const accumulateUrl =
-  (import.meta.env.VITE_ACCUMULATE_URL as string | undefined)?.trim() ||
-  "https://app.theaccumulate.com";
 
 export function LoginPage() {
   const { status, retry } = useAuth();
