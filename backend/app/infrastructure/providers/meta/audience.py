@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Mapping
 from datetime import datetime
 from typing import Any
@@ -12,10 +13,17 @@ from app.core.time import utc_now
 from app.domain.platforms import PlatformId
 from app.infrastructure.providers.meta.transport import MetaTransport, MetaTransportError
 
+logger = logging.getLogger(__name__)
+
 FACEBOOK_AUDIENCE_METRICS = (
     "page_fans_country",
     "page_fans_city",
 )
+# Page follower geography is served on the day and week periods, not lifetime.
+# Asking for lifetime returns nothing, which read as "the provider stopped
+# offering this" when the data was in fact available the whole time.
+FACEBOOK_AUDIENCE_PERIODS = ("day", "week")
+INSTAGRAM_AUDIENCE_PERIODS = ("lifetime",)
 INSTAGRAM_AUDIENCE_METRICS = (
     "follower_demographics",
     "engaged_audience_demographics",
@@ -45,25 +53,44 @@ class MetaAudienceReader:
             if self._platform is PlatformId.FACEBOOK
             else INSTAGRAM_AUDIENCE_METRICS
         )
+        periods = (
+            FACEBOOK_AUDIENCE_PERIODS
+            if self._platform is PlatformId.FACEBOOK
+            else INSTAGRAM_AUDIENCE_PERIODS
+        )
         breakdowns: dict[str, dict[str, float | int | None]] = {}
         for metric in metrics:
-            try:
-                payload = self._transport.get(
-                    f"{account.account_id}/insights",
-                    {"metric": metric, "period": "lifetime"},
-                )
-            except MetaTransportError:
-                continue
-            raw_rows = payload.get("data") or []
-            if not isinstance(raw_rows, list):
-                raise ValueError("provider_audience_shape_invalid")
-            for row in raw_rows:
-                if not isinstance(row, Mapping):
-                    raise ValueError("provider_audience_shape_invalid")
-                metric_name = str(row.get("name") or "").strip()
-                if metric_name != metric:
+            for period in periods:
+                try:
+                    payload = self._transport.get(
+                        f"{account.account_id}/insights",
+                        {"metric": metric, "period": period},
+                    )
+                except MetaTransportError as exc:
+                    # Swallowing this silently is what hid the wrong period for
+                    # months: the dashboards simply showed nothing.
+                    logger.warning(
+                        "meta_audience_read_failed platform=%s metric=%s period=%s reason=%s",
+                        self._platform.value,
+                        metric,
+                        period,
+                        exc.code,
+                    )
                     continue
-                breakdowns.update(_breakdowns(metric_name, row))
+                raw_rows = payload.get("data") or []
+                if not isinstance(raw_rows, list):
+                    raise ValueError("provider_audience_shape_invalid")
+                metric_breakdowns: dict[str, dict[str, float | int | None]] = {}
+                for row in raw_rows:
+                    if not isinstance(row, Mapping):
+                        raise ValueError("provider_audience_shape_invalid")
+                    metric_name = str(row.get("name") or "").strip()
+                    if metric_name != metric:
+                        continue
+                    metric_breakdowns.update(_breakdowns(metric_name, row))
+                if any(values for values in metric_breakdowns.values()):
+                    breakdowns.update(metric_breakdowns)
+                    break
         return AudienceSnapshot(
             account_id=account.account_id,
             observed_at=self._clock(),

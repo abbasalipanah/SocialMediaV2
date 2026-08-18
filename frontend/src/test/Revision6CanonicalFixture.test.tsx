@@ -328,7 +328,9 @@ describe("Revision 6 shared canonical fixture", () => {
   it("keeps the R1 critical Cover and provider-availability contracts", () => {
     const facebook = adapt(materialize("facebook_full"));
     const { rerender } = render(<FacebookPulseDashboard data={facebook} tab="cover" />);
-    expect(screen.getByRole("heading", { name: "Page Like Types (Organic vs Paid)" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Page Like Types (Organic vs Paid)" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Age & Gender" })).not.toBeInTheDocument();
 
     const instagramCase = fixture.cases.find((item) => item.id === "instagram_full_with_stories");
@@ -466,8 +468,8 @@ describe("Revision 6 shared canonical fixture", () => {
 
     rerender(<FacebookPulseDashboard data={facebook} tab="audience" />);
     expect(headings()).toEqual([
-      "Followers Trend", "New Followers Trend", "Page Like Types (Organic vs Paid)",
-      "Best Time to Engage", "Top Countries", "Top Cities", "Paid Reach Trend", "Organic Reach Trend",
+            "Followers Trend", "New Followers Trend", "Top Countries", "Top Cities",
+            "Paid Reach Trend", "Organic Reach Trend",
     ]);
 
     rerender(<InstagramPulseDashboard data={instagram} tab="audience" />);

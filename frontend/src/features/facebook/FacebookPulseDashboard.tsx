@@ -881,14 +881,9 @@ function AudienceSection({ data, withTitle }: { data: PlatformDashboard; withTit
         <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: V1_CHART_COLORS.followers }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
         <PulseTrendCard data={data} keys={[...V1_FOLLOWER_FLOW_KEYS]} subtitle={followerFlowSubtitle(data)} title="New Followers Trend" />
       </div>
-      <div className="facebook-two-grid">
-        <PulsePieCard
-          rows={breakdownPieRows(data.breakdowns, ["like_type"], ["#8357f6", "#f59e0b"])}
-          subtitle="Like source split"
-          title="Page Like Types (Organic vs Paid)"
-        />
-        <PulseHeatmapCard breakdowns={data.audience_capabilities.activity === "available" ? data.breakdowns : []} />
-      </div>
+      {/* Page like source and hourly activity are not offered for Facebook
+          Pages; the API answers with zeroes or nothing. Audience geography
+          is offered, on the day period rather than lifetime. */}
       <div className="facebook-two-grid">
         <SimplePulseTable columns={["#", "Country", "Value"]} rows={countryBreakdownRows(data.breakdowns)} subtitle="Country ranking" title="Top Countries" />
         <SimplePulseTable columns={["#", "City", "Value"]} rows={breakdownRows(data.breakdowns, "city")} subtitle="City ranking" title="Top Cities" />

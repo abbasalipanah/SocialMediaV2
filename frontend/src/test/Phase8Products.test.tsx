@@ -296,9 +296,19 @@ describe("Phase 8 product surfaces", () => {
     const performingContent = screen.getByRole("heading", { name: "All Performing Content" }).closest("article");
     if (!performingContent) throw new Error("Missing All Performing Content panel");
     expect(performingContent.querySelector("tbody tr td:last-child")).toHaveTextContent("—");
+    // Facebook Pages stopped reporting like source, hourly activity and
+    // audience geography on 2026-02-23, joining age and gender before them.
+    // Geography is offered and stays; like source, hourly activity and
+    // age/gender are not offered for Facebook Pages.
     expect(screen.getByRole("heading", { name: "Top Countries" })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Page Like Types (Organic vs Paid)" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Age & Gender" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Top Cities" })).toBeInTheDocument();
+    for (const retired of [
+      "Page Like Types (Organic vs Paid)",
+      "Best Time to Engage",
+      "Age & Gender",
+    ]) {
+      expect(screen.queryByRole("heading", { name: retired })).not.toBeInTheDocument();
+    }
     expect(screen.getAllByRole("heading", { name: "Followers Trend" })).toHaveLength(2);
     expect(screen.getAllByText("A quiet morning by the pool.")).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Open content: A quiet morning by the pool." })).toHaveAttribute(
