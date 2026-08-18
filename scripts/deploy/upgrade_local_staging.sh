@@ -137,6 +137,13 @@ RELEASE_CREATED=true
 rsync -a "$BUILD_ROOT/backend/" "$RELEASE_ROOT/backend/"
 rsync -a "$BUILD_ROOT/frontend/dist/" "$RELEASE_ROOT/frontend/dist/"
 chown -R "$SERVICE_USER:$SERVICE_GROUP" "$RELEASE_ROOT"
+# The script runs under `umask 077` and `rsync -a` preserves the build tree's
+# private modes, which leaves frontend/dist unreadable by the nginx user. The
+# loopback web service never noticed, because it runs as the owner. Make only
+# the published static tree world-readable so the canonical host can serve it.
+chmod 755 "$RELEASE_ROOT/frontend" "$RELEASE_ROOT/frontend/dist"
+find "$RELEASE_ROOT/frontend/dist" -type d -exec chmod 755 {} +
+find "$RELEASE_ROOT/frontend/dist" -type f -exec chmod 644 {} +
 
 runuser -u "$SERVICE_USER" -- python3 -m venv "$RELEASE_ROOT/backend/.venv"
 runuser -u "$SERVICE_USER" -- "$RELEASE_ROOT/backend/.venv/bin/python" -m pip install \

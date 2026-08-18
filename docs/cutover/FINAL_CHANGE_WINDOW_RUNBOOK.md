@@ -173,3 +173,40 @@ Before credential rotation, rollback is:
 After a TikTok refresh-token rotation, routing rollback is still possible, but collection rollback
 requires the provider owner's preserved valid credential procedure. Public routing and provider
 credential rollback are separate decisions.
+
+## 7. Two defects found during the live switch (`2026-08-18`)
+
+Both were caught by pre-flight checks before they reached users, and both would
+have broken the canonical host at the moment of cutover.
+
+### Release static tree was unreadable by nginx
+
+`upgrade_local_staging.sh` runs under `umask 077`, and `rsync -a` preserved the
+build tree's private modes, so `frontend/dist` landed as `0700` owned by the
+service account. The loopback web service never noticed because it runs as the
+owner; nginx runs as `www-data` and would have returned `403` for every static
+asset. The script now makes only the published static tree world-readable, and
+the existing release was corrected in place.
+
+Always verify before a routing switch:
+
+```bash
+sudo -u www-data test -r /opt/social-media-v2/frontend/dist/index.html
+```
+
+### Accumulate still resolves media through the shared hostname
+
+While the downstream flag is off, Accumulate's embedded Instagram story covers
+build absolute URLs at `https://social.theaccumulate.com/media/content-assets/...`
+(`backend/app/api/routes/dashboards.py`). V2 does not expose an unauthenticated
+`/media/` path — it serves media through authenticated `/api/` — so after the
+switch those requests fell through to the SPA fallback and returned `index.html`
+instead of an image.
+
+A temporary `location /media/` block proxying to V1 (`127.0.0.1:52120`) restores
+the previous behaviour for the mixed state. **Remove that block once the
+downstream flag is on and Accumulate no longer renders embedded Social Media**,
+otherwise V1 cannot be retired.
+
+This bridge is deliberately absent from `deploy/nginx/social-media-v2.conf`,
+which stays the canonical post-cutover configuration.
