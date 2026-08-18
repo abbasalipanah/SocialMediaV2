@@ -263,7 +263,7 @@ function ContentSection({ data, withTitle }: { data: PlatformDashboard; withTitl
       </div>
       <div className="facebook-three-grid">
         <PulsePieCard rows={summaryPieRows(data.content_summary.reach_by_type, ["#ec4899", "#38bdf8", "#14b8a6", "#8b5cf6"])} subtitle="Reach by content type" title="Content Type Reach" />
-        <UnavailableInsightCard copy="Sentiment is not inferred without a configured analysis model." subtitle="Not provided by TikTok Organic API" title="Comment Sentiment" />
+        <UnavailableInsightCard copy="Sentiment is not inferred without a configured analysis model." subtitle="Not provided by the Instagram Graph API" title="Comment Sentiment" />
         <SimplePulseTable columns={["Hashtag", "Count"]} emptyCopy="No hashtags in collected captions." rows={hashtagRows(data)} subtitle="Hashtags found in collected captions" title="Top Hashtags" />
       </div>
       <PerformingContentTable content={contentData.content} />

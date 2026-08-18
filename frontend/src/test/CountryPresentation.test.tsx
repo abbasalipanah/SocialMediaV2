@@ -1,6 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { PulseHeatmapCard } from "../features/facebook/FacebookPulseDashboard";
+
 import {
   CountryTableLabel,
   countryCode,
@@ -32,5 +34,30 @@ describe("country presentation", () => {
     expect(flag).toHaveAttribute("src", "/flags/tr.svg");
     // Decorative: the country name beside it already carries the meaning.
     expect(flag).toHaveAttribute("alt", "");
+  });
+});
+
+describe("hourly activity", () => {
+  it("treats an all-zero grid as no data", () => {
+    // The provider answers with the full 7x24 grid at zero when it has no
+    // hourly activity to report; every heatmap row in the dataset is zero.
+    const empty = [
+      { dimension: "best_time_to_engage", metric_id: "interactions", items: [
+        { key: "Fri|0", value: 0, percentage: null },
+        { key: "Fri|1", value: 0, percentage: null },
+      ] },
+    ];
+    render(<PulseHeatmapCard breakdowns={empty as never} />);
+    expect(screen.getByText("No heatmap data in selected range.")).toBeInTheDocument();
+  });
+
+  it("draws the grid when the provider reports activity", () => {
+    const filled = [
+      { dimension: "best_time_to_engage", metric_id: "interactions", items: [
+        { key: "Fri|10", value: 12, percentage: null },
+      ] },
+    ];
+    render(<PulseHeatmapCard breakdowns={filled as never} />);
+    expect(screen.queryByText("No heatmap data in selected range.")).not.toBeInTheDocument();
   });
 });

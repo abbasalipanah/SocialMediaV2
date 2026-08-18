@@ -680,7 +680,11 @@ export function breakdownPieRows(breakdowns: DashboardBreakdown[], hints: string
 }
 
 export function PulseHeatmapCard({ breakdowns }: { breakdowns: DashboardBreakdown[] }) {
-  const rows = breakdowns.find((item) => /best_time|heatmap|hourly|activity/.test(item.dimension.toLowerCase()))?.items ?? [];
+  const matched = breakdowns.find((item) => /best_time|heatmap|hourly|activity/.test(item.dimension.toLowerCase()))?.items ?? [];
+  // The provider returns the full 7x24 grid with every cell at zero when it has
+  // no hourly activity to report. Drawing that grid looks like a rendered but
+  // broken chart; saying there is no data is the truth.
+  const rows = matched.some((item) => item.value > 0) ? matched : [];
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   const dayIndexes: Record<string, number> = { mon: 0, monday: 0, tue: 1, tuesday: 1, wed: 2, wednesday: 2, thu: 3, thursday: 3, fri: 4, friday: 4, sat: 5, saturday: 5, sun: 6, sunday: 6 };
   const matrix = new Map<string, number>();
@@ -864,7 +868,7 @@ function ContentSection({ data, withTitle }: { data: PlatformDashboard; withTitl
       </div>
       <div className="facebook-three-grid">
         <PulsePieCard rows={summaryPieRows(data.content_summary.reach_by_type, ["#f59e0b", "#ec4899", "#38bdf8", "#14b8a6"])} subtitle="Reach by content type" title="Content Type Reach" />
-        <UnavailableInsightCard copy="Sentiment is not inferred without a configured analysis model." subtitle="Not provided by TikTok Organic API" title="Comment Sentiment" />
+        <UnavailableInsightCard copy="Sentiment is not inferred without a configured analysis model." subtitle="Not provided by the Facebook Graph API" title="Comment Sentiment" />
         <SimplePulseTable columns={["Hashtag", "Count"]} emptyCopy="No hashtags in collected captions." rows={hashtagRows(data)} subtitle="Hashtags found in collected captions" title="Top Hashtags" />
       </div>
       <PerformingContentTable content={data.content} />
