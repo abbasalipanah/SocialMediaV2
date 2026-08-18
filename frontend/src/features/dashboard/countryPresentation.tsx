@@ -101,20 +101,20 @@ export function countryLookupKey(value: string): string {
   return normalized;
 }
 
-export function countryFlag(value: string): string | null {
+export function countryFlagSrc(value: string): string | null {
   const code = countryCode(value);
-  if (!code) return null;
-  return String.fromCodePoint(
-    ...[...code].map((letter) => letter.charCodeAt(0) + 127397),
-  );
+  return code ? `/flags/${code.toLowerCase()}.svg` : null;
 }
 
 export function CountryTableLabel({ value }: { value: string }) {
   const name = countryDisplayName(value);
-  const flag = countryFlag(value);
+  const flag = countryFlagSrc(value);
   return (
     <span className="country-table-label">
-      {flag ? <span aria-hidden="true" className="country-flag"><span>{flag}</span></span> : null}
+      {/* An image rather than the regional-indicator emoji: Windows renders no
+          flag for those code points and shows the two letters instead, so the
+          country appeared as a bare abbreviation next to an empty circle. */}
+      {flag ? <img alt="" className="country-flag" src={flag} /> : null}
       <span>{name}</span>
     </span>
   );

@@ -458,7 +458,7 @@ describe("Phase 8 product surfaces", () => {
     expect(within(countryMap).getByText("Türkiye")).toBeInTheDocument();
     expect(countryMap.querySelector(".country-flag")).not.toBeInTheDocument();
     expect(within(countryTable).getByText("Türkiye")).toBeInTheDocument();
-    expect(countryTable.querySelector(".country-flag")).toHaveTextContent("🇹🇷");
+    expect(countryTable.querySelector(".country-flag")).toHaveAttribute("src", "/flags/tr.svg");
   });
 
   it("filters the table and leaves manual sync disabled when backend mutation is unavailable", async () => {

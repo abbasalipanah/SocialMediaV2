@@ -996,8 +996,6 @@ body { background: var(--sm-bg); }
 .link-lock { color: #cbd5e1; }
 .sidebar-footer { margin: 0 8px 8px; padding: 12px 4px 4px; border-top: 1px solid #f1f5f9; }
 .sidebar-footer .sidebar-link { padding-inline: 16px; font-weight: 500; }
-.sidebar-product-note { display: flex; align-items: center; gap: 8px; padding: 9px 16px; color: #94a3b8; font-size: .72rem; }
-.sidebar-product-note > span { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 4px rgb(34 197 94 / 10%); }
 .sidebar-footer .sidebar-action:hover { color: #e11d48; background: #fff1f2; }
 .sidebar-return-link {
   display: flex;
@@ -1531,8 +1529,7 @@ body { background: var(--sm-bg); }
 .facebook-table-scroll tbody tr:hover td { background: #f8fafc; }
 .facebook-table-scroll tbody tr:only-child td[colspan] { height: 105px; color: #94a3b8; text-align: center; }
 .country-table-label { display: inline-flex; align-items: center; gap: 9px; color: #475569; font-weight: 650; white-space: nowrap; }
-.country-flag { display: inline-flex; width: 23px; height: 23px; flex: 0 0 23px; align-items: center; justify-content: center; overflow: hidden; border: 1px solid rgba(148, 163, 184, .24); border-radius: 50%; background: #f1f5f9; box-shadow: 0 1px 2px rgba(15, 23, 42, .08); font-size: 17px; line-height: 1; }
-.country-flag > span { display: block; transform: scale(1.15); }
+.country-flag { display: inline-block; width: 30px; height: 30px; flex: 0 0 30px; overflow: hidden; border: 1px solid rgba(148, 163, 184, .24); border-radius: 50%; background: #f1f5f9; box-shadow: 0 1px 2px rgba(15, 23, 42, .08); object-fit: cover; }
 .facebook-heatmap-card .facebook-pulse-empty { min-height: 190px; }
 .facebook-heatmap { display: grid; grid-template-columns: 30px minmax(0, 1fr); grid-template-rows: auto auto auto; align-content: center; column-gap: 8px; min-height: 225px; flex: 1; }
 .facebook-heatmap-days { display: grid; grid-row: 1; gap: 5px; }

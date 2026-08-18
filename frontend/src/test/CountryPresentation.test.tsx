@@ -5,7 +5,7 @@ import {
   CountryTableLabel,
   countryCode,
   countryDisplayName,
-  countryFlag,
+  countryFlagSrc,
   countryLookupKey,
 } from "../features/dashboard/countryPresentation";
 
@@ -23,7 +23,14 @@ describe("country presentation", () => {
   it("renders a local circular flag label for country tables", () => {
     const { container } = render(<CountryTableLabel value="TR" />);
     expect(screen.getByText("Türkiye")).toBeInTheDocument();
-    expect(countryFlag("TR")).toBe("🇹🇷");
-    expect(container.querySelector(".country-flag")).toHaveTextContent("🇹🇷");
+    // An image path, not the regional-indicator emoji: Windows renders no flag
+    // for those code points and falls back to the two letters.
+    expect(countryFlagSrc("TR")).toBe("/flags/tr.svg");
+    expect(countryFlagSrc("Germany")).toBe("/flags/de.svg");
+    expect(countryFlagSrc("Other")).toBeNull();
+    const flag = container.querySelector(".country-flag");
+    expect(flag).toHaveAttribute("src", "/flags/tr.svg");
+    // Decorative: the country name beside it already carries the meaning.
+    expect(flag).toHaveAttribute("alt", "");
   });
 });

@@ -133,7 +133,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             <img alt="" className="sidebar-return-mark" src="/favicon.png" />
             <span>Back to Accumulate</span>
           </a>
-          <div className="sidebar-product-note"><span />SocialMedia standalone</div>
         </nav>
       </aside>
     </>
