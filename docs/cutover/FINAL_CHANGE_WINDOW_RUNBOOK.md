@@ -237,3 +237,33 @@ sends the token in a request body with no length ceiling; V2 would need to accep
 Until that lands, treat the buffer directive as load-bearing: any rebuild of the
 Social hostname configuration must keep it, and the scope size must be
 re-measured whenever the Brand catalogue grows materially.
+
+## 9. The release script refuses to run while the collection timer is enabled
+
+`upgrade_local_staging.sh` aborts with:
+
+```text
+Refusing to upgrade while the V2 collection timer is enabled.
+```
+
+The guard is deliberate — it keeps a release swap from landing in the middle of a
+collection run. It becomes a trap once the timer is on, because the script exits
+non-zero before doing anything, and a deploy invoked with its output suppressed
+looks indistinguishable from a successful one. Three releases were reported as
+deployed while the previous build stayed live for that reason.
+
+The sequence is:
+
+```bash
+sudo systemctl stop social-media-v2-collection.service
+sudo systemctl disable --now social-media-v2-collection.timer
+sudo bash scripts/deploy/upgrade_local_staging.sh          # never with output suppressed
+sudo systemctl enable --now social-media-v2-collection.timer
+```
+
+Always confirm what is actually serving afterwards rather than trusting the exit
+line:
+
+```bash
+ls -l /opt/social-media-v2/frontend
+```
