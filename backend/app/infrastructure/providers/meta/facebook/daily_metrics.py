@@ -17,6 +17,24 @@ FACEBOOK_MEDIA_VIEW_BREAKDOWN_METRICS = (
 )
 
 
+def _metric_refused(error: MetaTransportError) -> bool:
+    """True when the provider declined this one metric for this one account.
+
+    Meta refuses an unsupported or ineligible metric either with a 4xx or with a
+    200 carrying an error payload. Both mean "not this metric, for this Page" —
+    not "this account is broken". Treating anything but a 400 as fatal cost the
+    whole account: profile, content, comments and media were all abandoned
+    because a single insight was unavailable.
+
+    Rate limiting and server faults still propagate; those are systemic and the
+    run must back off rather than record a false empty result.
+    """
+    if error.retryable:
+        return False
+    status = error.status_code
+    return status is None or 400 <= status < 500 or status == 200
+
+
 class FacebookDailyMetricsReader:
     def __init__(self, transport: MetaTransport) -> None:
         self._transport = transport
@@ -52,7 +70,7 @@ class FacebookDailyMetricsReader:
                         },
                     )
                 except MetaTransportError as exc:
-                    if exc.status_code == 400:
+                    if _metric_refused(exc):
                         continue
                     raise
                 metric_value = _first_value(page.items, source_field)
@@ -74,7 +92,7 @@ class FacebookDailyMetricsReader:
                     ).items
                 )
             except MetaTransportError as exc:
-                if exc.status_code != 400:
+                if not _metric_refused(exc):
                     raise
                 source_values = {}
             if source_values:
