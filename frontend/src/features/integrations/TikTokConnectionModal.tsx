@@ -81,12 +81,23 @@ export function TikTokConnectionModal({
       onConnectedRef.current();
     };
     window.addEventListener("message", receiveOAuthResult);
+    // Only the listener. This used to close the authorization window too, so
+    // any re-render that re-ran the effect -- a refetch on window focus, a
+    // changed Brand -- killed the popup the moment it opened, which read as
+    // "it closes before the page appears". The window belongs to the user for
+    // as long as they are authorizing; the callback page closes it itself.
     return () => {
       window.removeEventListener("message", receiveOAuthResult);
-      if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
-      popupRef.current = null;
     };
   }, [brandId, queryClient]);
+
+  // Dismissing the dialog is a deliberate abandon, so the authorization window
+  // goes with it. A re-render is not, which is why the effect no longer does.
+  const dismiss = () => {
+    if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
+    popupRef.current = null;
+    onClose();
+  };
 
   const connect = async () => {
     setStatus(null);
@@ -130,12 +141,12 @@ export function TikTokConnectionModal({
   // dimmed by its backdrop and impossible to click.
   return createPortal(
     <div className="tiktok-connect-layer">
-      <button aria-label="Close TikTok connection modal" className="tiktok-connect-backdrop" onClick={onClose} type="button" />
+      <button aria-label="Close TikTok connection modal" className="tiktok-connect-backdrop" onClick={dismiss} type="button" />
       <section aria-labelledby="tiktok-connect-title" aria-modal="true" className="tiktok-connect-modal" role="dialog">
         <header>
           <div className="integration-platform-icon platform-tiktok"><span aria-hidden="true" className="integration-tiktok-mark">♪</span></div>
           <div><h2 id="tiktok-connect-title">Connect TikTok</h2><p>Authorize one TikTok Business account only for {brandName}.</p></div>
-          <button aria-label="Close TikTok connection modal" onClick={onClose} type="button"><X size={18} /></button>
+          <button aria-label="Close TikTok connection modal" onClick={dismiss} type="button"><X size={18} /></button>
         </header>
 
         {status && <div className={`tiktok-connect-status ${status.tone}`} role="status">{status.tone === "success" ? <Check size={17} /> : <AlertTriangle size={17} />}<span>{status.message}</span></div>}
@@ -155,7 +166,7 @@ export function TikTokConnectionModal({
 
         <footer>
           <p>Opening this dialog does not contact TikTok. Authorization starts only after the button below.</p>
-          <button className="secondary-button" onClick={onClose} type="button">Cancel</button>
+          <button className="secondary-button" onClick={dismiss} type="button">Cancel</button>
           <button className="primary-button compact-button" disabled={!readiness.data?.oauth_start_available || isConnecting} onClick={() => void connect()} type="button">{isConnecting ? <RefreshCw className="spin" size={15} /> : <Link2 size={15} />}{isConnecting ? "Connecting…" : "Connect TikTok"}</button>
         </footer>
       </section>

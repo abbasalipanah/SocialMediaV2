@@ -51,3 +51,33 @@ describe("connection modal mounting", () => {
     }
   });
 });
+
+describe("authorization window lifetime", () => {
+  const MODALS = ["TikTokConnectionModal", "MetaConnectionModal"] as const;
+
+  function source(modal: string): string {
+    return readFileSync(
+      resolve(frontendRoot, `src/features/integrations/${modal}.tsx`),
+      "utf8",
+    );
+  }
+
+  it("does not close the popup from effect cleanup", () => {
+    // The cleanup ran on any re-render that re-ran the effect -- a refetch on
+    // window focus, a changed Brand -- and killed the authorization window the
+    // moment it opened, which read as "it closes before the page appears".
+    for (const modal of MODALS) {
+      const cleanup = /return \(\) => \{([\s\S]*?)\};/.exec(source(modal))?.[1] ?? "";
+      expect(cleanup).toContain("removeEventListener");
+      expect(cleanup).not.toContain("close()");
+    }
+  });
+
+  it("closes the popup when the dialog is deliberately dismissed", () => {
+    for (const modal of MODALS) {
+      const text = source(modal);
+      expect(text).toContain("const dismiss = () => {");
+      expect(text).not.toContain("onClick={onClose}");
+    }
+  });
+});

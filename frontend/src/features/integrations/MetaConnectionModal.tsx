@@ -126,12 +126,23 @@ export function MetaConnectionModal({
       });
     };
     window.addEventListener("message", receiveOAuthResult);
+    // Only the listener. This used to close the authorization window too, so
+    // any re-render that re-ran the effect -- a refetch on window focus, a
+    // changed Brand -- killed the popup the moment it opened, which read as
+    // "it closes before the page appears". The window belongs to the user for
+    // as long as they are authorizing; the callback page closes it itself.
     return () => {
       window.removeEventListener("message", receiveOAuthResult);
-      if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
-      popupRef.current = null;
     };
   }, [brandId, queryClient]);
+
+  // Dismissing the dialog is a deliberate abandon, so the authorization window
+  // goes with it. A re-render is not, which is why the effect no longer does.
+  const dismiss = () => {
+    if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
+    popupRef.current = null;
+    onClose();
+  };
 
   const connect = async () => {
     setStatus(null);
@@ -226,12 +237,12 @@ export function MetaConnectionModal({
   // dimmed by its backdrop and impossible to click.
   return createPortal(
     <div className="tiktok-connect-layer">
-      <button aria-label="Close Meta connection modal" className="tiktok-connect-backdrop" onClick={onClose} type="button" />
+      <button aria-label="Close Meta connection modal" className="tiktok-connect-backdrop" onClick={dismiss} type="button" />
       <section aria-labelledby="meta-connect-title" aria-modal="true" className="tiktok-connect-modal meta-connect-modal" role="dialog">
         <header>
           <div className="meta-connect-icons" aria-hidden="true"><Facebook size={20} /><Instagram size={20} /></div>
           <div><h2 id="meta-connect-title">Connect Meta</h2><p>Authorize Facebook once, then choose {focusLabel} for {brandName}.</p></div>
-          <button aria-label="Close Meta connection modal" onClick={onClose} type="button"><X size={18} /></button>
+          <button aria-label="Close Meta connection modal" onClick={dismiss} type="button"><X size={18} /></button>
         </header>
 
         {status && <div className={`tiktok-connect-status ${status.tone}`} role="status">{status.tone === "success" ? <Check size={17} /> : <AlertTriangle size={17} />}<span>{status.message}</span></div>}
@@ -264,7 +275,7 @@ export function MetaConnectionModal({
 
         <footer>
           <p>Opening this dialog does not contact Meta. Authorization starts only after Connect Meta.</p>
-          <button className="secondary-button" onClick={onClose} type="button">Cancel</button>
+          <button className="secondary-button" onClick={dismiss} type="button">Cancel</button>
           {pendingDiscoveries.length > 0 && <button className="secondary-button" disabled={isLinking || selected.size === 0 || !readiness.data?.oauth_start_available} onClick={() => void linkSelected()} type="button">{isLinking ? <RefreshCw className="spin" size={15} /> : <Check size={15} />}{isLinking ? "Linking…" : `Link selected (${selected.size})`}</button>}
           <button className="primary-button compact-button" disabled={!readiness.data?.oauth_start_available || isConnecting} onClick={() => void connect()} type="button">{isConnecting ? <RefreshCw className="spin" size={15} /> : <Link2 size={15} />}{isConnecting ? "Connecting…" : "Connect Meta"}</button>
         </footer>
