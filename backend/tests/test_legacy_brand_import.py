@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy.engine import make_url
 
 from scripts.import_legacy_brand import (
+    AUDIENCE_METRIC_MAP,
     _content_type,
     _copy_media,
     _safe_media_url,
@@ -39,6 +40,10 @@ def test_media_url_guard_rejects_oauth_material() -> None:
     assert _safe_media_url("https://cdn.example.test/image.jpg?access_token=secret") == ""
     assert _safe_media_url("/source-project/media/image.jpg") == ""
     assert _content_type("CAROUSEL_ALBUM") == "carousel"
+
+
+def test_demo_audience_city_rows_are_projected() -> None:
+    assert AUDIENCE_METRIC_MAP["audience_cities"] == ("followers", "audience_city")
 
 
 def test_media_copy_checks_the_source_checksum(tmp_path: Path) -> None:

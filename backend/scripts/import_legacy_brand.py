@@ -48,6 +48,7 @@ AUDIENCE_METRIC_MAP = {
     "audience_gender_age": ("followers", "audience_gender_age"),
     "audience_heatmap": ("interactions", "best_time_to_engage"),
     "audience_countries": ("followers", "audience_country"),
+    "audience_cities": ("followers", "audience_city"),
     "audience_ages": ("followers", "audience_age"),
     "audience_genders": ("followers", "audience_gender"),
     "audience_activity": ("interactions", "audience_activity"),

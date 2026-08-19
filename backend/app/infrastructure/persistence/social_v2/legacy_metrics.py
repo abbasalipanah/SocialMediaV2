@@ -123,7 +123,7 @@ KNOWN_LEGACY_BREAKDOWN_KEYS = frozenset(
     {
         "activity_type", "audience_activity", "audience_ages", "audience_cities",
         "audience_countries", "audience_genders", "city", "contact_option",
-        "content_id", "content_type", "country", "follow_type", "gender_age",
+        "comment_sentiment", "content_id", "content_type", "country", "follow_type", "gender_age",
         "hashtag", "heatmap",
     }
 )

@@ -687,9 +687,22 @@ class StandaloneCollector:
             )
             if audience.status is not CollectionStatus.SUCCESS:
                 partial_errors.add("audience_partial_or_unavailable")
-        except Exception:
+                logger.warning(
+                    "tiktok_audience_incomplete asset_id=%s status=%s reason=%s",
+                    row.asset_id,
+                    audience.status.value,
+                    audience.error_code or "unreported",
+                )
+        except Exception as exc:
             audience = None
             partial_errors.add("audience_unavailable")
+            # Swallowed silently, an account with no demographics looked the
+            # same as one the provider withholds them for.
+            logger.warning(
+                "tiktok_audience_failed asset_id=%s reason=%s",
+                row.asset_id,
+                _error_code(exc),
+            )
         totals: dict[MetricId, int] = {}
         comment_count = 0
         commented_videos = 0
@@ -743,7 +756,11 @@ class StandaloneCollector:
                     platform=PlatformId.TIKTOK,
                     account_id=row.asset_id,
                     brand_id=row.brand_id,
-                    observed_on=date.today(),
+                    # The same last complete day the daily metrics use. Dated
+                    # today, these totals fell a day outside every reporting
+                    # range -- which ends yesterday -- so the video cards were
+                    # permanently blank while the rows sat in the table.
+                    observed_on=until,
                     metric_id=metric_id,
                     value=value,
                 )
