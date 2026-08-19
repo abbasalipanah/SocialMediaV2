@@ -149,8 +149,20 @@ runuser -u "$SERVICE_USER" -- python3 -m venv "$RELEASE_ROOT/backend/.venv"
 runuser -u "$SERVICE_USER" -- "$RELEASE_ROOT/backend/.venv/bin/python" -m pip install \
   --disable-pip-version-check --no-cache-dir --require-hashes \
   -r "$RELEASE_ROOT/backend/requirements.lock"
-runuser -u "$SERVICE_USER" -- bash -c \
-  "set -a; source '$ENV_FILE'; set +a; cd '$RELEASE_ROOT/backend'; .venv/bin/python -c 'from app.main import app; assert app'"
+  # This check used to source the env file as the service user. The file is
+  # root-only so the source was refused, and it went on to import the module
+  # with no configuration at all -- proving only that the code parses, never
+  # that the release starts against the real settings, which is the failure it
+  # exists to catch before the symlink swap. Sourcing it in a shell cannot
+  # stand in either: systemd does not apply shell quote removal, so an
+  # unquoted JSON value arrives intact for the service and mangled for `.`.
+  # Let systemd read it with its own parser, as the identity that runs it.
+  systemd-run --pipe --wait --quiet --collect \
+    --uid="$SERVICE_USER" --gid="$SERVICE_GROUP" \
+    --property=EnvironmentFile="$ENV_FILE" \
+    --property=WorkingDirectory="$RELEASE_ROOT/backend" \
+    --setenv=PYTHONDONTWRITEBYTECODE=1 \
+    "$RELEASE_ROOT/backend/.venv/bin/python" -c 'from app.main import app; assert app'
 
 ln -sfn "releases/$RELEASE_ID/backend" "$INSTALL_ROOT/.backend.next"
 ln -sfn "releases/$RELEASE_ID/frontend" "$INSTALL_ROOT/.frontend.next"

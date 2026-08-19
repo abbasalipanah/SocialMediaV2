@@ -868,6 +868,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     settings = load_settings()
+    # Nothing had ever configured the root logger, so the level the deployment
+    # asks for was ignored and every INFO record was dropped. Only warnings
+    # reached the journal, which is why a run that collected nothing looked the
+    # same as one that collected everything.
+    logging.basicConfig(
+        level=getattr(logging, settings.log_level, logging.INFO),
+        format="%(message)s",
+        force=True,
+    )
     if args.command == "collect" and args.scheduled and not settings.worker_schedule_enabled:
         raise ConfigurationError("Scheduled collection is disabled")
     if not settings.db.url:
