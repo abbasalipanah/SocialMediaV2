@@ -266,10 +266,14 @@ class StandaloneCollector:
                 logger.warning(
                     "collection_account_stalled link_id=%s at=%s",
                     row.link_id,
+                    # Our own frames, not the socket layer's. The innermost
+                    # frames are always an SSL read, which says the account was
+                    # waiting on the provider but never which phase was asking.
                     " <- ".join(
                         f"{frame.filename.rsplit('/', 1)[-1]}:{frame.lineno}:{frame.name}"
-                        for frame in traceback.extract_tb(exc.__traceback__)[-4:]
-                    ),
+                        for frame in traceback.extract_tb(exc.__traceback__)
+                        if "/app/" in frame.filename
+                    )[-300:],
                 )
                 self.targets.mark_failure(row, error_code)
                 result = WorkerAccountResult(
