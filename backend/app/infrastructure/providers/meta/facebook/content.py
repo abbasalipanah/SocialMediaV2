@@ -39,9 +39,13 @@ class FacebookContentReader:
         self,
         transport: MetaTransport,
         *,
+        page_size: int = 100,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
+        if not 1 <= page_size <= 100:
+            raise ValueError("content_page_size_invalid")
         self._transport = transport
+        self._page_size = page_size
         self._clock = clock
 
     def list_content(
@@ -55,7 +59,7 @@ class FacebookContentReader:
         observed_at = self._clock()
         page = self._transport.page(
             f"{account.account_id}/published_posts",
-            {"fields": FIELDS, "limit": 100},
+            {"fields": FIELDS, "limit": self._page_size},
             cursor=cursor,
         )
         return ContentPage(

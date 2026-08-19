@@ -44,11 +44,15 @@ class InstagramContentReader:
         *,
         stories: bool = False,
         insights: bool = False,
+        page_size: int = 100,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
+        if not 1 <= page_size <= 100:
+            raise ValueError("content_page_size_invalid")
         self._transport = transport
         self._stories = stories
         self._insights = insights
+        self._page_size = page_size
         self._clock = clock
 
     def list_content(
@@ -63,7 +67,7 @@ class InstagramContentReader:
         edge = "stories" if self._stories else "media"
         page = self._transport.page(
             f"{account.account_id}/{edge}",
-            {"fields": STORY_FIELDS if self._stories else MEDIA_FIELDS, "limit": 100},
+            {"fields": STORY_FIELDS if self._stories else MEDIA_FIELDS, "limit": self._page_size},
             cursor=cursor,
         )
         items = tuple(_record(row, observed_at, story=self._stories) for row in page.items)

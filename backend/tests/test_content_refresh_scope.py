@@ -123,3 +123,32 @@ def test_a_backfill_still_resumes_where_it_stopped(collection_target) -> None:
 
     assert reader.cursors[0] == "deep-in-the-archive"
     assert checkpoints.written[-1].cursor is not None
+
+
+def test_a_refresh_asks_for_fewer_items_than_a_backfill() -> None:
+    """The provider is asked for insights on every item a page yields, and that
+    call takes seconds. A hundred of them outlast an account's whole share of a
+    run, which is what kept every account being interrupted in the same place.
+    """
+    from app.workers.collector import (
+        FULL_PAGE_SIZE,
+        REFRESH_PAGE_SIZE,
+    )
+
+    assert REFRESH_PAGE_SIZE < FULL_PAGE_SIZE
+    assert REFRESH_PAGE_SIZE <= 25
+
+
+def test_the_readers_refuse_a_page_size_the_provider_would_reject() -> None:
+    import pytest
+
+    from app.infrastructure.providers.meta.facebook.content import FacebookContentReader
+    from app.infrastructure.providers.meta.instagram.content import (
+        InstagramContentReader,
+    )
+
+    for reader in (FacebookContentReader, InstagramContentReader):
+        with pytest.raises(ValueError):
+            reader(object(), page_size=0)
+        with pytest.raises(ValueError):
+            reader(object(), page_size=101)

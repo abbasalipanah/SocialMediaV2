@@ -140,6 +140,12 @@ COMMENTED_CONTENT_PER_RUN = 25
 # collected with; engagement on them has long settled.
 CONTENT_PAGES_PER_RUN = 1
 FULL_CONTENT_PAGES = 100
+# A backfill reads the archive in pages of a hundred. A refresh cannot: the
+# provider is asked for insights on every item a page yields, and that call
+# takes seconds, so a hundred of them outlast the account's whole turn. Twenty
+# five is more recent posts than any dashboard shows at once.
+REFRESH_PAGE_SIZE = 25
+FULL_PAGE_SIZE = 100
 
 
 class AccountBudgetExceeded(BaseException):
@@ -405,15 +411,21 @@ class StandaloneCollector:
             daily_reader: DailyMetricsReader
             content_reader: ContentReader
             comments_reader: CommentsReader
+            refreshing = _backfill_complete(row.backfill_status)
+            content_page_size = REFRESH_PAGE_SIZE if refreshing else FULL_PAGE_SIZE
             if row.platform is PlatformId.FACEBOOK:
                 profile_reader = FacebookProfileReader(transport)
                 daily_reader = FacebookDailyMetricsReader(transport)
-                content_reader = FacebookContentReader(transport)
+                content_reader = FacebookContentReader(
+                    transport, page_size=content_page_size
+                )
                 comments_reader = FacebookCommentsReader(transport)
             else:
                 profile_reader = InstagramProfileReader(transport)
                 daily_reader = InstagramDailyMetricsReader(transport)
-                content_reader = InstagramContentReader(transport, insights=True)
+                content_reader = InstagramContentReader(
+                    transport, insights=True, page_size=content_page_size
+                )
                 comments_reader = InstagramCommentsReader(transport)
             audience_reader = MetaAudienceReader(transport, platform=row.platform)
             profile = collect_profile(
@@ -491,11 +503,9 @@ class StandaloneCollector:
                     checkpoint_store=self.checkpoints,
                     record_sink=persist_related,
                     max_pages=(
-                        CONTENT_PAGES_PER_RUN
-                        if _backfill_complete(row.backfill_status)
-                        else FULL_CONTENT_PAGES
+                        CONTENT_PAGES_PER_RUN if refreshing else FULL_CONTENT_PAGES
                     ),
-                    refresh_only=_backfill_complete(row.backfill_status),
+                    refresh_only=refreshing,
                 )
                 content_count = content.content_count
                 content_media_count = content.media_count
