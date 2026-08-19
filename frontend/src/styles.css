@@ -787,27 +787,34 @@ a { color: inherit; }
 .settings-toast span { flex: 1; }
 .settings-toast button { display: grid; place-items: center; color: inherit; border: 0; background: transparent; cursor: pointer; }
 
-.setup-layout { display: grid; min-height: calc(100vh - 82px); grid-template-columns: 210px 1fr; }
-.setup-navigation { padding: 18px 12px; border-right: 1px solid var(--border); background: #f8f9fc; }
-.setup-navigation button { display: flex; width: 100%; align-items: center; gap: 9px; margin-bottom: 4px; padding: 10px; color: #687289; border: 0; border-radius: 9px; background: transparent; font-size: .73rem; font-weight: 650; text-align: left; cursor: pointer; }
-.setup-navigation button span { display: grid; width: 23px; height: 23px; flex: 0 0 auto; place-items: center; color: #7b8498; border: 1px solid #d5d9e3; border-radius: 50%; font-size: .65rem; }
-.setup-navigation button.active { color: var(--accent-dark); background: #eeecff; }
-.setup-navigation button.active span { color: white; border-color: var(--accent); background: var(--accent); }
-.setup-content { display: flex; min-width: 0; flex-direction: column; padding: 24px; }
-.setup-progress { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
-.setup-progress span { color: #8b94a6; font-size: .67rem; }
-.setup-progress strong { color: #303b51; font-size: .82rem; }
-.setup-step { flex: 1; padding: 20px 0; }
-.setup-intro { margin: 0 0 18px; color: #6f798e; font-size: .78rem; line-height: 1.55; }
-.setup-brand-list, .setup-platform-list, .readiness-list { display: grid; gap: 9px; }
-.setup-brand-list article { padding: 15px; border: 1px solid var(--border); border-radius: 12px; }
-.setup-brand-list article > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.setup-brand-list strong { color: #303b51; font-size: .8rem; }
-.setup-brand-list span { color: #7067bd; font-size: .65rem; font-weight: 700; }
-.setup-brand-list dl { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 13px 0 0; padding-top: 12px; border-top: 1px solid #edf0f5; }
-.setup-brand-list dl div { display: flex; justify-content: space-between; gap: 8px; }
-.setup-brand-list dt, .setup-brand-list dd { margin: 0; color: #7f889b; font-size: .67rem; }
-.setup-brand-list dd { color: #3c475d; font-weight: 700; }
+/* One scrolling page of numbered sections, the way Brand Setup reads in
+   Performance Marketing. The four-step wizard hid three quarters of the
+   Brand's state behind Continue, and opened on a list of every Brand in
+   scope rather than the one being set up. */
+.setup-page { display: flex; flex-direction: column; gap: 14px; padding: 20px; background: #f8f9fc; }
+.setup-identity { display: flex; align-items: flex-start; gap: 12px; padding: 15px; border: 1px solid var(--border); border-radius: 13px; background: white; }
+.setup-identity-icon { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; color: var(--accent-dark); border: 1px solid #ddd9ff; border-radius: 12px; background: #eeecff; }
+.setup-identity strong { display: block; color: #303b51; font-size: .92rem; }
+.setup-identity span { display: block; margin-top: 4px; color: #7f889b; font-size: .7rem; line-height: 1.5; }
+.setup-section { padding: 16px; border: 1px solid var(--border); border-radius: 13px; background: white; }
+.setup-section header { margin-bottom: 12px; }
+.setup-section h4 { margin: 0; color: #303b51; font-size: .82rem; }
+.setup-section header p { margin: 5px 0 0; color: #7f889b; font-size: .69rem; line-height: 1.5; }
+.setup-field-grid { display: grid; margin: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 11px; grid-template-columns: repeat(2, 1fr); }
+.setup-field-grid > div { padding: 11px 13px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.setup-field-grid > div:nth-child(2n) { border-right: 0; }
+.setup-field-grid > div:nth-last-child(-n+2) { border-bottom: 0; }
+.setup-field-grid dt { margin: 0; color: #97a0b1; font-size: .61rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.setup-field-grid dd { overflow: hidden; margin: 5px 0 0; color: #303b51; font-size: .8rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.setup-platform-detail { min-width: 0; }
+.setup-platform-list .setup-state.muted { color: #a3abbb; font-weight: 650; }
+.setup-empty { margin: 0; color: #7f889b; font-size: .75rem; }
+@media (max-width: 620px) {
+  .setup-field-grid { grid-template-columns: 1fr; }
+  .setup-field-grid > div { border-right: 0; }
+  .setup-field-grid > div:nth-last-child(-n+2) { border-bottom: 1px solid var(--border); }
+  .setup-field-grid > div:last-child { border-bottom: 0; }
+}
 .setup-platform-list article { display: flex; align-items: center; gap: 11px; padding: 13px; border: 1px solid var(--border); border-radius: 12px; }
 .setup-platform-icon { display: grid; width: 38px; height: 38px; place-items: center; color: white; border-radius: 11px; background: #303645; }
 .setup-facebook { background: #1877f2; }
@@ -833,7 +840,7 @@ a { color: inherit; }
 .readiness-list strong, .readiness-list small { display: block; }
 .readiness-list strong { color: #374258; font-size: .75rem; }
 .readiness-list small { margin-top: 3px; color: #858ea1; font-size: .65rem; }
-.setup-actions { display: flex; justify-content: space-between; gap: 9px; padding-top: 15px; border-top: 1px solid var(--border); }
+.setup-actions { display: flex; justify-content: flex-end; gap: 9px; padding-top: 4px; }
 .nested-secure-surface { margin-top: 18px; padding: 22px; border: 1px solid #d9d5f1; border-radius: 16px; background: #fbfaff; }
 .secure-surface-heading { display: flex; align-items: flex-start; gap: 12px; }
 .secure-icon { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; color: var(--accent); border-radius: 12px; background: #ece9ff; }
@@ -924,10 +931,7 @@ a { color: inherit; }
   .settings-search { width: 100%; }
   .result-count { margin-left: 0; }
   .drawer-panel { width: min(620px, 100vw); }
-  .setup-layout { grid-template-columns: 1fr; }
-  .setup-navigation { display: flex; padding: 10px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--border); }
-  .setup-navigation button { width: auto; flex: 0 0 auto; margin: 0 3px 0 0; white-space: nowrap; }
-  .setup-content { padding: 18px; }
+    .setup-page { padding: 14px; gap: 11px; }
   .secure-denied { align-items: flex-start; flex-wrap: wrap; }
   .secure-denied .secondary-button { width: 100%; }
 }

@@ -1,5 +1,4 @@
-import { Check, Circle, Facebook, Instagram, Radio, Settings2 } from "lucide-react";
-import { useState } from "react";
+import { Check, Circle, Facebook, Instagram, Radio, Settings2, Store } from "lucide-react";
 
 import type {
   OperationsReadiness,
@@ -9,12 +8,11 @@ import type {
   ReportingSyncJob,
   SettingsBrand,
 } from "../../api";
+import { useBrandScope } from "../../app/BrandScopeProvider";
 import { Dialog } from "../../ui";
 import { PLATFORM_LABELS } from "../dashboard/catalog";
 import { formatDate, humanize } from "../dashboard/format";
 
-const STEPS = ["Brand Information", "Social Accounts", "Sync Settings", "Readiness Summary"] as const;
-type SetupStep = (typeof STEPS)[number];
 const PLATFORMS: Platform[] = ["facebook", "instagram", "tiktok"];
 
 function PlatformSymbol({ platform }: { platform: Platform }) {
@@ -23,32 +21,158 @@ function PlatformSymbol({ platform }: { platform: Platform }) {
   return <span className="drawer-tiktok">♪</span>;
 }
 
-function BrandInformation({ brands }: { brands: SettingsBrand[] }) {
-  return <div className="setup-step"><p className="setup-intro">Review the Brands visible to this signed-in workspace. Authority remains managed by Accumulate.</p><div className="setup-brand-list">{brands.map((brand) => <article key={brand.brand_id}><div><strong>{brand.name ?? `Brand ${brand.brand_id}`}</strong><span>{brand.parent_brand_id ? "Child Brand" : "Parent Brand"}</span></div><dl><div><dt>Linked accounts</dt><dd>{brand.linked_account_count}</dd></div><div><dt>Last sync</dt><dd>{formatDate(brand.last_sync_at)}</dd></div></dl></article>)}</div></div>;
+function Section({
+  index,
+  title,
+  hint,
+  children,
+}: {
+  index: number;
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="setup-section">
+      <header>
+        <h4>
+          {index}. {title}
+        </h4>
+        {hint && <p>{hint}</p>}
+      </header>
+      {children}
+    </section>
+  );
 }
 
-function SocialAccountStep({ accounts, connections }: { accounts: ReportingAccount[]; connections: ReportingConnection[] }) {
-  return <div className="setup-step"><p className="setup-intro">Only the three approved social platforms are shown.</p><div className="setup-platform-list">{PLATFORMS.map((platform) => {
-    const platformAccounts = accounts.filter((item) => item.platform === platform);
-    const connection = connections.find((item) => item.platform === platform);
-    return <article key={platform}><div className={`setup-platform-icon setup-${platform}`}><PlatformSymbol platform={platform} /></div><div><strong>{PLATFORM_LABELS[platform]}</strong><span>{platformAccounts.length} linked account{platformAccounts.length === 1 ? "" : "s"}</span></div><span className="setup-state">{humanize(connection?.state ?? "not connected")}</span></article>;
-  })}</div></div>;
+function BrandInformation({ brand }: { brand: SettingsBrand | null }) {
+  if (!brand) {
+    return <p className="setup-empty">This Brand is not in the current workspace scope.</p>;
+  }
+  const fields: [string, string][] = [
+    ["Brand name", brand.name ?? `Brand ${brand.brand_id}`],
+    ["Hierarchy", brand.parent_brand_id ? "Child Brand" : "Parent Brand"],
+    ["Access", humanize(brand.access_mode ?? "read")],
+    ["Last sync", formatDate(brand.last_sync_at)],
+  ];
+  return (
+    <dl className="setup-field-grid">
+      {fields.map(([label, value]) => (
+        <div key={label}>
+          <dt>{label}</dt>
+          <dd>{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
 }
 
-function SyncSettingsStep({ accounts, jobs, mutationAvailable }: { accounts: ReportingAccount[]; jobs: ReportingSyncJob[]; mutationAvailable: boolean }) {
+function SocialAccounts({
+  accounts,
+  connections,
+}: {
+  accounts: ReportingAccount[];
+  connections: ReportingConnection[];
+}) {
+  return (
+    <div className="setup-platform-list">
+      {PLATFORMS.map((platform) => {
+        const linked = accounts.filter((item) => item.platform === platform);
+        const connection = connections.find((item) => item.platform === platform);
+        return (
+          <article key={platform}>
+            <div className={`setup-platform-icon setup-${platform}`}>
+              <PlatformSymbol platform={platform} />
+            </div>
+            <div className="setup-platform-detail">
+              <strong>{PLATFORM_LABELS[platform]}</strong>
+              <span>
+                {linked.length} linked
+                {linked.length > 0 && ` · ${linked.map((item) => item.display_name).join(" · ")}`}
+              </span>
+            </div>
+            <span className={linked.length > 0 ? "setup-state" : "setup-state muted"}>
+              {humanize(connection?.state ?? "not connected")}
+            </span>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function SyncSettings({
+  accounts,
+  jobs,
+  mutationAvailable,
+}: {
+  accounts: ReportingAccount[];
+  jobs: ReportingSyncJob[];
+  mutationAvailable: boolean;
+}) {
   const active = jobs.filter((item) => ["pending", "running"].includes(item.status)).length;
-  return <div className="setup-step"><p className="setup-intro">Collection state is reported by the backend. This drawer never starts a job when opened.</p><div className="setup-summary-grid"><article><Radio size={20} /><span>Nightly enabled</span><strong>{accounts.filter((item) => item.nightly_enabled).length}</strong></article><article><Settings2 size={20} /><span>Pending or running</span><strong>{active}</strong></article></div><label className="readonly-toggle"><input checked={mutationAvailable} disabled readOnly type="checkbox" /><span><strong>Manual operations</strong><small>{mutationAvailable ? "Available for this scope" : "Disabled by backend capability"}</small></span></label></div>;
+  return (
+    <>
+      <div className="setup-summary-grid">
+        <article>
+          <Radio size={20} />
+          <span>Nightly enabled</span>
+          <strong>{accounts.filter((item) => item.nightly_enabled).length}</strong>
+        </article>
+        <article>
+          <Settings2 size={20} />
+          <span>Pending or running</span>
+          <strong>{active}</strong>
+        </article>
+      </div>
+      <label className="readonly-toggle">
+        <input checked={mutationAvailable} disabled readOnly type="checkbox" />
+        <span>
+          <strong>Manual operations</strong>
+          <small>
+            {mutationAvailable ? "Available for this scope" : "Disabled by backend capability"}
+          </small>
+        </span>
+      </label>
+    </>
+  );
 }
 
-function ReadinessStep({ readiness, accounts, jobs }: { readiness: OperationsReadiness | undefined; accounts: ReportingAccount[]; jobs: ReportingSyncJob[] }) {
+function Readiness({
+  readiness,
+  accounts,
+  jobs,
+}: {
+  readiness: OperationsReadiness | undefined;
+  accounts: ReportingAccount[];
+  jobs: ReportingSyncJob[];
+}) {
   const failed = jobs.filter((item) => item.status === "failed").length;
   const checks = [
     ["Backend readiness", readiness?.status === "ready", readiness?.status ?? "Unavailable"],
-    ["Reporting database", readiness?.database_configured === true, readiness?.database_configured ? "Configured" : "Not configured"],
+    [
+      "Reporting database",
+      readiness?.database_configured === true,
+      readiness?.database_configured ? "Configured" : "Not configured",
+    ],
     ["Linked social accounts", accounts.length > 0, `${accounts.length} linked`],
     ["Failed sync jobs", failed === 0, failed === 0 ? "None" : `${failed} require attention`],
   ] as const;
-  return <div className="setup-step"><p className="setup-intro">This summary is read-only and scoped to the selected Brand.</p><div className="readiness-list">{checks.map(([label, ready, detail]) => <article key={label}><span className={ready ? "ready" : "attention"}>{ready ? <Check size={17} /> : <Circle size={17} />}</span><div><strong>{label}</strong><small>{detail}</small></div></article>)}</div></div>;
+  return (
+    <div className="readiness-list">
+      {checks.map(([label, ready, detail]) => (
+        <article key={label}>
+          <span className={ready ? "ready" : "attention"}>
+            {ready ? <Check size={17} /> : <Circle size={17} />}
+          </span>
+          <div>
+            <strong>{label}</strong>
+            <small>{detail}</small>
+          </div>
+        </article>
+      ))}
+    </div>
+  );
 }
 
 export function SetupDrawer({
@@ -70,19 +194,62 @@ export function SetupDrawer({
   readiness: OperationsReadiness | undefined;
   mutationAvailable: boolean;
 }) {
-  const [step, setStep] = useState<SetupStep>(STEPS[0]);
-  const index = STEPS.indexOf(step);
+  const { selectedBrandId } = useBrandScope();
+  // The Brand this workspace is on, not the whole catalogue. The drawer used to
+  // list every Brand in scope on its first step, so opening setup for one Brand
+  // showed forty seven of them and said nothing about the one asked for.
+  const brand = brands.find((item) => item.brand_id === selectedBrandId) ?? null;
+
   return (
-    <Dialog description="Review social reporting setup and readiness." drawer onClose={onClose} open={open} title="Brand Setup">
-      <div className="setup-layout">
-        <nav aria-label="Setup steps" className="setup-navigation">{STEPS.map((item, itemIndex) => <button aria-current={step === item ? "step" : undefined} className={step === item ? "active" : ""} key={item} onClick={() => setStep(item)} type="button"><span>{itemIndex + 1}</span>{item}</button>)}</nav>
-        <div className="setup-content">
-          <div className="setup-progress"><span>Step {index + 1} of {STEPS.length}</span><strong>{step}</strong></div>
-          {step === "Brand Information" && <BrandInformation brands={brands} />}
-          {step === "Social Accounts" && <SocialAccountStep accounts={accounts} connections={connections} />}
-          {step === "Sync Settings" && <SyncSettingsStep accounts={accounts} jobs={jobs} mutationAvailable={mutationAvailable} />}
-          {step === "Readiness Summary" && <ReadinessStep accounts={accounts} jobs={jobs} readiness={readiness} />}
-          <div className="setup-actions"><button className="secondary-button" disabled={index === 0} onClick={() => setStep(STEPS[index - 1] ?? STEPS[0])} type="button">Back</button>{index < STEPS.length - 1 ? <button className="primary-button compact-button" onClick={() => setStep(STEPS[index + 1] ?? STEPS.at(-1)!)} type="button">Continue</button> : <button className="primary-button compact-button" onClick={onClose} type="button">Done</button>}</div>
+    <Dialog
+      description="Review Brand details, linked social accounts and collection readiness."
+      drawer
+      onClose={onClose}
+      open={open}
+      title="Brand Setup"
+    >
+      <div className="setup-page">
+        <div className="setup-identity">
+          <span className="setup-identity-icon">
+            <Store size={21} />
+          </span>
+          <div>
+            <strong>{brand?.name ?? "Brand Setup"}</strong>
+            <span>
+              Linking is managed by Accumulate and the platform connections; this view reports what
+              they resolved to.
+            </span>
+          </div>
+        </div>
+
+        <Section index={1} title="Brand Information">
+          <BrandInformation brand={brand} />
+        </Section>
+
+        <Section
+          index={2}
+          title="Social Accounts"
+          hint="Only the three approved platforms are shown. A platform with no linked account cannot be opened for this Brand."
+        >
+          <SocialAccounts accounts={accounts} connections={connections} />
+        </Section>
+
+        <Section
+          index={3}
+          title="Sync Settings"
+          hint="Collection state is reported by the backend. Opening this view never starts a job."
+        >
+          <SyncSettings accounts={accounts} jobs={jobs} mutationAvailable={mutationAvailable} />
+        </Section>
+
+        <Section index={4} title="Readiness">
+          <Readiness accounts={accounts} jobs={jobs} readiness={readiness} />
+        </Section>
+
+        <div className="setup-actions">
+          <button className="primary-button compact-button" onClick={onClose} type="button">
+            Close
+          </button>
         </div>
       </div>
     </Dialog>
