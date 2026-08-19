@@ -248,6 +248,7 @@ class StandaloneCollector:
         platforms: tuple[PlatformId, ...],
         brand_id: int | None,
         asset_id: int | None,
+        only_new: bool = False,
     ) -> tuple[WorkerAccountResult, ...]:
         selected = tuple(
             platform
@@ -267,6 +268,7 @@ class StandaloneCollector:
             platforms=selected,
             brand_id=brand_id,
             asset_id=asset_id,
+            only_new=only_new,
         )
         results: list[WorkerAccountResult] = []
         deadline = (
@@ -1052,6 +1054,11 @@ def main(argv: list[str] | None = None) -> int:
     collect_parser.add_argument("--brand-id", type=int)
     collect_parser.add_argument("--asset-id", type=int)
     collect_parser.add_argument("--scheduled", action="store_true")
+    collect_parser.add_argument(
+        "--only-new",
+        action="store_true",
+        help="Collect only accounts that have never been collected.",
+    )
     collect_parser.set_defaults(explain=False)
     canary_parser = subparsers.add_parser("verify-tiktok")
     canary_parser.add_argument(
@@ -1080,6 +1087,10 @@ def main(argv: list[str] | None = None) -> int:
     lock_name = (
         f"social_media_v2:tiktok_canary:{args.connection_id}"
         if args.command == "verify-tiktok"
+        # Its own lock: the fast lane after a connection must not wait behind a
+        # full pass, and a full pass must not wait behind it.
+        else "social_media_v2:new_account_collection"
+        if getattr(args, "only_new", False)
         else "social_media_v2:scheduled_collection"
     )
     lock_connection = _lock(engine, lock_name)
@@ -1121,6 +1132,7 @@ def main(argv: list[str] | None = None) -> int:
                 platforms=_platforms(args.platform),
                 brand_id=args.brand_id,
                 asset_id=args.asset_id,
+                only_new=args.only_new,
             )
         print(json.dumps([asdict(item) for item in results], separators=(",", ":")))
         return collection_exit_code(results)

@@ -47,6 +47,7 @@ class SocialCollectionTargetStore:
         platforms: tuple[PlatformId, ...],
         brand_id: int | None = None,
         asset_id: int | None = None,
+        only_new: bool = False,
     ) -> tuple[CollectionTargetRow, ...]:
         if not platforms:
             return ()
@@ -65,6 +66,11 @@ class SocialCollectionTargetStore:
         if asset_id is not None:
             clauses.append("la.asset_id=:asset_id")
             parameters["asset_id"] = asset_id
+        if only_new:
+            # An account linked moments ago has never been collected. Kept to a
+            # query of its own so the fast lane after a connection stays small
+            # and predictable, whatever the main queue is doing.
+            clauses.append("la.last_synced_at IS NULL")
         with self.engine.connect() as connection:
             rows = connection.execute(
                 text(

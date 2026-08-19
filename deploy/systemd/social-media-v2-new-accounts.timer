@@ -1,0 +1,10 @@
+[Unit]
+Description=Pick up newly connected Social Media V2 accounts every two minutes
+
+[Timer]
+OnCalendar=*:0/2
+Persistent=false
+Unit=social-media-v2-new-accounts.service
+
+[Install]
+WantedBy=timers.target

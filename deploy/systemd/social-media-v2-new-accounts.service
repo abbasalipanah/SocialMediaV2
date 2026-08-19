@@ -1,0 +1,27 @@
+[Unit]
+Description=Social Media V2 first collection for newly connected accounts
+After=network-online.target social-media-v2-api.service
+
+[Service]
+Type=oneshot
+User=social-media-v2
+Group=social-media-v2
+WorkingDirectory=/opt/social-media-v2/backend
+EnvironmentFile=/etc/social-media-v2/production.env
+# Only accounts that have never been collected, under their own advisory lock,
+# so an admin sees data as soon as setup finishes instead of waiting for the
+# next full pass. A full pass is unaffected and vice versa.
+ExecStart=/opt/social-media-v2/backend/.venv/bin/python -m app.workers collect --platform all --scheduled --only-new
+TimeoutStartSec=600
+
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/social-media-v2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
