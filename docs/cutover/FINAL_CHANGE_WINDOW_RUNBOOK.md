@@ -387,3 +387,37 @@ Every symptom pointed away from the cause. The unit reported success, because a
 that did nothing. The dashboards looked populated, because the V1 import had
 filled them. The provider looked healthy, because it was. Measure the state
 directly — which accounts were collected, and when — never the unit result.
+
+## 13. The last stalling account was re-downloading its own media (`2026-08-19`)
+
+After the content walk was bounded, one account still exhausted its budget on
+every run. Running it alone with logging showed the reason plainly: a stream of
+GETs to `scontent-*.cdninstagram.com`, inside Story collection.
+
+The media writer fetched every image before deciding anything. It never asked
+whether the file was already stored, because a published post's image does not
+change and the provider's URLs are signed and rotate, so there was nothing to
+compare them against — and the check was simply never written.
+
+The result was self-sustaining. An account that had never finished spent its
+whole turn re-downloading bytes it already held, was interrupted by the account
+budget, and was therefore never marked finished; the next run began again from
+the same place. The media directory had grown to `8.9 GB` holding exactly what
+was being fetched again every thirty minutes.
+
+The writer now skips an item whose stored file is still on disk, and re-fetches
+one whose file has gone, which repairs a broken record rather than trusting it.
+
+Stories also refresh from the top of the feed now. The provider drops them
+within a day, so resuming from a stored cursor walks a feed that no longer
+exists while missing the ones posted this morning.
+
+### The unit result was lying in the other direction too
+
+The worker exited non-zero if any account was less than perfect, and a partial
+account is ordinary — a provider withholds one metric and the rest is
+collected. So a run that collected twenty one accounts and stopped cleanly on
+its own budget was reported as `failed`. That is the state a real failure would
+have had to stand out from, which is why the unit result has been worthless as
+a signal throughout this investigation. It now fails only when a run reached
+nothing at all.
