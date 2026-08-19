@@ -1090,7 +1090,20 @@ def main(argv: list[str] | None = None) -> int:
         collector = StandaloneCollector(settings, engine)
         results: tuple[WorkerAccountResult, ...]
         if args.command == "verify-tiktok":
-            results = (collector.verify_pending_tiktok(args.connection_id),)
+            try:
+                results = (collector.verify_pending_tiktok(args.connection_id),)
+            except Exception as exc:
+                # A refused verification left the connection at
+                # `pending_verification` with nothing written anywhere, so an
+                # account that TikTok would not confirm looked the same as one
+                # still waiting its turn. The reason is our own provider layer's
+                # enum, which carries no credential or response body.
+                logger.warning(
+                    "tiktok_verification_failed connection_id=%s reason=%s",
+                    args.connection_id,
+                    _error_code(exc),
+                )
+                raise
         else:
             results = collector.collect_connected(
                 platforms=_platforms(args.platform),
