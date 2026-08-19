@@ -130,8 +130,15 @@ DEFAULT_RUN_BUDGET_SECONDS = 1200
 DEFAULT_ACCOUNT_BUDGET_SECONDS = 240
 
 
-class AccountBudgetExceeded(TimeoutError):
-    pass
+class AccountBudgetExceeded(BaseException):
+    """Raised in the collector's own thread when an account outstays its budget.
+
+    Deliberately not an `Exception`: the collection phases catch broadly so one
+    provider fault cannot lose the rest of an account's data, and any of those
+    handlers would otherwise swallow the interrupt and let the stall continue.
+    Like `KeyboardInterrupt`, this is an instruction to stop, not a fault to be
+    recovered from.
+    """
 
 
 def _raise_account_budget(signum: int, frame: object) -> None:
@@ -247,6 +254,16 @@ class StandaloneCollector:
                 with self._account_budget():
                     result = self._collect(row)
                 self.targets.mark_success(row, datetime.now(UTC))
+            except AccountBudgetExceeded as exc:
+                error_code = _error_code(exc)
+                self.targets.mark_failure(row, error_code)
+                result = WorkerAccountResult(
+                    platform=row.platform.value,
+                    brand_id=row.brand_id,
+                    asset_id=row.asset_id,
+                    status="failed",
+                    error_code=error_code,
+                )
             except Exception as exc:
                 error_code = _error_code(exc)
                 self.targets.mark_failure(row, error_code)
@@ -854,7 +871,7 @@ def _validate_media_url(value: str) -> None:
         raise ValueError("media_url_rejected")
 
 
-def _error_code(exc: Exception) -> str:
+def _error_code(exc: BaseException) -> str:
     """Record the class and the provider's sanitized reason.
 
     The class name alone said only `metatransporterror`, which is true of a

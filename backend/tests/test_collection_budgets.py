@@ -63,3 +63,21 @@ def test_the_budget_can_be_switched_off() -> None:
 def test_the_interruption_is_recorded_as_its_own_reason() -> None:
     code = _error_code(AccountBudgetExceeded("account_budget_exceeded"))
     assert code == "accountbudgetexceeded:account_budget_exceeded"
+
+
+def test_the_interrupt_survives_the_phase_handlers() -> None:
+    """The collection phases catch broadly so one provider fault does not lose
+    the rest of an account. The budget interrupt must pass straight through
+    them, or a stalled account keeps the run and is never recorded as stalled.
+    """
+    assert not issubclass(AccountBudgetExceeded, Exception)
+
+    collector = StandaloneCollector.__new__(StandaloneCollector)
+    collector._account_budget_seconds = 1
+
+    with pytest.raises(AccountBudgetExceeded):
+        with collector._account_budget():
+            try:
+                time.sleep(5)
+            except Exception:  # noqa: BLE001 - mirrors the phase handlers
+                pytest.fail("a phase handler swallowed the budget interrupt")
