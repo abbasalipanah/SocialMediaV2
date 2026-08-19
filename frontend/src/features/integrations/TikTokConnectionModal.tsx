@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Check, Link2, RefreshCw, ShieldCheck, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import {
   apiMutation,
@@ -122,7 +123,12 @@ export function TikTokConnectionModal({
     ? READINESS_COPY[readiness.data.reason] ?? "TikTok self-service is unavailable in this runtime."
     : null;
 
-  return (
+  // Through a portal, like the dialog this can be opened from. That dialog
+  // portals to the document body, so a modal left inside the page tree sits in
+  // whatever stacking context an ancestor happens to create and cannot rise
+  // above it, whatever z-index it carries -- it rendered behind the drawer,
+  // dimmed by its backdrop and impossible to click.
+  return createPortal(
     <div className="tiktok-connect-layer">
       <button aria-label="Close TikTok connection modal" className="tiktok-connect-backdrop" onClick={onClose} type="button" />
       <section aria-labelledby="tiktok-connect-title" aria-modal="true" className="tiktok-connect-modal" role="dialog">
@@ -153,6 +159,7 @@ export function TikTokConnectionModal({
           <button className="primary-button compact-button" disabled={!readiness.data?.oauth_start_available || isConnecting} onClick={() => void connect()} type="button">{isConnecting ? <RefreshCw className="spin" size={15} /> : <Link2 size={15} />}{isConnecting ? "Connecting…" : "Connect TikTok"}</button>
         </footer>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }

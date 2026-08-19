@@ -31,3 +31,23 @@ describe("connection modal stacking", () => {
     expect(DRAWER).toContain("linked[0]?.connection_state");
   });
 });
+
+describe("connection modal mounting", () => {
+  const MODALS = ["TikTokConnectionModal", "MetaConnectionModal"] as const;
+
+  it("mounts each connection modal through a portal", () => {
+    // The dialog that opens them portals to the document body. A modal left in
+    // the page tree sits in whatever stacking context an ancestor creates and
+    // cannot rise above that dialog, whatever z-index it carries -- raising the
+    // z-index alone did not bring it forward.
+    for (const modal of MODALS) {
+      const source = readFileSync(
+        resolve(frontendRoot, `src/features/integrations/${modal}.tsx`),
+        "utf8",
+      );
+      expect(source).toContain('from "react-dom"');
+      expect(source).toContain("return createPortal(");
+      expect(source).toContain("document.body,");
+    }
+  });
+});
