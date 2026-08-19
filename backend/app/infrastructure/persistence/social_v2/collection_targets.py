@@ -83,7 +83,14 @@ class SocialCollectionTargetStore:
                             ELSE 'v2:meta:connection:' || la.connection_id
                           END
                         WHERE {' AND '.join(clauses)}
-                        ORDER BY la.platform, la.brand_id, la.id"""
+                        -- Least recently collected first. A fixed order starved the
+                        -- tail of the list: a run that ran out of time was killed
+                        -- partway through and the next one began again at the same
+                        -- account, so anything past the cut-off was never collected.
+                        -- Ordering by staleness makes every account take its turn,
+                        -- and a truncated run resumes instead of repeating itself.
+                        ORDER BY la.last_synced_at ASC NULLS FIRST,
+                                 la.platform, la.brand_id, la.id"""
                 ),
                 parameters,
             ).mappings()

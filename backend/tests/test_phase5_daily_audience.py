@@ -225,7 +225,7 @@ def test_facebook_and_instagram_audience_breakdowns_are_normalized() -> None:
     fb_payload = {
         "data": [
             {
-                "name": "page_fans_country",
+                "name": "page_follows_country",
                 "values": [{"value": {"TR": 70, "DE": 20}}],
             }
         ]
@@ -267,7 +267,7 @@ def test_audience_collection_atomically_projects_only_provider_rows() -> None:
     payload = {
         "data": [
             {
-                "name": "page_fans_country",
+                "name": "page_follows_country",
                 "values": [{"value": {"TR": 70, "DE": 20}}],
             }
         ]
@@ -293,7 +293,7 @@ def test_audience_collection_atomically_projects_only_provider_rows() -> None:
 
 
 def test_malformed_audience_payload_fails_without_synthetic_breakdown() -> None:
-    payload = {"data": [{"name": "page_fans_country", "values": [{"value": {"TR": "x"}}]}]}
+    payload = {"data": [{"name": "page_follows_country", "values": [{"value": {"TR": "x"}}]}]}
     reader = MetaAudienceReader(
         _transport(lambda request: httpx.Response(200, json=payload, request=request)),
         platform=PlatformId.FACEBOOK,

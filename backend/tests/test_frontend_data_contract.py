@@ -23,7 +23,7 @@ from app.domain.reporting import (
     PlatformDashboard,
 )
 from app.infrastructure.providers.meta.audience import (
-    FACEBOOK_AUDIENCE_METRICS,
+    FACEBOOK_AUDIENCE_BREAKDOWN_KEYS,
     INSTAGRAM_AUDIENCE_METRICS,
 )
 from app.infrastructure.providers.meta.facebook.daily_metrics import (
@@ -155,7 +155,7 @@ def test_every_frontend_dimension_has_a_declared_producer_or_unavailable_state()
                 }[platform_name]
                 assert set(row["backend_keys"]).issubset(allowed)
                 if platform_name == "facebook":
-                    assert set(row["backend_keys"]).issubset(FACEBOOK_AUDIENCE_METRICS)
+                    assert set(row["backend_keys"]).issubset(FACEBOOK_AUDIENCE_BREAKDOWN_KEYS)
                 elif platform_name == "instagram":
                     assert all(
                         any(key.startswith(metric) for metric in INSTAGRAM_AUDIENCE_METRICS)
@@ -168,11 +168,11 @@ def test_every_frontend_dimension_has_a_declared_producer_or_unavailable_state()
             if row["support"] != "provider_native":
                 assert row["consumer"] in provider_limited.get(platform_name, {})
 
-    assert set(FACEBOOK_AUDIENCE_METRICS).issubset(facebook_allowed)
+    assert set(FACEBOOK_AUDIENCE_BREAKDOWN_KEYS).issubset(facebook_allowed)
     assert set(AUDIENCE_FIELDS).issubset(tiktok_allowed)
     local_demo = (REPOSITORY_ROOT / "backend/app/local_demo.py").read_text(encoding="utf-8")
     assert '"like_type"' in local_demo
-    assert "like_type" not in FACEBOOK_AUDIENCE_METRICS
+    assert "like_type" not in FACEBOOK_AUDIENCE_BREAKDOWN_KEYS
     assert "like_type" not in imported_dimensions
     facebook = audience_capabilities(
         PlatformId.FACEBOOK,

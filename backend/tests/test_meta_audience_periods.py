@@ -1,8 +1,10 @@
-"""Facebook follower geography is served on day/week, not lifetime.
+"""Facebook follower geography survived Meta's rename of the metric.
 
-Asking for the wrong period returned nothing, and the empty result was read as
-the provider having withdrawn the data. It had not: the same account answers on
-the day period, which is how V1's canary kept collecting it throughout.
+Meta retired the `page_fans_*` family on 2025-11-15 and answers it with an
+invalid-metric error, so the reader asks for the `page_follows_*` successors
+instead. It stores them under the established keys: the measurement is the same
+and the dashboards and history are keyed on the old names, so renaming the
+stored key would split every Page's series in two.
 """
 
 from __future__ import annotations
@@ -40,11 +42,35 @@ def _row(metric, values):
     return {"data": [{"name": metric, "values": [{"value": values}]}]}
 
 
-def test_facebook_geography_is_read_from_the_day_period() -> None:
+def test_facebook_geography_is_requested_under_the_current_metric_names() -> None:
     transport = RecordingTransport(
         {
-            ("page_fans_country", "day"): _row("page_fans_country", {"TR": 120, "DE": 30}),
-            ("page_fans_city", "day"): _row("page_fans_city", {"Istanbul": 90}),
+            ("page_follows_country", "day"): _row(
+                "page_follows_country", {"TR": 120, "DE": 30}
+            ),
+            ("page_follows_city", "day"): _row("page_follows_city", {"Istanbul": 90}),
+        }
+    )
+
+    MetaAudienceReader(
+        transport, platform=PlatformId.FACEBOOK, clock=lambda: NOW
+    ).fetch_audience(_account())
+
+    # The retired names are never sent; sending them cost a refused round trip
+    # per Page on every run.
+    assert transport.calls == [
+        ("page_follows_country", "day"),
+        ("page_follows_city", "day"),
+    ]
+
+
+def test_renamed_metric_is_stored_under_the_established_key() -> None:
+    transport = RecordingTransport(
+        {
+            ("page_follows_country", "day"): _row(
+                "page_follows_country", {"TR": 120, "DE": 30}
+            ),
+            ("page_follows_city", "day"): _row("page_follows_city", {"Istanbul": 90}),
         }
     )
 
@@ -54,22 +80,7 @@ def test_facebook_geography_is_read_from_the_day_period() -> None:
 
     assert snapshot.breakdowns["page_fans_country"] == {"TR": 120, "DE": 30}
     assert snapshot.breakdowns["page_fans_city"] == {"Istanbul": 90}
-    # Never asked for lifetime, and stopped as soon as a period answered.
-    assert [period for _metric, period in transport.calls] == ["day", "day"]
-
-
-def test_facebook_falls_back_to_the_week_period() -> None:
-    transport = RecordingTransport(
-        {("page_fans_country", "week"): _row("page_fans_country", {"TR": 7})}
-    )
-
-    snapshot = MetaAudienceReader(
-        transport, platform=PlatformId.FACEBOOK, clock=lambda: NOW
-    ).fetch_audience(_account())
-
-    assert snapshot.breakdowns["page_fans_country"] == {"TR": 7}
-    assert ("page_fans_country", "day") in transport.calls
-    assert ("page_fans_country", "week") in transport.calls
+    assert "page_follows_country" not in snapshot.breakdowns
 
 
 def test_instagram_keeps_the_lifetime_period() -> None:

@@ -15,14 +15,31 @@ from app.infrastructure.providers.meta.transport import MetaTransport, MetaTrans
 
 logger = logging.getLogger(__name__)
 
+# Meta retired the `page_fans_*` family on 2025-11-15 and now answers them with
+# an invalid-metric error, so every request for follower geography was refused.
+# Its own reference guide still lists them as current, which is why the refusal
+# read as a transient provider fault for so long; the live API is the authority
+# here. The follows-based metrics are the documented successors.
 FACEBOOK_AUDIENCE_METRICS = (
-    "page_fans_country",
-    "page_fans_city",
+    "page_follows_country",
+    "page_follows_city",
 )
-# Page follower geography is served on the day and week periods, not lifetime.
-# Asking for lifetime returns nothing, which read as "the provider stopped
-# offering this" when the data was in fact available the whole time.
-FACEBOOK_AUDIENCE_PERIODS = ("day", "week")
+FACEBOOK_AUDIENCE_PERIODS = ("day",)
+# The successor metric measures the same thing under a new name, and Meta maps
+# the old series onto it. Storing it under the established key keeps one
+# continuous history per Page instead of splitting it at the rename, and leaves
+# the stored vocabulary and the dashboards that read it untouched.
+FACEBOOK_CANONICAL_BREAKDOWN_KEYS = {
+    "page_follows_country": "page_fans_country",
+    "page_follows_city": "page_fans_city",
+}
+# What a reader of the stored snapshot sees. This is deliberately separate from
+# the wire metric names above: the provider's vocabulary is free to change again
+# without moving the key anything downstream is written against.
+FACEBOOK_AUDIENCE_BREAKDOWN_KEYS = tuple(
+    FACEBOOK_CANONICAL_BREAKDOWN_KEYS.get(metric, metric)
+    for metric in FACEBOOK_AUDIENCE_METRICS
+)
 INSTAGRAM_AUDIENCE_PERIODS = ("lifetime",)
 INSTAGRAM_AUDIENCE_METRICS = (
     "follower_demographics",
@@ -87,7 +104,10 @@ class MetaAudienceReader:
                     metric_name = str(row.get("name") or "").strip()
                     if metric_name != metric:
                         continue
-                    metric_breakdowns.update(_breakdowns(metric_name, row))
+                    canonical = FACEBOOK_CANONICAL_BREAKDOWN_KEYS.get(
+                        metric_name, metric_name
+                    )
+                    metric_breakdowns.update(_breakdowns(canonical, row))
                 if any(values for values in metric_breakdowns.values()):
                     breakdowns.update(metric_breakdowns)
                     break

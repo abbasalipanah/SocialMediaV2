@@ -102,10 +102,35 @@ class TikTokAccessContext:
     scopes: frozenset[str]
 
 
+# V2 writes `complete`; the V1 import wrote `completed`. Comparing against one
+# spelling meant every imported account looked mid-backfill forever, so each run
+# re-read a thirty-day window for it instead of yesterday. That is what made a
+# pass outlast its own service timeout, and because the account was then never
+# marked finished, the state could never correct itself.
+BACKFILL_COMPLETE_STATUSES = frozenset({"complete", "completed"})
+
+
+def _backfill_complete(status: str) -> bool:
+    return status.strip().lower() in BACKFILL_COMPLETE_STATUSES
+
+
+# The collection service is given 1500s before systemd terminates it. Stopping
+# at 1200s leaves the account in flight room to finish and be committed, so a
+# long pass ends with a complete record rather than a half-written one.
+DEFAULT_RUN_BUDGET_SECONDS = 1200
+
+
 class StandaloneCollector:
-    def __init__(self, settings: AppSettings, engine: Engine) -> None:
+    def __init__(
+        self,
+        settings: AppSettings,
+        engine: Engine,
+        *,
+        run_budget_seconds: int | None = DEFAULT_RUN_BUDGET_SECONDS,
+    ) -> None:
         self.settings = settings
         self.engine = engine
+        self._run_budget_seconds = run_budget_seconds
         self.policy = WritePolicy.from_settings(settings)
         self.policy.assert_allows_mutation("standalone_collection")
         try:
@@ -161,7 +186,24 @@ class StandaloneCollector:
             asset_id=asset_id,
         )
         results: list[WorkerAccountResult] = []
-        for row in rows:
+        deadline = (
+            time.monotonic() + self._run_budget_seconds
+            if self._run_budget_seconds
+            else None
+        )
+        logger.info("collection_started accounts=%s", len(rows))
+        for index, row in enumerate(rows, start=1):
+            if deadline is not None and time.monotonic() >= deadline:
+                # Stop on our own terms. Being killed by the service timeout
+                # aborts whichever account is mid-write, and because the next
+                # run starts from the stalest account it resumes here anyway.
+                logger.warning(
+                    "collection_budget_exhausted collected=%s remaining=%s",
+                    index - 1,
+                    len(rows) - index + 1,
+                )
+                break
+            started = time.monotonic()
             try:
                 result = self._collect(row)
                 self.targets.mark_success(row, datetime.now(UTC))
@@ -175,6 +217,17 @@ class StandaloneCollector:
                     status="failed",
                     error_code=error_code,
                 )
+            logger.info(
+                "collection_account_done index=%s/%s platform=%s brand_id=%s "
+                "link_id=%s status=%s seconds=%.1f",
+                index,
+                len(rows),
+                row.platform.value,
+                row.brand_id,
+                row.link_id,
+                result.status,
+                time.monotonic() - started,
+            )
             results.append(result)
         return tuple(results)
 
@@ -286,9 +339,9 @@ class StandaloneCollector:
             )
             today = date.today()
             since = (
-                today - timedelta(days=29)
-                if row.backfill_status != "complete"
-                else today - timedelta(days=1)
+                today - timedelta(days=1)
+                if _backfill_complete(row.backfill_status)
+                else today - timedelta(days=29)
             )
             daily = collect_daily_metrics(
                 target=target,
@@ -444,9 +497,9 @@ class StandaloneCollector:
         )
         until = date.today() - timedelta(days=1)
         since = (
-            until - timedelta(days=29)
-            if row.backfill_status != "complete"
-            else until
+            until
+            if _backfill_complete(row.backfill_status)
+            else until - timedelta(days=29)
         )
         daily = collect_daily_metrics(
             target=target,
