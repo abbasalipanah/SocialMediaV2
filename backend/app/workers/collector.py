@@ -129,6 +129,9 @@ DEFAULT_RUN_BUDGET_SECONDS = 1200
 # every account queued behind it with it. Four minutes is well past a healthy
 # pass and well short of the run budget.
 DEFAULT_ACCOUNT_BUDGET_SECONDS = 240
+# How many of an account's most recent posts get their comments re-read
+# each run. Older posts keep whatever was collected when they were new.
+COMMENTED_CONTENT_PER_RUN = 25
 
 
 class AccountBudgetExceeded(BaseException):
@@ -431,22 +434,31 @@ class StandaloneCollector:
                 audience = None
                 partial_errors.add("audience_unavailable")
             comment_count = 0
+            commented_items = 0
 
             def persist_related(item: ProviderRecord) -> int:
-                nonlocal comment_count
-                try:
-                    comments = collect_comments(
-                        target=target,
-                        content_id=item.external_id,
-                        reader=comments_reader,
-                        comment_store=self.comments,
-                        max_pages=20,
-                    )
-                    comment_count += comments.comment_count
-                    if comments.status is not CollectionStatus.SUCCESS:
-                        partial_errors.add("comments_partial")
-                except Exception:
-                    partial_errors.add("comments_unavailable")
+                nonlocal comment_count, commented_items
+                # Content arrives newest first, so this reads the comments on
+                # recent posts and leaves the archive alone. Unbounded, an
+                # account with hundreds of posts spent its entire turn re-reading
+                # every comment on every one of them, every half hour, and the
+                # accounts queued behind it were never reached. TikTok has been
+                # bounded this way from the start.
+                if commented_items < COMMENTED_CONTENT_PER_RUN:
+                    commented_items += 1
+                    try:
+                        comments = collect_comments(
+                            target=target,
+                            content_id=item.external_id,
+                            reader=comments_reader,
+                            comment_store=self.comments,
+                            max_pages=20,
+                        )
+                        comment_count += comments.comment_count
+                        if comments.status is not CollectionStatus.SUCCESS:
+                            partial_errors.add("comments_partial")
+                    except Exception:
+                        partial_errors.add("comments_unavailable")
                 try:
                     return self._persist_media(target, item)
                 except Exception:

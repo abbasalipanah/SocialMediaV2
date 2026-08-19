@@ -6,16 +6,18 @@ import random
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any, cast
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
 
 from app.application.ports.platforms import ProviderCredential
+from app.infrastructure.providers.meta.errors import _error_signature, _retry_after
 
 from .rate_guard import MetaRateGuard
 
 META_GRAPH_BASE_URL = "https://graph.facebook.com"
+MAX_BACKOFF_SECONDS = 60.0  # Upper bound on any single wait.
 
 
 @dataclass(frozen=True)
@@ -23,21 +25,6 @@ class MetaPage:
     items: tuple[Mapping[str, Any], ...]
     next_cursor: str | None
     payload: Mapping[str, Any]
-
-
-def _error_signature(payload: Mapping[str, Any] | None) -> str:
-    """Provider error code and subcode, never the message.
-
-    Meta's numeric codes distinguish an expired token from a missing permission
-    from an unsupported field; the message can echo request content, so it is
-    left out. Without the codes every refusal read the same and the cause could
-    only be guessed at.
-    """
-    error = (payload or {}).get("error")
-    if not isinstance(error, Mapping):
-        return ""
-    parts = [str(error.get(key)) for key in ("code", "error_subcode") if error.get(key) is not None]
-    return ":".join(parts)
 
 
 class MetaTransportError(RuntimeError):
@@ -213,7 +200,9 @@ class MetaTransport:
     def _sleep(self, attempt: int, retry_after: float | None) -> None:
         base = self._base_backoff_seconds * (2**attempt)
         delay = base + self._jitter(0.0, base * 0.2)
-        self._sleeper(max(delay, retry_after or 0.0))
+        # The provider may ask for an hour; spending the whole window on one
+        # account is worse than retrying it next run, when it is the stalest.
+        self._sleeper(min(max(delay, retry_after or 0.0), MAX_BACKOFF_SECONDS))
 
 
 def _json_object(response: httpx.Response) -> Mapping[str, Any]:
@@ -230,21 +219,6 @@ def _json_object(response: httpx.Response) -> Mapping[str, Any]:
             status_code=response.status_code,
         )
     return payload
-
-
-def _retry_after(response: httpx.Response, payload: Mapping[str, Any]) -> float | None:
-    values: list[object] = [response.headers.get("retry-after")]
-    error = payload.get("error")
-    if isinstance(error, Mapping):
-        values.extend((error.get("retry_after"), error.get("retry_after_seconds")))
-    parsed: list[float] = []
-    for value in values:
-        try:
-            if value is not None:
-                parsed.append(max(0.0, float(cast(Any, value))))
-        except (TypeError, ValueError):
-            continue
-    return max(parsed) if parsed else None
 
 
 __all__ = ["META_GRAPH_BASE_URL", "MetaPage", "MetaTransport", "MetaTransportError"]
