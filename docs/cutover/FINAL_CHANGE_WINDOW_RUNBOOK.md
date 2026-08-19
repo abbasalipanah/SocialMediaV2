@@ -345,3 +345,45 @@ bash: line 1: /etc/social-media-v2/production.env: Permission denied
 ```
 
 A deploy that prints an error and still reports success is worth stopping for.
+
+## 12. Where the collection time actually went (`2026-08-19`)
+
+Section 10 removed four faults and the runs still did not finish: five of the
+first six accounts hit the account budget. Two hypotheses were wrong before the
+right one — unbounded comment reads were real but not the cost, and the network
+to Meta answers in a hundred milliseconds with no loss, so nothing was hanging.
+
+What settled it was a per-account budget that logs the frames it interrupts,
+filtered to this project's own files. The socket frames only ever say "waiting
+on the provider"; ours name the phase:
+
+```text
+_collect_meta <- collect_content <- list_content <- _with_insights
+              <- fetch_content_insights <- transport.get
+```
+
+Content is read with a **per-item insights call**. Once an account finished
+paging its history, the checkpoint stored a null cursor, so the next run started
+again at the newest post and walked the entire archive — asking the provider
+about every post the account had ever published, every thirty minutes, at
+roughly a second per post.
+
+Two things were needed, and neither works alone:
+
+- **Bound the walk.** A page is a hundred posts. Three pages still did not fit
+  in an account's share of a run; one does.
+- **Stay at the top of the feed.** Bounding the pages while resuming from the
+  stored cursor creeps through the archive a few pages per run and takes days to
+  come back around to a post published this morning. A Story is dropped by the
+  provider within a day, so it would be gone before its turn arrived.
+
+A backfill in progress still resumes from its cursor and still walks a hundred
+pages; only a completed account refreshes.
+
+### Why this was invisible
+
+Every symptom pointed away from the cause. The unit reported success, because a
+`oneshot` that exits non-zero after doing most of its work looks the same as one
+that did nothing. The dashboards looked populated, because the V1 import had
+filled them. The provider looked healthy, because it was. Measure the state
+directly — which accounts were collected, and when — never the unit result.
