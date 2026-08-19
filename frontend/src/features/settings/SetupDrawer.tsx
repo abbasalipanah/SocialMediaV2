@@ -105,9 +105,7 @@ function SocialAccounts({
               disabled={!canManage}
               onClick={() => onConnect(platform)}
               title={
-                canManage
-                  ? undefined
-                  : "Open Social Media from Accumulate on this Brand to link its accounts"
+                canManage ? undefined : "Needs an agency admin or super admin, on a single Brand"
               }
               type="button"
             >
@@ -237,10 +235,9 @@ export function SetupDrawer({
   const brandJobs = jobs.filter((item) => String(item.brand_id) === brand.brand_id);
   const brandName = brand.name ?? `Brand ${brand.brand_id}`;
 
-  // A provider connection is bound to the Brand the session was launched with:
-  // the backend refuses to link accounts to any other one, and the OAuth state
-  // and credential vault are keyed on it. So setup is offered for the Brand this
-  // session is actually on, and the others say plainly how to reach them.
+  // Settings authority may set up any Brand its signed scope grants, which is
+  // what opening setup from a row means. The backend re-checks write access on
+  // this Brand before any exchange, so this only decides whether to offer it.
   const canManage =
     !rollup &&
     capabilities?.permissions.meta_connection_manage === true &&
@@ -281,7 +278,7 @@ export function SetupDrawer({
           <Section
             index={2}
             title="Social Accounts"
-            hint="Facebook, Instagram and TikTok accounts linked to this Brand."
+            hint="Connect Facebook, Instagram or TikTok for this Brand, or edit what is already linked."
           >
             <SocialAccounts
               accounts={brandAccounts}
@@ -291,8 +288,8 @@ export function SetupDrawer({
             />
             {!canManage && (
               <p className="setup-note">
-                Accounts are linked for the Brand this session was opened with. To set up{" "}
-                {brandName}, open Social Media from Accumulate with that Brand selected.
+                Linking accounts needs an agency admin or super admin on a single
+                Brand. Leave the roll-up view to set up {brandName}.
               </p>
             )}
           </Section>

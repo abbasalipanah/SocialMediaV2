@@ -94,6 +94,7 @@ def create_workspace_router(
             and workspace.scope.resolved_brand_ids == (str(payload.get("brand_id") or ""),)
         )
         integrations_visible = session_can_access_integrations(payload)
+        settings_visible = session_can_access_settings(payload)
         return WorkspaceCapabilitiesResponse(
             scope=workspace.scope,
             platforms=tuple(
@@ -116,7 +117,7 @@ def create_workspace_router(
                 for platform in PlatformId
             ),
             permissions=WorkspacePermissions(
-                settings_visible=session_can_access_settings(payload),
+                settings_visible=settings_visible,
                 integrations_visible=integrations_visible,
                 internal_audit_visible=(
                     session_can_access_settings(payload)
@@ -124,8 +125,18 @@ def create_workspace_router(
                 ),
                 rollup_available=True,
                 operation_mutation_available=False,
-                tiktok_connection_manage=(selected_brand_is_session_brand and integrations_visible),
-                meta_connection_manage=(selected_brand_is_session_brand and integrations_visible),
+                # Settings authority manages connections for any Brand its scope
+                # grants; a session Accumulate delegated for one Brand manages
+                # only that Brand. Reporting the narrower rule to everyone left
+                # Brand Setup unable to offer setup for the row it was opened on.
+                tiktok_connection_manage=(
+                    integrations_visible
+                    and (settings_visible or selected_brand_is_session_brand)
+                ),
+                meta_connection_manage=(
+                    integrations_visible
+                    and (settings_visible or selected_brand_is_session_brand)
+                ),
             ),
             runtime=RuntimeCapabilities(
                 mode=runtime_mode,

@@ -32,6 +32,7 @@ from app.core.write_policy import WritePolicy
 from app.domain.platforms import PlatformId
 
 from .authority import AuthorityError, build_brand_workspace
+from .sso import session_can_access_settings
 
 INTENT_TTL = timedelta(minutes=15)
 
@@ -71,9 +72,19 @@ class SessionActivationAuthority:
             session is None
             or session.get("revoked") is True
             or str(session.get("user_id") or "") != context.user_id
-            or str(session.get("brand_id") or "") != str(context.brand_id)
         ):
             return False
+        # Settings authority may connect a provider for any Brand its signed
+        # scope grants write on: an admin opens Brand Setup for the row they
+        # clicked, which need not be the Brand the session was launched with. A
+        # session Accumulate delegated for one Brand stays bound to that Brand,
+        # which is what the delegation is for.
+        if str(session.get("brand_id") or "") != str(
+            context.brand_id
+        ) and not session_can_access_settings(session):
+            return False
+        # The scope decides the rest: write on this Brand, resolving to this
+        # Brand alone so a rollup cannot stand in for one of its members.
         try:
             workspace = build_brand_workspace(
                 session=session,

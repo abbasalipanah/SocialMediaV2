@@ -207,17 +207,29 @@ def create_settings_router(
             require_settings=False,
             require_integrations=True,
         )
+        # The Brand being set up, as for Meta: an admin opens Brand Setup for the
+        # row they clicked, which need not be the Brand this session was launched
+        # with. The signed scope has already been resolved, and the activation
+        # authority re-checks write access on this Brand before any exchange.
+        target_brand_id = scope.workspace.scope.requested_brand_id
         session_brand_id = str(scope.session.get("brand_id") or "")
-        if (
-            scope.workspace.scope.requested_brand_id != session_brand_id
-            or scope.workspace.scope.rollup
-            or scope.workspace.scope.resolved_brand_ids != (session_brand_id,)
+        # Settings authority may set up any Brand its signed scope grants: an
+        # admin opens Brand Setup for the row they clicked, which need not be the
+        # Brand this session was launched with. A session delegated by Accumulate
+        # for one Brand -- a viewer carrying a connection app role -- stays bound
+        # to that Brand, which is the whole point of the delegation.
+        if target_brand_id != session_brand_id and not session_can_access_settings(
+            scope.session
+        ):
+            raise HTTPException(403, "tiktok_self_service_brand_forbidden")
+        if scope.workspace.scope.rollup or scope.workspace.scope.resolved_brand_ids != (
+            target_brand_id,
         ):
             raise HTTPException(403, "tiktok_self_service_brand_forbidden")
         try:
             context = ActivationContext(
                 user_id=str(scope.session.get("user_id") or ""),
-                brand_id=int(session_brand_id),
+                brand_id=int(target_brand_id),
                 session_binding=sha256_text(raw_session or ""),
                 # These legacy-named context fields carry a stable, session-bound
                 # self-service authority reference. They do not assert an SSO handoff.
@@ -241,17 +253,30 @@ def create_settings_router(
             require_settings=False,
             require_integrations=True,
         )
+        # The Brand being set up, which need not be the one this session was
+        # launched with: an admin opens Brand Setup from the Settings table for
+        # whichever Brand's row they clicked. `_scope` has already resolved the
+        # request against the signed scope, and the activation authority
+        # re-checks write access on this Brand before anything is exchanged.
+        target_brand_id = scope.workspace.scope.requested_brand_id
         session_brand_id = str(scope.session.get("brand_id") or "")
-        if (
-            scope.workspace.scope.requested_brand_id != session_brand_id
-            or scope.workspace.scope.rollup
-            or scope.workspace.scope.resolved_brand_ids != (session_brand_id,)
+        # Settings authority may set up any Brand its signed scope grants: an
+        # admin opens Brand Setup for the row they clicked, which need not be the
+        # Brand this session was launched with. A session delegated by Accumulate
+        # for one Brand -- a viewer carrying a connection app role -- stays bound
+        # to that Brand, which is the whole point of the delegation.
+        if target_brand_id != session_brand_id and not session_can_access_settings(
+            scope.session
+        ):
+            raise HTTPException(403, "meta_self_service_brand_forbidden")
+        if scope.workspace.scope.rollup or scope.workspace.scope.resolved_brand_ids != (
+            target_brand_id,
         ):
             raise HTTPException(403, "meta_self_service_brand_forbidden")
         try:
             context = ActivationContext(
                 user_id=str(scope.session.get("user_id") or ""),
-                brand_id=int(session_brand_id),
+                brand_id=int(target_brand_id),
                 session_binding=sha256_text(raw_session or ""),
                 sso_jti_hash=sha256_text(f"meta-self-service:{raw_session or ''}"),
                 sso_consumed_at=datetime.fromtimestamp(0, UTC),
