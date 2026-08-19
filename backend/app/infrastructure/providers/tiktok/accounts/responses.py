@@ -8,7 +8,18 @@ from typing import Any
 
 
 class TikTokResponseError(ValueError):
-    pass
+    """A provider refusal, carrying its code and -- for operators only -- its text.
+
+    `provider_message` exists so a human running a manual diagnostic can read
+    what the provider actually said about an undocumented code. Nothing logs or
+    returns it: the string can echo request content, which is why the message is
+    kept out of `str(exc)` and out of every automatic path.
+    """
+
+    def __init__(self, code: str, *, provider_message: str = "") -> None:
+        super().__init__(code)
+        self.code = code
+        self.provider_message = provider_message
 
 
 @dataclass(frozen=True)
@@ -69,7 +80,10 @@ def success_data(
         # The numeric code is a stable, non-sensitive enum that distinguishes an
         # expired token from a malformed request. The message and body are still
         # withheld, because they can echo request content back.
-        raise TikTokResponseError(f"provider_rejected:{code}")
+        raise TikTokResponseError(
+            f"provider_rejected:{code}",
+            provider_message=str(payload.get("message") or ""),
+        )
     _text(payload, "message")
     _text(payload, "request_id")
     data = payload.get("data")

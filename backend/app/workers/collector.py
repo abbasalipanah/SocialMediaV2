@@ -1052,7 +1052,13 @@ def main(argv: list[str] | None = None) -> int:
     collect_parser.add_argument("--brand-id", type=int)
     collect_parser.add_argument("--asset-id", type=int)
     collect_parser.add_argument("--scheduled", action="store_true")
+    collect_parser.set_defaults(explain=False)
     canary_parser = subparsers.add_parser("verify-tiktok")
+    canary_parser.add_argument(
+        "--explain",
+        action="store_true",
+        help="Print the provider's own message for a refusal, to this terminal only.",
+    )
     canary_parser.add_argument("--connection-id", type=int, required=True)
     args = parser.parse_args(argv)
 
@@ -1103,6 +1109,12 @@ def main(argv: list[str] | None = None) -> int:
                     args.connection_id,
                     _error_code(exc),
                 )
+                # Only when an operator asks, and only to their terminal. The
+                # provider's text is the sole way to read an undocumented code,
+                # and it can echo request content, so it never reaches a log.
+                message = getattr(exc, "provider_message", "")
+                if args.explain and message:
+                    print(f"provider_message: {message}")
                 raise
         else:
             results = collector.collect_connected(
