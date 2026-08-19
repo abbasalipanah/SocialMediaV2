@@ -10,7 +10,7 @@ import signal
 import threading
 import time
 import traceback
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from datetime import UTC, date, datetime, timedelta
@@ -927,6 +927,22 @@ def _validate_media_url(value: str) -> None:
         raise ValueError("media_url_rejected")
 
 
+def collection_exit_code(results: Sequence[WorkerAccountResult]) -> int:
+    """Whether the run itself failed, not whether every account was perfect.
+
+    Exiting non-zero on any imperfect account marked every run failed, because
+    a partial account is ordinary: a provider withholds one metric and the rest
+    is collected. systemd then showed `failed` on a healthy system, which is
+    the state a real failure would have to stand out from.
+
+    A run that reached nothing is worth waking someone for; one that collected
+    what it could is not.
+    """
+    if not results:
+        return 0
+    return 0 if any(item.status != "failed" for item in results) else 1
+
+
 def _error_code(exc: BaseException) -> str:
     """Record the class and the provider's sanitized reason.
 
@@ -1022,7 +1038,7 @@ def main(argv: list[str] | None = None) -> int:
                 asset_id=args.asset_id,
             )
         print(json.dumps([asdict(item) for item in results], separators=(",", ":")))
-        return 1 if any(item.status != "success" for item in results) else 0
+        return collection_exit_code(results)
     finally:
         if collector is not None:
             collector.close()
