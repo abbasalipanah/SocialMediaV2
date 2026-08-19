@@ -124,7 +124,12 @@ def test_instagram_demographics_are_asked_for_one_breakdown_at_a_time() -> None:
     for params in transport.parameters:
         assert params["period"] == "lifetime"
         assert params["metric_type"] == "total_value"
-        assert params["timeframe"] == "last_90_days"
+        assert params["timeframe"] == (
+            "last_90_days"
+            if params["metric"] == "follower_demographics"
+            # Meta withdrew the rolling timeframes from these two.
+            else "this_month"
+        )
         assert params["breakdown"] in {"country", "city", "age", "gender"}
 
     asked = {(p["metric"], p["breakdown"]) for p in transport.parameters}

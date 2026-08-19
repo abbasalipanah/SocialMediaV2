@@ -7,7 +7,7 @@ into a list of dead ends.
 
 from __future__ import annotations
 
-from app.api.workspace import _brands_with_social_media
+from app.application.queries.brand_visibility import brands_with_social_media
 from app.domain.authority import (
     BrandFamilyProjection,
     BrandScope,
@@ -53,7 +53,7 @@ def _workspace(brands, families=()):
 def test_brands_without_an_account_are_not_offered() -> None:
     workspace = _workspace([_brand("1"), _brand("2"), _brand("3")])
 
-    result = _brands_with_social_media(
+    result = brands_with_social_media(
         workspace, reporting_store=FakeReportingStore({"1"}), keep_brand_id="1"
     )
 
@@ -64,7 +64,7 @@ def test_the_launch_brand_is_always_offered() -> None:
     # Dropping the Brand the session resolved to would fail the workspace.
     workspace = _workspace([_brand("1"), _brand("2")])
 
-    result = _brands_with_social_media(
+    result = brands_with_social_media(
         workspace, reporting_store=FakeReportingStore(set()), keep_brand_id="2"
     )
 
@@ -77,7 +77,7 @@ def test_a_parent_is_kept_so_its_child_keeps_its_place() -> None:
         [BrandFamilyProjection(root_brand_id="10", brand_ids=("10", "11"))],
     )
 
-    result = _brands_with_social_media(
+    result = brands_with_social_media(
         workspace, reporting_store=FakeReportingStore({"11"}), keep_brand_id="11"
     )
 
@@ -88,7 +88,7 @@ def test_a_parent_is_kept_so_its_child_keeps_its_place() -> None:
 def test_an_unavailable_store_changes_nothing() -> None:
     workspace = _workspace([_brand("1"), _brand("2")])
 
-    result = _brands_with_social_media(
+    result = brands_with_social_media(
         workspace, reporting_store=None, keep_brand_id="1"
     )
 

@@ -9,6 +9,7 @@ import re
 import signal
 import threading
 import time
+import traceback
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
@@ -256,6 +257,17 @@ class StandaloneCollector:
                 self.targets.mark_success(row, datetime.now(UTC))
             except AccountBudgetExceeded as exc:
                 error_code = _error_code(exc)
+                # Record where the account was blocked. The interrupt lands on
+                # whichever call is waiting, so the innermost frames name the
+                # phase; without them a stall is only ever "took too long".
+                logger.warning(
+                    "collection_account_stalled link_id=%s at=%s",
+                    row.link_id,
+                    " <- ".join(
+                        f"{frame.filename.rsplit('/', 1)[-1]}:{frame.lineno}:{frame.name}"
+                        for frame in traceback.extract_tb(exc.__traceback__)[-4:]
+                    ),
+                )
                 self.targets.mark_failure(row, error_code)
                 result = WorkerAccountResult(
                     platform=row.platform.value,

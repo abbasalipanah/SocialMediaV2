@@ -38,6 +38,7 @@ from app.application.ports import (
     ReportingStore,
     TikTokActivationError,
 )
+from app.application.queries.brand_visibility import brands_with_social_media
 from app.application.services.meta_activation import MetaActivationCoordinator
 from app.application.services.sso import (
     TIKTOK_CONNECTION_MANAGE_PERMISSION,
@@ -268,10 +269,19 @@ def create_settings_router(
     ) -> SettingsBrandsResponse:
         scope = _scope(raw_session=session, brand_id=brand_id, rollup=rollup)
         assert reporting_store is not None
-        visible_ids = tuple(item.brand_id for item in scope.workspace.brands)
+        # The same narrowing the switcher applies. Listing every Brand the user
+        # may open in Accumulate meant this page offered a hundred and
+        # thirty-five rows where the product serves a third of them, and each
+        # extra row read as a Brand whose accounts had gone missing.
+        workspace = brands_with_social_media(
+            scope.workspace,
+            reporting_store=reporting_store,
+            keep_brand_id=brand_id or scope.workspace.default_brand_id,
+        )
+        visible_ids = tuple(item.brand_id for item in workspace.brands)
         accounts = reporting_store.list_accounts(brand_ids=visible_ids)
         return SettingsBrandsResponse(
-            meta=scope.workspace.scope,
+            meta=workspace.scope,
             items=tuple(
                 SettingsBrandItem(
                     brand_id=item.brand_id,
@@ -293,7 +303,7 @@ def create_settings_router(
                         default=None,
                     ),
                 )
-                for item in scope.workspace.brands
+                for item in workspace.brands
             ),
         )
 

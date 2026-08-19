@@ -55,8 +55,15 @@ INSTAGRAM_AUDIENCE_BREAKDOWNS = {
     "engaged_audience_demographics": ("country", "city"),
     "reached_audience_demographics": ("country", "city"),
 }
-# These metrics reject `since`/`until`; the timeframe selects the window.
-INSTAGRAM_AUDIENCE_TIMEFRAME = "last_90_days"
+# These metrics reject `since`/`until`; the timeframe selects the window. Meta
+# withdrew the rolling timeframes from the engaged and reached metrics while
+# leaving them valid for follower demographics, so a single shared value is
+# accepted for one metric and refused for the other two.
+INSTAGRAM_AUDIENCE_TIMEFRAMES = {
+    "follower_demographics": "last_90_days",
+    "engaged_audience_demographics": "this_month",
+    "reached_audience_demographics": "this_month",
+}
 
 
 class MetaAudienceReader:
@@ -93,7 +100,7 @@ class MetaAudienceReader:
                     "metric": metric,
                     "period": period,
                     "metric_type": "total_value",
-                    "timeframe": INSTAGRAM_AUDIENCE_TIMEFRAME,
+                    "timeframe": INSTAGRAM_AUDIENCE_TIMEFRAMES[metric],
                     "breakdown": breakdown,
                 },
             )
