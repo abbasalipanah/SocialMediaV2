@@ -46,6 +46,7 @@ class SocialReportingStore:
             f"""SELECT a.id, CAST(a.brand_id AS text) AS brand_id, a.platform,
                        a.external_id, a.display_name, a.status,
                        COALESCE(pc.status, la.status, 'disconnected') AS connection_state,
+                       COALESCE(la.status, 'active') AS link_status,
                        COALESCE(la.health_status, 'unknown') AS health_status,
                        COALESCE(la.backfill_status, 'pending') AS backfill_status,
                        COALESCE(la.nightly_enabled, false) AS nightly_enabled,
@@ -83,6 +84,7 @@ class SocialReportingStore:
                     backfill_status=str(row["backfill_status"]),
                     nightly_enabled=bool(row["nightly_enabled"]),
                     last_synced_at=row["last_synced_at"],
+                    link_status=str(row["link_status"]),
                 )
                 for row in rows
             )

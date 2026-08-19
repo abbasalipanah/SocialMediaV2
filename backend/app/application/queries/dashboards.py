@@ -108,7 +108,7 @@ def collected_accounts(
     return tuple(
         account
         for account in accounts
-        if account.status.strip().lower() not in _UNCOLLECTED_ACCOUNT_STATUSES
+        if account.link_status.strip().lower() not in _UNCOLLECTED_ACCOUNT_STATUSES
     )
 
 

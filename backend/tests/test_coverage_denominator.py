@@ -23,12 +23,16 @@ def _account(account_id: int, status: str) -> ReportingAccount:
         platform=PlatformId.FACEBOOK,
         external_id="138663676259165",
         display_name="Limak International Hotels & Resorts",
-        status=status,
+        status="active",
         connection_state="connected",
         health_status="healthy",
         backfill_status="complete",
         nightly_enabled=True,
         last_synced_at=datetime(2026, 8, 18, tzinfo=UTC),
+        # The asset stays active and the platform connection stays healthy; it
+        # is the link that is disabled, which is why neither of the other two
+        # fields could be used to spot it.
+        link_status=status,
     )
 
 

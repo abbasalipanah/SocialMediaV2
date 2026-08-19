@@ -24,6 +24,12 @@ class ReportingAccount:
     backfill_status: str
     nightly_enabled: bool
     last_synced_at: datetime | None
+    # The link's own status, which neither `status` nor `connection_state`
+    # carries: `status` is the asset's and `connection_state` reports the
+    # platform connection, so a link disabled on a healthy connection read as
+    # connected. Defaults to active so a caller that does not know about links
+    # keeps the previous behaviour.
+    link_status: str = "active"
 
 
 @dataclass(frozen=True)
