@@ -109,6 +109,11 @@ def _arguments() -> argparse.Namespace:
     parser.add_argument("--source-media-root", type=Path, required=True)
     parser.add_argument("--target-media-root", type=Path, required=True)
     parser.add_argument("--brand-slug", required=True)
+    parser.add_argument(
+        "--verify-existing-media",
+        action="store_true",
+        help="Verify existing source and target files instead of copying media.",
+    )
     return parser.parse_args()
 
 
@@ -480,6 +485,32 @@ def _copy_media(snapshot: dict[str, Any], source_root: Path, target_root: Path) 
             raise RuntimeError("target_media_size_mismatch")
 
 
+def _verify_existing_media(
+    snapshot: dict[str, Any],
+    root: Path,
+    *,
+    label: str,
+) -> int:
+    resolved_root = root.resolve(strict=True)
+    verified: set[Path] = set()
+    for row in snapshot["media"]:
+        relative = Path(str(row["storage_path"]))
+        if relative.is_absolute():
+            raise RuntimeError(f"{label}_media_path_must_be_relative")
+        candidate = (resolved_root / relative).resolve(strict=True)
+        if not candidate.is_relative_to(resolved_root):
+            raise RuntimeError(f"{label}_media_path_outside_root")
+        if candidate in verified:
+            continue
+        if candidate.stat().st_size != int(row["size_bytes"]):
+            raise RuntimeError(f"{label}_media_size_mismatch")
+        digest = hashlib.sha256(candidate.read_bytes()).hexdigest()
+        if digest != str(row["checksum"]):
+            raise RuntimeError(f"{label}_media_checksum_mismatch")
+        verified.add(candidate)
+    return len(verified)
+
+
 def _replace_target(connection: Any, snapshot: dict[str, Any]) -> dict[str, int]:
     brand = snapshot["brand"]
     brand_id = int(brand["id"])
@@ -759,11 +790,25 @@ def main() -> None:
     try:
         with source_engine.connect() as source_connection:
             snapshot = _source_snapshot(source_connection, arguments.brand_slug)
-        _copy_media(
-            snapshot,
-            arguments.source_media_root,
-            arguments.target_media_root,
-        )
+        if arguments.verify_existing_media:
+            source_media_files = _verify_existing_media(
+                snapshot,
+                arguments.source_media_root,
+                label="legacy",
+            )
+            target_media_files = _verify_existing_media(
+                snapshot,
+                arguments.target_media_root,
+                label="target",
+            )
+            if source_media_files != target_media_files:
+                raise RuntimeError("source_and_target_media_file_count_mismatch")
+        else:
+            _copy_media(
+                snapshot,
+                arguments.source_media_root,
+                arguments.target_media_root,
+            )
         with target_engine.begin() as target_connection:
             counts = _replace_target(target_connection, snapshot)
     finally:

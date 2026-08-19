@@ -43,7 +43,10 @@ def test_full_legacy_inventory_has_an_explicit_policy() -> None:
     }
     assert len(pairs) == 169
     assert len({metric_id for _, metric_id in pairs}) == 125
-    assert len(KNOWN_LEGACY_BREAKDOWN_KEYS) == 15
+    # Sixteen since comment sentiment joined the inventory. The count is here
+    # so a key cannot be added without someone deciding it belongs.
+    assert len(KNOWN_LEGACY_BREAKDOWN_KEYS) == 16
+    assert "comment_sentiment" in KNOWN_LEGACY_BREAKDOWN_KEYS
     for platform, metric_id in pairs:
         assert (
             legacy_metric_disposition(platform, metric_id, None)

@@ -1,0 +1,25 @@
+[Unit]
+Description=Refresh and verify Demo Company in Social Media V2
+Wants=network-online.target postgresql@15-main.service
+After=network-online.target postgresql@15-main.service socialmedia-demo-seed.service
+
+[Service]
+Type=oneshot
+User=api
+Group=api
+SupplementaryGroups=social-media-v2
+WorkingDirectory=/home/api/colab_scripts/SocialMediadownstream/backend
+EnvironmentFile=/etc/social-media-v2/demo-sync.env
+Environment=PYTHONPATH=/home/api/colab_scripts/SocialMediadownstream/backend
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/home/api/colab_scripts/SocialMediadownstream/backend/.venv/bin/python scripts/import_legacy_brand.py --source-env /etc/ars/socialmedia-demo-seed.env --source-media-root /home/api/colab_scripts/SocialMedia/backend/media-demo --target-media-root ${SOCIAL_MEDIA_STORAGE_ROOT} --brand-slug demo-company --verify-existing-media
+ExecStartPost=/home/api/colab_scripts/SocialMediadownstream/backend/.venv/bin/python scripts/verify_demo_company.py
+TimeoutStartSec=20min
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+UMask=0077
+StandardOutput=journal
+StandardError=journal

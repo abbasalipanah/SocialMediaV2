@@ -679,6 +679,25 @@ export function breakdownPieRows(breakdowns: DashboardBreakdown[], hints: string
   })).filter((item) => item.value > 0) ?? [];
 }
 
+export function sentimentPieRows(breakdowns: DashboardBreakdown[]): PieRow[] {
+  const breakdown = breakdowns.find(
+    (item) => item.dimension.toLowerCase() === "comment_sentiment",
+  );
+  const colors: Record<string, string> = {
+    positive: "#10b981",
+    neutral: "#f59e0b",
+    negative: "#ef4444",
+  };
+  return ["positive", "neutral", "negative"].flatMap((sentiment) => {
+    const item = breakdown?.items.find(
+      (candidate) => candidate.key.toLowerCase() === sentiment,
+    );
+    return item && item.value > 0
+      ? [{ label: humanize(item.key), value: item.value, color: colors[sentiment] ?? "#64748b" }]
+      : [];
+  });
+}
+
 export function PulseHeatmapCard({ breakdowns }: { breakdowns: DashboardBreakdown[] }) {
   const matched = breakdowns.find((item) => /best_time|heatmap|hourly|activity/.test(item.dimension.toLowerCase()))?.items ?? [];
   // The provider returns the full 7x24 grid with every cell at zero when it has
@@ -868,7 +887,7 @@ function ContentSection({ data, withTitle }: { data: PlatformDashboard; withTitl
       </div>
       <div className="facebook-three-grid">
         <PulsePieCard rows={summaryPieRows(data.content_summary.reach_by_type, ["#f59e0b", "#ec4899", "#38bdf8", "#14b8a6"])} subtitle="Reach by content type" title="Content Type Reach" />
-        <UnavailableInsightCard copy="Sentiment is not inferred without a configured analysis model." subtitle="Not provided by the Facebook Graph API" title="Comment Sentiment" />
+        <PulsePieCard rows={sentimentPieRows(data.breakdowns)} subtitle="Classified comment distribution" title="Comment Sentiment" />
         <SimplePulseTable columns={["Hashtag", "Count"]} emptyCopy="No hashtags in collected captions." rows={hashtagRows(data)} subtitle="Hashtags found in collected captions" title="Top Hashtags" />
       </div>
       <PerformingContentTable content={data.content} />

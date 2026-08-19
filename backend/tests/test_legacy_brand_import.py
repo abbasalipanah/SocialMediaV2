@@ -12,6 +12,7 @@ from scripts.import_legacy_brand import (
     _copy_media,
     _safe_media_url,
     _validate_urls,
+    _verify_existing_media,
 )
 
 
@@ -66,3 +67,29 @@ def test_media_copy_checks_the_source_checksum(tmp_path: Path) -> None:
     _copy_media(snapshot, source_root, target_root)
 
     assert (target_root / "content-assets/facebook/cover.jpg").read_bytes() == source.read_bytes()
+
+
+def test_existing_media_verification_is_read_only_and_checksum_strict(tmp_path: Path) -> None:
+    root = tmp_path / "target"
+    media = root / "demo-assets" / "cover.webp"
+    media.parent.mkdir(parents=True)
+    media.write_bytes(b"demo-cover")
+    snapshot = {
+        "media": [
+            {
+                "storage_path": "demo-assets/cover.webp",
+                "size_bytes": media.stat().st_size,
+                "checksum": hashlib.sha256(media.read_bytes()).hexdigest(),
+            },
+            {
+                "storage_path": "demo-assets/cover.webp",
+                "size_bytes": media.stat().st_size,
+                "checksum": hashlib.sha256(media.read_bytes()).hexdigest(),
+            },
+        ]
+    }
+
+    assert _verify_existing_media(snapshot, root, label="target") == 1
+    media.write_bytes(b"wrong-cover")
+    with pytest.raises(RuntimeError, match="target_media_size_mismatch"):
+        _verify_existing_media(snapshot, root, label="target")

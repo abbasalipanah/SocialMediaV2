@@ -1,7 +1,10 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { PulsePieCard } from "../features/facebook/FacebookPulseDashboard";
+import {
+  PulsePieCard,
+  sentimentPieRows,
+} from "../features/facebook/FacebookPulseDashboard";
 
 describe("PulsePieCard V1 interaction parity", () => {
   it("lifts the hovered slice and shows its label, value and percentage", () => {
@@ -46,5 +49,25 @@ describe("PulsePieCard V1 interaction parity", () => {
     const segment = within(screen.getByRole("img", { name: "Reach Distribution chart" }))
       .getByRole("button", { name: "Organic: 856, 100%" });
     expect(segment.getAttribute("d")).not.toMatch(/NaN|Infinity/u);
+  });
+
+  it("maps classified comment breakdowns to stable sentiment colors", () => {
+    expect(
+      sentimentPieRows([
+        {
+          metric_id: "interactions",
+          dimension: "comment_sentiment",
+          items: [
+            { key: "negative", value: 1, percentage: 10 },
+            { key: "positive", value: 8, percentage: 80 },
+            { key: "neutral", value: 1, percentage: 10 },
+          ],
+        },
+      ]),
+    ).toEqual([
+      { label: "Positive", value: 8, color: "#10b981" },
+      { label: "Neutral", value: 1, color: "#f59e0b" },
+      { label: "Negative", value: 1, color: "#ef4444" },
+    ]);
   });
 });
