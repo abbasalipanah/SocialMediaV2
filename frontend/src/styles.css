@@ -1041,6 +1041,9 @@ body { background: var(--sm-bg); }
   box-shadow: 0 2px 6px rgb(15 23 42 / 8%);
 }
 .sidebar-return-mark { width: 22px; height: 22px; flex-shrink: 0; object-fit: contain; }
+/* If the name ever outgrows the rail it truncates rather than overflowing
+   the pill; `nowrap` alone would push it past the border. */
+.sidebar-return-link span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .app-workspace { margin-left: 236px; }
 .app-topbar {
   min-height: 70px;
