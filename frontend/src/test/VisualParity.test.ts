@@ -94,3 +94,12 @@ describe("V1 visual theme parity", () => {
     );
   });
 });
+
+describe("sidebar return link", () => {
+  it("keeps the product name on one line", () => {
+    // "Back to Accumulate AI" wrapped in the 236px rail, and a two-line pill
+    // reads as two separate links.
+    const rule = styles.split(".sidebar-return-link {")[1].split("}")[0];
+    expect(rule).toContain("white-space: nowrap");
+  });
+});
