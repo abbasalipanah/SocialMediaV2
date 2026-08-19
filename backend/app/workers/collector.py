@@ -132,12 +132,13 @@ DEFAULT_ACCOUNT_BUDGET_SECONDS = 240
 # How many of an account's most recent posts get their comments re-read
 # each run. Older posts keep whatever was collected when they were new.
 COMMENTED_CONTENT_PER_RUN = 25
-# How far back a routine refresh walks. Once an account is backfilled, its
+# How far back a routine refresh walks. Once an account is backfilled its
 # archive is already stored, and the provider is asked for per-item insights on
-# every item a page yields -- so re-walking the whole history each run spent the
-# account's entire turn re-reading posts whose numbers had long settled. The
-# newest pages are where the numbers still move.
-CONTENT_PAGES_PER_RUN = 3
+# every item a page yields, at roughly a second each. A page is a hundred posts,
+# which is already more than any dashboard shows as recent, and three pages did
+# not fit in an account's share of a run. Older posts keep the numbers they were
+# collected with; engagement on them has long settled.
+CONTENT_PAGES_PER_RUN = 1
 FULL_CONTENT_PAGES = 100
 
 
