@@ -526,6 +526,7 @@ class StandaloneCollector:
                     transport,
                     stories=True,
                     insights=True,
+                    page_size=REFRESH_PAGE_SIZE,
                 )
 
                 def persist_story_media(item: ProviderRecord) -> int:
@@ -544,6 +545,11 @@ class StandaloneCollector:
                         record_sink=persist_story_media,
                         checkpoint_account_id=f"{account.account_id}.stories",
                         max_pages=20,
+                        # Stories are what the account has live now; the
+                        # provider drops them within a day. Resuming from where
+                        # a previous run stopped walks a feed that no longer
+                        # exists and misses the ones posted this morning.
+                        refresh_only=True,
                     )
                     story_content_count = stories.content_count
                     story_media_count = stories.media_count

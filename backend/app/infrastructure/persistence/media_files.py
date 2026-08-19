@@ -21,6 +21,15 @@ class AtomicMediaFiles:
         self._root = root.resolve()
         self._root.mkdir(parents=True, exist_ok=True)
 
+    def holds(self, relative_path: str) -> bool:
+        """Whether this path is already on disk, and not an empty leftover."""
+        if not relative_path:
+            return False
+        destination = (self._root / relative_path).resolve()
+        if self._root not in destination.parents:
+            return False
+        return destination.is_file() and destination.stat().st_size > 0
+
     def persist(self, relative_path: str, data: bytes) -> PersistedMedia:
         if not relative_path or not data:
             raise ValueError("media_write_input_invalid")

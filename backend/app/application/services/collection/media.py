@@ -42,7 +42,20 @@ class ContentMediaWriter:
         self._fetch = fetch
         self._clock = clock
 
+    def _already_held(self, item: ProviderRecord) -> bool:
+        stored = self._media_store.get(
+            self._target.local_account_id, item.external_id, "cover"
+        )
+        return stored is not None and self._files.holds(stored.storage_path)
+
     def persist(self, item: ProviderRecord) -> int:
+        # A published post's image does not change, and the provider's URLs are
+        # signed and rotate, so there is nothing to compare them against. Every
+        # run therefore re-downloaded every image it already held: an account
+        # that had not finished spent its whole turn fetching bytes that were
+        # already on disk, and never got far enough to be marked done.
+        if self._already_held(item):
+            return 0
         selected: tuple[str, FetchedMedia] | None = None
         for source_url in _media_candidates(item):
             try:
