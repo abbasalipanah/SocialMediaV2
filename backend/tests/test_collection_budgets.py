@@ -22,8 +22,15 @@ from app.workers.collector import (
 
 
 def test_the_account_budget_leaves_room_inside_the_run_budget() -> None:
-    # Otherwise the first slow account would exhaust the run on its own.
-    assert DEFAULT_ACCOUNT_BUDGET_SECONDS < DEFAULT_RUN_BUDGET_SECONDS
+    # Otherwise the first slow account would exhaust the run on its own. A
+    # quarter of the run is already generous for one account.
+    assert DEFAULT_ACCOUNT_BUDGET_SECONDS <= DEFAULT_RUN_BUDGET_SECONDS // 4
+
+
+def test_the_account_budget_clears_the_heaviest_measured_account() -> None:
+    # The busiest account measured needs 233s, nearly all of it reading the
+    # insights of around sixty live Stories one at a time.
+    assert DEFAULT_ACCOUNT_BUDGET_SECONDS >= 280
 
 
 def test_the_run_budget_stops_before_the_service_timeout() -> None:

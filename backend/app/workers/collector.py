@@ -126,9 +126,14 @@ DEFAULT_RUN_BUDGET_SECONDS = 1200
 # One account must not be able to consume the whole window. Provider calls have
 # their own timeouts, but a request that trickles rather than stalls outlives
 # them, and a single account then held the run until systemd killed it -- taking
-# every account queued behind it with it. Four minutes is well past a healthy
-# pass and well short of the run budget.
-DEFAULT_ACCOUNT_BUDGET_SECONDS = 240
+# every account queued behind it with it.
+#
+# Five minutes, because the heaviest measured account legitimately needs 233s:
+# it carries around sixty live Stories and the provider is asked about each one
+# separately, at roughly two seconds a call. Four minutes left it finishing with
+# seven seconds to spare, which is not a margin. Still a fraction of the run
+# budget, so a genuinely stuck account cannot take the window with it.
+DEFAULT_ACCOUNT_BUDGET_SECONDS = 300
 # How many of an account's most recent posts get their comments re-read
 # each run. Older posts keep whatever was collected when they were new.
 COMMENTED_CONTENT_PER_RUN = 25
