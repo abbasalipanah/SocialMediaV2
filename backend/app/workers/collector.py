@@ -342,7 +342,7 @@ class StandaloneCollector:
                     for name, seconds in sorted(
                         timings.items(), key=lambda item: -item[1]
                     )
-                    if seconds >= 1
+                    if seconds >= 1 and name != "provider_pressure_pct"
                 )
                 or "-",
             )
@@ -425,9 +425,10 @@ class StandaloneCollector:
             account_id=row.external_id,
             credential=ProviderCredential(access_token=token),
         )
+        rate_guard = MetaRateGuard(sleeper=time.sleep)
         transport = MetaTransport(
             credential=account.credential,
-            rate_guard=MetaRateGuard(sleeper=time.sleep),
+            rate_guard=rate_guard,
             base_url=self.settings.meta.graph_base_url,
             api_version=self.settings.meta.graph_version,
             timeout_seconds=self.settings.meta_activation.provider_timeout_seconds,
@@ -611,6 +612,20 @@ class StandaloneCollector:
                 error_code=_partial_error_code(partial_errors),
             )
         finally:
+            # What the provider says is left of our quota, which is otherwise
+            # measured and then thrown away. Meta reports pressure per app, per
+            # Page and per user, and the only place it is visible to us is the
+            # response headers of the calls we just made.
+            usage = rate_guard.snapshot()
+            if usage.pressure_pct > 0:
+                timings["provider_pressure_pct"] = usage.pressure_pct
+                logger.info(
+                    "meta_rate_pressure link_id=%s scope=%s pressure_pct=%.1f%s",
+                    row.link_id,
+                    usage.scope or "unknown",
+                    usage.pressure_pct,
+                    " degraded" if usage.degraded_until else "",
+                )
             transport.close()
 
     def _collect_tiktok(
