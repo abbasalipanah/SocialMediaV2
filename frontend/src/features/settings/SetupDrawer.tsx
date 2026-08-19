@@ -83,7 +83,14 @@ function SocialAccounts({
     <div className="setup-platform-list">
       {PLATFORMS.map((platform) => {
         const linked = accounts.filter((item) => item.platform === platform);
-        const connection = connections.find((item) => item.platform === platform);
+        // The account's own connection state, not the connection list's. A Meta
+        // connection is stored once under `facebook` and serves Instagram too,
+        // so looking it up per platform reported a linked Instagram profile as
+        // "Not Connected".
+        const state =
+          linked[0]?.connection_state ??
+          connections.find((item) => item.platform === platform)?.state ??
+          "not connected";
         return (
           <article key={platform}>
             <div className={`setup-platform-icon setup-${platform}`}>
@@ -98,7 +105,7 @@ function SocialAccounts({
               </span>
             </div>
             <span className={linked.length > 0 ? "setup-state" : "setup-state muted"}>
-              {humanize(connection?.state ?? "not connected")}
+              {humanize(state)}
             </span>
             <button
               className="settings-row-action"

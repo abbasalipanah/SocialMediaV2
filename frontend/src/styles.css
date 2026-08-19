@@ -1962,7 +1962,10 @@ body { background: var(--sm-bg); }
 .integration-manage-button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 7px; color: #4338ca; border: 1px solid #c7d2fe; border-radius: 10px; background: #eef2ff; font-size: .68rem; font-weight: 800; text-decoration: none; }
 .integration-manage-button:hover { border-color: #a5b4fc; background: #e0e7ff; }
 
-.tiktok-connect-layer { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 18px; }
+/* Above the Brand Setup drawer, which opens it. Both sat at 100, so with
+   equal stacking the drawer won on DOM order and the connection dialog
+   rendered behind it: visible, dimmed, and impossible to click. */
+.tiktok-connect-layer { position: fixed; z-index: 110; inset: 0; display: grid; place-items: center; padding: 18px; }
 .tiktok-connect-backdrop { position: absolute; inset: 0; border: 0; background: rgb(15 23 42 / 42%); backdrop-filter: blur(2px); cursor: default; }
 .tiktok-connect-modal { position: relative; display: flex; width: min(600px, 100%); max-height: calc(100vh - 36px); flex-direction: column; overflow: hidden; border: 1px solid #e2e8f0; border-radius: 18px; background: white; box-shadow: 0 28px 80px rgb(15 23 42 / 24%); }
 .tiktok-connect-modal > header { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 18px 20px; border-bottom: 1px solid #e2e8f0; }
