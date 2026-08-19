@@ -36,7 +36,12 @@ class FakeSelfServiceActivation:
         context,
         require_gate_context: bool = True,
     ) -> ActivationResult:
-        assert query == {"auth_code": "authorization-code", "state": "self-service"}
+        # What Login Kit returns: `code`, the scopes it granted, and `state`.
+        assert query == {
+            "code": "authorization-code",
+            "scopes": "user.info.basic,video.list",
+            "state": "self-service",
+        }
         assert context.brand_id == 101
         self.calls.append(("complete", require_gate_context))
         return ActivationResult(
@@ -181,7 +186,11 @@ async def test_self_service_start_and_callback_use_non_sso_context(tmp_path) -> 
         )
         callback = await client.get(
             "/api/social/tiktok/oauth/callback",
-            params={"auth_code": "authorization-code", "state": "self-service"},
+            params={
+                "code": "authorization-code",
+                "scopes": "user.info.basic,video.list",
+                "state": "self-service",
+            },
         )
 
     assert readiness.json()["oauth_start_available"] is True

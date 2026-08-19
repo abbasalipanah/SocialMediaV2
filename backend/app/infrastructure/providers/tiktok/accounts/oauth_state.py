@@ -108,6 +108,9 @@ class TikTokStateCodec:
         return binding
 
 
+CALLBACK_FIELDS = frozenset({"code", "scopes", "state"})
+
+
 def validate_callback(
     query: Mapping[str, str],
     *,
@@ -115,9 +118,14 @@ def validate_callback(
 ) -> tuple[str, str]:
     if actual_redirect_uri != TIKTOK_REDIRECT_URI:
         raise TikTokStateError("callback_uri_mismatch")
-    if set(query) != {"auth_code", "state"}:
+    # What TikTok actually sends back. The authorization runs through Login Kit,
+    # which returns `code` alongside the scopes it granted; only the token
+    # endpoint, on the Business API, calls the same value `auth_code`. Requiring
+    # the callback to use that name meant every authorization was rejected on
+    # arrival, before the code was ever exchanged.
+    if set(query) != CALLBACK_FIELDS:
         raise TikTokStateError("callback_fields_invalid")
-    auth_code = query.get("auth_code", "")
+    auth_code = query.get("code", "")
     state = query.get("state", "")
     if not auth_code or not state:
         raise TikTokStateError("callback_fields_invalid")

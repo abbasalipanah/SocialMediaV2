@@ -50,6 +50,7 @@ from app.capabilities import PlatformCapabilityRegistry
 from app.core import Boundary, WritePolicy, mark_boundary
 from app.core.security import sha256_text
 from app.domain.platforms import CapabilityId, PlatformId
+from app.infrastructure.providers.tiktok.accounts.oauth_state import CALLBACK_FIELDS
 
 TIKTOK_CONNECTION_STATES = {
     "disconnected",
@@ -849,7 +850,11 @@ def create_settings_router(
         if activation is None:
             raise HTTPException(503, "owner_activation_unavailable")
         pairs = list(request.query_params.multi_items())
-        if len(pairs) != 2 or len({key for key, _ in pairs}) != 2:
+        # Login Kit returns `code`, the scopes it granted, and `state`. Insisting
+        # on exactly two parameters rejected every authorization on arrival.
+        if len(pairs) != len(CALLBACK_FIELDS) or {key for key, _ in pairs} != set(
+            CALLBACK_FIELDS
+        ):
             raise HTTPException(400, "activation_callback_rejected")
         payload = (
             resolve_session(session, authority_store)

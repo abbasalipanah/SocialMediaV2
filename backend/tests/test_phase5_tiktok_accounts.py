@@ -269,21 +269,41 @@ def test_profile_video_and_unavailable_metric_fixtures(
     assert second.next_cursor is None
 
 
-def test_callback_exact_match_and_no_code_fallback() -> None:
+def test_callback_accepts_exactly_what_login_kit_returns() -> None:
+    """Authorization runs through Login Kit, which returns `code`.
+
+    This asserted the opposite -- that `code` must be refused and `auth_code`
+    required -- and the live provider settles it: every callback arrives as
+    `code`, `scopes` and `state`. `auth_code` is only the Business API token
+    endpoint's name for the same value. Requiring it here rejected every
+    authorization on arrival, before the code was ever exchanged.
+    """
+    granted = "user.info.basic,video.list"
     assert validate_callback(
-        {"auth_code": "fixture-auth-value", "state": "opaque-state"},
+        {"code": "fixture-auth-value", "scopes": granted, "state": "opaque-state"},
         actual_redirect_uri=TIKTOK_REDIRECT_URI,
     ) == ("fixture-auth-value", "opaque-state")
+
     with pytest.raises(TikTokStateError, match="callback_uri_mismatch"):
         validate_callback(
-            {"auth_code": "fixture-auth-value", "state": "opaque-state"},
+            {"code": "fixture-auth-value", "scopes": granted, "state": "opaque-state"},
             actual_redirect_uri=f"{TIKTOK_REDIRECT_URI}/",
         )
-    with pytest.raises(TikTokStateError, match="callback_fields_invalid"):
-        validate_callback(
-            {"code": "fixture-auth-value", "state": "opaque-state"},
-            actual_redirect_uri=TIKTOK_REDIRECT_URI,
-        )
+
+    # The set stays exact: a missing or unexpected parameter is still refused.
+    for query in (
+        {"code": "fixture-auth-value", "state": "opaque-state"},
+        {"auth_code": "fixture-auth-value", "scopes": granted, "state": "opaque-state"},
+        {
+            "code": "fixture-auth-value",
+            "scopes": granted,
+            "state": "opaque-state",
+            "extra": "x",
+        },
+        {"code": "", "scopes": granted, "state": "opaque-state"},
+    ):
+        with pytest.raises(TikTokStateError, match="callback_fields_invalid"):
+            validate_callback(query, actual_redirect_uri=TIKTOK_REDIRECT_URI)
 
 
 def test_state_is_bound_single_use_and_provider_family_checked() -> None:

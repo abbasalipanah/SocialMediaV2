@@ -30,6 +30,7 @@ from app.application.ports.credentials import (
 from app.core.time import utc_now
 from app.core.write_policy import WritePolicy
 from app.domain.platforms import PlatformId
+from app.infrastructure.providers.tiktok.accounts.oauth_state import CALLBACK_FIELDS
 
 from .authority import AuthorityError, build_brand_workspace
 from .sso import session_can_access_settings
@@ -197,9 +198,11 @@ class TikTokActivationCoordinator:
         require_gate_context: bool = True,
     ) -> ActivationResult:
         now = self._assert_enabled("tiktok_activation_callback")
-        if set(query) != {"auth_code", "state"}:
+        # See `validate_callback`: Login Kit returns `code` and the granted
+        # `scopes`; `auth_code` is the token endpoint's name for the same value.
+        if set(query) != CALLBACK_FIELDS:
             raise TikTokActivationError("activation_callback_rejected")
-        auth_code = query.get("auth_code", "")
+        auth_code = query.get("code", "")
         state = query.get("state", "")
         if not auth_code or len(auth_code.encode("utf-8")) > 2048 or not state:
             raise TikTokActivationError("activation_callback_rejected")
