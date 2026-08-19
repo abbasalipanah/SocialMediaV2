@@ -26,6 +26,13 @@ class FetchedMedia:
             raise ValueError("fetched_media_invalid")
 
 
+# V2 writes every cover under one kind; the V1 import distinguished a Story's
+# cover from a post's. Looking under only V2's name meant an imported Story
+# image was never recognised as held, so those were re-downloaded on every run
+# -- which is exactly where the last stalling account spent its budget.
+STORED_MEDIA_KINDS = ("cover", "story_cover")
+
+
 class ContentMediaWriter:
     def __init__(
         self,
@@ -43,10 +50,13 @@ class ContentMediaWriter:
         self._clock = clock
 
     def _already_held(self, item: ProviderRecord) -> bool:
-        stored = self._media_store.get(
-            self._target.local_account_id, item.external_id, "cover"
-        )
-        return stored is not None and self._files.holds(stored.storage_path)
+        for media_kind in STORED_MEDIA_KINDS:
+            stored = self._media_store.get(
+                self._target.local_account_id, item.external_id, media_kind
+            )
+            if stored is not None and self._files.holds(stored.storage_path):
+                return True
+        return False
 
     def persist(self, item: ProviderRecord) -> int:
         # A published post's image does not change, and the provider's URLs are

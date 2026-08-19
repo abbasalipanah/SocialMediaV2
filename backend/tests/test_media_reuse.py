@@ -21,12 +21,13 @@ from app.infrastructure.persistence.media_files import AtomicMediaFiles
 
 
 class _Store:
-    def __init__(self, record: MediaRecord | None) -> None:
+    def __init__(self, record: MediaRecord | None, kind: str = "cover") -> None:
         self.record = record
+        self.kind = kind
         self.written: list[MediaRecord] = []
 
     def get(self, account_id: int, external_content_id: str, media_kind: str):
-        return self.record
+        return self.record if media_kind == self.kind else None
 
     def upsert(self, record: MediaRecord) -> None:
         self.written.append(record)
@@ -52,13 +53,13 @@ def _item() -> ProviderRecord:
     )
 
 
-def _record(path: str) -> MediaRecord:
+def _record(path: str, kind: str = "cover") -> MediaRecord:
     return MediaRecord(
         platform=PlatformId.INSTAGRAM,
         account_id=2790,
         brand_id=57,
         external_content_id="18005672441954835",
-        media_kind="cover",
+        media_kind=kind,
         storage_path=path,
         source_url="https://scontent.cdninstagram.com/old.jpg",
         source_status=200,
@@ -126,3 +127,25 @@ def test_an_unseen_item_is_fetched(tmp_path: Path) -> None:
     _writer(tmp_path, _Store(None), fetches).persist(_item())
 
     assert fetches == ["https://scontent.cdninstagram.com/a.jpg"]
+
+
+def test_an_imported_story_cover_counts_as_held(tmp_path: Path) -> None:
+    """The V1 import filed a Story's image under its own kind.
+
+    V2 writes every cover under one name, so looking only there meant an
+    imported Story image was never recognised as held. Those were re-downloaded
+    on every run, which is where the last stalling account spent its budget.
+    """
+    stored = tmp_path / "content-assets" / "instagram" / "2790" / "s.jpg"
+    stored.parent.mkdir(parents=True)
+    stored.write_bytes(b"img")
+    fetches: list[str] = []
+    store = _Store(
+        _record("content-assets/instagram/2790/s.jpg", kind="story_cover"),
+        kind="story_cover",
+    )
+
+    written = _writer(tmp_path, store, fetches).persist(_item())
+
+    assert fetches == []
+    assert written == 0
