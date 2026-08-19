@@ -26,7 +26,25 @@ def test_connected_platform_keeps_its_real_warnings() -> None:
         freshness_status=FreshnessStatus.OUTDATED,
     )
 
-    assert warnings == ["metric_unavailable:reach", "freshness:outdated"]
+    assert warnings == ["metric_unavailable", "freshness:outdated"]
+
+
+def test_a_rollup_states_partial_coverage_once() -> None:
+    """A rollup across eleven Brands listed thirty-three coverage warnings.
+
+    Each card already carries its own reason, so the banner only needs to say
+    that coverage is partial, not repeat it for every metric.
+    """
+    warnings = platform_warnings(
+        has_accounts=True,
+        metric_warnings=tuple(
+            f"partial_account_coverage:metric_{index}" for index in range(16)
+        )
+        + tuple(f"metric_unavailable:other_{index}" for index in range(4)),
+        freshness_status=FreshnessStatus.FRESH,
+    )
+
+    assert warnings == ["partial_account_coverage", "metric_unavailable"]
 
 
 def test_fresh_connected_platform_stays_silent() -> None:

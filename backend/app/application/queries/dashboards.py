@@ -89,6 +89,29 @@ def _exclude_content_types(rows, excluded: tuple[str, ...]):
     return tuple(row for row in rows if row.content_type.strip().lower() not in normalized)
 
 
+# Warning families that carry one entry per metric. Each card already states its
+# own reason, so the banner repeating them turned a single fact — "some accounts
+# in this rollup do not report everything" — into thirty-three lines that buried
+# the warnings a reader could act on.
+_PER_METRIC_WARNINGS = ("metric_unavailable", "partial_account_coverage")
+
+
+def summarize_metric_warnings(warnings: Sequence[str]) -> list[str]:
+    """Collapse per-metric families to one entry, keeping everything else."""
+    seen_families: set[str] = set()
+    summarized: list[str] = []
+    for warning in warnings:
+        family = warning.split(":", 1)[0]
+        if family not in _PER_METRIC_WARNINGS:
+            summarized.append(warning)
+            continue
+        if family in seen_families:
+            continue
+        seen_families.add(family)
+        summarized.append(family)
+    return summarized
+
+
 def platform_warnings(
     *,
     has_accounts: bool,
@@ -103,7 +126,7 @@ def platform_warnings(
     """
     if not has_accounts:
         return ["no_accounts"]
-    warnings = list(metric_warnings)
+    warnings = summarize_metric_warnings(metric_warnings)
     if freshness_status is not FreshnessStatus.FRESH:
         warnings.append(f"freshness:{freshness_status.value}")
     return warnings
