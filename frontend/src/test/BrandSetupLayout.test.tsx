@@ -28,8 +28,27 @@ describe("Brand Setup layout", () => {
     expect(SOURCE).toContain("{index}. {title}");
   });
 
-  it("describes the Brand the workspace is on, not the whole catalogue", () => {
-    expect(SOURCE).toContain("brands.find((item) => item.brand_id === selectedBrandId)");
+  it("describes the Brand whose row was clicked", () => {
+    // Opening setup from a row and then showing the session's Brand meant every
+    // row opened the same one -- whichever Brand Accumulate launched.
+    expect(SOURCE).toContain("brand: SettingsBrand | null");
+    expect(SOURCE).not.toContain("selectedBrandId");
+  });
+
+  it("scopes accounts, connections and jobs to that Brand", () => {
+    for (const collection of ["accounts", "connections", "jobs"]) {
+      expect(SOURCE).toContain(
+        `${collection}.filter(`,
+      );
+    }
+    expect(SOURCE).toContain("=== brand.brand_id");
+  });
+
+  it("does not offer linking the backend would refuse", () => {
+    // A provider connection is bound to the Brand the session was launched
+    // with; the backend answers any other one with meta_self_service_brand_forbidden.
+    expect(SOURCE).toContain("meta_connection_manage");
+    expect(SOURCE).toContain("tiktok_connection_manage");
   });
 
   it("drops the wizard chrome from the stylesheet too", () => {

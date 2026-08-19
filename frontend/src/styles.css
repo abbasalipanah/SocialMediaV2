@@ -809,6 +809,8 @@ a { color: inherit; }
 .setup-platform-detail { min-width: 0; }
 .setup-platform-list .setup-state.muted { color: #a3abbb; font-weight: 650; }
 .setup-empty { margin: 0; color: #7f889b; font-size: .75rem; }
+.setup-note { margin: 11px 0 0; padding: 10px 12px; color: #6f798e; border: 1px solid #e6e9f0; border-radius: 10px; background: #f8f9fc; font-size: .7rem; line-height: 1.55; }
+.setup-platform-list .settings-row-action { margin-left: 10px; flex: 0 0 auto; }
 @media (max-width: 620px) {
   .setup-field-grid { grid-template-columns: 1fr; }
   .setup-field-grid > div { border-right: 0; }

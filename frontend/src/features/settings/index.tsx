@@ -12,6 +12,7 @@ import {
 import { useState } from "react";
 import { Link, Outlet, useLocation } from "../../routing";
 
+import type { SettingsBrand } from "../../api";
 import { apiQuery, auditSchema, queryString, tiktokActivationReadinessSchema } from "../../api";
 import { useBrandScope } from "../../app/BrandScopeProvider";
 import { SetupDrawer } from "./SetupDrawer";
@@ -29,7 +30,9 @@ import { useSettingsData } from "./useSettingsData";
 export default function SettingsPage() {
   const location = useLocation();
   const nested = location.pathname !== "/settings";
-  const [setupOpen, setSetupOpen] = useState(false);
+  // The Brand whose row was clicked. Opening setup from a row and then
+  // showing the session's Brand meant every row opened the same one.
+  const [setupBrand, setSetupBrand] = useState<SettingsBrand | null>(null);
   const [view, setView] = useState<SettingsView>("brands");
   const { capabilities } = useBrandScope();
   const data = useSettingsData();
@@ -132,16 +135,16 @@ export default function SettingsPage() {
         <article><span>{failedJobs ? "Failed Jobs" : "Active Jobs"}</span><strong>{failedJobs || activeJobs}</strong></article>
       </section>
 
-      {viewLoading ? <SettingsTableLoading /> : viewError ? <SettingsTableError retry={retryView} /> : view === "brands" ? <BrandsTable items={brands} navigation={tabs} onSetup={() => setSetupOpen(true)} /> : view === "accounts" ? <AccountsTable items={accounts} mutationAvailable={mutationAvailable} navigation={tabs} /> : view === "links" ? <LinksTable items={links} navigation={tabs} /> : <SyncTable items={jobs} mutationAvailable={mutationAvailable} navigation={tabs} />}
+      {viewLoading ? <SettingsTableLoading /> : viewError ? <SettingsTableError retry={retryView} /> : view === "brands" ? <BrandsTable items={brands} navigation={tabs} onSetup={setSetupBrand} /> : view === "accounts" ? <AccountsTable items={accounts} mutationAvailable={mutationAvailable} navigation={tabs} /> : view === "links" ? <LinksTable items={links} navigation={tabs} /> : <SyncTable items={jobs} mutationAvailable={mutationAvailable} navigation={tabs} />}
       {nested && <Outlet />}
       <SetupDrawer
         accounts={data.accounts.data?.items ?? []}
-        brands={data.brands.data?.items ?? []}
+        brand={setupBrand}
         connections={data.connections.data?.items ?? []}
         jobs={data.jobs.data?.items ?? []}
         mutationAvailable={mutationAvailable}
-        onClose={() => setSetupOpen(false)}
-        open={setupOpen}
+        onClose={() => setSetupBrand(null)}
+        open={setupBrand !== null}
         readiness={data.readiness.data}
       />
     </main>

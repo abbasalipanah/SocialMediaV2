@@ -92,7 +92,7 @@ function EmptyRow({ columns }: { columns: number }) {
   return <tr><td className="table-empty" colSpan={columns}>No matching records.</td></tr>;
 }
 
-export function BrandsTable({ items, navigation, onSetup }: { items: SettingsBrand[]; navigation: ReactNode; onSetup: () => void }) {
+export function BrandsTable({ items, navigation, onSetup }: { items: SettingsBrand[]; navigation: ReactNode; onSetup: (brand: SettingsBrand) => void }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [hierarchyFilter, setHierarchyFilter] = useState("all");
@@ -116,7 +116,7 @@ export function BrandsTable({ items, navigation, onSetup }: { items: SettingsBra
   return (
     <TableFrame count={rows.length} navigation={navigation} onSearch={setSearch} onSecondaryFilter={setHierarchyFilter} onStatusFilter={setStatusFilter} search={search} secondaryFilter={hierarchyFilter} secondaryLabel="Hierarchy" secondaryOptions={[{ label: "Hierarchy: All", value: "all" }, { label: "Parent Brands", value: "parent" }, { label: "Child Brands", value: "child" }]} statusFilter={statusFilter} statusOptions={statusOptions} totalCount={items.length}>
       <table className="settings-table performance-settings-table"><thead><tr><th>#</th><th>ID</th><th><SortButton active={sort === "name"} direction={direction} label="Brand" onClick={() => chooseSort("name")} /></th><th>Status</th><th>Access</th><th><SortButton active={sort === "accounts"} direction={direction} label="Linked" onClick={() => chooseSort("accounts")} /></th><th>Last sync</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>
-        {rows.length === 0 ? <EmptyRow columns={8} /> : rows.map((item, index) => <tr key={item.brand_id}><td>{index + 1}</td><td><span className="muted-cell">{item.brand_id}</span></td><td><div className={item.parent_brand_id ? "hierarchy-name child" : "hierarchy-name"}><strong>{item.name ?? `Brand ${item.brand_id}`}</strong><small>{item.parent_brand_id ? "Child Brand" : "Parent Brand"}</small></div></td><td><StatusPill value={brandStatus(item)} /></td><td>{item.access_mode ? <StatusPill value={item.access_mode} /> : <span className="muted-cell">Inherited</span>}</td><td><strong>{item.linked_account_count}</strong> linked</td><td>{formatDate(item.last_sync_at)}</td><td><button className="settings-row-action" onClick={onSetup} type="button">{item.linked_account_count > 0 ? "Edit" : "Setup"}<MoreHorizontal size={15} /></button></td></tr>)}
+        {rows.length === 0 ? <EmptyRow columns={8} /> : rows.map((item, index) => <tr key={item.brand_id}><td>{index + 1}</td><td><span className="muted-cell">{item.brand_id}</span></td><td><div className={item.parent_brand_id ? "hierarchy-name child" : "hierarchy-name"}><strong>{item.name ?? `Brand ${item.brand_id}`}</strong><small>{item.parent_brand_id ? "Child Brand" : "Parent Brand"}</small></div></td><td><StatusPill value={brandStatus(item)} /></td><td>{item.access_mode ? <StatusPill value={item.access_mode} /> : <span className="muted-cell">Inherited</span>}</td><td><strong>{item.linked_account_count}</strong> linked</td><td>{formatDate(item.last_sync_at)}</td><td><button className="settings-row-action" onClick={() => onSetup(item)} type="button">{item.linked_account_count > 0 ? "Edit" : "Setup"}<MoreHorizontal size={15} /></button></td></tr>)}
       </tbody></table>
     </TableFrame>
   );

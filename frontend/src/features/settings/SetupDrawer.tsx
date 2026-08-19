@@ -1,4 +1,6 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { Check, Circle, Facebook, Instagram, Radio, Settings2, Store } from "lucide-react";
+import { useState } from "react";
 
 import type {
   OperationsReadiness,
@@ -10,6 +12,8 @@ import type {
 } from "../../api";
 import { useBrandScope } from "../../app/BrandScopeProvider";
 import { Dialog } from "../../ui";
+import { MetaConnectionModal } from "../integrations/MetaConnectionModal";
+import { TikTokConnectionModal } from "../integrations/TikTokConnectionModal";
 import { PLATFORM_LABELS } from "../dashboard/catalog";
 import { formatDate, humanize } from "../dashboard/format";
 
@@ -45,10 +49,7 @@ function Section({
   );
 }
 
-function BrandInformation({ brand }: { brand: SettingsBrand | null }) {
-  if (!brand) {
-    return <p className="setup-empty">This Brand is not in the current workspace scope.</p>;
-  }
+function BrandInformation({ brand }: { brand: SettingsBrand }) {
   const fields: [string, string][] = [
     ["Brand name", brand.name ?? `Brand ${brand.brand_id}`],
     ["Hierarchy", brand.parent_brand_id ? "Child Brand" : "Parent Brand"],
@@ -70,9 +71,13 @@ function BrandInformation({ brand }: { brand: SettingsBrand | null }) {
 function SocialAccounts({
   accounts,
   connections,
+  canManage,
+  onConnect,
 }: {
   accounts: ReportingAccount[];
   connections: ReportingConnection[];
+  canManage: boolean;
+  onConnect: (platform: Platform) => void;
 }) {
   return (
     <div className="setup-platform-list">
@@ -87,13 +92,27 @@ function SocialAccounts({
             <div className="setup-platform-detail">
               <strong>{PLATFORM_LABELS[platform]}</strong>
               <span>
-                {linked.length} linked
-                {linked.length > 0 && ` · ${linked.map((item) => item.display_name).join(" · ")}`}
+                {linked.length > 0
+                  ? linked.map((item) => item.display_name).join(" · ")
+                  : "No account linked to this Brand"}
               </span>
             </div>
             <span className={linked.length > 0 ? "setup-state" : "setup-state muted"}>
               {humanize(connection?.state ?? "not connected")}
             </span>
+            <button
+              className="settings-row-action"
+              disabled={!canManage}
+              onClick={() => onConnect(platform)}
+              title={
+                canManage
+                  ? undefined
+                  : "Open Social Media from Accumulate on this Brand to link its accounts"
+              }
+              type="button"
+            >
+              {linked.length > 0 ? "Edit" : "Connect"}
+            </button>
           </article>
         );
       })}
@@ -111,6 +130,9 @@ function SyncSettings({
   mutationAvailable: boolean;
 }) {
   const active = jobs.filter((item) => ["pending", "running"].includes(item.status)).length;
+  const awaiting = accounts.filter(
+    (item) => !["complete", "completed"].includes(item.backfill_status.toLowerCase()),
+  ).length;
   return (
     <>
       <div className="setup-summary-grid">
@@ -125,6 +147,11 @@ function SyncSettings({
           <strong>{active}</strong>
         </article>
       </div>
+      <p className="setup-note">
+        {awaiting === 0
+          ? "Every linked account has finished its backfill. The scheduled collection keeps them current."
+          : `${awaiting} account${awaiting === 1 ? "" : "s"} still to backfill. A newly linked account is backfilled by the scheduled collection; it is not started from this view.`}
+      </p>
       <label className="readonly-toggle">
         <input checked={mutationAvailable} disabled readOnly type="checkbox" />
         <span>
@@ -178,7 +205,7 @@ function Readiness({
 export function SetupDrawer({
   open,
   onClose,
-  brands,
+  brand,
   accounts,
   connections,
   jobs,
@@ -187,71 +214,126 @@ export function SetupDrawer({
 }: {
   open: boolean;
   onClose: () => void;
-  brands: SettingsBrand[];
+  brand: SettingsBrand | null;
   accounts: ReportingAccount[];
   connections: ReportingConnection[];
   jobs: ReportingSyncJob[];
   readiness: OperationsReadiness | undefined;
   mutationAvailable: boolean;
 }) {
-  const { selectedBrandId } = useBrandScope();
-  // The Brand this workspace is on, not the whole catalogue. The drawer used to
-  // list every Brand in scope on its first step, so opening setup for one Brand
-  // showed forty seven of them and said nothing about the one asked for.
-  const brand = brands.find((item) => item.brand_id === selectedBrandId) ?? null;
+  const queryClient = useQueryClient();
+  const { capabilities, rollup } = useBrandScope();
+  const [connecting, setConnecting] = useState<Platform | null>(null);
+
+  if (!brand) return null;
+
+  // Everything below is about the Brand whose row was clicked. The tables load
+  // the whole workspace, so a drawer that used them unfiltered described some
+  // other Brand's accounts under this Brand's name.
+  const brandAccounts = accounts.filter((item) => String(item.brand_id) === brand.brand_id);
+  const brandConnections = connections.filter(
+    (item) => String(item.brand_id) === brand.brand_id,
+  );
+  const brandJobs = jobs.filter((item) => String(item.brand_id) === brand.brand_id);
+  const brandName = brand.name ?? `Brand ${brand.brand_id}`;
+
+  // A provider connection is bound to the Brand the session was launched with:
+  // the backend refuses to link accounts to any other one, and the OAuth state
+  // and credential vault are keyed on it. So setup is offered for the Brand this
+  // session is actually on, and the others say plainly how to reach them.
+  const canManage =
+    !rollup &&
+    capabilities?.permissions.meta_connection_manage === true &&
+    capabilities?.permissions.tiktok_connection_manage === true;
+
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["settings"] });
+    setConnecting(null);
+  };
 
   return (
-    <Dialog
-      description="Review Brand details, linked social accounts and collection readiness."
-      drawer
-      onClose={onClose}
-      open={open}
-      title="Brand Setup"
-    >
-      <div className="setup-page">
-        <div className="setup-identity">
-          <span className="setup-identity-icon">
-            <Store size={21} />
-          </span>
-          <div>
-            <strong>{brand?.name ?? "Brand Setup"}</strong>
-            <span>
-              Linking is managed by Accumulate and the platform connections; this view reports what
-              they resolved to.
+    <>
+      <Dialog
+        description="Review Brand details, link social accounts and check collection readiness."
+        drawer
+        onClose={onClose}
+        open={open}
+        title="Brand Setup"
+      >
+        <div className="setup-page">
+          <div className="setup-identity">
+            <span className="setup-identity-icon">
+              <Store size={21} />
             </span>
+            <div>
+              <strong>{brandName}</strong>
+              <span>
+                Brand #{brand.brand_id} · {brandAccounts.length} linked account
+                {brandAccounts.length === 1 ? "" : "s"}
+              </span>
+            </div>
+          </div>
+
+          <Section index={1} title="Brand Information">
+            <BrandInformation brand={brand} />
+          </Section>
+
+          <Section
+            index={2}
+            title="Social Accounts"
+            hint="Facebook, Instagram and TikTok accounts linked to this Brand."
+          >
+            <SocialAccounts
+              accounts={brandAccounts}
+              canManage={canManage}
+              connections={brandConnections}
+              onConnect={setConnecting}
+            />
+            {!canManage && (
+              <p className="setup-note">
+                Accounts are linked for the Brand this session was opened with. To set up{" "}
+                {brandName}, open Social Media from Accumulate with that Brand selected.
+              </p>
+            )}
+          </Section>
+
+          <Section index={3} title="Sync Settings">
+            <SyncSettings
+              accounts={brandAccounts}
+              jobs={brandJobs}
+              mutationAvailable={mutationAvailable}
+            />
+          </Section>
+
+          <Section index={4} title="Readiness">
+            <Readiness accounts={brandAccounts} jobs={brandJobs} readiness={readiness} />
+          </Section>
+
+          <div className="setup-actions">
+            <button className="primary-button compact-button" onClick={onClose} type="button">
+              Close
+            </button>
           </div>
         </div>
+      </Dialog>
 
-        <Section index={1} title="Brand Information">
-          <BrandInformation brand={brand} />
-        </Section>
-
-        <Section
-          index={2}
-          title="Social Accounts"
-          hint="Only the three approved platforms are shown. A platform with no linked account cannot be opened for this Brand."
-        >
-          <SocialAccounts accounts={accounts} connections={connections} />
-        </Section>
-
-        <Section
-          index={3}
-          title="Sync Settings"
-          hint="Collection state is reported by the backend. Opening this view never starts a job."
-        >
-          <SyncSettings accounts={accounts} jobs={jobs} mutationAvailable={mutationAvailable} />
-        </Section>
-
-        <Section index={4} title="Readiness">
-          <Readiness accounts={accounts} jobs={jobs} readiness={readiness} />
-        </Section>
-
-        <div className="setup-actions">
-          <button className="primary-button compact-button" onClick={onClose} type="button">
-            Close
-          </button>
-        </div>
-      </div>
-    </Dialog>
+      {(connecting === "facebook" || connecting === "instagram") && (
+        <MetaConnectionModal
+          brandId={brand.brand_id}
+          brandName={brandName}
+          focusPlatform={connecting}
+          onClose={() => setConnecting(null)}
+          onConnected={refresh}
+        />
+      )}
+      {connecting === "tiktok" && (
+        <TikTokConnectionModal
+          brandId={brand.brand_id}
+          brandName={brandName}
+          onClose={() => setConnecting(null)}
+          onConnected={refresh}
+        />
+      )}
+    </>
   );
 }
