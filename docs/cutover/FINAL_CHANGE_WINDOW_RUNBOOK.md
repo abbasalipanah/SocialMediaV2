@@ -272,3 +272,76 @@ line:
 ```bash
 ls -l /opt/social-media-v2/frontend
 ```
+
+## 10. Scheduled collection was reaching almost none of the accounts (`2026-08-19`)
+
+The timer fired every thirty minutes and the service reported nothing unusual,
+but only `2` of `53` Facebook accounts and `0` of `47` Instagram accounts had
+been marked collected within the previous two hours. Four faults compounded,
+and each one hid the next.
+
+**The imported accounts never left backfill mode.** The collector asked for a
+thirty-day window whenever `backfill_status` was anything other than `complete`.
+V2 writes `complete`; the V1 import wrote `completed`. All `79` imported
+accounts therefore took the backfill path on every single run, forever. Because
+a run never got far enough to mark an account finished, the state that caused
+the slowness could never correct itself.
+
+**A run that ran out of time always lost the same accounts.** Targets came back
+ordered by `platform, brand_id, id`. A run killed partway through was followed
+by one that started again at the very same account, so everything past the
+cut-off was never collected at all. Ordering by `last_synced_at ASC NULLS
+FIRST` makes each account take its turn and lets a truncated run resume.
+
+**The run had no budget of its own.** `TimeoutStartSec=1500` terminated it
+mid-account, discarding whatever that account had not yet committed. The
+collector now stops after `1200s`, leaving the account in flight room to finish.
+
+**Every Facebook account spent four round trips being refused.** Meta retired
+the `page_fans_*` metrics on `2025-11-15`; its own reference guide still lists
+them as current, so the refusal read as a transient provider fault. The
+successors are `page_follows_*`, stored under the established keys so each
+Page keeps one continuous history.
+
+None of this was visible because nothing configured the worker's root logger.
+The deployment sets `SOCIAL_LOG_LEVEL=INFO`, but with no configuration only
+`WARNING` and above reached the journal, so a run that collected nothing looked
+exactly like one that collected everything. Per-account progress is now logged.
+
+Check the state directly rather than trusting the unit result:
+
+```sql
+SELECT platform,
+       count(*) AS accounts,
+       count(*) FILTER (WHERE last_synced_at > now() - interval '6 hours') AS recent
+FROM linked_social_accounts
+WHERE backfill_status <> 'disabled'
+GROUP BY platform;
+```
+
+A full pass takes hours, not thirty minutes, because provider calls are serial
+and network-bound. That is expected: the timer keeps working through the queue
+in staleness order rather than trying to finish everything in one tick.
+
+## 11. The pre-swap release check was inert (`2026-08-19`)
+
+`upgrade_local_staging.sh` validated each release by importing the application
+as the service user with the production env sourced. The env file is
+`root`-only, so the source was refused, and the check went on to import the
+module with no configuration at all. It proved the code parses — never that the
+release starts against the real settings, which is precisely the failure it
+exists to catch before the symlink swap, and precisely the failure that took the
+API down once already during this cutover.
+
+Sourcing the file in a shell cannot substitute: systemd applies no shell quote
+removal, so the unquoted JSON credential keyring arrives intact for the service
+and mangled for `.`. The check now runs through `systemd-run` with the same
+`EnvironmentFile` and the same identity, so it uses systemd's own parser.
+
+The refusal was visible the whole time as one line in the deploy output:
+
+```text
+bash: line 1: /etc/social-media-v2/production.env: Permission denied
+```
+
+A deploy that prints an error and still reports success is worth stopping for.
