@@ -148,6 +148,20 @@ REFRESH_PAGE_SIZE = 25
 FULL_PAGE_SIZE = 100
 
 
+@contextmanager
+def _phase(timings: dict[str, float], name: str) -> Iterator[None]:
+    """Time one collection phase.
+
+    An account that used its whole budget said only that it was slow. Knowing
+    which phase spent the time turned three rounds of guessing into one look.
+    """
+    started = time.monotonic()
+    try:
+        yield
+    finally:
+        timings[name] = timings.get(name, 0.0) + time.monotonic() - started
+
+
 class AccountBudgetExceeded(BaseException):
     """Raised in the collector's own thread when an account outstays its budget.
 
@@ -268,9 +282,10 @@ class StandaloneCollector:
                 )
                 break
             started = time.monotonic()
+            timings: dict[str, float] = {}
             try:
                 with self._account_budget():
-                    result = self._collect(row)
+                    result = self._collect(row, timings)
                 self.targets.mark_success(row, datetime.now(UTC))
             except AccountBudgetExceeded as exc:
                 error_code = _error_code(exc)
@@ -309,7 +324,7 @@ class StandaloneCollector:
                 )
             logger.info(
                 "collection_account_done index=%s/%s platform=%s brand_id=%s "
-                "link_id=%s status=%s seconds=%.1f",
+                "link_id=%s status=%s seconds=%.1f phases=%s",
                 index,
                 len(rows),
                 row.platform.value,
@@ -317,6 +332,14 @@ class StandaloneCollector:
                 row.link_id,
                 result.status,
                 time.monotonic() - started,
+                ",".join(
+                    f"{name}={seconds:.0f}"
+                    for name, seconds in sorted(
+                        timings.items(), key=lambda item: -item[1]
+                    )
+                    if seconds >= 1
+                )
+                or "-",
             )
             results.append(result)
         return tuple(results)
@@ -362,12 +385,17 @@ class StandaloneCollector:
         )
         return result
 
-    def _collect(self, row: CollectionTargetRow) -> WorkerAccountResult:
+    def _collect(
+        self, row: CollectionTargetRow, timings: dict[str, float] | None = None
+    ) -> WorkerAccountResult:
+        timings = {} if timings is None else timings
         if row.platform is PlatformId.TIKTOK:
-            return self._collect_tiktok(row)
-        return self._collect_meta(row)
+            return self._collect_tiktok(row, timings)
+        return self._collect_meta(row, timings)
 
-    def _collect_meta(self, row: CollectionTargetRow) -> WorkerAccountResult:
+    def _collect_meta(
+        self, row: CollectionTargetRow, timings: dict[str, float]
+    ) -> WorkerAccountResult:
         token = self._access_token(row.platform, row.credential_reference)
         if row.platform is PlatformId.FACEBOOK:
             # Published posts and Page insights are refused with the connected
@@ -428,30 +456,33 @@ class StandaloneCollector:
                 )
                 comments_reader = InstagramCommentsReader(transport)
             audience_reader = MetaAudienceReader(transport, platform=row.platform)
-            profile = collect_profile(
-                target=target,
-                reader=profile_reader,
-                metric_store=self.metrics,
-            )
+            with _phase(timings, "profile"):
+                profile = collect_profile(
+                    target=target,
+                    reader=profile_reader,
+                    metric_store=self.metrics,
+                )
             today = date.today()
             since = (
                 today - timedelta(days=1)
                 if _backfill_complete(row.backfill_status)
                 else today - timedelta(days=29)
             )
-            daily = collect_daily_metrics(
-                target=target,
-                reader=daily_reader,
-                metric_store=self.metrics,
-                since=since,
-                until=today,
-            )
-            try:
-                audience = collect_audience(
+            with _phase(timings, "daily"):
+                daily = collect_daily_metrics(
                     target=target,
-                    reader=audience_reader,
+                    reader=daily_reader,
                     metric_store=self.metrics,
+                    since=since,
+                    until=today,
                 )
+            try:
+                with _phase(timings, "audience"):
+                    audience = collect_audience(
+                        target=target,
+                        reader=audience_reader,
+                        metric_store=self.metrics,
+                    )
                 if audience.status is not CollectionStatus.SUCCESS:
                     partial_errors.add("audience_partial_or_unavailable")
             except Exception:
@@ -496,17 +527,18 @@ class StandaloneCollector:
             content_count = 0
             content_media_count = 0
             try:
-                content = collect_content(
-                    target=target,
-                    reader=content_reader,
-                    content_store=self.content,
-                    checkpoint_store=self.checkpoints,
-                    record_sink=persist_related,
-                    max_pages=(
-                        CONTENT_PAGES_PER_RUN if refreshing else FULL_CONTENT_PAGES
-                    ),
-                    refresh_only=refreshing,
-                )
+                with _phase(timings, "content"):
+                    content = collect_content(
+                        target=target,
+                        reader=content_reader,
+                        content_store=self.content,
+                        checkpoint_store=self.checkpoints,
+                        record_sink=persist_related,
+                        max_pages=(
+                            CONTENT_PAGES_PER_RUN if refreshing else FULL_CONTENT_PAGES
+                        ),
+                        refresh_only=refreshing,
+                    )
                 content_count = content.content_count
                 content_media_count = content.media_count
                 if content.status is not CollectionStatus.SUCCESS:
@@ -537,20 +569,21 @@ class StandaloneCollector:
                         return 0
 
                 try:
-                    stories = collect_content(
-                        target=target,
-                        reader=story_reader,
-                        content_store=self.content,
-                        checkpoint_store=self.checkpoints,
-                        record_sink=persist_story_media,
-                        checkpoint_account_id=f"{account.account_id}.stories",
-                        max_pages=20,
-                        # Stories are what the account has live now; the
-                        # provider drops them within a day. Resuming from where
-                        # a previous run stopped walks a feed that no longer
-                        # exists and misses the ones posted this morning.
-                        refresh_only=True,
-                    )
+                    with _phase(timings, "stories"):
+                        stories = collect_content(
+                            target=target,
+                            reader=story_reader,
+                            content_store=self.content,
+                            checkpoint_store=self.checkpoints,
+                            record_sink=persist_story_media,
+                            checkpoint_account_id=f"{account.account_id}.stories",
+                            max_pages=20,
+                            # Stories are what the account has live now; the
+                            # provider drops them within a day. Resuming from where
+                            # a previous run stopped walks a feed that no longer
+                            # exists and misses the ones posted this morning.
+                            refresh_only=True,
+                        )
                     story_content_count = stories.content_count
                     story_media_count = stories.media_count
                     if stories.status is not CollectionStatus.SUCCESS:
@@ -578,6 +611,7 @@ class StandaloneCollector:
     def _collect_tiktok(
         self,
         row: CollectionTargetRow,
+        timings: dict[str, float] | None = None,
         *,
         provider_account: ProviderAccount | None = None,
         granted_scopes: frozenset[str] | None = None,
