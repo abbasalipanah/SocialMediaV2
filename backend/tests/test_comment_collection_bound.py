@@ -9,7 +9,14 @@ bounded this way; the Meta path was not.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from app.workers.collector import COMMENTED_CONTENT_PER_RUN
+
+# Resolved from this file, so the assertions hold wherever pytest is invoked.
+COLLECTOR_SOURCE = (
+    Path(__file__).resolve().parents[1] / "app" / "workers" / "collector.py"
+).read_text(encoding="utf-8")
 
 
 def test_a_bound_exists_and_is_modest() -> None:
@@ -17,16 +24,10 @@ def test_a_bound_exists_and_is_modest() -> None:
 
 
 def test_the_meta_path_applies_the_bound() -> None:
-    from pathlib import Path
-
-    source = Path("app/workers/collector.py").read_text(encoding="utf-8")
     # The bound has to sit on the Meta record sink, which is the caller that was
     # unbounded; asserting on the constant alone would not notice it going unused.
-    assert "if commented_items < COMMENTED_CONTENT_PER_RUN:" in source
+    assert "if commented_items < COMMENTED_CONTENT_PER_RUN:" in COLLECTOR_SOURCE
 
 
 def test_tiktok_keeps_its_own_bound() -> None:
-    from pathlib import Path
-
-    source = Path("app/workers/collector.py").read_text(encoding="utf-8")
-    assert "commented_videos < 10" in source
+    assert "commented_videos < 10" in COLLECTOR_SOURCE

@@ -37,6 +37,8 @@ export type BrandScopeContextValue = {
   selectedBrandId: string;
   rollup: boolean;
   selectParent: (brandId: string) => void;
+  /** Select any Brand by id, whichever family it belongs to. */
+  selectBrand: (brandId: string) => void;
   selectChild: (brandId: string | "all") => void;
   accountSelections: AccountSelections;
   selectAccount: (platform: Platform, accountId: number | "all") => void;
@@ -181,6 +183,13 @@ export function BrandScopeProvider({ children }: { children: ReactNode }) {
     [persistBrand, workspace],
   );
 
+  const selectBrand = useCallback(
+    (brandId: string) => {
+      persistBrand(brandId);
+    },
+    [persistBrand],
+  );
+
   const selectChild = useCallback(
     (brandId: string | "all") => {
       if (!selectedFamily) return;
@@ -212,6 +221,7 @@ export function BrandScopeProvider({ children }: { children: ReactNode }) {
     selectedBrandId,
     rollup,
     selectParent,
+    selectBrand,
     selectChild,
     accountSelections,
     selectAccount,

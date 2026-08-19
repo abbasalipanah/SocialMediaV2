@@ -1,4 +1,6 @@
 import { Building2, Check, LogOut, Menu, UserRound } from "lucide-react";
+import { useMemo } from "react";
+
 import { useLocation } from "../routing";
 
 import type { Platform } from "../api";
@@ -50,6 +52,7 @@ export function Topbar({
   const platform = routePlatform(location.pathname);
   const { user } = useAuth();
   const {
+    workspace,
     parentBrands,
     parentBrand,
     childBrands,
@@ -57,11 +60,49 @@ export function Topbar({
     selectedBrandId,
     rollup,
     selectParent,
+    selectBrand,
     selectChild,
     accountSelections,
     selectAccount,
   } = useBrandScope();
   const accountState = usePlatformAccounts(platform);
+  // Each family reads as its parent with its Brands underneath, the way the
+  // Brand tree is drawn in Accumulate. A flat list of parents hid the child
+  // Brands behind a second dropdown, so which Brands a family contained was
+  // only discoverable by selecting it first.
+  const familyOptions = useMemo(
+    () =>
+      parentBrands.flatMap((parent) => {
+        const family = workspace?.families.find(
+          (item) => item.root_brand_id === parent.brand_id,
+        );
+        const children = (workspace?.brands ?? []).filter(
+          (brand) =>
+            brand.brand_id !== parent.brand_id &&
+            brand.visibility === "active" &&
+            family?.brand_ids.includes(brand.brand_id),
+        );
+        return [
+          {
+            id: parent.brand_id,
+            label: brandLabel(parent.name, parent.brand_id),
+            detail:
+              parent.visibility === "hidden_parent"
+                ? "Parent workspace"
+                : children.length > 0
+                  ? `${children.length} Brands`
+                  : undefined,
+          },
+          ...children.map((child) => ({
+            id: child.brand_id,
+            label: brandLabel(child.name, child.brand_id),
+            nested: true,
+          })),
+        ];
+      }),
+    [parentBrands, workspace],
+  );
+
 
   if (!user) return null;
 
@@ -85,15 +126,17 @@ export function Topbar({
           {(close) => (
             <ScopePicker
               onSelect={(id) => {
-                selectParent(id);
+                // A parent row still means "this family, rolled up"; a child
+                // row means that Brand, whichever family it belongs to.
+                if (parentBrands.some((brand) => brand.brand_id === id)) {
+                  selectParent(id);
+                } else {
+                  selectBrand(id);
+                }
                 close();
               }}
-              options={parentBrands.map((brand) => ({
-                id: brand.brand_id,
-                label: brandLabel(brand.name, brand.brand_id),
-                detail: brand.visibility === "hidden_parent" ? "Parent workspace" : undefined,
-              }))}
-              selectedId={parentBrand?.brand_id ?? ""}
+              options={familyOptions}
+              selectedId={selectedBrandId || parentBrand?.brand_id || ""}
             />
           )}
         </Popover>

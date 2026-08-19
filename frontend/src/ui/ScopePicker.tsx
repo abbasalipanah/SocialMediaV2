@@ -5,6 +5,8 @@ type ScopeOption = {
   id: string;
   label: string;
   detail?: string;
+  /** Renders under its parent, the way the Brand tree reads elsewhere. */
+  nested?: boolean;
 };
 
 type ScopePickerProps = {
@@ -24,11 +26,14 @@ export function ScopePicker({
   const searchId = useId();
   const filtered = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase();
-    return needle
-      ? options.filter((option) =>
-          `${option.label} ${option.detail ?? ""}`.toLocaleLowerCase().includes(needle),
-        )
-      : options;
+    if (!needle) return options;
+    // A search result stands on its own: indenting a child whose parent was
+    // filtered out would place it under whichever row happened to precede it.
+    return options
+      .filter((option) =>
+        `${option.label} ${option.detail ?? ""}`.toLocaleLowerCase().includes(needle),
+      )
+      .map((option) => ({ ...option, nested: false }));
   }, [options, search]);
 
   return (
@@ -50,7 +55,7 @@ export function ScopePicker({
         {filtered.map((option) => (
           <button
             aria-selected={option.id === selectedId}
-            className="scope-option"
+              className={option.nested ? "scope-option scope-option-nested" : "scope-option"}
             key={option.id}
             onClick={() => onSelect(option.id)}
             role="option"
