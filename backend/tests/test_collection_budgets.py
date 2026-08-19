@@ -1,0 +1,65 @@
+"""One slow account must not consume the whole collection window.
+
+A single account stalled inside a provider read and held the run until systemd
+terminated it, taking every account queued behind it. Because targets came back
+in a fixed order, the next run began at the same account and stalled again, so
+the queue behind it was never reached at all.
+"""
+
+from __future__ import annotations
+
+import time
+
+import pytest
+
+from app.workers.collector import (
+    DEFAULT_ACCOUNT_BUDGET_SECONDS,
+    DEFAULT_RUN_BUDGET_SECONDS,
+    AccountBudgetExceeded,
+    StandaloneCollector,
+    _error_code,
+)
+
+
+def test_the_account_budget_leaves_room_inside_the_run_budget() -> None:
+    # Otherwise the first slow account would exhaust the run on its own.
+    assert DEFAULT_ACCOUNT_BUDGET_SECONDS < DEFAULT_RUN_BUDGET_SECONDS
+
+
+def test_the_run_budget_stops_before_the_service_timeout() -> None:
+    # The unit allows 1500s; stopping at the budget lets the account in flight
+    # finish and be committed instead of being killed mid-write.
+    assert DEFAULT_RUN_BUDGET_SECONDS < 1500
+
+
+def test_a_stalled_account_is_interrupted() -> None:
+    collector = StandaloneCollector.__new__(StandaloneCollector)
+    collector._account_budget_seconds = 1
+
+    with pytest.raises(AccountBudgetExceeded):
+        with collector._account_budget():
+            time.sleep(5)
+
+
+def test_the_alarm_is_cleared_after_a_healthy_account() -> None:
+    collector = StandaloneCollector.__new__(StandaloneCollector)
+    collector._account_budget_seconds = 1
+
+    with collector._account_budget():
+        pass
+    # A leaked alarm would fire during whichever account came next and blame it
+    # for the previous one's stall.
+    time.sleep(2)
+
+
+def test_the_budget_can_be_switched_off() -> None:
+    collector = StandaloneCollector.__new__(StandaloneCollector)
+    collector._account_budget_seconds = None
+
+    with collector._account_budget():
+        pass
+
+
+def test_the_interruption_is_recorded_as_its_own_reason() -> None:
+    code = _error_code(AccountBudgetExceeded("account_budget_exceeded"))
+    assert code == "accountbudgetexceeded:account_budget_exceeded"

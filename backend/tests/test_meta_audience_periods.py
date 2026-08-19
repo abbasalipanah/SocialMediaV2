@@ -22,11 +22,13 @@ class RecordingTransport:
     def __init__(self, answers):
         self._answers = answers
         self.calls: list[tuple[str, str]] = []
+        self.parameters: list[dict[str, str]] = []
 
     def get(self, path, params=None):
         params = params or {}
         metric, period = params.get("metric", ""), params.get("period", "")
         self.calls.append((metric, period))
+        self.parameters.append(dict(params))
         return self._answers.get((metric, period), {"data": []})
 
 
@@ -97,3 +99,79 @@ def test_instagram_keeps_the_lifetime_period() -> None:
     )
 
     assert {period for _metric, period in transport.calls} == {"lifetime"}
+
+
+def test_instagram_demographics_are_asked_for_one_breakdown_at_a_time() -> None:
+    """Instagram refuses a demographic read that does not name its breakdown.
+
+    Sending only metric and period returned `400:100` for all three metrics, so
+    V2 had never written an audience row and the dashboards were still showing
+    the snapshot imported from V1.
+    """
+    transport = RecordingTransport({})
+
+    MetaAudienceReader(
+        transport, platform=PlatformId.INSTAGRAM, clock=lambda: NOW
+    ).fetch_audience(
+        ProviderAccount(
+            platform=PlatformId.INSTAGRAM,
+            account_id="ig-1",
+            credential=ProviderCredential(access_token="opaque"),
+        )
+    )
+
+    assert transport.parameters, "no request was made"
+    for params in transport.parameters:
+        assert params["period"] == "lifetime"
+        assert params["metric_type"] == "total_value"
+        assert params["timeframe"] == "last_90_days"
+        assert params["breakdown"] in {"country", "city", "age", "gender"}
+
+    asked = {(p["metric"], p["breakdown"]) for p in transport.parameters}
+    # Follower demographics carry the age and gender panels; the engaged and
+    # reached metrics only ever fed the geography ones.
+    assert ("follower_demographics", "age") in asked
+    assert ("follower_demographics", "gender") in asked
+    assert ("engaged_audience_demographics", "country") in asked
+    assert ("reached_audience_demographics", "city") in asked
+    assert ("engaged_audience_demographics", "age") not in asked
+
+
+def test_instagram_breakdowns_are_stored_under_the_declared_contract_keys() -> None:
+    payload = {
+        "data": [
+            {
+                "name": "follower_demographics",
+                "total_value": {
+                    "breakdowns": [
+                        {
+                            "dimension_keys": ["country"],
+                            "results": [
+                                {"dimension_values": ["TR"], "value": 400},
+                                {"dimension_values": ["DE"], "value": 25},
+                            ],
+                        }
+                    ]
+                },
+            }
+        ]
+    }
+    transport = RecordingTransport(
+        {("follower_demographics", "lifetime"): payload}
+    )
+
+    snapshot = MetaAudienceReader(
+        transport, platform=PlatformId.INSTAGRAM, clock=lambda: NOW
+    ).fetch_audience(
+        ProviderAccount(
+            platform=PlatformId.INSTAGRAM,
+            account_id="ig-1",
+            credential=ProviderCredential(access_token="opaque"),
+        )
+    )
+
+    # The frontend data matrix declares this exact key for the country panel.
+    assert snapshot.breakdowns["follower_demographics_country"] == {
+        "TR": 400,
+        "DE": 25,
+    }

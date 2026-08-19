@@ -6,7 +6,11 @@ import argparse
 import json
 import logging
 import re
+import signal
+import threading
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -118,6 +122,20 @@ def _backfill_complete(status: str) -> bool:
 # at 1200s leaves the account in flight room to finish and be committed, so a
 # long pass ends with a complete record rather than a half-written one.
 DEFAULT_RUN_BUDGET_SECONDS = 1200
+# One account must not be able to consume the whole window. Provider calls have
+# their own timeouts, but a request that trickles rather than stalls outlives
+# them, and a single account then held the run until systemd killed it -- taking
+# every account queued behind it with it. Four minutes is well past a healthy
+# pass and well short of the run budget.
+DEFAULT_ACCOUNT_BUDGET_SECONDS = 240
+
+
+class AccountBudgetExceeded(TimeoutError):
+    pass
+
+
+def _raise_account_budget(signum: int, frame: object) -> None:
+    raise AccountBudgetExceeded("account_budget_exceeded")
 
 
 class StandaloneCollector:
@@ -127,10 +145,12 @@ class StandaloneCollector:
         engine: Engine,
         *,
         run_budget_seconds: int | None = DEFAULT_RUN_BUDGET_SECONDS,
+        account_budget_seconds: int | None = DEFAULT_ACCOUNT_BUDGET_SECONDS,
     ) -> None:
         self.settings = settings
         self.engine = engine
         self._run_budget_seconds = run_budget_seconds
+        self._account_budget_seconds = account_budget_seconds
         self.policy = WritePolicy.from_settings(settings)
         self.policy.assert_allows_mutation("standalone_collection")
         try:
@@ -158,6 +178,25 @@ class StandaloneCollector:
     def close(self) -> None:
         if self.media_fetcher is not None:
             self.media_fetcher.close()
+
+    @contextmanager
+    def _account_budget(self) -> Iterator[None]:
+        """Interrupt one account that outstays its share of the run.
+
+        SIGALRM is only usable from the main thread, which is where the worker
+        runs; anywhere else the budget is skipped rather than pretended.
+        """
+        seconds = self._account_budget_seconds
+        if not seconds or threading.current_thread() is not threading.main_thread():
+            yield
+            return
+        previous = signal.signal(signal.SIGALRM, _raise_account_budget)
+        signal.alarm(seconds)
+        try:
+            yield
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, previous)
 
     def collect_connected(
         self,
@@ -205,7 +244,8 @@ class StandaloneCollector:
                 break
             started = time.monotonic()
             try:
-                result = self._collect(row)
+                with self._account_budget():
+                    result = self._collect(row)
                 self.targets.mark_success(row, datetime.now(UTC))
             except Exception as exc:
                 error_code = _error_code(exc)

@@ -46,6 +46,17 @@ INSTAGRAM_AUDIENCE_METRICS = (
     "engaged_audience_demographics",
     "reached_audience_demographics",
 )
+# Instagram serves one breakdown per request and refuses the call outright when
+# `metric_type` or `breakdown` is missing, which is why every demographic read
+# came back rejected and V2 has never written an audience row of its own. The
+# dashboards have been showing the imported V1 snapshot this whole time.
+INSTAGRAM_AUDIENCE_BREAKDOWNS = {
+    "follower_demographics": ("country", "city", "age", "gender"),
+    "engaged_audience_demographics": ("country", "city"),
+    "reached_audience_demographics": ("country", "city"),
+}
+# These metrics reject `since`/`until`; the timeframe selects the window.
+INSTAGRAM_AUDIENCE_TIMEFRAME = "last_90_days"
 
 
 class MetaAudienceReader:
@@ -62,55 +73,69 @@ class MetaAudienceReader:
         self._platform = platform
         self._clock = clock
 
+    def _requests(self) -> tuple[tuple[str, dict[str, str]], ...]:
+        """Every read this platform needs, as (metric, query parameters).
+
+        Facebook answers a metric in one call. Instagram serves one breakdown
+        per call and rejects the request unless it is told which one, so a
+        demographic metric becomes several reads rather than one.
+        """
+        if self._platform is PlatformId.FACEBOOK:
+            return tuple(
+                (metric, {"metric": metric, "period": period})
+                for metric in FACEBOOK_AUDIENCE_METRICS
+                for period in FACEBOOK_AUDIENCE_PERIODS
+            )
+        return tuple(
+            (
+                metric,
+                {
+                    "metric": metric,
+                    "period": period,
+                    "metric_type": "total_value",
+                    "timeframe": INSTAGRAM_AUDIENCE_TIMEFRAME,
+                    "breakdown": breakdown,
+                },
+            )
+            for metric in INSTAGRAM_AUDIENCE_METRICS
+            for breakdown in INSTAGRAM_AUDIENCE_BREAKDOWNS[metric]
+            for period in INSTAGRAM_AUDIENCE_PERIODS
+        )
+
     def fetch_audience(self, account: ProviderAccount) -> AudienceSnapshot:
         if account.platform is not self._platform:
             raise ValueError("provider_family_mismatch")
-        metrics = (
-            FACEBOOK_AUDIENCE_METRICS
-            if self._platform is PlatformId.FACEBOOK
-            else INSTAGRAM_AUDIENCE_METRICS
-        )
-        periods = (
-            FACEBOOK_AUDIENCE_PERIODS
-            if self._platform is PlatformId.FACEBOOK
-            else INSTAGRAM_AUDIENCE_PERIODS
-        )
         breakdowns: dict[str, dict[str, float | int | None]] = {}
-        for metric in metrics:
-            for period in periods:
-                try:
-                    payload = self._transport.get(
-                        f"{account.account_id}/insights",
-                        {"metric": metric, "period": period},
-                    )
-                except MetaTransportError as exc:
-                    # Swallowing this silently is what hid the wrong period for
-                    # months: the dashboards simply showed nothing.
-                    logger.warning(
-                        "meta_audience_read_failed platform=%s metric=%s period=%s reason=%s",
-                        self._platform.value,
-                        metric,
-                        period,
-                        exc.code,
-                    )
-                    continue
-                raw_rows = payload.get("data") or []
-                if not isinstance(raw_rows, list):
+        for metric, params in self._requests():
+            try:
+                payload = self._transport.get(
+                    f"{account.account_id}/insights", dict(params)
+                )
+            except MetaTransportError as exc:
+                # Swallowing this silently is what hid two provider contract
+                # changes for months: the dashboards simply showed nothing new.
+                logger.warning(
+                    "meta_audience_read_failed platform=%s metric=%s params=%s reason=%s",
+                    self._platform.value,
+                    metric,
+                    ",".join(f"{key}={value}" for key, value in params.items()
+                             if key != "metric"),
+                    exc.code,
+                )
+                continue
+            raw_rows = payload.get("data") or []
+            if not isinstance(raw_rows, list):
+                raise ValueError("provider_audience_shape_invalid")
+            for row in raw_rows:
+                if not isinstance(row, Mapping):
                     raise ValueError("provider_audience_shape_invalid")
-                metric_breakdowns: dict[str, dict[str, float | int | None]] = {}
-                for row in raw_rows:
-                    if not isinstance(row, Mapping):
-                        raise ValueError("provider_audience_shape_invalid")
-                    metric_name = str(row.get("name") or "").strip()
-                    if metric_name != metric:
-                        continue
-                    canonical = FACEBOOK_CANONICAL_BREAKDOWN_KEYS.get(
-                        metric_name, metric_name
-                    )
-                    metric_breakdowns.update(_breakdowns(canonical, row))
-                if any(values for values in metric_breakdowns.values()):
-                    breakdowns.update(metric_breakdowns)
-                    break
+                metric_name = str(row.get("name") or "").strip()
+                if metric_name != metric:
+                    continue
+                canonical = FACEBOOK_CANONICAL_BREAKDOWN_KEYS.get(
+                    metric_name, metric_name
+                )
+                breakdowns.update(_breakdowns(canonical, row))
         return AudienceSnapshot(
             account_id=account.account_id,
             observed_at=self._clock(),
