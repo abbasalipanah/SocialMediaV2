@@ -103,13 +103,14 @@ def create_workspace_router(
                         record for record in capabilities.records() if record.platform is platform
                     ),
                     linked_account_count=sum(account.platform is platform for account in accounts),
-                    navigation_available=(
-                        any(account.platform is platform for account in accounts)
-                        or any(
-                            record.platform is platform
-                            and record.status.value in {"available", "partial"}
-                            for record in capabilities.records()
-                        )
+                    # Whether this Brand can open the platform, which is a
+                    # question about its accounts. The capability records say
+                    # what the product supports, so folding them in here left
+                    # every platform navigable for every Brand: TikTok opened
+                    # on a Brand with no TikTok account and showed an empty
+                    # dashboard headed "No Accounts".
+                    navigation_available=any(
+                        account.platform is platform for account in accounts
                     ),
                 )
                 for platform in PlatformId

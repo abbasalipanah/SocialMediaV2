@@ -1,6 +1,8 @@
 import { lazy, Suspense, type ReactNode } from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "../routing";
 
+import type { Platform } from "../api";
+
 import { BrandScopeProvider, useBrandScope } from "../app/BrandScopeProvider";
 import { useAuth } from "../auth";
 import { AppShell } from "../layout";
@@ -55,6 +57,19 @@ function AuthenticatedWorkspace() {
   );
 }
 
+function PlatformGuard({ platform, children }: { platform: Platform; children: ReactNode }) {
+  const { capabilities, isLoading } = useBrandScope();
+  if (isLoading) return <RouteLoading />;
+  // The sidebar shows a platform this Brand has no account for as locked. The
+  // route has to agree: without this the page still opened from a bookmark, a
+  // back button, or a Brand switch that left the URL where it was, and it
+  // rendered an empty dashboard headed "No Accounts".
+  const available = capabilities?.platforms.find(
+    (item) => item.platform === platform,
+  )?.navigation_available;
+  return available ? children : <Navigate replace to="/overview" />;
+}
+
 function SettingsGuard({ audit = false, children }: { audit?: boolean; children: ReactNode }) {
   const { capabilities, isLoading } = useBrandScope();
   if (isLoading) return <RouteLoading />;
@@ -82,9 +97,30 @@ export function AppRoutes() {
         <Route element={<AuthenticatedWorkspace />}>
           <Route element={<AppShell />}>
             <Route path="overview" element={<OverviewPage />} />
-            <Route path="facebook" element={<FacebookPage />} />
-            <Route path="instagram" element={<InstagramPage />} />
-            <Route path="tiktok" element={<TikTokPage />} />
+            <Route
+              path="facebook"
+              element={
+                <PlatformGuard platform="facebook">
+                  <FacebookPage />
+                </PlatformGuard>
+              }
+            />
+            <Route
+              path="instagram"
+              element={
+                <PlatformGuard platform="instagram">
+                  <InstagramPage />
+                </PlatformGuard>
+              }
+            />
+            <Route
+              path="tiktok"
+              element={
+                <PlatformGuard platform="tiktok">
+                  <TikTokPage />
+                </PlatformGuard>
+              }
+            />
             <Route path="integrations" element={<IntegrationsGuard><IntegrationsPage /></IntegrationsGuard>} />
             <Route path="settings" element={<SettingsGuard><SettingsPage /></SettingsGuard>}>
               <Route
