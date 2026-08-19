@@ -23,6 +23,13 @@ TIKTOK_DAILY_FIELDS = (
     "shares",
 )
 MAX_TIKTOK_DAILY_WINDOW_DAYS = 30
+# Fields that count a total the account holds, rather than what happened on a
+# day. TikTok returns `0` for these on a day it has not finalised, and stored as
+# an observation that reads as "this account lost every follower and got them
+# back": the series collapses, and the dashboard's headline follower count --
+# which takes the last day in range -- shows nothing. A day with no total is a
+# day we have no total for.
+_STOCK_FIELDS = frozenset({"followers_count"})
 
 _ACCOUNT_METRICS = {
     "followers_count": MetricId.FOLLOWERS,
@@ -96,6 +103,8 @@ def _daily_rows(
                 continue
             for field in TIKTOK_DAILY_FIELDS:
                 if field in row and (value := _number(row.get(field))) is not None:
+                    if field in _STOCK_FIELDS and value <= 0:
+                        continue
                     daily.setdefault(observed_on, {})[field] = value
     for field in TIKTOK_DAILY_FIELDS:
         for observed_on, value in _field_series(
@@ -103,6 +112,8 @@ def _daily_rows(
             since=since,
             until=until,
         ):
+            if field in _STOCK_FIELDS and value <= 0:
+                continue
             daily.setdefault(observed_on, {}).setdefault(field, value)
     return daily
 
