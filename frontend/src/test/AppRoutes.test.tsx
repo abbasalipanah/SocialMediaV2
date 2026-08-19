@@ -414,7 +414,7 @@ describe("Phase 7 application shell", () => {
     expect(within(primary).queryByText("Support")).not.toBeInTheDocument();
     // The shell is reached through Accumulate's signed launch, so the way back is
     // an explicit link out rather than any V2 route.
-    expect(within(primary).getByRole("link", { name: "Back to Accumulate" })).toHaveAttribute(
+    expect(within(primary).getByRole("link", { name: "Back to Accumulate AI" })).toHaveAttribute(
       "href",
       "https://app.theaccumulate.com",
     );

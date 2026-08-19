@@ -152,7 +152,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           )}
           <a className="sidebar-return-link" href={accumulateUrl}>
             <img alt="" className="sidebar-return-mark" src="/favicon.png" />
-            <span>Back to Accumulate</span>
+            <span>Back to Accumulate AI</span>
           </a>
         </nav>
       </aside>
