@@ -30,6 +30,7 @@ def collect_content(
     after_record: Callable[[int], None] | None = None,
     checkpoint_account_id: str | None = None,
     max_pages: int = 100,
+    refresh_only: bool = False,
 ) -> CollectionOutcome:
     if max_pages < 1 or max_pages > 1000:
         raise ValueError("collection_page_limit_invalid")
@@ -39,7 +40,12 @@ def collect_content(
         account_id=checkpoint_account_id or target.account.account_id,
     )
     checkpoint = checkpoint_store.get(key)
-    cursor = checkpoint.cursor if checkpoint is not None else None
+    # A backfilled account is refreshed from the newest page every run, not
+    # resumed from wherever the last one stopped. Resuming would walk the
+    # archive a few pages at a time and take days to come back around to a post
+    # published this morning -- and a Story, which the provider drops after a
+    # day, would be gone before its turn arrived.
+    cursor = None if refresh_only else (checkpoint.cursor if checkpoint else None)
     content_count = 0
     media_count = 0
     page_count = 0
@@ -56,7 +62,9 @@ def collect_content(
         next_checkpoint = ProviderCheckpoint(
             key=key,
             version=next_version,
-            cursor=page.next_cursor,
+            # Stay at the top of the feed rather than recording how far this
+            # refresh happened to reach.
+            cursor=None if refresh_only else page.next_cursor,
             watermark=_watermark(page.items),
             observed_through=page.observed_at,
         )

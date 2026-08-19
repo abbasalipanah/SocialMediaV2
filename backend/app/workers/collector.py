@@ -132,6 +132,13 @@ DEFAULT_ACCOUNT_BUDGET_SECONDS = 240
 # How many of an account's most recent posts get their comments re-read
 # each run. Older posts keep whatever was collected when they were new.
 COMMENTED_CONTENT_PER_RUN = 25
+# How far back a routine refresh walks. Once an account is backfilled, its
+# archive is already stored, and the provider is asked for per-item insights on
+# every item a page yields -- so re-walking the whole history each run spent the
+# account's entire turn re-reading posts whose numbers had long settled. The
+# newest pages are where the numbers still move.
+CONTENT_PAGES_PER_RUN = 3
+FULL_CONTENT_PAGES = 100
 
 
 class AccountBudgetExceeded(BaseException):
@@ -482,7 +489,12 @@ class StandaloneCollector:
                     content_store=self.content,
                     checkpoint_store=self.checkpoints,
                     record_sink=persist_related,
-                    max_pages=100,
+                    max_pages=(
+                        CONTENT_PAGES_PER_RUN
+                        if _backfill_complete(row.backfill_status)
+                        else FULL_CONTENT_PAGES
+                    ),
+                    refresh_only=_backfill_complete(row.backfill_status),
                 )
                 content_count = content.content_count
                 content_media_count = content.media_count
@@ -643,7 +655,12 @@ class StandaloneCollector:
             content_store=self.content,
             checkpoint_store=self.checkpoints,
             record_sink=persist_related,
-            max_pages=100,
+            max_pages=(
+                CONTENT_PAGES_PER_RUN
+                if _backfill_complete(row.backfill_status)
+                else FULL_CONTENT_PAGES
+            ),
+            refresh_only=_backfill_complete(row.backfill_status),
         )
         for metric_id, value in totals.items():
             from app.application.ports.persistence import MetricPoint
