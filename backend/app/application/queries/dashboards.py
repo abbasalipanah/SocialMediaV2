@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from app.application.ports.reporting import ReportingStore
+from app.application.ports.reporting import ReportingAccount, ReportingStore
 from app.application.queries.comment_privacy import redact_dashboard_comments
 from app.application.queries.dashboard_aggregation import (
     audience_capabilities,
@@ -93,6 +93,25 @@ def _exclude_content_types(rows, excluded: tuple[str, ...]):
 # own reason, so the banner repeating them turned a single fact — "some accounts
 # in this rollup do not report everything" — into thirty-three lines that buried
 # the warnings a reader could act on.
+# An account that is deliberately not collected cannot be missing data. The
+# same Page and profile are linked under a rollup parent and under one of its
+# children; the parent's links are disabled so the pair is collected once. They
+# still counted towards coverage, so the rollup reported partial coverage
+# permanently, with no account anyone could fix to clear it.
+_UNCOLLECTED_ACCOUNT_STATUSES = frozenset({"disabled", "archived", "removed"})
+
+
+def collected_accounts(
+    accounts: Sequence[ReportingAccount],
+) -> tuple[ReportingAccount, ...]:
+    """The accounts a run is expected to write, which is what coverage means."""
+    return tuple(
+        account
+        for account in accounts
+        if account.status.strip().lower() not in _UNCOLLECTED_ACCOUNT_STATUSES
+    )
+
+
 _PER_METRIC_WARNINGS = ("metric_unavailable", "partial_account_coverage")
 
 
@@ -141,7 +160,9 @@ def _build_platform_dashboard(
     now: datetime | None = None,
 ) -> PlatformDashboard:
     generated = (now or datetime.now(UTC)).astimezone(UTC)
-    accounts = store.list_accounts(brand_ids=query.resolved_brand_ids, platform=platform)
+    accounts = collected_accounts(
+        store.list_accounts(brand_ids=query.resolved_brand_ids, platform=platform)
+    )
     if query.account_id is not None:
         accounts = tuple(account for account in accounts if account.account_id == query.account_id)
         if not accounts:

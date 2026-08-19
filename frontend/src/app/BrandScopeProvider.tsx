@@ -88,13 +88,22 @@ export function BrandScopeProvider({ children }: { children: ReactNode }) {
     if (hydratedFor.current === hydrationKey) return;
     hydratedFor.current = hydrationKey;
     const stored = window.localStorage.getItem(selectedBrandStorageKey(user.user_id));
+    const storedBrandIsValid = Boolean(stored && brandIds.has(stored));
+    // The Brand the session was launched with wins. Accumulate is the entry
+    // point, so whichever Brand the user picked there is the one they asked to
+    // see; letting a remembered choice override it meant that selecting a child
+    // Brand still opened whatever had been open last -- usually the parent,
+    // rolled up. The remembered Brand is only a fallback for a launch that
+    // names none this workspace can honour.
     const defaultBrandId = brandIds.has(user.brand_id)
       ? user.brand_id
-      : workspace.default_brand_id;
-    const storedBrandIsValid = Boolean(stored && brandIds.has(stored));
-    setSelectedBrandId(storedBrandIsValid && stored ? stored : defaultBrandId);
+      : storedBrandIsValid && stored
+        ? stored
+        : workspace.default_brand_id;
+    setSelectedBrandId(defaultBrandId);
+    // Keep the remembered Brand in step with what is on screen.
+    window.localStorage.setItem(selectedBrandStorageKey(user.user_id), defaultBrandId);
     if (stored && !storedBrandIsValid) {
-      window.localStorage.setItem(selectedBrandStorageKey(user.user_id), defaultBrandId);
       PLATFORMS.forEach((platform) =>
         window.localStorage.removeItem(selectedAccountStorageKey(user.user_id, platform)),
       );
