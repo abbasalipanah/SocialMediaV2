@@ -243,31 +243,34 @@ export function SetupDrawer({
   const { capabilities, rollup } = useBrandScope();
   const [connecting, setConnecting] = useState<Platform | null>(null);
 
-  if (!brand) return null;
-
   // Fetched for the Brand whose row was clicked, not filtered out of the page's
   // lists: those are scoped to the Brand the workspace is currently on, so any
   // other row found nothing in them and reported a Brand with linked accounts
   // as having none, with every platform offering "Connect".
-  const scope = queryString({ brand_id: brand.brand_id, rollup: false });
+  // These hooks must also run while the drawer is closed. Returning before them
+  // changes React's hook order when a Brand is selected and crashes the route.
+  const brandId = brand?.brand_id;
+  const scope = queryString({ brand_id: brandId, rollup: false });
   const accountsQuery = useQuery({
-    enabled: open,
-    queryKey: ["settings", "setup", "accounts", brand.brand_id],
+    enabled: open && brandId !== undefined,
+    queryKey: ["settings", "setup", "accounts", brandId],
     queryFn: ({ signal }) =>
       apiQuery(`/api/settings/social-accounts${scope}`, socialAccountsSchema, signal),
   });
   const connectionsQuery = useQuery({
-    enabled: open,
-    queryKey: ["settings", "setup", "connections", brand.brand_id],
+    enabled: open && brandId !== undefined,
+    queryKey: ["settings", "setup", "connections", brandId],
     queryFn: ({ signal }) =>
       apiQuery(`/api/settings/connections${scope}`, connectionsSchema, signal),
   });
   const jobsQuery = useQuery({
-    enabled: open,
-    queryKey: ["settings", "setup", "jobs", brand.brand_id],
+    enabled: open && brandId !== undefined,
+    queryKey: ["settings", "setup", "jobs", brandId],
     queryFn: ({ signal }) =>
       apiQuery(`/api/settings/sync-jobs${scope}`, syncJobsSchema, signal),
   });
+
+  if (!brand) return null;
 
   const brandAccounts = accountsQuery.data?.items ?? [];
   const brandConnections = connectionsQuery.data?.items ?? [];

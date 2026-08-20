@@ -46,7 +46,8 @@ describe("Brand Setup layout", () => {
     ]) {
       expect(SOURCE).toContain(path);
     }
-    expect(SOURCE).toContain("queryString({ brand_id: brand.brand_id, rollup: false })");
+    expect(SOURCE).toContain("queryString({ brand_id: brandId, rollup: false })");
+    expect(SOURCE).toContain("enabled: open && brandId !== undefined");
     expect(SOURCE).not.toContain("=== brand.brand_id");
   });
 

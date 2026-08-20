@@ -73,7 +73,10 @@ test("Settings keeps the Performance-style table-first workspace", async ({ page
   await page.getByPlaceholder("Search by name or ID").fill("Coastal One");
   const brandRow = page.getByRole("row", { name: /Coastal One/ });
   await expect(brandRow).toBeVisible();
-  await expect(brandRow.getByRole("button", { name: "Edit" })).toBeVisible();
+  await brandRow.getByRole("button", { name: "Edit" }).click();
+  const setupDialog = page.getByRole("dialog", { name: "Brand Setup" });
+  await expect(setupDialog).toBeVisible();
+  await expect(setupDialog).toContainText("Brand #hotel-1 · 3 linked accounts");
 });
 
 test("direct TikTok activation remains GET-only without a signed owner launch", async ({ page }) => {
