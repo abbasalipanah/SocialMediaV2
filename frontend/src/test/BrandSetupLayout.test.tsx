@@ -35,13 +35,24 @@ describe("Brand Setup layout", () => {
     expect(SOURCE).not.toContain("selectedBrandId");
   });
 
-  it("scopes accounts, connections and jobs to that Brand", () => {
-    for (const collection of ["accounts", "connections", "jobs"]) {
-      expect(SOURCE).toContain(
-        `${collection}.filter(`,
-      );
+  it("fetches accounts, connections and jobs for that Brand", () => {
+    // The page's own lists are scoped to the Brand the workspace is on, so any
+    // other row found nothing in them: a Brand with two linked accounts showed
+    // "0 linked accounts" and offered Connect on every platform.
+    for (const path of [
+      "/api/settings/social-accounts",
+      "/api/settings/connections",
+      "/api/settings/sync-jobs",
+    ]) {
+      expect(SOURCE).toContain(path);
     }
-    expect(SOURCE).toContain("=== brand.brand_id");
+    expect(SOURCE).toContain("queryString({ brand_id: brand.brand_id, rollup: false })");
+    expect(SOURCE).not.toContain("=== brand.brand_id");
+  });
+
+  it("says it is still checking rather than reporting nothing linked", () => {
+    expect(SOURCE).toContain("loading");
+    expect(SOURCE).toContain('"Checking…"');
   });
 
   it("does not offer linking the backend would refuse", () => {

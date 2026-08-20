@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Circle, Facebook, Instagram, Radio, Settings2, Store } from "lucide-react";
 import { useState } from "react";
 
@@ -9,6 +9,13 @@ import type {
   ReportingConnection,
   ReportingSyncJob,
   SettingsBrand,
+} from "../../api";
+import {
+  apiQuery,
+  connectionsSchema,
+  queryString,
+  socialAccountsSchema,
+  syncJobsSchema,
 } from "../../api";
 import { useBrandScope } from "../../app/BrandScopeProvider";
 import { Dialog } from "../../ui";
@@ -72,11 +79,13 @@ function SocialAccounts({
   accounts,
   connections,
   canManage,
+  loading,
   onConnect,
 }: {
   accounts: ReportingAccount[];
   connections: ReportingConnection[];
   canManage: boolean;
+  loading: boolean;
   onConnect: (platform: Platform) => void;
 }) {
   return (
@@ -99,9 +108,13 @@ function SocialAccounts({
             <div className="setup-platform-detail">
               <strong>{PLATFORM_LABELS[platform]}</strong>
               <span>
-                {linked.length > 0
-                  ? linked.map((item) => item.display_name).join(" · ")
-                  : "No account linked to this Brand"}
+                {loading
+                  ? "Checking…"
+                  : linked.length > 0
+                    ? linked
+                        .map((item) => item.display_name || item.external_id)
+                        .join(" · ")
+                    : "No account linked to this Brand"}
               </span>
             </div>
             <span className={linked.length > 0 ? "setup-state" : "setup-state muted"}>
@@ -232,14 +245,34 @@ export function SetupDrawer({
 
   if (!brand) return null;
 
-  // Everything below is about the Brand whose row was clicked. The tables load
-  // the whole workspace, so a drawer that used them unfiltered described some
-  // other Brand's accounts under this Brand's name.
-  const brandAccounts = accounts.filter((item) => String(item.brand_id) === brand.brand_id);
-  const brandConnections = connections.filter(
-    (item) => String(item.brand_id) === brand.brand_id,
-  );
-  const brandJobs = jobs.filter((item) => String(item.brand_id) === brand.brand_id);
+  // Fetched for the Brand whose row was clicked, not filtered out of the page's
+  // lists: those are scoped to the Brand the workspace is currently on, so any
+  // other row found nothing in them and reported a Brand with linked accounts
+  // as having none, with every platform offering "Connect".
+  const scope = queryString({ brand_id: brand.brand_id, rollup: false });
+  const accountsQuery = useQuery({
+    enabled: open,
+    queryKey: ["settings", "setup", "accounts", brand.brand_id],
+    queryFn: ({ signal }) =>
+      apiQuery(`/api/settings/social-accounts${scope}`, socialAccountsSchema, signal),
+  });
+  const connectionsQuery = useQuery({
+    enabled: open,
+    queryKey: ["settings", "setup", "connections", brand.brand_id],
+    queryFn: ({ signal }) =>
+      apiQuery(`/api/settings/connections${scope}`, connectionsSchema, signal),
+  });
+  const jobsQuery = useQuery({
+    enabled: open,
+    queryKey: ["settings", "setup", "jobs", brand.brand_id],
+    queryFn: ({ signal }) =>
+      apiQuery(`/api/settings/sync-jobs${scope}`, syncJobsSchema, signal),
+  });
+
+  const brandAccounts = accountsQuery.data?.items ?? [];
+  const brandConnections = connectionsQuery.data?.items ?? [];
+  const brandJobs = jobsQuery.data?.items ?? [];
+  const loadingAccounts = accountsQuery.isPending;
   const brandName = brand.name ?? `Brand ${brand.brand_id}`;
 
   // Settings authority may set up any Brand its signed scope grants, which is
@@ -272,8 +305,12 @@ export function SetupDrawer({
             <div>
               <strong>{brandName}</strong>
               <span>
-                Brand #{brand.brand_id} · {brandAccounts.length} linked account
-                {brandAccounts.length === 1 ? "" : "s"}
+                Brand #{brand.brand_id} ·{" "}
+                {loadingAccounts
+                  ? "checking linked accounts…"
+                  : `${brandAccounts.length} linked account${
+                      brandAccounts.length === 1 ? "" : "s"
+                    }`}
               </span>
             </div>
           </div>
@@ -291,6 +328,7 @@ export function SetupDrawer({
               accounts={brandAccounts}
               canManage={canManage}
               connections={brandConnections}
+              loading={loadingAccounts}
               onConnect={setConnecting}
             />
             {!canManage && (
