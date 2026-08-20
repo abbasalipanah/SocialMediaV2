@@ -434,12 +434,12 @@ describe("Revision 6 shared canonical fixture", () => {
     rerender(<FacebookPulseDashboard data={facebook} tab="content" />);
     expect(headings()).toEqual([
       "Content Type", "Views & Reach Trend", "Interaction Trend", "Engagement Split",
-      "Content Type Reach", "Comment Sentiment", "Top Hashtags", "All Performing Content",
+      "Content Type Views", "Comment Sentiment", "Top Hashtags", "All Performing Content",
     ]);
     const contentTable = screen.getByRole("heading", { name: "All Performing Content" }).closest("article");
     if (!contentTable) throw new Error("Missing All Performing Content panel");
     expect(within(contentTable).getAllByRole("columnheader").map((item) => item.textContent)).toEqual([
-      "#", "Cover", "Caption", "Date", "Type", "Post Views", "Post Reach", "Likes", "Comments", "Shares", "Engagement",
+      "#", "Cover", "Caption", "Date", "Type", "Post Views", "Interactions", "Likes", "Comments", "Shares", "Engagement",
     ]);
     expect(within(contentTable).getByRole("button", { name: "Sort by Date" }).closest("th")).toHaveAttribute("aria-sort", "descending");
     expect(within(contentTable).getAllByText("Image")).toHaveLength(2);
@@ -469,7 +469,7 @@ describe("Revision 6 shared canonical fixture", () => {
     rerender(<FacebookPulseDashboard data={facebook} tab="audience" />);
     expect(headings()).toEqual([
             "Followers Trend", "New Followers Trend", "Top Countries", "Top Cities",
-            "Paid Reach Trend", "Organic Reach Trend",
+            "Paid Views Trend", "Organic Views Trend",
     ]);
 
     rerender(<InstagramPulseDashboard data={instagram} tab="audience" />);

@@ -453,7 +453,7 @@ class StandaloneCollector:
                 profile_reader = FacebookProfileReader(transport)
                 daily_reader = FacebookDailyMetricsReader(transport)
                 content_reader = FacebookContentReader(
-                    transport, page_size=content_page_size
+                    transport, insights=True, page_size=content_page_size
                 )
                 comments_reader = FacebookCommentsReader(transport)
             else:

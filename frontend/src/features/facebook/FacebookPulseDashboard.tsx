@@ -73,7 +73,7 @@ type ContentSortKey =
   | "date"
   | "type"
   | "views"
-  | "reach"
+  | "interactions"
   | "likes"
   | "comments"
   | "shares"
@@ -113,8 +113,9 @@ function safeContentUrl(rawUrl: string): string | null {
 }
 
 function contentEngagement(item: DashboardContent): number | null {
-  return item.reach !== null && item.reach > 0
-    ? (item.interactions / item.reach) * 100
+  const delivery = item.reach !== null && item.reach > 0 ? item.reach : item.views;
+  return delivery !== null && delivery > 0
+    ? (item.interactions / delivery) * 100
     : null;
 }
 
@@ -141,7 +142,7 @@ function contentSortValue(item: DashboardContent, key: ContentSortKey): string |
   if (key === "date") return contentPublishedAt(item);
   if (key === "type") return humanize(item.content_type);
   if (key === "views") return item.views;
-  if (key === "reach") return item.reach;
+  if (key === "interactions") return item.interactions;
   if (key === "likes") return item.likes_count;
   if (key === "comments") return item.comments_count;
   if (key === "shares") return item.shares_count;
@@ -775,7 +776,7 @@ export function PerformingContentTable({ content }: { content: DashboardContent[
         <SortableContentHeader activeDirection={sortDirection("date")} label="Date" onSort={() => sortBy("date")} />
         <SortableContentHeader activeDirection={sortDirection("type")} label="Type" onSort={() => sortBy("type")} />
         <SortableContentHeader activeDirection={sortDirection("views")} label="Post Views" onSort={() => sortBy("views")} />
-        <SortableContentHeader activeDirection={sortDirection("reach")} label="Post Reach" onSort={() => sortBy("reach")} />
+        <SortableContentHeader activeDirection={sortDirection("interactions")} label="Interactions" onSort={() => sortBy("interactions")} />
         <SortableContentHeader activeDirection={sortDirection("likes")} label="Likes" onSort={() => sortBy("likes")} />
         <SortableContentHeader activeDirection={sortDirection("comments")} label="Comments" onSort={() => sortBy("comments")} />
         <SortableContentHeader activeDirection={sortDirection("shares")} label="Shares" onSort={() => sortBy("shares")} />
@@ -809,7 +810,7 @@ export function PerformingContentTable({ content }: { content: DashboardContent[
               <td title={item.published_at ?? undefined}>{contentDateLabel(item.published_at)}</td>
               <td><ContentTypeChip contentType={item.content_type} /></td>
               <td>{item.views === null ? "—" : formatNumber(item.views)}</td>
-              <td>{item.reach === null ? "—" : formatNumber(item.reach)}</td>
+              <td>{formatNumber(item.interactions)}</td>
               <td>{formatNumber(item.likes_count)}</td>
               <td>{formatNumber(item.comments_count)}</td>
               <td>{formatNumber(item.shares_count)}</td>
@@ -887,7 +888,7 @@ function ContentSection({ data, withTitle }: { data: PlatformDashboard; withTitl
         <PulsePieCard legendColumns={3} rows={engagementRows(data.content)} subtitle="Interaction mix" title="Engagement Split" />
       </div>
       <div className="facebook-three-grid">
-        <PulsePieCard rows={summaryPieRows(data.content_summary.reach_by_type, ["#f59e0b", "#ec4899", "#38bdf8", "#14b8a6"])} subtitle="Reach by content type" title="Content Type Reach" />
+        <PulsePieCard rows={summaryPieRows(data.content_summary.views_by_type, ["#f59e0b", "#ec4899", "#38bdf8", "#14b8a6"])} subtitle="Views by content type" title="Content Type Views" />
         <PulsePieCard rows={sentimentPieRows(data.breakdowns)} subtitle="Classified comment distribution" title="Comment Sentiment" />
         <SimplePulseTable columns={["Hashtag", "Count"]} emptyCopy="No hashtags in collected captions." rows={hashtagRows(data)} subtitle="Hashtags found in collected captions" title="Top Hashtags" />
       </div>
@@ -913,8 +914,8 @@ function AudienceSection({ data, withTitle }: { data: PlatformDashboard; withTit
         <SimplePulseTable columns={["#", "City", "Value"]} rows={breakdownRows(data.breakdowns, "city")} subtitle="City ranking" title="Top Cities" />
       </div>
       <div className="facebook-two-grid">
-        <PulseTrendCard data={data} keys={[{ id: "reach_paid", label: "Paid Reach", color: V1_CHART_COLORS.paid }]} subtitle="Paid delivery trend" title="Paid Reach Trend" />
-        <PulseTrendCard data={data} keys={[{ id: "reach_organic", label: "Organic Reach", color: "#8b5cf6" }]} subtitle="Organic delivery trend" title="Organic Reach Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "views_paid", label: "Paid Views", color: V1_CHART_COLORS.paid }]} subtitle="Paid delivery trend" title="Paid Views Trend" />
+        <PulseTrendCard data={data} keys={[{ id: "views_organic", label: "Organic Views", color: "#8b5cf6" }]} subtitle="Organic delivery trend" title="Organic Views Trend" />
       </div>
     </section>
   );

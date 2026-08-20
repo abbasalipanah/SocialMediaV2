@@ -19,6 +19,8 @@ from app.infrastructure.providers.meta.fields import (
 )
 from app.infrastructure.providers.meta.transport import MetaTransport
 
+from .content_insights import fetch_content_insights, map_content_insights
+
 FIELDS = ",".join(
     (
         "id",
@@ -39,12 +41,14 @@ class FacebookContentReader:
         self,
         transport: MetaTransport,
         *,
+        insights: bool = False,
         page_size: int = 100,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
         if not 1 <= page_size <= 100:
             raise ValueError("content_page_size_invalid")
         self._transport = transport
+        self._insights = insights
         self._page_size = page_size
         self._clock = clock
 
@@ -62,10 +66,21 @@ class FacebookContentReader:
             {"fields": FIELDS, "limit": self._page_size},
             cursor=cursor,
         )
+        items = tuple(_record(row, observed_at) for row in page.items)
+        if self._insights:
+            items = tuple(self._with_insights(item) for item in items)
         return ContentPage(
-            items=tuple(_record(row, observed_at) for row in page.items),
+            items=items,
             next_cursor=page.next_cursor,
             observed_at=observed_at,
+        )
+
+    def _with_insights(self, item: ProviderRecord) -> ProviderRecord:
+        metrics = fetch_content_insights(self._transport, item.external_id)
+        return ProviderRecord(
+            external_id=item.external_id,
+            observed_at=item.observed_at,
+            fields={**item.fields, **map_content_insights(metrics)},
         )
 
 
