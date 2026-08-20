@@ -1070,7 +1070,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     collect_parser.add_argument("--brand-id", type=int)
     collect_parser.add_argument("--asset-id", type=int)
-    collect_parser.add_argument("--scheduled", action="store_true")
+    run_mode = collect_parser.add_mutually_exclusive_group()
+    run_mode.add_argument("--scheduled", action="store_true")
+    run_mode.add_argument(
+        "--complete",
+        action="store_true",
+        help="Process every selected account without the scheduled-run time budget.",
+    )
     collect_parser.add_argument(
         "--only-new",
         action="store_true",
@@ -1121,7 +1127,13 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     collector: StandaloneCollector | None = None
     try:
-        collector = StandaloneCollector(settings, engine)
+        collector = StandaloneCollector(
+            settings,
+            engine,
+            run_budget_seconds=(
+                None if getattr(args, "complete", False) else DEFAULT_RUN_BUDGET_SECONDS
+            ),
+        )
         results: tuple[WorkerAccountResult, ...]
         if args.command == "verify-tiktok":
             try:

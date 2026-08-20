@@ -152,3 +152,16 @@ def test_the_readers_refuse_a_page_size_the_provider_would_reject() -> None:
             reader(object(), page_size=0)
         with pytest.raises(ValueError):
             reader(object(), page_size=101)
+
+
+def test_feed_insights_do_not_fall_back_for_a_story_only_metric() -> None:
+    from app.infrastructure.providers.meta.instagram.content_insights import (
+        MEDIA_INSIGHT_METRICS,
+        STORY_INSIGHT_METRICS,
+    )
+
+    # Meta rejects the whole comma-separated request when `replies` is sent
+    # for an ordinary feed post. That made the reader retry every metric one at
+    # a time and turned a complete account refresh into a 100-second operation.
+    assert "replies" not in MEDIA_INSIGHT_METRICS
+    assert "replies" in STORY_INSIGHT_METRICS

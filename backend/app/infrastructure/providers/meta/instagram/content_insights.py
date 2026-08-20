@@ -16,10 +16,10 @@ MEDIA_INSIGHT_METRICS = (
     "comments",
     "shares",
     "saved",
-    "replies",
 )
 STORY_INSIGHT_METRICS = (
     *MEDIA_INSIGHT_METRICS,
+    "replies",
     "impressions",
     "taps_forward",
     "taps_back",
