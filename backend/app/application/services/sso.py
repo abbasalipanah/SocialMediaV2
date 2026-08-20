@@ -306,10 +306,15 @@ def verify_sso(token: str, secret: str, now: datetime | None = None) -> Verified
     jti = str(claims.get("jti", "")).strip()
     if not jti:
         raise SsoError("missing_jti")
-    expires_at = datetime.fromtimestamp(int(claims["exp"]), UTC)
+    # The signed launch token is intentionally short-lived and single-use: its
+    # expiry limits how long it may be presented to this endpoint. Once it has
+    # been verified and consumed, the local session has a separate lifetime.
+    # Reusing the launch-token expiry here made every browser session expire
+    # after Accumulate's ten-minute handoff TTL and repeatedly sent active users
+    # back to the signed-out entry page.
+    expires_at = current + timedelta(hours=12)
     if access_expiry is not None:
         expires_at = min(expires_at, access_expiry)
-    expires_at = min(expires_at, current + timedelta(hours=12))
     brand_scope = _verified_brand_scope(
         contract,
         brand_id=brand_id,

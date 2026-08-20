@@ -237,6 +237,17 @@ def test_contract_access_window_is_enforced_and_caps_session() -> None:
     assert verified.expires_at == expiry
 
 
+def test_short_lived_launch_token_creates_a_twelve_hour_local_session() -> None:
+    now = datetime.now(UTC).replace(microsecond=0)
+    verified = verify_sso(
+        token(exp=int((now + timedelta(minutes=10)).timestamp())),
+        SECRET,
+        now,
+    )
+
+    assert verified.expires_at == now + timedelta(hours=12)
+
+
 def test_contract_shape_and_subject_match_are_required() -> None:
     with pytest.raises(SsoError, match="missing_identity"):
         verify_sso(token(contract_overrides={"email": None}), SECRET)

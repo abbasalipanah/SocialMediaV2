@@ -7,6 +7,8 @@ reaches the application. Both routes must behave identically.
 
 from __future__ import annotations
 
+from http.cookies import SimpleCookie
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -41,6 +43,10 @@ async def test_post_launch_matches_the_get_launch(monkeypatch: pytest.MonkeyPatc
     assert response.headers["referrer-policy"] == "no-referrer"
     assert "HttpOnly" in response.headers["set-cookie"]
     assert "SameSite=lax" in response.headers["set-cookie"]
+    cookies = SimpleCookie()
+    cookies.load(response.headers["set-cookie"])
+    max_age = int(cookies["social_media_session"]["max-age"])
+    assert 43_190 <= max_age <= 43_200
 
 
 @pytest.mark.asyncio
