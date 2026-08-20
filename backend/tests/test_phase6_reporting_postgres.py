@@ -247,7 +247,9 @@ def _schema() -> tuple[str, ...]:
             id serial PRIMARY KEY, asset_id integer NOT NULL, platform varchar(32) NOT NULL,
             content_id varchar(255) NOT NULL, comment_id varchar(255) NOT NULL,
             user_name varchar(255), text text NOT NULL, like_count integer NOT NULL,
-            reply_count integer NOT NULL, answered boolean NOT NULL, commented_at timestamptz
+            reply_count integer NOT NULL, answered boolean NOT NULL, commented_at timestamptz,
+            sentiment varchar(16), sentiment_model varchar(128),
+            sentiment_classified_at timestamptz
         )""",
         """CREATE TABLE social_backfill_jobs (
             id integer PRIMARY KEY, brand_id integer NOT NULL, asset_id integer,

@@ -152,6 +152,9 @@ def stores() -> Iterator[
                     attachment_media_type varchar(64) NULL,
                     attachment_url varchar(1024) NULL,
                     commented_at timestamptz NULL,
+                    sentiment varchar(16) NULL,
+                    sentiment_model varchar(128) NULL,
+                    sentiment_classified_at timestamptz NULL,
                     created_at timestamptz NOT NULL,
                     updated_at timestamptz NOT NULL,
                     CONSTRAINT uq_content_comments_asset_comment UNIQUE (asset_id, comment_id)

@@ -10,6 +10,13 @@ from .ai_summary import (
     AiSummaryRepository,
     AiSummaryService,
 )
+from .comment_sentiment import (
+    ClassifiedCommentSentiment,
+    CommentSentimentBatch,
+    CommentSentimentProvider,
+    CommentSentimentRepository,
+    PendingCommentSentiment,
+)
 from .meta_activation import (
     MetaActivationError,
     MetaActivationProvider,
@@ -55,6 +62,10 @@ __all__ = [
     "AiSummaryRepository",
     "AiSummaryService",
     "AuthorityStore",
+    "ClassifiedCommentSentiment",
+    "CommentSentimentBatch",
+    "CommentSentimentProvider",
+    "CommentSentimentRepository",
     "ActivationAuthority",
     "ActivationContext",
     "ActivationIntent",
@@ -75,6 +86,7 @@ __all__ = [
     "MetaLinkSelection",
     "MetaProviderAccount",
     "MetaProviderGrant",
+    "PendingCommentSentiment",
     "ReportingStore",
     "SessionStore",
     "ProviderAccountGrant",

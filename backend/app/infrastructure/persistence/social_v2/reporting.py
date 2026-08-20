@@ -290,7 +290,7 @@ class SocialReportingStore:
         statement = _expanded(
             """SELECT c.asset_id, c.platform, c.content_id, c.comment_id,
                       c.user_name, c.text, c.like_count, c.reply_count,
-                      c.answered, c.commented_at
+                      c.answered, c.commented_at, c.sentiment
                FROM content_comments AS c
                WHERE c.asset_id IN :account_ids
                  AND c.commented_at >= :start_at
@@ -315,6 +315,7 @@ class SocialReportingStore:
                     reply_count=int(row["reply_count"]),
                     answered=bool(row["answered"]),
                     commented_at=row["commented_at"],
+                    sentiment=row["sentiment"],
                 )
                 for row in rows
             )

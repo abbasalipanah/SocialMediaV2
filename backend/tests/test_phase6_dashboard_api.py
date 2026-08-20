@@ -29,7 +29,11 @@ from app.application.queries import (
     build_overview_dashboard,
     build_platform_dashboard,
 )
-from app.application.queries.dashboard_aggregation import best_time_to_engage_breakdown
+from app.application.queries.dashboard_aggregation import (
+    best_time_to_engage_breakdown,
+    comment_sentiment_breakdown,
+    top_hashtags,
+)
 from app.core.security import sha256_text
 from app.domain.metrics import MetricId, bootstrap_metric_catalog
 from app.domain.platforms import PlatformId
@@ -815,6 +819,66 @@ def test_best_time_to_engage_uses_average_content_engagement_in_istanbul_time() 
     assert [(item.key, item.value) for item in result.items] == [("Mon|10", 20.0)]
 
 
+def test_top_hashtags_normalizes_meta_punctuation_and_counts_posts() -> None:
+    first = ReportingContent(
+        11,
+        "101",
+        PlatformId.FACEBOOK,
+        "post-1",
+        "post",
+        "https://example.test/post-1",
+        "#AquaMICE. #Hotel #hotel #İstanbul!",
+        "",
+        NOW,
+        0,
+        0,
+        0,
+    )
+    second = replace(
+        first,
+        external_content_id="post-2",
+        message="#aquamice #HOTEL #summer_2026",
+    )
+
+    assert [(item.name, item.count) for item in top_hashtags((first, second))] == [
+        ("#aquamice", 2),
+        ("#hotel", 2),
+        ("#i̇stanbul", 1),
+        ("#summer_2026", 1),
+    ]
+
+
+def test_comment_sentiment_breakdown_uses_current_classified_comments() -> None:
+    first = ReportingComment(
+        11,
+        PlatformId.FACEBOOK,
+        "post-1",
+        "comment-1",
+        "Person",
+        "Great",
+        0,
+        0,
+        False,
+        NOW,
+        "positive",
+    )
+    rows = (
+        first,
+        replace(first, external_comment_id="comment-2", sentiment="negative"),
+        replace(first, external_comment_id="comment-3", sentiment="positive"),
+        replace(first, external_comment_id="comment-4", sentiment=None),
+    )
+
+    result = comment_sentiment_breakdown(rows)
+
+    assert result is not None
+    assert result.dimension == "comment_sentiment"
+    assert [(item.key, item.value, item.percentage) for item in result.items] == [
+        ("Positive", 2.0, pytest.approx(200 / 3)),
+        ("Negative", 1.0, pytest.approx(100 / 3)),
+    ]
+
+
 @pytest.mark.asyncio
 async def test_instagram_content_tab_excludes_stories_from_every_content_projection(
     phase6_fixture,
@@ -1032,7 +1096,7 @@ async def test_phase6_routes_are_scoped_read_only_and_honest(phase6_fixture) -> 
 
 
 @pytest.mark.asyncio
-async def test_ai_summary_generation_requires_viewer_operator_and_scoped_brand_authority(
+async def test_ai_summary_generation_requires_app_role_and_scoped_brand_authority(
     phase6_fixture,
 ) -> None:
     authority, reporting, media_root = phase6_fixture
@@ -1086,6 +1150,10 @@ async def test_ai_summary_generation_requires_viewer_operator_and_scoped_brand_a
         assert scoped_brand.status_code == 200
         assert scoped_brand.json()["can_generate"] is True
         session["app_role"] = "admin"
+        assert (
+            await client.get("/api/insights/limit", params={"brand_id": "101"})
+        ).status_code == 200
+        session["app_role"] = "viewer"
         assert (
             await client.get("/api/insights/limit", params={"brand_id": "101"})
         ).status_code == 403

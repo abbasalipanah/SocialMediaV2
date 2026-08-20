@@ -274,7 +274,7 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-function mockApi(options: { authenticated?: boolean; integrationsVisible?: boolean; operator?: boolean; settingsVisible?: boolean } = {}) {
+function mockApi(options: { admin?: boolean; authenticated?: boolean; integrationsVisible?: boolean; operator?: boolean; settingsVisible?: boolean } = {}) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     if (url.includes("/api/auth/me")) {
@@ -282,6 +282,7 @@ function mockApi(options: { authenticated?: boolean; integrationsVisible?: boole
         ? json({ detail: "session_invalid" }, 401)
         : json({
           ...auth,
+          ...(options.admin ? { app_role: "admin" } : {}),
           ...(options.operator ? { role: "viewer", app_role: "operator", access_mode: "read" } : {}),
           settings_visible: options.settingsVisible ?? true,
           integrations_visible: options.integrationsVisible ?? true,
@@ -603,6 +604,13 @@ describe("Phase 7 application shell", () => {
       expect.stringContaining("/api/insights/generate"),
       expect.objectContaining({ method: "POST" }),
     ));
+  });
+
+  it("shows AI Summary generation to an Accumulate app admin", async () => {
+    window.localStorage.clear();
+    renderApp("/", mockApi({ admin: true }));
+    await userEvent.click(await screen.findByRole("button", { name: /^Open$/ }));
+    expect(await screen.findByRole("button", { name: "Generate summary" })).toBeEnabled();
   });
 
   it("keeps one footer Settings link and renders the Performance-style workspace in the shell", async () => {

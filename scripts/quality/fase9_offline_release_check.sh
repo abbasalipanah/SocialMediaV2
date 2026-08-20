@@ -77,6 +77,8 @@ for line in (
 assert (root / "deploy/systemd/social-media-v2-api.service").is_file()
 assert (root / "deploy/systemd/social-media-v2-collection.service").is_file()
 assert (root / "deploy/systemd/social-media-v2-collection.timer").is_file()
+assert (root / "deploy/systemd/social-media-v2-sentiment.service").is_file()
+assert (root / "deploy/systemd/social-media-v2-sentiment.timer").is_file()
 nginx = (root / "deploy/nginx/social-media-v2.conf").read_text()
 assert "127.0.0.1:8026" in nginx
 assert "root /opt/social-media-v2/frontend/dist" in nginx

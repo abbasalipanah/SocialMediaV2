@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh Social Media V2 comment sentiment every 30 minutes
+
+[Timer]
+OnCalendar=*:20,50
+Persistent=true
+RandomizedDelaySec=60
+Unit=social-media-v2-sentiment.service
+
+[Install]
+WantedBy=timers.target

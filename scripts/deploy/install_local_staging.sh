@@ -114,6 +114,10 @@ install -m 0644 "$ROOT/deploy/systemd/social-media-v2-collection.service" \
   /etc/systemd/system/social-media-v2-collection.service
 install -m 0644 "$ROOT/deploy/systemd/social-media-v2-collection.timer" \
   /etc/systemd/system/social-media-v2-collection.timer
+install -m 0644 "$ROOT/deploy/systemd/social-media-v2-sentiment.service" \
+  /etc/systemd/system/social-media-v2-sentiment.service
+install -m 0644 "$ROOT/deploy/systemd/social-media-v2-sentiment.timer" \
+  /etc/systemd/system/social-media-v2-sentiment.timer
 install -m 0644 "$ROOT/deploy/systemd/social-media-v2-web.service" \
   /etc/systemd/system/social-media-v2-web.service
 install -m 0640 -o root -g "$SERVICE_GROUP" \
@@ -128,4 +132,4 @@ systemctl enable --now social-media-v2-web.service
 echo "Social Media V2 local staging installed: $RELEASE_ROOT"
 echo "API: http://127.0.0.1:8026"
 echo "Web: http://127.0.0.1:3026"
-echo "Collection service/timer were installed but remain disabled."
+echo "Collection and sentiment service/timers were installed but remain disabled."

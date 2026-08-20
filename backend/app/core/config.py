@@ -80,6 +80,7 @@ AI_SUMMARY_MODELS = (
     "google/gemini-2.5-flash-lite",
     "google/gemini-3-flash-preview",
 )
+COMMENT_SENTIMENT_MODEL = "google/gemini-2.5-flash-lite"
 
 LOCAL_DB_HOSTS = {"127.0.0.1", "localhost", "::1", "postgres", "db"}
 BLOCKED_SOURCE_DB_NAMES = {"socialmedia_adv"}
@@ -233,6 +234,7 @@ class AiSummaryConfig:
     api_key: str
     base_url: str
     models: tuple[str, ...]
+    sentiment_model: str
     provider_timeout_seconds: float
 
     @property
@@ -275,6 +277,8 @@ def _validate_ai_summary(
         raise ConfigurationError("AI Summary provider endpoint is not allowlisted")
     if not config.models:
         raise ConfigurationError("AI Summary requires at least one allowlisted model")
+    if not config.sentiment_model:
+        raise ConfigurationError("Comment sentiment requires an allowlisted model")
     if not db.url or not db.resolved_name.startswith(V2_DATABASE_PREFIX):
         raise ConfigurationError("AI Summary requires a dedicated Social Media V2 database")
     if app_env in PRODUCTION_LIKE_ENVS and not writes:
@@ -615,6 +619,10 @@ def load_settings() -> AppSettings:
             AI_SUMMARY_OPENROUTER_BASE_URL,
         ).rstrip("/"),
         models=_csv("SOCIAL_AI_OPENROUTER_MODELS", AI_SUMMARY_MODELS),
+        sentiment_model=_env(
+            "SOCIAL_AI_SENTIMENT_MODEL",
+            COMMENT_SENTIMENT_MODEL,
+        ),
         provider_timeout_seconds=_positive_float(
             "SOCIAL_AI_PROVIDER_TIMEOUT_SECONDS",
             "45",

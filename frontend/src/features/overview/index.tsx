@@ -23,11 +23,10 @@ export default function OverviewPage() {
   const insights = useInsights();
   const canGenerateAiSummary = Boolean(
     user
-    && user.role === "viewer"
-    && user.app_role === "operator"
+    && ["admin", "operator"].includes(user.app_role ?? "")
     && user.source_system === "accumulate"
-    && selectedBrand?.role === "viewer"
-    && selectedBrand.access_mode === "read"
+    && selectedBrand?.role
+    && ["read", "write"].includes(selectedBrand.access_mode ?? "")
     && !rollup,
   );
   const aiSummaryLimit = useAiSummaryLimit(canGenerateAiSummary);

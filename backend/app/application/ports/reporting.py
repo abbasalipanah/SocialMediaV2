@@ -94,6 +94,7 @@ class ReportingComment:
     reply_count: int
     answered: bool
     commented_at: datetime | None
+    sentiment: str | None = None
 
 
 @dataclass(frozen=True)

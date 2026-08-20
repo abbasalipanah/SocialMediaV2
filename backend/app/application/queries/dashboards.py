@@ -11,6 +11,7 @@ from app.application.queries.comment_privacy import redact_dashboard_comments
 from app.application.queries.dashboard_aggregation import (
     audience_capabilities,
     best_time_to_engage_breakdown,
+    comment_sentiment_breakdown,
     community_summary,
     content_cards,
     content_summary,
@@ -254,6 +255,13 @@ def _build_platform_dashboard(
     observed_days = len({sample.observed_on for sample in samples})
     expected_days = (query.date_range.end_on - query.date_range.start_on).days + 1
     breakdowns = metric_breakdowns(samples)
+    # The imported V1 sentiment metric was a stale three-row snapshot. Always
+    # remove it and project the current date range from persisted AI labels.
+    breakdowns = tuple(
+        item for item in breakdowns if item.dimension != "comment_sentiment"
+    )
+    if sentiment := comment_sentiment_breakdown(comment_rows):
+        breakdowns += (sentiment,)
     if engagement_time := best_time_to_engage_breakdown(platform, content_rows):
         breakdowns = tuple(
             item for item in breakdowns if item.dimension != engagement_time.dimension

@@ -3,6 +3,7 @@
 from .boundary import Boundary, mark_boundary
 from .config import (
     AI_SUMMARY_OPENROUTER_BASE_URL,
+    COMMENT_SENTIMENT_MODEL,
     RUNTIME_MODE_SEQUENCE,
     AiSummaryConfig,
     AppSettings,
@@ -14,6 +15,7 @@ from .write_policy import WritePolicy
 
 __all__ = [
     "AI_SUMMARY_OPENROUTER_BASE_URL",
+    "COMMENT_SENTIMENT_MODEL",
     "AiSummaryConfig",
     "AppSettings",
     "Boundary",

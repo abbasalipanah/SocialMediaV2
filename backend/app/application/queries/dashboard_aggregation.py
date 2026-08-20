@@ -554,12 +554,46 @@ def community_summary(
 def top_hashtags(rows: tuple[ReportingContent, ...]) -> tuple[DashboardHashtag, ...]:
     counts: dict[str, int] = {}
     for row in rows:
-        for tag in re.findall(r"(?<!\w)#([\w.]+)", row.message, flags=re.UNICODE):
-            normalized = f"#{tag.lower()}"
+        # FB/IG punctuation terminates a hashtag. Count each tag once per
+        # caption so a repeated tag in one post cannot inflate popularity.
+        tags = {
+            f"#{tag.casefold()}"
+            for tag in re.findall(r"(?<!\w)#(\w+)", row.message, flags=re.UNICODE)
+        }
+        for normalized in tags:
             counts[normalized] = counts.get(normalized, 0) + 1
     return tuple(
         DashboardHashtag(name=name, count=count)
         for name, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:8]
+    )
+
+
+def comment_sentiment_breakdown(
+    rows: tuple[ReportingComment, ...],
+) -> DashboardBreakdown | None:
+    """Build the chart from classified comments in the selected date range."""
+
+    labels = ("Positive", "Neutral", "Negative")
+    counts = {label: 0 for label in labels}
+    for row in rows:
+        sentiment = str(row.sentiment or "").strip().lower()
+        if sentiment in {"positive", "neutral", "negative"}:
+            counts[sentiment.title()] += 1
+    total = sum(counts.values())
+    if total == 0:
+        return None
+    return DashboardBreakdown(
+        metric_id=MetricId.INTERACTIONS,
+        dimension="comment_sentiment",
+        items=tuple(
+            DashboardBreakdownItem(
+                key=label,
+                value=float(counts[label]),
+                percentage=counts[label] / total * 100,
+            )
+            for label in labels
+            if counts[label]
+        ),
     )
 
 
@@ -1133,4 +1167,5 @@ __all__ = [
     "source_breakdown",
     "stories_contract",
     "top_hashtags",
+    "comment_sentiment_breakdown",
 ]

@@ -95,6 +95,10 @@ if systemctl is-enabled --quiet social-media-v2-collection.timer; then
   echo "Refusing to upgrade while the V2 collection timer is enabled." >&2
   exit 1
 fi
+if systemctl is-enabled --quiet social-media-v2-sentiment.timer; then
+  echo "Refusing to upgrade while the V2 sentiment timer is enabled." >&2
+  exit 1
+fi
 
 OLD_BACKEND="$(readlink -f "$INSTALL_ROOT/backend")"
 OLD_FRONTEND="$(readlink -f "$INSTALL_ROOT/frontend")"
@@ -163,6 +167,12 @@ runuser -u "$SERVICE_USER" -- "$RELEASE_ROOT/backend/.venv/bin/python" -m pip in
     --property=WorkingDirectory="$RELEASE_ROOT/backend" \
     --setenv=PYTHONDONTWRITEBYTECODE=1 \
     "$RELEASE_ROOT/backend/.venv/bin/python" -c 'from app.main import app; assert app'
+
+install -m 0644 "$ROOT/deploy/systemd/social-media-v2-sentiment.service" \
+  /etc/systemd/system/social-media-v2-sentiment.service
+install -m 0644 "$ROOT/deploy/systemd/social-media-v2-sentiment.timer" \
+  /etc/systemd/system/social-media-v2-sentiment.timer
+systemctl daemon-reload
 
 ln -sfn "releases/$RELEASE_ID/backend" "$INSTALL_ROOT/.backend.next"
 ln -sfn "releases/$RELEASE_ID/frontend" "$INSTALL_ROOT/.frontend.next"

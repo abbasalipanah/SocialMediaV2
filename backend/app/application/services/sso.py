@@ -17,7 +17,7 @@ CANONICAL_ROLES = {"super_admin", "agency_admin", "agency_operator", "viewer"}
 WRITE_ROLES = {"super_admin", "agency_admin", "agency_operator"}
 SETTINGS_ROLES = {"super_admin", "agency_admin"}
 PLATFORM_CONNECTION_APP_ROLES = {"admin", "operator"}
-AI_SUMMARY_APP_ROLE = "operator"
+AI_SUMMARY_APP_ROLES = {"admin", "operator"}
 PLATFORM_CONNECTION_MANAGE_PERMISSION = "social.connection.manage"
 TIKTOK_CONNECTION_MANAGE_PERMISSION = "tiktok.connection.manage"
 BRAND_STATUSES = {"active", "suspended", "archived"}
@@ -90,12 +90,11 @@ def session_can_access_integrations(session: Mapping[str, object]) -> bool:
 
 
 def session_can_generate_ai_summary(session: Mapping[str, object]) -> bool:
-    """AI Summary generation is an explicit Accumulate viewer/operator capability."""
+    """AI Summary generation follows the explicit downstream app role."""
 
     return (
-        str(session.get("role") or "").strip().lower() == "viewer"
-        and str(session.get("source_system") or "").strip().lower() == "accumulate"
-        and str(session.get("app_role") or "").strip().lower() == AI_SUMMARY_APP_ROLE
+        str(session.get("source_system") or "").strip().lower() == "accumulate"
+        and str(session.get("app_role") or "").strip().lower() in AI_SUMMARY_APP_ROLES
         and bool(str(session.get("brand_id") or "").strip())
     )
 

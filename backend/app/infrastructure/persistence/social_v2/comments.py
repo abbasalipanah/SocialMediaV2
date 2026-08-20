@@ -4,6 +4,10 @@ from __future__ import annotations
 
 from sqlalchemy import Engine, text
 
+from app.application.ports import (
+    CommentSentimentBatch,
+    PendingCommentSentiment,
+)
 from app.application.ports.persistence import CommentRecord
 from app.core.write_policy import WritePolicy
 
@@ -49,6 +53,18 @@ class SocialCommentStore(SocialStoreBase):
                         attachment_media_type=EXCLUDED.attachment_media_type,
                         attachment_url=EXCLUDED.attachment_url,
                         commented_at=EXCLUDED.commented_at,
+                        sentiment=CASE
+                            WHEN content_comments.text IS DISTINCT FROM EXCLUDED.text THEN NULL
+                            ELSE content_comments.sentiment
+                        END,
+                        sentiment_model=CASE
+                            WHEN content_comments.text IS DISTINCT FROM EXCLUDED.text THEN NULL
+                            ELSE content_comments.sentiment_model
+                        END,
+                        sentiment_classified_at=CASE
+                            WHEN content_comments.text IS DISTINCT FROM EXCLUDED.text THEN NULL
+                            ELSE content_comments.sentiment_classified_at
+                        END,
                         updated_at=now()"""
                 ),
                 {
@@ -68,6 +84,55 @@ class SocialCommentStore(SocialStoreBase):
                     "commented_at": record.commented_at,
                 },
             )
+
+    def list_pending(self, *, limit: int) -> tuple[PendingCommentSentiment, ...]:
+        if limit < 1 or limit > 10_000:
+            raise ValueError("comment_sentiment_limit_invalid")
+        with self.engine.connect() as connection:
+            rows = connection.execute(
+                text(
+                    """SELECT id, text
+                       FROM content_comments
+                       WHERE sentiment IS NULL AND length(btrim(text)) > 0
+                       ORDER BY commented_at DESC NULLS LAST, id DESC
+                       LIMIT :limit"""
+                ),
+                {"limit": limit},
+            ).mappings()
+            return tuple(
+                PendingCommentSentiment(
+                    comment_row_id=int(row["id"]),
+                    text=str(row["text"]),
+                )
+                for row in rows
+            )
+
+    def save(self, batch: CommentSentimentBatch) -> None:
+        self._assert_mutation("comment.sentiment")
+        if not batch.items:
+            return
+        if len({item.comment_row_id for item in batch.items}) != len(batch.items):
+            raise ValueError("comment_sentiment_batch_invalid")
+        with self.engine.begin() as connection:
+            result = connection.execute(
+                text(
+                    """UPDATE content_comments
+                       SET sentiment=:sentiment,
+                           sentiment_model=:model,
+                           sentiment_classified_at=now()
+                       WHERE id=:comment_row_id AND sentiment IS NULL"""
+                ),
+                [
+                    {
+                        "comment_row_id": item.comment_row_id,
+                        "sentiment": item.sentiment,
+                        "model": batch.model[:128],
+                    }
+                    for item in batch.items
+                ],
+            )
+            if result.rowcount not in {-1, len(batch.items)}:
+                raise RuntimeError("comment_sentiment_write_conflict")
 
     def list_for_content(
         self, account_id: int, external_content_id: str

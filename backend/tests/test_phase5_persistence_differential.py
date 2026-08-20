@@ -55,6 +55,8 @@ def _prepare(engine: Engine) -> None:
                        reply_count integer NOT NULL, answered boolean NOT NULL,
                        attachment_type varchar(64), attachment_media_type varchar(64),
                        attachment_url varchar(1024), commented_at timestamptz,
+                       sentiment varchar(16), sentiment_model varchar(128),
+                       sentiment_classified_at timestamptz,
                        created_at timestamptz NOT NULL, updated_at timestamptz NOT NULL,
                        UNIQUE (asset_id, comment_id)
                    )"""

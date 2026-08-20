@@ -79,7 +79,11 @@ def create_insights_router(
             ),
             None,
         )
-        if selected is None or selected.role != "viewer" or selected.access_mode != "read":
+        if (
+            selected is None
+            or selected.role is None
+            or selected.access_mode not in {"read", "write"}
+        ):
             raise HTTPException(403, "ai_summary_brand_scope_denied")
         return scope
 

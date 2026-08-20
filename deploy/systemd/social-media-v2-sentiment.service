@@ -1,0 +1,24 @@
+[Unit]
+Description=Classify Social Media V2 comments with the low-cost AI model
+After=network-online.target social-media-v2-api.service
+
+[Service]
+Type=oneshot
+User=social-media-v2
+Group=social-media-v2
+WorkingDirectory=/opt/social-media-v2/backend
+EnvironmentFile=/etc/social-media-v2/production.env
+ExecStart=/opt/social-media-v2/backend/.venv/bin/python -m app.workers.sentiment --scheduled --limit 1000 --batch-size 50
+TimeoutStartSec=1200
+
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/social-media-v2
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
