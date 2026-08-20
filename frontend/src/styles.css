@@ -605,19 +605,6 @@ a { color: inherit; }
 .secondary-button:hover { color: var(--accent-dark); border-color: #c2bdf1; background: #f8f7ff; }
 .secondary-button:disabled { cursor: wait; opacity: .65; }
 .export-button { white-space: nowrap; }
-.coverage-notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 11px;
-  margin-bottom: 20px;
-  padding: 13px 15px;
-  color: #755720;
-  border: 1px solid #ecd9ad;
-  border-radius: 12px;
-  background: #fffaf0;
-}
-.coverage-notice strong { display: block; font-size: .84rem; }
-.coverage-notice p { margin: 3px 0 0; color: #876c3c; font-size: .78rem; }
 .metric-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
 .metric-card {
   min-width: 0;

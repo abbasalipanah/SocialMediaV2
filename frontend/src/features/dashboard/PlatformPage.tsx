@@ -8,7 +8,6 @@ import { FacebookPulseDashboard } from "../facebook/FacebookPulseDashboard";
 import { InstagramPulseDashboard } from "../instagram/InstagramPulseDashboard";
 import { TikTokPulseDashboard } from "../tiktok/TikTokPulseDashboard";
 import {
-  CoverageNotice,
   DashboardError,
   DashboardLoading,
 } from "./DashboardFrame";
@@ -122,7 +121,6 @@ export function PlatformPage({ platform }: { platform: Platform }) {
           />
         </div>
       </header>
-      <CoverageNotice status={data.meta.data_status} warnings={data.meta.warnings} />
       <div aria-live="polite" role="tabpanel">
         <TabContent data={data} platform={platform} tab={tab} />
       </div>

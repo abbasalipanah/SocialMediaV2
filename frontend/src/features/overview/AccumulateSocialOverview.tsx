@@ -31,7 +31,6 @@ import type {
 } from "../../api";
 import { Link } from "../../routing";
 import { Dialog } from "../../ui";
-import { CoverageNotice } from "../dashboard/DashboardFrame";
 import { ReportExport } from "../dashboard/ReportExport";
 import { RANGE_OPTIONS, type RangeKey } from "../dashboard/catalog";
 import { formatDate, formatNumber, humanize } from "../dashboard/format";
@@ -949,8 +948,6 @@ export function AccumulateSocialOverview({
           />
         </div>
       </header>
-
-      {data.meta.data_status !== "available" && <CoverageNotice status={data.meta.data_status} warnings={data.meta.warnings} />}
 
       <section aria-label="Key performance indicators" className="social-kpi-grid overview-kpi-grid">
         {kpis.map((definition) => <KpiCard definition={definition} key={definition.label} />)}

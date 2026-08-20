@@ -83,19 +83,6 @@ export function DashboardError({ retry }: { retry: () => void }) {
   );
 }
 
-export function CoverageNotice({ warnings, status }: { warnings: string[]; status: DataStatus }) {
-  if (status === "available" && warnings.length === 0) return null;
-  return (
-    <aside className="coverage-notice" role="status">
-      <AlertTriangle aria-hidden="true" size={18} />
-      <div>
-        <strong>{status === "partial" ? "Partial reporting coverage" : "Reporting data unavailable"}</strong>
-        <p>{warnings.length > 0 ? warnings.map(humanize).join(" · ") : "The provider returned no supported observations for this scope."}</p>
-      </div>
-    </aside>
-  );
-}
-
 export function DashboardTabs({
   tabs,
   active,

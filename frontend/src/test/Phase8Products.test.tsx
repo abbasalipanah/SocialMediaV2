@@ -117,7 +117,13 @@ describe("Phase 8 product surfaces", () => {
       series: [{ metric_id: "followers" as const, semantic_type: "snapshot" as const, points: [{ observed_on: "2026-07-14", value: 1200 }], methodology: "provider_reported" }],
     };
     const data = {
-      meta: { ...baseDashboard.meta, platform: null, data_status: "available" as const, freshness: "fresh" as const },
+      meta: {
+        ...baseDashboard.meta,
+        platform: null,
+        data_status: "partial" as const,
+        freshness: "fresh" as const,
+        warnings: ["facebook:metric_unavailable", "instagram:metric_unavailable"],
+      },
       metrics: [metric(1200, "available")],
       platforms: [platformDashboard],
       content: [],
@@ -166,6 +172,8 @@ describe("Phase 8 product surfaces", () => {
     expect(screen.getByRole("heading", { name: "Content Snapshot" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Top Performing Content" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "AI Summary" })).toBeInTheDocument();
+    expect(screen.queryByText("Partial reporting coverage")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Facebook:Metric Unavailable/)).not.toBeInTheDocument();
     expect(screen.queryByText("Overall Organic Health")).not.toBeInTheDocument();
     expect(screen.getAllByText(/Total Audience|Total Reach|Total Impressions|Total Interactions|Avg\. Engagement/)).toHaveLength(5);
     expect(document.querySelector(".overview-mini-line")).toHaveAttribute("stroke-width", "1.25");
