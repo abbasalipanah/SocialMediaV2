@@ -386,7 +386,7 @@ export async function mockR5Api(page: Page, authenticated = true) {
     } });
     if (path === "/api/integrations/meta/accounts/link") {
       const body = route.request().postDataJSON() as { connection_id: number; accounts: unknown[] };
-      return void await route.fulfill({ json: { connection_id: body.connection_id, linked_count: body.accounts.length, connection_state: "connected" } });
+      return void await route.fulfill({ json: { connection_id: body.connection_id, linked_count: body.accounts.length, connection_state: body.accounts.length ? "connected" : "disconnected" } });
     }
     if (path === "/api/operations/readiness") return void await route.fulfill({ json: { status: "ready", runtime_mode: "dormant", writes_enabled: false, database_configured: true, scope, platforms: (["facebook", "instagram", "tiktok"] as const).map((platform) => ({ platform, account_count: 1, last_sync_at: "2026-07-14T11:00:00Z", pending_job_count: 0 })) } });
     if (path === "/api/settings/tiktok/activation-readiness") return void await route.fulfill({ status: 403, json: { detail: "tiktok_owner_launch_required" } });

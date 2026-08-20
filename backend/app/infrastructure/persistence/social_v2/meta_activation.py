@@ -210,10 +210,31 @@ class ProjectionMetaConnectionStore:
         with self.engine.connect() as connection:
             rows = connection.execute(
                 text(
-                    """SELECT connection_id, platform, external_id,
-                              COALESCE(display_name, external_id) AS display_name, status
-                       FROM brand_social_account_discoveries
-                       WHERE brand_id=:brand_id AND status IN ('available', 'discovered', 'linked')
+                    """SELECT connection_id, platform, external_id, display_name, status
+                       FROM (
+                           SELECT d.connection_id, d.platform, d.external_id,
+                                  COALESCE(d.display_name, d.external_id) AS display_name,
+                                  d.status
+                           FROM brand_social_account_discoveries AS d
+                           WHERE d.brand_id=:brand_id
+                             AND d.status IN ('available', 'discovered', 'linked')
+                           UNION ALL
+                           SELECT la.connection_id, la.platform, la.external_id,
+                                  COALESCE(NULLIF(la.display_name, ''), la.external_id),
+                                  'linked' AS status
+                           FROM linked_social_accounts AS la
+                           WHERE la.brand_id=:brand_id
+                             AND la.platform IN ('facebook', 'instagram')
+                             AND la.status IN ('active', 'connected')
+                             AND la.connection_id IS NOT NULL
+                             AND NOT EXISTS (
+                                 SELECT 1
+                                 FROM brand_social_account_discoveries AS d
+                                 WHERE d.brand_id=la.brand_id
+                                   AND d.platform=la.platform
+                                   AND d.external_id=la.external_id
+                             )
+                       ) AS editable_accounts
                        ORDER BY platform, display_name, external_id"""
                 ),
                 {"brand_id": brand_id},
@@ -257,6 +278,7 @@ class ProjectionMetaConnectionStore:
             if connection_row is None or connection_row["status"] not in {
                 "pending_verification",
                 "connected",
+                "disconnected",
             }:
                 raise MetaActivationError("meta_connection_unavailable")
 
@@ -266,7 +288,8 @@ class ProjectionMetaConnectionStore:
             existing_links = tuple(
                 connection.execute(
                     text(
-                        """SELECT platform, external_id, asset_id
+                        """SELECT platform, external_id, display_name, connection_id,
+                                  meta_account_id, asset_id, status
                            FROM linked_social_accounts
                            WHERE brand_id=:brand_id
                              AND platform IN ('facebook', 'instagram')
@@ -275,6 +298,10 @@ class ProjectionMetaConnectionStore:
                     {"brand_id": brand_id},
                 ).mappings()
             )
+            existing_by_key = {
+                (str(item["platform"]), str(item["external_id"])): item
+                for item in existing_links
+            }
             for existing in existing_links:
                 key = (str(existing["platform"]), str(existing["external_id"]))
                 if key in selected_keys:
@@ -345,7 +372,38 @@ class ProjectionMetaConnectionStore:
                     .one_or_none()
                 )
                 if discovery is None:
-                    raise MetaActivationError("meta_discovery_selection_invalid")
+                    existing = existing_by_key.get(
+                        (selection.platform.value, selection.external_id)
+                    )
+                    if (
+                        existing is None
+                        or existing["connection_id"] is None
+                        or int(existing["connection_id"]) != connection_id
+                        or str(existing["status"]) not in {"active", "connected"}
+                    ):
+                        raise MetaActivationError("meta_discovery_selection_invalid")
+                    connection.execute(
+                        text(
+                            """UPDATE linked_social_accounts
+                               SET status='connected', updated_at=now()
+                               WHERE brand_id=:brand_id AND platform=:platform
+                                 AND external_id=:external_id"""
+                        ),
+                        {
+                            "brand_id": brand_id,
+                            "platform": selection.platform.value,
+                            "external_id": selection.external_id,
+                        },
+                    )
+                    if existing["asset_id"] is not None:
+                        connection.execute(
+                            text(
+                                "UPDATE assets SET status='active', updated_at=now() WHERE id=:id"
+                            ),
+                            {"id": int(existing["asset_id"])},
+                        )
+                    linked_count += 1
+                    continue
                 account_id = _upsert_asset(
                     connection,
                     tenant_id=int(connection_row["tenant_id"]),
@@ -389,13 +447,15 @@ class ProjectionMetaConnectionStore:
                     {"discovery_id": int(discovery["id"])},
                 )
                 linked_count += 1
+            next_state = "connected" if linked_count else "disconnected"
+            projection_status = "active" if linked_count else "inactive"
             connection.execute(
                 text(
                     """UPDATE platform_connections
-                       SET status='connected', projected_at=now()
+                       SET status=:status, projected_at=now(), updated_at=now()
                        WHERE id=:connection_id"""
                 ),
-                {"connection_id": connection_id},
+                {"connection_id": connection_id, "status": next_state},
             )
             connection.execute(
                 text(
@@ -410,18 +470,24 @@ class ProjectionMetaConnectionStore:
             connection.execute(
                 text(
                     """UPDATE social_projection_state
-                       SET status='active',
-                           payload_json=payload_json || jsonb_build_object('state', 'connected'),
+                       SET status=:projection_status,
+                           payload_json=payload_json || jsonb_build_object(
+                               'state', CAST(:state AS text)
+                           ),
                            updated_at=now()
                        WHERE projection_key=:key"""
                 ),
-                {"key": self._connection_key(connection_id)},
+                {
+                    "key": self._connection_key(connection_id),
+                    "projection_status": projection_status,
+                    "state": next_state,
+                },
             )
         return MetaLinkResult(
             connection_id=connection_id,
             brand_id=brand_id,
             linked_count=linked_count,
-            state="connected",
+            state=next_state,
         )
 
     @staticmethod

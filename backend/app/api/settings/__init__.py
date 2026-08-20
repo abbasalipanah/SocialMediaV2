@@ -72,7 +72,7 @@ class MetaAccountSelectionPayload(BaseModel):
 
 class MetaLinkPayload(BaseModel):
     connection_id: int = Field(gt=0)
-    accounts: list[MetaAccountSelectionPayload] = Field(min_length=1, max_length=200)
+    accounts: list[MetaAccountSelectionPayload] = Field(max_length=200)
 
 
 def create_settings_router(

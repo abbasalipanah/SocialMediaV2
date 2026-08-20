@@ -85,6 +85,61 @@ def test_saving_meta_selection_replaces_the_brands_current_accounts(engine: Engi
     }
 
 
+def test_legacy_links_are_editable_without_discovery_rows(engine: Engine) -> None:
+    with engine.begin() as connection:
+        connection.execute(text("DELETE FROM brand_social_account_discoveries"))
+    store = ProjectionMetaConnectionStore(
+        engine,
+        WritePolicy(runtime_mode=RuntimeMode.DEVELOPMENT, writes_enabled=True),
+    )
+
+    assert [
+        (item.connection_id, item.platform, item.external_id, item.status)
+        for item in store.list_discoveries(brand_id=101)
+    ] == [
+        (91, PlatformId.FACEBOOK, "10001", "linked"),
+        (91, PlatformId.INSTAGRAM, "20002", "linked"),
+    ]
+
+    kept_all = store.link_accounts(
+        brand_id=101,
+        connection_id=91,
+        selections=(
+            MetaLinkSelection(PlatformId.FACEBOOK, "10001"),
+            MetaLinkSelection(PlatformId.INSTAGRAM, "20002"),
+        ),
+    )
+    assert kept_all.linked_count == 2
+    assert [
+        (item.platform, item.external_id)
+        for item in SocialReportingStore(engine).list_accounts(brand_ids=("101",))
+    ] == [
+        (PlatformId.FACEBOOK, "10001"),
+        (PlatformId.INSTAGRAM, "20002"),
+    ]
+
+    kept = store.link_accounts(
+        brand_id=101,
+        connection_id=91,
+        selections=(MetaLinkSelection(PlatformId.INSTAGRAM, "20002"),),
+    )
+    assert kept.linked_count == 1
+    assert kept.state == "connected"
+    assert [
+        (item.platform, item.external_id)
+        for item in SocialReportingStore(engine).list_accounts(brand_ids=("101",))
+    ] == [(PlatformId.INSTAGRAM, "20002")]
+
+    removed = store.link_accounts(brand_id=101, connection_id=91, selections=())
+    assert removed.linked_count == 0
+    assert removed.state == "disconnected"
+    assert SocialReportingStore(engine).list_accounts(brand_ids=("101",)) == ()
+    with engine.connect() as connection:
+        assert connection.execute(
+            text("SELECT status FROM platform_connections WHERE id=91")
+        ).scalar_one() == "disconnected"
+
+
 def _states(engine: Engine) -> dict[tuple[str, str], tuple[str, str, str]]:
     with engine.connect() as connection:
         rows = connection.execute(

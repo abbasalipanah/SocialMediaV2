@@ -224,9 +224,7 @@ class MetaActivationCoordinator:
     ) -> MetaLinkResult:
         self._assert_enabled("meta_activation_link")
         self._assert_authorized(context)
-        if not selections or len({(item.platform, item.external_id) for item in selections}) != len(
-            selections
-        ):
+        if len({(item.platform, item.external_id) for item in selections}) != len(selections):
             raise MetaActivationError("meta_link_selection_invalid")
         try:
             result = self._connection_store.link_accounts(
@@ -238,7 +236,10 @@ class MetaActivationCoordinator:
             raise
         except Exception as exc:
             raise MetaActivationError("meta_link_failed") from exc
-        if result.brand_id != context.brand_id or result.state != "connected":
+        if result.brand_id != context.brand_id or result.state not in {
+            "connected",
+            "disconnected",
+        }:
             raise MetaActivationError("meta_link_result_invalid")
         return result
 

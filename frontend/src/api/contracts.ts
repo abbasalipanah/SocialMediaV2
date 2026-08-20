@@ -639,8 +639,8 @@ export const metaSelfServiceStartSchema = z.object({
 
 export const metaLinkResponseSchema = z.object({
   connection_id: z.number().int().positive(),
-  linked_count: z.number().int().positive(),
-  connection_state: z.literal("connected"),
+  linked_count: z.number().int().nonnegative(),
+  connection_state: z.enum(["connected", "disconnected"]),
 });
 
 export const reportJobSchema = z.object({

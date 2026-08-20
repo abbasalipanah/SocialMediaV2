@@ -59,10 +59,10 @@ test("dashboard tabs, URL state, ranges and report exports follow the R1 contrac
 
 test("Settings keeps the Performance-style table-first workspace", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.startsWith("desktop"), "desktop product assertion");
-  let metaLinkPayload: { connection_id: number; accounts: Array<{ platform: string; external_id: string }> } | null = null;
+  const metaLinkPayloads: Array<{ connection_id: number; accounts: Array<{ platform: string; external_id: string }> }> = [];
   page.on("request", (request) => {
     if (request.url().includes("/api/integrations/meta/accounts/link")) {
-      metaLinkPayload = request.postDataJSON() as typeof metaLinkPayload;
+      metaLinkPayloads.push(request.postDataJSON() as (typeof metaLinkPayloads)[number]);
     }
   });
   await mockR5Api(page);
@@ -94,12 +94,17 @@ test("Settings keeps the Performance-style table-first workspace", async ({ page
   await expect(metaDialog.getByRole("checkbox").nth(0)).toBeChecked();
   await expect(metaDialog.getByRole("checkbox").nth(1)).toBeChecked();
   await metaDialog.getByRole("checkbox").nth(1).uncheck();
-  await metaDialog.getByRole("button", { name: "Save selection (1)" }).click();
+  await metaDialog.getByRole("button", { name: "Save changes (1 linked)" }).click();
   await expect(metaDialog.getByRole("status")).toContainText("1 Meta account saved for Coastal One");
-  expect(metaLinkPayload).toEqual({
+  expect(metaLinkPayloads[0]).toEqual({
     connection_id: 91,
     accounts: [{ platform: "facebook", external_id: "facebook-account" }],
   });
+
+  await metaDialog.getByRole("button", { name: "Unlink" }).click();
+  await metaDialog.getByRole("button", { name: "Save and unlink all" }).click();
+  await expect(metaDialog.getByRole("status")).toContainText("All Meta accounts were unlinked from Coastal One");
+  expect(metaLinkPayloads[1]).toEqual({ connection_id: 91, accounts: [] });
 });
 
 test("direct TikTok activation remains GET-only without a signed owner launch", async ({ page }) => {

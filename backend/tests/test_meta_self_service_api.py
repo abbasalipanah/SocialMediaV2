@@ -21,6 +21,7 @@ from tests.test_phase6_dashboard_api import MemoryAuthority, MemoryReporting
 class FakeMetaActivation:
     def __init__(self) -> None:
         self.calls: list[str] = []
+        self.link_selections: list[tuple[PlatformId, str]] = []
 
     def ready_for_start(self, context) -> bool:
         assert context.brand_id == 101
@@ -64,16 +65,15 @@ class FakeMetaActivation:
     def link_accounts(self, *, context, connection_id, selections) -> MetaLinkResult:
         assert context.brand_id == 101
         assert connection_id == 91
-        assert [(item.platform, item.external_id) for item in selections] == [
-            (PlatformId.FACEBOOK, "10001"),
-            (PlatformId.INSTAGRAM, "20002"),
+        self.link_selections = [
+            (item.platform, item.external_id) for item in selections
         ]
         self.calls.append("link")
         return MetaLinkResult(
             connection_id=91,
             brand_id=101,
-            linked_count=2,
-            state="connected",
+            linked_count=len(selections),
+            state="connected" if selections else "disconnected",
         )
 
 
@@ -208,4 +208,39 @@ async def test_meta_start_callback_and_explicit_account_link(tmp_path) -> None:
         "linked_count": 2,
         "connection_state": "connected",
     }
+    assert activation.link_selections == [
+        (PlatformId.FACEBOOK, "10001"),
+        (PlatformId.INSTAGRAM, "20002"),
+    ]
     assert activation.calls == ["start", "complete", "link"]
+
+
+@pytest.mark.asyncio
+async def test_meta_link_accepts_an_empty_selection_to_unlink_all(tmp_path) -> None:
+    authority = MemoryAuthority()
+    _session(authority)
+    activation = FakeMetaActivation()
+    app = create_app(
+        authority,
+        _reporting(tmp_path),
+        meta_activation=activation,
+    )
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        cookies={COOKIE_NAME: authority.raw_session},
+    ) as browser:
+        response = await browser.post(
+            "/api/integrations/meta/accounts/link",
+            params={"brand_id": "101"},
+            headers={"Origin": "http://test"},
+            json={"connection_id": 91, "accounts": []},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "connection_id": 91,
+        "linked_count": 0,
+        "connection_state": "disconnected",
+    }
+    assert activation.link_selections == []

@@ -1864,7 +1864,6 @@
               "$ref": "#/components/schemas/MetaAccountSelectionPayload"
             },
             "maxItems": 200,
-            "minItems": 1,
             "title": "Accounts",
             "type": "array"
           },
