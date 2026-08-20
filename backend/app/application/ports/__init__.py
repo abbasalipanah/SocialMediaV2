@@ -28,6 +28,7 @@ from .meta_activation import (
     MetaLinkSelection,
     MetaProviderAccount,
     MetaProviderGrant,
+    MetaRefreshConnection,
 )
 from .reporting import ReportingStore
 from .session_store import SessionStore
@@ -86,6 +87,7 @@ __all__ = [
     "MetaLinkSelection",
     "MetaProviderAccount",
     "MetaProviderGrant",
+    "MetaRefreshConnection",
     "PendingCommentSentiment",
     "ReportingStore",
     "SessionStore",

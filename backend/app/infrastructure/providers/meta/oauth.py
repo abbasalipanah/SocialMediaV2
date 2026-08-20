@@ -16,13 +16,12 @@ from app.application.ports import (
 )
 from app.application.ports.platforms import ProviderCredential
 from app.core.config import META_APP_ID, META_REDIRECT_URI, MetaConfig
-from app.domain.platforms import PlatformId
 
+from .account_discovery import MAX_DISCOVERY_PAGES, discover_meta_accounts
 from .rate_guard import MetaRateGuard
-from .transport import MetaTransport
+from .transport import MetaTransport, MetaTransportError
 
 MAX_OAUTH_RESPONSE_BYTES = 1_000_000
-MAX_DISCOVERY_PAGES = 10
 OAUTH_APP_ID_FIELD = "cli" + "ent_id"
 OAUTH_APP_SECRET_FIELD = "cli" + "ent_secret"
 
@@ -144,20 +143,12 @@ class MetaAccountsActivationProvider:
         )
         access_token = _required_text(long, "access_token")
         expires_in = _positive_int(long, "expires_in")
-        graph = MetaTransport(
-            credential=ProviderCredential(access_token),
-            rate_guard=MetaRateGuard(sleeper=time.sleep),
-            wire=self._graph_wire,
-            base_url=self._config.graph_base_url,
-            api_version=self._config.graph_version,
-            timeout_seconds=30,
-            egress_enabled=True,
-        )
+        graph = self._graph(access_token)
         try:
             identity = graph.get("me", {"fields": "id"})
             provider_user_id = _required_identifier(identity, "id")
             granted_scopes = self._granted_scopes(graph)
-            accounts = self._accounts(graph)
+            accounts = discover_meta_accounts(graph)
         finally:
             graph.close()
         return MetaProviderGrant(
@@ -168,8 +159,34 @@ class MetaAccountsActivationProvider:
             accounts=accounts,
         )
 
+    def discover_accounts(
+        self, *, access_token: str
+    ) -> tuple[MetaProviderAccount, ...]:
+        if not access_token:
+            raise MetaActivationError("meta_refresh_authorization_expired")
+        graph = self._graph(access_token)
+        try:
+            return discover_meta_accounts(graph)
+        except MetaTransportError as exc:
+            if exc.status_code in {400, 401, 403}:
+                raise MetaActivationError("meta_refresh_authorization_expired") from exc
+            raise MetaActivationError("meta_refresh_failed") from exc
+        finally:
+            graph.close()
+
     def revoke(self, *, access_token: str) -> None:
         self._oauth_transport.revoke(access_token=access_token)
+
+    def _graph(self, access_token: str) -> MetaTransport:
+        return MetaTransport(
+            credential=ProviderCredential(access_token),
+            rate_guard=MetaRateGuard(sleeper=time.sleep),
+            wire=self._graph_wire,
+            base_url=self._config.graph_base_url,
+            api_version=self._config.graph_version,
+            timeout_seconds=30,
+            egress_enabled=True,
+        )
 
     @staticmethod
     def _granted_scopes(graph: MetaTransport) -> tuple[str, ...]:
@@ -185,43 +202,6 @@ class MetaAccountsActivationProvider:
             if not cursor:
                 return tuple(scopes)
         raise MetaActivationError("meta_permission_pagination_exceeded")
-
-    @staticmethod
-    def _accounts(graph: MetaTransport) -> tuple[MetaProviderAccount, ...]:
-        discovered: dict[tuple[PlatformId, str], MetaProviderAccount] = {}
-        cursor: str | None = None
-        fields = "id,name,access_token,instagram_business_account{id,username,name}"
-        for _ in range(MAX_DISCOVERY_PAGES):
-            page = graph.page("me/accounts", {"fields": fields, "limit": 100}, cursor=cursor)
-            for item in page.items:
-                page_id = _required_identifier(item, "id")
-                page_name = _required_text(item, "name")
-                page_token = _required_text(item, "access_token")
-                facebook = MetaProviderAccount(
-                    platform=PlatformId.FACEBOOK,
-                    external_id=page_id,
-                    display_name=page_name,
-                    access_token=page_token,
-                )
-                discovered[(facebook.platform, facebook.external_id)] = facebook
-                instagram = item.get("instagram_business_account")
-                if isinstance(instagram, Mapping):
-                    instagram_id = _required_identifier(instagram, "id")
-                    instagram_name = str(
-                        instagram.get("username") or instagram.get("name") or instagram_id
-                    ).strip()
-                    profile = MetaProviderAccount(
-                        platform=PlatformId.INSTAGRAM,
-                        external_id=instagram_id,
-                        display_name=instagram_name,
-                        access_token=page_token,
-                    )
-                    discovered[(profile.platform, profile.external_id)] = profile
-            cursor = page.next_cursor
-            if not cursor:
-                return tuple(discovered.values())
-        raise MetaActivationError("meta_account_pagination_exceeded")
-
 
 def _required_text(payload: Mapping[str, object], field: str) -> str:
     value = payload.get(field)

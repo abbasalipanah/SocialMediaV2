@@ -18,6 +18,7 @@ from app.application.ports import (
     MetaDiscovery,
     MetaLinkResult,
     MetaLinkSelection,
+    MetaRefreshConnection,
 )
 from app.core.write_policy import WritePolicy
 from app.domain.platforms import PlatformId
@@ -250,6 +251,162 @@ class ProjectionMetaConnectionStore:
                 for row in rows
             )
 
+    def latest_refresh_connection(self, *, brand_id: int) -> MetaRefreshConnection | None:
+        if brand_id < 1:
+            raise MetaActivationError("meta_activation_brand_invalid")
+        with self.engine.connect() as connection:
+            row = (
+                connection.execute(
+                    text(
+                        """SELECT pc.id, ps.payload_json->>'user_credential_reference'
+                                      AS user_credential_reference
+                           FROM platform_connections AS pc
+                           JOIN social_projection_state AS ps
+                             ON ps.projection_key='v2:meta:connection:' || pc.id::text
+                           WHERE pc.brand_id=:brand_id AND pc.platform='facebook'
+                             AND pc.status IN ('pending_verification', 'connected', 'disconnected')
+                             AND length(ps.payload_json->>'user_credential_reference') > 0
+                           ORDER BY pc.projected_at DESC NULLS LAST, pc.id DESC
+                           LIMIT 1"""
+                    ),
+                    {"brand_id": brand_id},
+                )
+                .mappings()
+                .one_or_none()
+            )
+        if row is None:
+            return None
+        return MetaRefreshConnection(
+            connection_id=int(row["id"]),
+            brand_id=brand_id,
+            user_credential_reference=str(row["user_credential_reference"]),
+        )
+
+    def refresh_discoveries(
+        self,
+        *,
+        brand_id: int,
+        connection_id: int,
+        credentials: tuple[MetaCredentialBinding, ...],
+    ) -> MetaConnectionResult:
+        self._write_policy.assert_allows_mutation("meta_activation_refresh_discoveries")
+        if (
+            brand_id < 1
+            or connection_id < 1
+            or not credentials
+            or len({(item.platform, item.external_id) for item in credentials})
+            != len(credentials)
+        ):
+            raise MetaActivationError("meta_refresh_accounts_invalid")
+        with self.engine.begin() as connection:
+            connection_state = connection.execute(
+                text(
+                    """SELECT status FROM platform_connections
+                       WHERE id=:connection_id AND brand_id=:brand_id
+                         AND platform='facebook'
+                         AND status IN ('pending_verification', 'connected', 'disconnected')
+                       FOR UPDATE"""
+                ),
+                {"connection_id": connection_id, "brand_id": brand_id},
+            ).scalar_one_or_none()
+            if connection_state is None:
+                raise MetaActivationError("meta_refresh_connection_unavailable")
+            connection.execute(
+                text(
+                    """UPDATE brand_social_account_discoveries
+                       SET status='unavailable', updated_at=now()
+                       WHERE brand_id=:brand_id AND connection_id=:connection_id
+                         AND status IN ('available', 'discovered')"""
+                ),
+                {"brand_id": brand_id, "connection_id": connection_id},
+            )
+            account_payload: list[dict[str, str]] = []
+            for item in credentials:
+                meta_account_id = _upsert_meta_account(connection, item)
+                linked = bool(
+                    connection.execute(
+                        text(
+                            """SELECT 1 FROM linked_social_accounts
+                               WHERE brand_id=:brand_id AND platform=:platform
+                                 AND external_id=:external_id
+                                 AND status IN ('active', 'connected')
+                               LIMIT 1"""
+                        ),
+                        {
+                            "brand_id": brand_id,
+                            "platform": item.platform.value,
+                            "external_id": item.external_id,
+                        },
+                    ).scalar_one_or_none()
+                )
+                discovery_status = "linked" if linked else "available"
+                connection.execute(
+                    text(
+                        """INSERT INTO brand_social_account_discoveries
+                           (brand_id, connection_id, meta_account_id, platform,
+                            external_id, display_name, status, last_discovered_at,
+                            created_at, updated_at)
+                           VALUES (:brand_id, :connection_id, :meta_account_id, :platform,
+                                   :external_id, :display_name, :status, now(), now(), now())
+                           ON CONFLICT (brand_id, platform, external_id) DO UPDATE
+                           SET connection_id=EXCLUDED.connection_id,
+                               meta_account_id=EXCLUDED.meta_account_id,
+                               display_name=EXCLUDED.display_name,
+                               status=EXCLUDED.status,
+                               last_discovered_at=now(), updated_at=now()"""
+                    ),
+                    {
+                        "brand_id": brand_id,
+                        "connection_id": connection_id,
+                        "meta_account_id": meta_account_id,
+                        "platform": item.platform.value,
+                        "external_id": item.external_id,
+                        "display_name": item.display_name,
+                        "status": discovery_status,
+                    },
+                )
+                account_payload.append(
+                    {
+                        "platform": item.platform.value,
+                        "external_id": item.external_id,
+                        "credential_reference": item.credential_reference,
+                    }
+                )
+            connection.execute(
+                text(
+                    """UPDATE social_projection_state
+                       SET payload_json=payload_json || jsonb_build_object(
+                               'accounts', CAST(:accounts AS jsonb),
+                               'last_refreshed_at', to_jsonb(now())
+                           ),
+                           projected_at=now(), updated_at=now()
+                       WHERE projection_key=:key"""
+                ),
+                {
+                    "key": self._connection_key(connection_id),
+                    "accounts": json.dumps(account_payload, separators=(",", ":")),
+                },
+            )
+            connection.execute(
+                text(
+                    """UPDATE platform_connections
+                       SET projected_at=now(), updated_at=now()
+                       WHERE id=:connection_id"""
+                ),
+                {"connection_id": connection_id},
+            )
+        return MetaConnectionResult(
+            connection_id=connection_id,
+            brand_id=brand_id,
+            state=str(connection_state),
+            facebook_count=sum(
+                item.platform is PlatformId.FACEBOOK for item in credentials
+            ),
+            instagram_count=sum(
+                item.platform is PlatformId.INSTAGRAM for item in credentials
+            ),
+        )
+
     def link_accounts(
         self,
         *,
@@ -302,8 +459,11 @@ class ProjectionMetaConnectionStore:
                 (str(item["platform"]), str(item["external_id"])): item
                 for item in existing_links
             }
-            for existing in existing_links:
-                key = (str(existing["platform"]), str(existing["external_id"]))
+            for existing_link in existing_links:
+                key = (
+                    str(existing_link["platform"]),
+                    str(existing_link["external_id"]),
+                )
                 if key in selected_keys:
                     continue
                 connection.execute(
@@ -319,10 +479,10 @@ class ProjectionMetaConnectionStore:
                         "external_id": key[1],
                     },
                 )
-                if existing["asset_id"] is not None:
+                if existing_link["asset_id"] is not None:
                     connection.execute(
                         text("UPDATE assets SET status='inactive', updated_at=now() WHERE id=:id"),
-                        {"id": int(existing["asset_id"])},
+                        {"id": int(existing_link["asset_id"])},
                     )
                 connection.execute(
                     text(

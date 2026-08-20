@@ -191,6 +191,14 @@ class MetaLinkResponse:
 
 
 @dataclass(frozen=True)
+class MetaRefreshResponse:
+    connection_id: int
+    facebook_count: int
+    instagram_count: int
+    discovered_count: int
+
+
+@dataclass(frozen=True)
 class InsightsResponse:
     meta: BrandScope
     items: tuple[ReportingInsight, ...]
@@ -289,6 +297,7 @@ __all__ = [
     "MetaDiscoveryItem",
     "MetaLinkedAccountItem",
     "MetaLinkResponse",
+    "MetaRefreshResponse",
     "MetaSelfServiceReadinessResponse",
     "MetaSelfServiceStartResponse",
     "OperationsReadinessResponse",

@@ -643,6 +643,13 @@ export const metaLinkResponseSchema = z.object({
   connection_state: z.enum(["connected", "disconnected"]),
 });
 
+export const metaRefreshResponseSchema = z.object({
+  connection_id: z.number().int().positive(),
+  facebook_count: z.number().int().nonnegative(),
+  instagram_count: z.number().int().nonnegative(),
+  discovered_count: z.number().int().nonnegative(),
+});
+
 export const reportJobSchema = z.object({
   job_id: z.string().min(1),
   state: z.enum(["queued", "running", "ready", "failed"]),

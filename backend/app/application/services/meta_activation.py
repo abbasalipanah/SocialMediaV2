@@ -215,6 +215,67 @@ class MetaActivationCoordinator:
         self._assert_authorized(context)
         return self._connection_store.list_discoveries(brand_id=context.brand_id)
 
+    def refresh_accounts(self, context: ActivationContext) -> MetaConnectionResult:
+        """Refresh the saved Meta user's Pages without starting OAuth again."""
+
+        self._assert_enabled("meta_activation_refresh")
+        self._assert_authorized(context)
+        try:
+            connection = self._connection_store.latest_refresh_connection(
+                brand_id=context.brand_id
+            )
+            if connection is None:
+                raise MetaActivationError("meta_refresh_connection_unavailable")
+            user_reference = CredentialRef(
+                platform=PlatformId.FACEBOOK,
+                connection_id=connection.user_credential_reference,
+                token_kind=TokenKind.ACCESS,
+            )
+            user_token = self._credential_store.get(user_reference)
+            if user_token is None:
+                raise MetaActivationError("meta_refresh_authorization_expired")
+            accounts = self._provider.discover_accounts(access_token=user_token.value)
+            if not accounts:
+                raise MetaActivationError("meta_activation_accounts_unavailable")
+            bindings: list[MetaCredentialBinding] = []
+            for account in accounts:
+                reference_value = self._credential_reference(
+                    brand_id=context.brand_id,
+                    platform=account.platform,
+                    external_id=account.external_id,
+                )
+                self._credential_store.put(
+                    CredentialRef(
+                        platform=account.platform,
+                        connection_id=reference_value,
+                        token_kind=TokenKind.ACCESS,
+                    ),
+                    SecretToken(
+                        value=account.access_token,
+                        expires_at=user_token.expires_at,
+                    ),
+                )
+                bindings.append(
+                    MetaCredentialBinding(
+                        platform=account.platform,
+                        external_id=account.external_id,
+                        display_name=account.display_name,
+                        credential_reference=reference_value,
+                    )
+                )
+            result = self._connection_store.refresh_discoveries(
+                brand_id=context.brand_id,
+                connection_id=connection.connection_id,
+                credentials=tuple(bindings),
+            )
+        except MetaActivationError:
+            raise
+        except Exception as exc:
+            raise MetaActivationError("meta_refresh_failed") from exc
+        if result.brand_id != context.brand_id:
+            raise MetaActivationError("meta_refresh_failed")
+        return result
+
     def link_accounts(
         self,
         *,

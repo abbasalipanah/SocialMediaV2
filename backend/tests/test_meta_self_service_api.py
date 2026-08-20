@@ -62,6 +62,17 @@ class FakeMetaActivation:
             ),
         )
 
+    def refresh_accounts(self, context) -> MetaConnectionResult:
+        assert context.brand_id == 101
+        self.calls.append("refresh")
+        return MetaConnectionResult(
+            connection_id=91,
+            brand_id=101,
+            state="connected",
+            facebook_count=40,
+            instagram_count=59,
+        )
+
     def link_accounts(self, *, context, connection_id, selections) -> MetaLinkResult:
         assert context.brand_id == 101
         assert connection_id == 91
@@ -185,6 +196,11 @@ async def test_meta_start_callback_and_explicit_account_link(tmp_path) -> None:
             "/api/social/meta/oauth/callback",
             params={"code": "authorization-value", "state": "bound"},
         )
+        refreshed = await browser.post(
+            "/api/integrations/meta/accounts/refresh",
+            params={"brand_id": "101"},
+            headers={"Origin": "http://test"},
+        )
         linked = await browser.post(
             "/api/integrations/meta/accounts/link",
             params={"brand_id": "101"},
@@ -203,6 +219,13 @@ async def test_meta_start_callback_and_explicit_account_link(tmp_path) -> None:
     assert callback.status_code == 200
     assert '"type":"social-media:meta-oauth"' in callback.text
     assert '"facebookCount":1' in callback.text
+    assert refreshed.status_code == 200
+    assert refreshed.json() == {
+        "connection_id": 91,
+        "facebook_count": 40,
+        "instagram_count": 59,
+        "discovered_count": 99,
+    }
     assert linked.json() == {
         "connection_id": 91,
         "linked_count": 2,
@@ -212,7 +235,7 @@ async def test_meta_start_callback_and_explicit_account_link(tmp_path) -> None:
         (PlatformId.FACEBOOK, "10001"),
         (PlatformId.INSTAGRAM, "20002"),
     ]
-    assert activation.calls == ["start", "complete", "link"]
+    assert activation.calls == ["start", "complete", "refresh", "link"]
 
 
 @pytest.mark.asyncio

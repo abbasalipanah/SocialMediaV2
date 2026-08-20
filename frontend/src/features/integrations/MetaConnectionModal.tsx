@@ -6,6 +6,7 @@ import {
   Instagram,
   Link2,
   RefreshCw,
+  Search,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -17,6 +18,7 @@ import {
   apiQuery,
   apiUrl,
   metaLinkResponseSchema,
+  metaRefreshResponseSchema,
   metaSelfServiceReadinessSchema,
   metaSelfServiceStartSchema,
   queryString,
@@ -62,10 +64,13 @@ export function MetaConnectionModal({
   const onConnectedRef = useRef(onConnected);
   const queryClient = useQueryClient();
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
   const [activeConnectionId, setActiveConnectionId] = useState<number | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [selectionInitialized, setSelectionInitialized] = useState(false);
+  const [accountSearch, setAccountSearch] = useState("");
+  const [requiresAuthorization, setRequiresAuthorization] = useState(false);
   const [status, setStatus] = useState<{ tone: "success" | "error"; message: string } | null>(null);
   const readiness = useQuery({
     queryKey: ["integrations", "meta", "self-service", brandId],
@@ -90,6 +95,20 @@ export function MetaConnectionModal({
     );
     return connectionId === null ? [] : rows.filter((item) => item.connection_id === connectionId);
   }, [activeConnectionId, readiness.data?.discoveries]);
+  const filteredDiscoveries = useMemo(() => {
+    const needle = accountSearch.trim().toLocaleLowerCase();
+    if (!needle) return availableDiscoveries;
+    return availableDiscoveries.filter((item) => (
+      item.display_name.toLocaleLowerCase().includes(needle)
+      || item.external_id.includes(needle)
+      || item.platform.includes(needle)
+    ));
+  }, [accountSearch, availableDiscoveries]);
+  const hasSavedMetaAccess = Boolean(
+    readiness.data
+    && !requiresAuthorization
+    && (readiness.data.linked_accounts.length > 0 || readiness.data.discoveries.length > 0)
+  );
 
   useEffect(() => {
     if (selectionInitialized || availableDiscoveries.length === 0) return;
@@ -123,6 +142,7 @@ export function MetaConnectionModal({
         return;
       }
       setActiveConnectionId(payload.connectionId);
+      setRequiresAuthorization(false);
       setSelected(new Set());
       setSelectionInitialized(false);
       setStatus({
@@ -180,6 +200,42 @@ export function MetaConnectionModal({
         tone: "error",
         message: error instanceof Error ? error.message.replaceAll("_", " ") : "Meta connection could not be started.",
       });
+    }
+  };
+
+  const refreshAccounts = async () => {
+    setIsRefreshing(true);
+    setStatus(null);
+    try {
+      const refreshed = await apiMutation(
+        `/api/integrations/meta/accounts/refresh${queryString({ brand_id: brandId })}`,
+        metaRefreshResponseSchema,
+        { method: "POST" },
+      );
+      setActiveConnectionId(refreshed.connection_id);
+      setRequiresAuthorization(false);
+      setSelectionInitialized(false);
+      setAccountSearch("");
+      setStatus({
+        tone: "success",
+        message: `${refreshed.discovered_count} account${refreshed.discovered_count === 1 ? "" : "s"} loaded from the saved Meta access (${refreshed.facebook_count} Facebook · ${refreshed.instagram_count} Instagram). Select any accounts for ${brandName}.`,
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["integrations", "meta", "self-service", brandId],
+      });
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "";
+      const savedAccessUnavailable = reason.includes("meta_refresh_authorization_expired")
+        || reason.includes("meta_refresh_connection_unavailable");
+      if (savedAccessUnavailable) setRequiresAuthorization(true);
+      setStatus({
+        tone: "error",
+        message: savedAccessUnavailable
+          ? "The saved Meta access is no longer available. Reauthorize once to restore the account list."
+          : reason.replaceAll("_", " ") || "Accounts could not be refreshed from Meta.",
+      });
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -247,6 +303,24 @@ export function MetaConnectionModal({
     setSelectionInitialized(true);
   };
 
+  const selectAllShown = () => {
+    setSelected((current) => {
+      const next = new Set(current);
+      filteredDiscoveries.forEach((item) => next.add(discoveryKey(item)));
+      return next;
+    });
+    setSelectionInitialized(true);
+  };
+
+  const clearShown = () => {
+    setSelected((current) => {
+      const next = new Set(current);
+      filteredDiscoveries.forEach((item) => next.delete(discoveryKey(item)));
+      return next;
+    });
+    setSelectionInitialized(true);
+  };
+
   const unavailableReason = readiness.data && !readiness.data.oauth_start_available
     ? READINESS_COPY[readiness.data.reason] ?? "Meta self-service is unavailable in this runtime."
     : null;
@@ -272,14 +346,14 @@ export function MetaConnectionModal({
         <div className="tiktok-connect-body">
           <article>
             <span className="tiktok-connect-step">1</span>
-            <div><h3>Authorize with Facebook</h3><p>Meta returns the Pages you manage and their linked Instagram Business accounts. Provider tokens remain encrypted on the backend.</p></div>
+            <div><h3>{hasSavedMetaAccess ? "Load accounts from saved Meta access" : "Connect Meta once"}</h3><p>{hasSavedMetaAccess ? "Refresh the Pages and linked Instagram Business accounts already available to the connected Meta user. No Facebook login is opened." : "Authorize once so Meta can return the Pages you manage and their linked Instagram Business accounts. Provider tokens remain encrypted on the backend."}</p></div>
           </article>
           <article>
             <span className="tiktok-connect-step">2</span>
             <div><h3>Select accounts for this Brand</h3><p>Choose {focusLabel} and any other Meta accounts this Brand should use. Saving replaces the current selection for {brandName}.</p></div>
           </article>
 
-          {readiness.isPending ? <div className="tiktok-connect-readiness"><RefreshCw className="spin" size={16} />Checking Meta connection readiness…</div> : readiness.isError || !readiness.data ? <div className="tiktok-connect-readiness error"><AlertTriangle size={16} />Self-service access could not be verified.</div> : <div className={`tiktok-connect-readiness ${readiness.data.oauth_start_available ? "ready" : "blocked"}`}><ShieldCheck size={16} /><span><strong>{readiness.data.oauth_start_available ? "Ready to authorize" : "Authorization not active"}</strong>{unavailableReason && <small>{unavailableReason}</small>}<small>{readiness.data.facebook_linked_count} Facebook · {readiness.data.instagram_linked_count} Instagram currently linked.</small></span></div>}
+          {readiness.isPending ? <div className="tiktok-connect-readiness"><RefreshCw className="spin" size={16} />Checking Meta connection readiness…</div> : readiness.isError || !readiness.data ? <div className="tiktok-connect-readiness error"><AlertTriangle size={16} />Self-service access could not be verified.</div> : <div className={`tiktok-connect-readiness ${readiness.data.oauth_start_available ? "ready" : "blocked"}`}><ShieldCheck size={16} /><span><strong>{hasSavedMetaAccess ? "Saved Meta access is ready" : readiness.data.oauth_start_available ? "Ready to connect" : "Connection not active"}</strong>{unavailableReason && <small>{unavailableReason}</small>}<small>{readiness.data.facebook_linked_count} Facebook · {readiness.data.instagram_linked_count} Instagram currently linked.</small></span></div>}
 
           {readiness.data && readiness.data.linked_accounts.length > 0 && (
             <section className="meta-current-links" aria-label={`Accounts linked to ${brandName}`}>
@@ -300,8 +374,16 @@ export function MetaConnectionModal({
 
           {availableDiscoveries.length > 0 && (
             <fieldset className="meta-discovery-list">
-              <legend>Accounts available in the Meta authorization</legend>
-              {availableDiscoveries.map((item) => (
+              <legend>Accounts available from Meta ({availableDiscoveries.length})</legend>
+              {availableDiscoveries.length > 8 && (
+                <div className="meta-account-tools">
+                  <label><Search size={15} /><input aria-label="Search Meta accounts" onChange={(event) => setAccountSearch(event.target.value)} placeholder="Search by name or ID" type="search" value={accountSearch} /></label>
+                  <span>{filteredDiscoveries.length} shown</span>
+                  <button disabled={filteredDiscoveries.length === 0} onClick={selectAllShown} type="button">Select shown</button>
+                  <button disabled={filteredDiscoveries.length === 0} onClick={clearShown} type="button">Clear shown</button>
+                </div>
+              )}
+              {filteredDiscoveries.map((item) => (
                 <label key={discoveryKey(item)}>
                   <input checked={selected.has(discoveryKey(item))} onChange={() => toggle(item)} type="checkbox" />
                   <span className={`integration-platform-icon platform-${item.platform}`}>{item.platform === "facebook" ? <Facebook size={17} /> : <Instagram size={17} />}</span>
@@ -309,19 +391,24 @@ export function MetaConnectionModal({
                   <em className={linkedAccountKeys.has(discoveryKey(item)) ? "linked" : "available"}>{linkedAccountKeys.has(discoveryKey(item)) ? "Currently linked" : "Available"}</em>
                 </label>
               ))}
+              {filteredDiscoveries.length === 0 && <p className="meta-account-empty">No Meta account matches this search.</p>}
             </fieldset>
           )}
 
           {readiness.data && (
-            <p className="meta-refresh-note">Need another account? Add or refresh from Meta to load every Facebook Page and linked Instagram Business account managed by the authorizing Meta user.</p>
+            <p className="meta-refresh-note">Refresh uses the encrypted Meta access already stored for this Brand. Facebook authorization opens only when connecting for the first time, switching Meta users, or restoring expired access.</p>
           )}
         </div>
 
         <footer>
-          <p>Opening this dialog does not contact Meta. Authorization starts only after you continue to Meta.</p>
+          <p>Loading accounts reads Meta with the saved encrypted access; it does not open Facebook authorization.</p>
           <button className="secondary-button" onClick={dismiss} type="button">Cancel</button>
-          {availableDiscoveries.length > 0 && <button className={`secondary-button ${selected.size === 0 ? "meta-unlink-all-button" : ""}`} disabled={isLinking || !readiness.data?.oauth_start_available} onClick={() => void linkSelected()} type="button">{isLinking ? <RefreshCw className="spin" size={15} /> : <Check size={15} />}{isLinking ? "Saving…" : selected.size === 0 ? "Save and unlink all" : `Save changes (${selected.size} linked)`}</button>}
-          <button className="primary-button compact-button" disabled={!readiness.data?.oauth_start_available || isConnecting} onClick={() => void connect()} type="button">{isConnecting ? <RefreshCw className="spin" size={15} /> : <Link2 size={15} />}{isConnecting ? "Connecting…" : readiness.data?.linked_accounts.length ? "Add / refresh accounts" : "Connect Meta"}</button>
+          {availableDiscoveries.length > 0 && <button className={`secondary-button ${selected.size === 0 ? "meta-unlink-all-button" : ""}`} disabled={isLinking || isRefreshing || !readiness.data?.oauth_start_available} onClick={() => void linkSelected()} type="button">{isLinking ? <RefreshCw className="spin" size={15} /> : <Check size={15} />}{isLinking ? "Saving…" : selected.size === 0 ? "Save and unlink all" : `Save changes (${selected.size} linked)`}</button>}
+          {hasSavedMetaAccess ? (
+            <button className="primary-button compact-button" disabled={!readiness.data?.oauth_start_available || isRefreshing || isLinking} onClick={() => void refreshAccounts()} type="button">{isRefreshing ? <RefreshCw className="spin" size={15} /> : <RefreshCw size={15} />}{isRefreshing ? "Loading…" : "Load available accounts"}</button>
+          ) : (
+            <button className="primary-button compact-button" disabled={!readiness.data?.oauth_start_available || isConnecting} onClick={() => void connect()} type="button">{isConnecting ? <RefreshCw className="spin" size={15} /> : <Link2 size={15} />}{isConnecting ? "Connecting…" : "Connect Meta"}</button>
+          )}
         </footer>
       </section>
     </div>,

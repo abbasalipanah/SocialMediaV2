@@ -80,6 +80,21 @@ class MetaConnectionResult:
 
 
 @dataclass(frozen=True)
+class MetaRefreshConnection:
+    connection_id: int
+    brand_id: int
+    user_credential_reference: str
+
+    def __post_init__(self) -> None:
+        if (
+            self.connection_id < 1
+            or self.brand_id < 1
+            or not re.fullmatch(r"[A-Za-z0-9._-]{1,128}", self.user_credential_reference)
+        ):
+            raise MetaActivationError("meta_refresh_connection_invalid")
+
+
+@dataclass(frozen=True)
 class MetaLinkSelection:
     platform: PlatformId
     external_id: str
@@ -110,6 +125,10 @@ class MetaActivationProvider(Protocol):
 
     def exchange_and_discover(self, *, authorization_code: str) -> MetaProviderGrant: ...
 
+    def discover_accounts(
+        self, *, access_token: str
+    ) -> tuple[MetaProviderAccount, ...]: ...
+
     def revoke(self, *, access_token: str) -> None: ...
 
 
@@ -125,6 +144,16 @@ class MetaConnectionStore(Protocol):
     ) -> MetaConnectionResult: ...
 
     def list_discoveries(self, *, brand_id: int) -> tuple[MetaDiscovery, ...]: ...
+
+    def latest_refresh_connection(self, *, brand_id: int) -> MetaRefreshConnection | None: ...
+
+    def refresh_discoveries(
+        self,
+        *,
+        brand_id: int,
+        connection_id: int,
+        credentials: tuple[MetaCredentialBinding, ...],
+    ) -> MetaConnectionResult: ...
 
     def link_accounts(
         self,
@@ -146,4 +175,5 @@ __all__ = [
     "MetaLinkSelection",
     "MetaProviderAccount",
     "MetaProviderGrant",
+    "MetaRefreshConnection",
 ]

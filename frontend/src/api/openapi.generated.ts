@@ -191,6 +191,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/integrations/meta/accounts/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Meta Refresh Accounts */
+        post: operations["meta_refresh_accounts_api_integrations_meta_accounts_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/integrations/meta/oauth/start": {
         parameters: {
             query?: never;
@@ -1254,6 +1271,17 @@ export interface components {
             external_id: string;
             platform: components["schemas"]["PlatformId"];
         };
+        /** MetaRefreshResponse */
+        MetaRefreshResponse: {
+            /** Connection Id */
+            connection_id: number;
+            /** Discovered Count */
+            discovered_count: number;
+            /** Facebook Count */
+            facebook_count: number;
+            /** Instagram Count */
+            instagram_count: number;
+        };
         /** MetaSelfServiceReadinessResponse */
         MetaSelfServiceReadinessResponse: {
             /** Brand Id */
@@ -2082,6 +2110,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MetaLinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    meta_refresh_accounts_api_integrations_meta_accounts_refresh_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetaRefreshResponse"];
                 };
             };
             /** @description Validation Error */

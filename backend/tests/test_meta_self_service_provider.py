@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 import httpx
 import pytest
 
+from app.application.ports import MetaActivationError
 from app.application.ports.checkpoints import CheckpointKey, ProviderCheckpoint
 from app.core.config import (
     META_APP_ID,
@@ -172,6 +173,7 @@ def test_meta_exchange_discovers_facebook_and_instagram_without_token_echo() -> 
     )
 
     grant = provider.exchange_and_discover(authorization_code="authorization-value")
+    refreshed_accounts = provider.discover_accounts(access_token="saved-user-value")
 
     assert grant.provider_user_id == "30003"
     assert grant.granted_scopes == META_REQUIRED_SCOPES
@@ -182,7 +184,40 @@ def test_meta_exchange_discovers_facebook_and_instagram_without_token_echo() -> 
     assert "long-user-value" not in repr(grant)
     assert "page-access-value" not in repr(grant)
     assert len(token_requests) == 2
+    assert [
+        (item.platform, item.external_id, item.display_name)
+        for item in refreshed_accounts
+    ] == [
+        (PlatformId.FACEBOOK, "10001", "Coastal Page"),
+        (PlatformId.INSTAGRAM, "20002", "coastal.hotel"),
+    ]
     assert all(request.url.host == "graph.facebook.com" for request in graph_requests)
     assert all(
-        request.headers["authorization"] == "Bearer long-user-value" for request in graph_requests
+        request.headers["authorization"] in {"Bearer long-user-value", "Bearer saved-user-value"}
+        for request in graph_requests
     )
+    assert graph_requests[-1].headers["authorization"] == "Bearer saved-user-value"
+
+
+def test_saved_meta_access_rejection_requests_one_reauthorization() -> None:
+    def rejected(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            400,
+            json={"error": {"code": 190, "type": "OAuthException"}},
+            request=request,
+        )
+
+    provider = MetaAccountsActivationProvider(
+        config=_config(),
+        oauth_transport=MetaOAuthTransport(
+            token_url=META_TOKEN_URL,
+            graph_base_url=META_GRAPH_BASE_URL,
+            graph_version=META_GRAPH_VERSION,
+            timeout_seconds=5,
+            sender=httpx.Client(transport=httpx.MockTransport(rejected)).request,
+        ),
+        graph_wire=httpx.MockTransport(rejected),
+    )
+
+    with pytest.raises(MetaActivationError, match="meta_refresh_authorization_expired"):
+        provider.discover_accounts(access_token="expired-user-value")

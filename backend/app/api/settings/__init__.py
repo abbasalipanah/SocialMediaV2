@@ -19,6 +19,7 @@ from app.api.contracts import (
     MetaDiscoveryItem,
     MetaLinkedAccountItem,
     MetaLinkResponse,
+    MetaRefreshResponse,
     MetaSelfServiceReadinessResponse,
     MetaSelfServiceStartResponse,
     SettingsBrandItem,
@@ -578,6 +579,34 @@ def create_settings_router(
         )
 
     @router.post(
+        "/api/integrations/meta/accounts/refresh",
+        response_model=MetaRefreshResponse,
+    )
+    @mark_boundary(Boundary.COMMAND)
+    async def meta_refresh_accounts(
+        request: Request,
+        brand_id: str = Query(min_length=1),
+        session: str | None = Cookie(default=None, alias=COOKIE_NAME),
+    ) -> MetaRefreshResponse:
+        _same_origin(request)
+        if meta_activation is None:
+            raise HTTPException(503, "meta_self_service_unavailable")
+        _, context = _meta_context(
+            raw_session=session,
+            requested_brand_id=brand_id,
+        )
+        try:
+            result = meta_activation.refresh_accounts(context)
+        except MetaActivationError as exc:
+            _raise_meta_activation_error(exc)
+        return MetaRefreshResponse(
+            connection_id=result.connection_id,
+            facebook_count=result.facebook_count,
+            instagram_count=result.instagram_count,
+            discovered_count=result.facebook_count + result.instagram_count,
+        )
+
+    @router.post(
         "/api/integrations/meta/accounts/link",
         response_model=MetaLinkResponse,
     )
@@ -948,7 +977,12 @@ def _raise_meta_activation_error(exc: MetaActivationError) -> None:
         raise HTTPException(403, reason) from exc
     if reason in {"meta_callback_rejected", "meta_link_selection_invalid"}:
         raise HTTPException(400, reason) from exc
-    if reason in {"meta_scope_denied", "meta_accounts_unavailable"}:
+    if reason in {
+        "meta_scope_denied",
+        "meta_accounts_unavailable",
+        "meta_refresh_authorization_expired",
+        "meta_refresh_connection_unavailable",
+    }:
         raise HTTPException(409, reason) from exc
     raise HTTPException(503, reason) from exc
 
@@ -965,6 +999,13 @@ def _meta_error_code(exc: MetaActivationError) -> str:
         return "meta_scope_denied"
     if reason == "meta_activation_accounts_unavailable":
         return "meta_accounts_unavailable"
+    if reason in {
+        "meta_refresh_authorization_expired",
+        "meta_refresh_connection_unavailable",
+    }:
+        return reason
+    if reason == "meta_refresh_failed":
+        return "meta_refresh_failed"
     if reason in {"meta_link_selection_invalid", "meta_discovery_selection_invalid"}:
         return "meta_link_selection_invalid"
     return "meta_connection_failed"
