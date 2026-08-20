@@ -77,8 +77,8 @@ META_REQUIRED_SCOPES = (
 AI_SUMMARY_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 AI_SUMMARY_MODELS = (
     "google/gemini-2.5-flash",
-    "google/gemini-2.0-flash-lite-001",
-    "google/gemini-2.0-flash-001",
+    "google/gemini-2.5-flash-lite",
+    "google/gemini-3-flash-preview",
 )
 
 LOCAL_DB_HOSTS = {"127.0.0.1", "localhost", "::1", "postgres", "db"}
