@@ -29,6 +29,7 @@ from app.application.queries import (
     build_overview_dashboard,
     build_platform_dashboard,
 )
+from app.application.queries.dashboard_aggregation import best_time_to_engage_breakdown
 from app.core.security import sha256_text
 from app.domain.metrics import MetricId, bootstrap_metric_catalog
 from app.domain.platforms import PlatformId
@@ -724,6 +725,96 @@ def test_instagram_structured_stories_preserve_content_level_metrics(
     assert dashboard.stories.items[0].data_status is DataStatus.AVAILABLE
 
 
+def test_instagram_story_trend_keeps_known_days_when_one_story_is_unavailable(
+    phase6_fixture,
+) -> None:
+    _, reporting, _ = phase6_fixture
+    known = ReportingContent(
+        21,
+        "101",
+        PlatformId.INSTAGRAM,
+        "ig-story-known",
+        "story",
+        "https://example.test/ig-story-known",
+        "Known story",
+        "",
+        datetime(2026, 7, 1, 11, tzinfo=UTC),
+        3,
+        2,
+        1,
+        views_count=120,
+        reach_count=90,
+    )
+    unavailable = replace(
+        known,
+        external_content_id="ig-story-unavailable",
+        permalink="https://example.test/ig-story-unavailable",
+        published_at=datetime(2026, 7, 2, 11, tzinfo=UTC),
+        views_count=None,
+        reach_count=None,
+    )
+    reporting.content += (known, unavailable)
+    dashboard = build_platform_dashboard(
+        store=reporting,
+        catalog=bootstrap_metric_catalog(),
+        platform=PlatformId.INSTAGRAM,
+        query=DashboardQuery(
+            requested_brand_id="101",
+            resolved_brand_ids=("101",),
+            rollup=False,
+            date_range=ReportingRange(date(2026, 7, 1), date(2026, 7, 2), "custom"),
+            content_type="story",
+        ),
+        now=NOW,
+    )
+
+    assert dashboard.stories is not None
+    assert dashboard.stories.trend.views == (120.0, None)
+    assert dashboard.stories.trend.reach == (90.0, None)
+    assert dashboard.stories.trend.data_status is DataStatus.PARTIAL
+
+
+def test_best_time_to_engage_uses_average_content_engagement_in_istanbul_time() -> None:
+    first = ReportingContent(
+        11,
+        "101",
+        PlatformId.FACEBOOK,
+        "post-1",
+        "post",
+        "https://example.test/post-1",
+        "First",
+        "",
+        # Monday 10:00 in Europe/Istanbul.
+        datetime(2026, 7, 6, 7, 15, tzinfo=UTC),
+        4,
+        3,
+        3,
+    )
+    second = replace(
+        first,
+        external_content_id="post-2",
+        permalink="https://example.test/post-2",
+        published_at=datetime(2026, 7, 6, 8, 30, tzinfo=UTC),
+        interactions_count=30,
+    )
+    story = replace(
+        first,
+        external_content_id="story-1",
+        content_type="story",
+        published_at=datetime(2026, 7, 6, 7, 45, tzinfo=UTC),
+        interactions_count=1000,
+    )
+
+    result = best_time_to_engage_breakdown(
+        PlatformId.FACEBOOK,
+        (first, second, story),
+    )
+
+    assert result is not None
+    assert result.dimension == "best_time_to_engage"
+    assert [(item.key, item.value) for item in result.items] == [("Mon|10", 20.0)]
+
+
 @pytest.mark.asyncio
 async def test_instagram_content_tab_excludes_stories_from_every_content_projection(
     phase6_fixture,
@@ -941,7 +1032,7 @@ async def test_phase6_routes_are_scoped_read_only_and_honest(phase6_fixture) -> 
 
 
 @pytest.mark.asyncio
-async def test_ai_summary_generation_requires_exact_viewer_operator_authority(
+async def test_ai_summary_generation_requires_viewer_operator_and_scoped_brand_authority(
     phase6_fixture,
 ) -> None:
     authority, reporting, media_root = phase6_fixture
@@ -989,9 +1080,11 @@ async def test_ai_summary_generation_requires_exact_viewer_operator_authority(
         assert generated.json()["summary"] == "Generated summary"
         assert runtime.generated == [("101", "user-1", "last_30_days")]
 
-        assert (
-            await client.get("/api/insights/limit", params={"brand_id": "102"})
-        ).status_code == 403
+        scoped_brand = await client.get(
+            "/api/insights/limit", params={"brand_id": "102"}
+        )
+        assert scoped_brand.status_code == 200
+        assert scoped_brand.json()["can_generate"] is True
         session["app_role"] = "admin"
         assert (
             await client.get("/api/insights/limit", params={"brand_id": "101"})

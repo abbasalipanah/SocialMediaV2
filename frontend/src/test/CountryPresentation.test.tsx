@@ -60,4 +60,15 @@ describe("hourly activity", () => {
     render(<PulseHeatmapCard breakdowns={filled as never} />);
     expect(screen.queryByText("No heatmap data in selected range.")).not.toBeInTheDocument();
   });
+
+  it("combines both hours that share a two-hour heatmap slot", () => {
+    const filled = [
+      { dimension: "best_time_to_engage", metric_id: "interactions", items: [
+        { key: "Fri|10", value: 4, percentage: null },
+        { key: "Fri|11", value: 6, percentage: null },
+      ] },
+    ];
+    const { container } = render(<PulseHeatmapCard breakdowns={filled as never} />);
+    expect(container.querySelector('[title="Fri 10:00 · 10"]')).not.toBeNull();
+  });
 });

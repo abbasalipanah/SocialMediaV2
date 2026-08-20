@@ -288,7 +288,16 @@ function mockApi(options: { authenticated?: boolean; integrationsVisible?: boole
         });
     }
     if (url.includes("/api/auth/logout") && init?.method === "POST") return new Response(null, { status: 204 });
-    if (url.includes("/api/workspace/brands")) return json(workspace);
+    if (url.includes("/api/workspace/brands")) {
+      return json(options.operator
+        ? {
+          ...workspace,
+          brands: workspace.brands.map((brand) => brand.brand_id === "child-1"
+            ? { ...brand, role: "viewer", access_mode: "read" }
+            : brand),
+        }
+        : workspace);
+    }
     if (url.includes("/api/workspace/capabilities")) return json(capabilities(
       options.settingsVisible,
       options.integrationsVisible,

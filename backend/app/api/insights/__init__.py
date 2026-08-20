@@ -71,8 +71,15 @@ def create_insights_router(
         )
         if not session_can_generate_ai_summary(scope.session):
             raise HTTPException(403, "ai_summary_operator_required")
-        session_brand = str(scope.session.get("brand_id") or "")
-        if scope.workspace.scope.requested_brand_id != session_brand:
+        selected = next(
+            (
+                item
+                for item in scope.workspace.brands
+                if item.brand_id == scope.workspace.scope.requested_brand_id
+            ),
+            None,
+        )
+        if selected is None or selected.role != "viewer" or selected.access_mode != "read":
             raise HTTPException(403, "ai_summary_brand_scope_denied")
         return scope
 

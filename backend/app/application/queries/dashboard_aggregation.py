@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from collections import defaultdict
 from datetime import UTC, date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from app.application.ports.reporting import (
     ReportingAccount,
@@ -410,6 +411,56 @@ def metric_breakdowns(
             grouped.items(), key=lambda item: (item[0][0].value, item[0][1])
         )
         if (total := sum(values.values())) >= 0
+    )
+
+
+_ENGAGEMENT_TIME_ZONE = ZoneInfo("Europe/Istanbul")
+_WEEKDAY_LABELS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+
+def best_time_to_engage_breakdown(
+    platform: PlatformId,
+    rows: tuple[ReportingContent, ...],
+) -> DashboardBreakdown | None:
+    """Average content engagement by local publish weekday and two-hour slot.
+
+    The imported provider heatmap is a complete 7x24 grid whose values are all
+    zero for every Meta account.  It therefore says nothing about the selected
+    Brand.  Published content is an observed, Brand-scoped source: grouping its
+    engagement by publish time produces the actionable chart the label promises.
+    Stories are excluded because their short lifecycle and separate metrics would
+    otherwise overwhelm the post/reel publishing recommendation.
+    """
+
+    if platform not in {PlatformId.FACEBOOK, PlatformId.INSTAGRAM}:
+        return None
+    buckets: dict[tuple[int, int], list[float]] = defaultdict(list)
+    for row in rows:
+        if row.published_at is None or "story" in row.content_type.strip().lower():
+            continue
+        published_at = row.published_at
+        if published_at.tzinfo is None:
+            published_at = published_at.replace(tzinfo=UTC)
+        local = published_at.astimezone(_ENGAGEMENT_TIME_ZONE)
+        engagement = (
+            row.interactions_count
+            if row.interactions_count is not None
+            else float(row.likes_count + row.comments_count + row.shares_count)
+        )
+        buckets[(local.weekday(), (local.hour // 2) * 2)].append(float(engagement))
+    if not buckets:
+        return None
+    return DashboardBreakdown(
+        metric_id=MetricId.INTERACTIONS,
+        dimension="best_time_to_engage",
+        items=tuple(
+            DashboardBreakdownItem(
+                key=f"{_WEEKDAY_LABELS[weekday]}|{hour}",
+                value=sum(values) / len(values),
+                percentage=None,
+            )
+            for (weekday, hour), values in sorted(buckets.items())
+        ),
     )
 
 
@@ -828,16 +879,39 @@ def stories_contract(
         date_range.start_on + timedelta(days=index)
         for index in range((date_range.end_on - date_range.start_on).days + 1)
     )
+    views_available = any(row.views_count is not None for row in story_rows)
+    reach_available = any(row.reach_count is not None for row in story_rows)
     views_complete = bool(story_rows) and all(row.views_count is not None for row in story_rows)
     reach_complete = bool(story_rows) and all(row.reach_count is not None for row in story_rows)
     daily_views: dict[date, float] = defaultdict(float)
     daily_reach: dict[date, float] = defaultdict(float)
+    stories_by_day: dict[date, list[ReportingContent]] = defaultdict(list)
     for row in story_rows:
         observed_on = row.published_at.date() if row.published_at else date_range.start_on
+        stories_by_day[observed_on].append(row)
         if row.views_count is not None:
             daily_views[observed_on] += row.views_count
         if row.reach_count is not None:
             daily_reach[observed_on] += row.reach_count
+
+    def daily_values(
+        values: dict[date, float],
+        field: str,
+        *,
+        available: bool,
+    ) -> tuple[float | None, ...]:
+        if not available:
+            return tuple(None for _ in labels)
+        result: list[float | None] = []
+        for observed_on in labels:
+            day_rows = stories_by_day.get(observed_on, ())
+            if not day_rows:
+                result.append(0.0)
+            elif any(getattr(row, field) is not None for row in day_rows):
+                result.append(values.get(observed_on, 0.0))
+            else:
+                result.append(None)
+        return tuple(result)
     navigation_from_rows = {
         "taps_forward": _optional_sum(tuple(row.taps_forward for row in story_rows)),
         "taps_back": _optional_sum(tuple(row.taps_back for row in story_rows)),
@@ -908,21 +982,21 @@ def stories_contract(
         previous_summary=previous_summary,
         trend=DashboardStoryTrend(
             labels=labels,
-            views=(
-                tuple(daily_views.get(observed_on, 0.0) for observed_on in labels)
-                if views_complete
-                else tuple(None for _ in labels)
+            views=daily_values(
+                daily_views,
+                "views_count",
+                available=views_available,
             ),
-            reach=(
-                tuple(daily_reach.get(observed_on, 0.0) for observed_on in labels)
-                if reach_complete
-                else tuple(None for _ in labels)
+            reach=daily_values(
+                daily_reach,
+                "reach_count",
+                available=reach_available,
             ),
             data_status=(
                 DataStatus.AVAILABLE
                 if views_complete and reach_complete
                 else DataStatus.PARTIAL
-                if views_complete or reach_complete
+                if views_available or reach_available
                 else DataStatus.UNAVAILABLE
             ),
         ),
@@ -1046,6 +1120,7 @@ def freshness(
 
 __all__ = [
     "audience_capabilities",
+    "best_time_to_engage_breakdown",
     "community_summary",
     "content_summary",
     "content_cards",

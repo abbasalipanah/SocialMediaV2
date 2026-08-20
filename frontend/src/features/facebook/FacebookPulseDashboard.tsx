@@ -712,7 +712,8 @@ export function PulseHeatmapCard({ breakdowns }: { breakdowns: DashboardBreakdow
     const day = dayIndexes[String(rawDay ?? "").trim().toLowerCase()];
     const hour = Number(rawHour);
     if (day === undefined || !Number.isFinite(hour)) return;
-    matrix.set(`${day}|${Math.floor(hour / 2) * 2}`, row.value);
+    const key = `${day}|${Math.floor(hour / 2) * 2}`;
+    matrix.set(key, (matrix.get(key) ?? 0) + row.value);
   });
   const maximum = Math.max(1, ...matrix.values());
   const hours = Array.from({ length: 12 }, (_, index) => index * 2);
@@ -723,7 +724,7 @@ export function PulseHeatmapCard({ breakdowns }: { breakdowns: DashboardBreakdow
   };
   return (
     <article className="facebook-pulse-card facebook-heatmap-card">
-      <PulseCardHeading subtitle="Hourly activity density" title="Best Time to Engage" />
+      <PulseCardHeading subtitle="Average content engagement by publishing time" title="Best Time to Engage" />
       {rows.length === 0 ? <PulseEmpty copy="No heatmap data in selected range." /> : (
         <div className="facebook-heatmap">
           <div className="facebook-heatmap-days">{days.map((day) => <span key={day}>{day}</span>)}</div>

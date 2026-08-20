@@ -26,7 +26,8 @@ export default function OverviewPage() {
     && user.role === "viewer"
     && user.app_role === "operator"
     && user.source_system === "accumulate"
-    && user.brand_id === selectedBrandId
+    && selectedBrand?.role === "viewer"
+    && selectedBrand.access_mode === "read"
     && !rollup,
   );
   const aiSummaryLimit = useAiSummaryLimit(canGenerateAiSummary);

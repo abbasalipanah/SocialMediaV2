@@ -71,7 +71,7 @@ async def test_local_demo_opens_a_scoped_session_and_serves_product_data() -> No
         dimensions = {item["dimension"] for item in facebook.json()["breakdowns"]}
         assert "like_type" in dimensions
         assert "page_fans_gender_age" not in dimensions
-        assert "best_time_to_engage" not in dimensions
+        assert "best_time_to_engage" in dimensions
         assert facebook.json()["audience_capabilities"] == {
             "source": "meta_graph_api_v23",
             "geo": "available",

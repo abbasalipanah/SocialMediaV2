@@ -10,6 +10,7 @@ from app.application.ports.reporting import ReportingAccount, ReportingStore
 from app.application.queries.comment_privacy import redact_dashboard_comments
 from app.application.queries.dashboard_aggregation import (
     audience_capabilities,
+    best_time_to_engage_breakdown,
     community_summary,
     content_cards,
     content_summary,
@@ -253,6 +254,10 @@ def _build_platform_dashboard(
     observed_days = len({sample.observed_on for sample in samples})
     expected_days = (query.date_range.end_on - query.date_range.start_on).days + 1
     breakdowns = metric_breakdowns(samples)
+    if engagement_time := best_time_to_engage_breakdown(platform, content_rows):
+        breakdowns = tuple(
+            item for item in breakdowns if item.dimension != engagement_time.dimension
+        ) + (engagement_time,)
     return PlatformDashboard(
         meta=DashboardMeta(
             dashboard_id=platform.value,
