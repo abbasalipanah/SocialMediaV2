@@ -1246,6 +1246,14 @@ export interface components {
             /** Linked Count */
             linked_count: number;
         };
+        /** MetaLinkedAccountItem */
+        MetaLinkedAccountItem: {
+            /** Display Name */
+            display_name: string;
+            /** External Id */
+            external_id: string;
+            platform: components["schemas"]["PlatformId"];
+        };
         /** MetaSelfServiceReadinessResponse */
         MetaSelfServiceReadinessResponse: {
             /** Brand Id */
@@ -1265,6 +1273,8 @@ export interface components {
             facebook_linked_count: number;
             /** Instagram Linked Count */
             instagram_linked_count: number;
+            /** Linked Accounts */
+            linked_accounts: components["schemas"]["MetaLinkedAccountItem"][];
             /** Oauth Start Available */
             oauth_start_available: boolean;
             /** Reason */
@@ -1400,6 +1410,11 @@ export interface components {
             health_status: string;
             /** Last Synced At */
             last_synced_at: string | null;
+            /**
+             * Link Status
+             * @default active
+             */
+            link_status: string;
             /** Nightly Enabled */
             nightly_enabled: boolean;
             platform: components["schemas"]["PlatformId"];

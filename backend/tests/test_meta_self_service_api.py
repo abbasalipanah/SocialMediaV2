@@ -142,6 +142,18 @@ async def test_meta_readiness_is_exact_brand_and_not_settings_bound(tmp_path) ->
     assert payload["connection_state"] == "pending_verification"
     assert payload["facebook_linked_count"] == 1
     assert payload["instagram_linked_count"] == 1
+    assert payload["linked_accounts"] == [
+        {
+            "platform": "facebook",
+            "external_id": "fb-a",
+            "display_name": "Facebook A",
+        },
+        {
+            "platform": "instagram",
+            "external_id": "ig-a",
+            "display_name": "Instagram A",
+        },
+    ]
     assert len(payload["discoveries"]) == 2
     assert capabilities.json()["permissions"]["settings_visible"] is False
     assert capabilities.json()["permissions"]["meta_connection_manage"] is True

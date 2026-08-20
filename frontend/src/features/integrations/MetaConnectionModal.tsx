@@ -41,7 +41,7 @@ const READINESS_COPY: Record<string, string> = {
   writes_disabled: "Connection writes are disabled in this runtime.",
 };
 
-function discoveryKey(item: MetaDiscovery): string {
+function discoveryKey(item: Pick<MetaDiscovery, "external_id" | "platform">): string {
   return `${item.platform}:${item.external_id}`;
 }
 
@@ -78,8 +78,12 @@ export function MetaConnectionModal({
   });
   onConnectedRef.current = onConnected;
 
-  const pendingDiscoveries = useMemo(() => {
-    const rows = readiness.data?.discoveries.filter((item) => item.status === "discovered") ?? [];
+  const linkedAccountKeys = useMemo(
+    () => new Set((readiness.data?.linked_accounts ?? []).map(discoveryKey)),
+    [readiness.data?.linked_accounts],
+  );
+  const availableDiscoveries = useMemo(() => {
+    const rows = readiness.data?.discoveries ?? [];
     const connectionId = activeConnectionId ?? rows.reduce<number | null>(
       (latest, item) => latest === null || item.connection_id > latest ? item.connection_id : latest,
       null,
@@ -88,13 +92,17 @@ export function MetaConnectionModal({
   }, [activeConnectionId, readiness.data?.discoveries]);
 
   useEffect(() => {
-    if (selectionInitialized || pendingDiscoveries.length === 0) return;
-    const firstDiscovery = pendingDiscoveries[0];
+    if (selectionInitialized || availableDiscoveries.length === 0) return;
+    const firstDiscovery = availableDiscoveries[0];
     if (!firstDiscovery) return;
     setActiveConnectionId(firstDiscovery.connection_id);
-    setSelected(new Set(pendingDiscoveries.map(discoveryKey)));
+    setSelected(new Set(
+      availableDiscoveries
+        .filter((item) => linkedAccountKeys.has(discoveryKey(item)))
+        .map(discoveryKey),
+    ));
     setSelectionInitialized(true);
-  }, [pendingDiscoveries, selectionInitialized]);
+  }, [availableDiscoveries, linkedAccountKeys, selectionInitialized]);
 
   useEffect(() => {
     const expectedOrigin = new URL(apiUrl("/"), window.location.origin).origin;
@@ -177,7 +185,7 @@ export function MetaConnectionModal({
 
   const linkSelected = async () => {
     if (activeConnectionId === null) return;
-    const accounts = pendingDiscoveries
+    const accounts = availableDiscoveries
       .filter((item) => selected.has(discoveryKey(item)))
       .map((item) => ({ platform: item.platform, external_id: item.external_id }));
     if (accounts.length === 0) {
@@ -198,9 +206,8 @@ export function MetaConnectionModal({
       );
       setStatus({
         tone: "success",
-        message: `${linked.linked_count} account${linked.linked_count === 1 ? "" : "s"} linked to ${brandName}.`,
+        message: `${linked.linked_count} Meta account${linked.linked_count === 1 ? "" : "s"} saved for ${brandName}.`,
       });
-      setSelected(new Set());
       await queryClient.invalidateQueries({
         queryKey: ["integrations", "meta", "self-service", brandId],
       });
@@ -241,7 +248,7 @@ export function MetaConnectionModal({
       <section aria-labelledby="meta-connect-title" aria-modal="true" className="tiktok-connect-modal meta-connect-modal" role="dialog">
         <header>
           <div className="meta-connect-icons" aria-hidden="true"><Facebook size={20} /><Instagram size={20} /></div>
-          <div><h2 id="meta-connect-title">Connect Meta</h2><p>Authorize Facebook once, then choose {focusLabel} for {brandName}.</p></div>
+          <div><h2 id="meta-connect-title">Manage Meta accounts</h2><p>Review or change the Facebook and Instagram accounts linked to {brandName}.</p></div>
           <button aria-label="Close Meta connection modal" onClick={dismiss} type="button"><X size={18} /></button>
         </header>
 
@@ -254,30 +261,49 @@ export function MetaConnectionModal({
           </article>
           <article>
             <span className="tiktok-connect-step">2</span>
-            <div><h3>Select accounts for this Brand</h3><p>Nothing is linked automatically. Only the accounts selected below are attached to {brandName}.</p></div>
+            <div><h3>Select accounts for this Brand</h3><p>Choose {focusLabel} and any other Meta accounts this Brand should use. Saving replaces the current selection for {brandName}.</p></div>
           </article>
 
           {readiness.isPending ? <div className="tiktok-connect-readiness"><RefreshCw className="spin" size={16} />Checking Meta connection readiness…</div> : readiness.isError || !readiness.data ? <div className="tiktok-connect-readiness error"><AlertTriangle size={16} />Self-service access could not be verified.</div> : <div className={`tiktok-connect-readiness ${readiness.data.oauth_start_available ? "ready" : "blocked"}`}><ShieldCheck size={16} /><span><strong>{readiness.data.oauth_start_available ? "Ready to authorize" : "Authorization not active"}</strong>{unavailableReason && <small>{unavailableReason}</small>}<small>{readiness.data.facebook_linked_count} Facebook · {readiness.data.instagram_linked_count} Instagram currently linked.</small></span></div>}
 
-          {pendingDiscoveries.length > 0 && (
+          {readiness.data && readiness.data.linked_accounts.length > 0 && (
+            <section className="meta-current-links" aria-label={`Accounts linked to ${brandName}`}>
+              <h3>Currently linked to {brandName}</h3>
+              <div>
+                {readiness.data.linked_accounts.map((item) => (
+                  <span key={discoveryKey(item)}>
+                    <span className={`integration-platform-icon platform-${item.platform}`}>{item.platform === "facebook" ? <Facebook size={16} /> : <Instagram size={16} />}</span>
+                    <span><strong>{item.display_name}</strong><small>{item.platform === "facebook" ? "Facebook Page" : "Instagram Business"} · {item.external_id}</small></span>
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {availableDiscoveries.length > 0 && (
             <fieldset className="meta-discovery-list">
-              <legend>Discovered accounts</legend>
-              {pendingDiscoveries.map((item) => (
+              <legend>Accounts available in the Meta authorization</legend>
+              {availableDiscoveries.map((item) => (
                 <label key={discoveryKey(item)}>
                   <input checked={selected.has(discoveryKey(item))} onChange={() => toggle(item)} type="checkbox" />
                   <span className={`integration-platform-icon platform-${item.platform}`}>{item.platform === "facebook" ? <Facebook size={17} /> : <Instagram size={17} />}</span>
                   <span><strong>{item.display_name}</strong><small>{item.platform === "facebook" ? "Facebook Page" : "Instagram Business"} · {item.external_id}</small></span>
+                  <em className={linkedAccountKeys.has(discoveryKey(item)) ? "linked" : "available"}>{linkedAccountKeys.has(discoveryKey(item)) ? "Currently linked" : "Available"}</em>
                 </label>
               ))}
             </fieldset>
           )}
+
+          {readiness.data && readiness.data.linked_accounts.length > 0 && availableDiscoveries.length === 0 && (
+            <p className="meta-refresh-note">Authorize Facebook again to refresh the Meta account list and change this Brand’s selection.</p>
+          )}
         </div>
 
         <footer>
-          <p>Opening this dialog does not contact Meta. Authorization starts only after Connect Meta.</p>
+          <p>Opening this dialog does not contact Meta. Authorization starts only after you continue to Meta.</p>
           <button className="secondary-button" onClick={dismiss} type="button">Cancel</button>
-          {pendingDiscoveries.length > 0 && <button className="secondary-button" disabled={isLinking || selected.size === 0 || !readiness.data?.oauth_start_available} onClick={() => void linkSelected()} type="button">{isLinking ? <RefreshCw className="spin" size={15} /> : <Check size={15} />}{isLinking ? "Linking…" : `Link selected (${selected.size})`}</button>}
-          <button className="primary-button compact-button" disabled={!readiness.data?.oauth_start_available || isConnecting} onClick={() => void connect()} type="button">{isConnecting ? <RefreshCw className="spin" size={15} /> : <Link2 size={15} />}{isConnecting ? "Connecting…" : "Connect Meta"}</button>
+          {availableDiscoveries.length > 0 && <button className="secondary-button" disabled={isLinking || selected.size === 0 || !readiness.data?.oauth_start_available} onClick={() => void linkSelected()} type="button">{isLinking ? <RefreshCw className="spin" size={15} /> : <Check size={15} />}{isLinking ? "Saving…" : `Save selection (${selected.size})`}</button>}
+          <button className="primary-button compact-button" disabled={!readiness.data?.oauth_start_available || isConnecting} onClick={() => void connect()} type="button">{isConnecting ? <RefreshCw className="spin" size={15} /> : <Link2 size={15} />}{isConnecting ? "Connecting…" : readiness.data?.linked_accounts.length ? "Refresh from Meta" : "Connect Meta"}</button>
         </footer>
       </section>
     </div>,

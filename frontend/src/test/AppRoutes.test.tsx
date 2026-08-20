@@ -127,6 +127,7 @@ const accounts = {
       connection_state: "connected",
       health_status: "healthy",
       backfill_status: "complete",
+      link_status: "active",
       nightly_enabled: true,
       last_synced_at: null,
     },

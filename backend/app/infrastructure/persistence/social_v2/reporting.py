@@ -60,6 +60,8 @@ class SocialReportingStore:
                 LEFT JOIN platform_connections AS pc ON pc.id=la.connection_id
                 LEFT JOIN asset_sync_state AS ss ON ss.asset_id=a.id
                 WHERE CAST(a.brand_id AS text) IN :brand_ids
+                  AND a.status='active'
+                  AND COALESCE(la.status, 'active') IN ('active', 'connected')
                   {platform_clause}
                 ORDER BY a.platform, a.display_name, a.id""",
             "brand_ids",

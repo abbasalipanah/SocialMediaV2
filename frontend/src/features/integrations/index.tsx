@@ -98,7 +98,12 @@ export function buildSocialIntegrations({
 }): SocialIntegrationPlatform[] {
   return PLATFORMS.map((platform) => {
     const platformAccounts = accounts.filter((account) => account.platform === platform);
-    const connection = connections.find((item) => item.platform === platform) ?? null;
+    const connection = connections
+      .filter((item) => item.platform === platform)
+      .reduce<ReportingConnection | null>(
+        (latest, item) => (!latest || item.connection_id > latest.connection_id ? item : latest),
+        null,
+      );
     const platformJobs = jobs.filter((job) => job.platform === platform);
     const capabilityRows = capabilities?.platforms.find((item) => item.platform === platform)?.capabilities ?? [];
     const readinessRow = readiness?.platforms.find((item) => item.platform === platform);

@@ -288,6 +288,9 @@ export function SetupDrawer({
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["settings"] });
+  };
+  const refreshAndCloseConnection = () => {
+    refresh();
     setConnecting(null);
   };
 
@@ -376,7 +379,7 @@ export function SetupDrawer({
           brandId={brand.brand_id}
           brandName={brandName}
           onClose={() => setConnecting(null)}
-          onConnected={refresh}
+          onConnected={refreshAndCloseConnection}
         />
       )}
     </>

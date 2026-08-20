@@ -114,6 +114,7 @@ export const reportingAccountSchema = z.object({
   connection_state: z.string(),
   health_status: z.string(),
   backfill_status: z.string(),
+  link_status: z.string(),
   nightly_enabled: z.boolean(),
   last_synced_at: z.string().nullable(),
 });
@@ -609,12 +610,19 @@ export const metaDiscoverySchema = z.object({
 });
 export type MetaDiscovery = z.infer<typeof metaDiscoverySchema>;
 
+export const metaLinkedAccountSchema = z.object({
+  platform: z.enum(["facebook", "instagram"]),
+  external_id: z.string(),
+  display_name: z.string(),
+});
+
 export const metaSelfServiceReadinessSchema = z.object({
   brand_id: z.string(),
   can_manage: z.boolean(),
   connection_state: z.string(),
   facebook_linked_count: z.number().int().nonnegative(),
   instagram_linked_count: z.number().int().nonnegative(),
+  linked_accounts: z.array(metaLinkedAccountSchema),
   discoveries: z.array(metaDiscoverySchema),
   oauth_start_available: z.boolean(),
   reason: z.string(),

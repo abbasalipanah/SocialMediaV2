@@ -155,12 +155,20 @@ class MetaDiscoveryItem:
 
 
 @dataclass(frozen=True)
+class MetaLinkedAccountItem:
+    platform: PlatformId
+    external_id: str
+    display_name: str
+
+
+@dataclass(frozen=True)
 class MetaSelfServiceReadinessResponse:
     brand_id: str
     can_manage: bool
     connection_state: str
     facebook_linked_count: int
     instagram_linked_count: int
+    linked_accounts: tuple[MetaLinkedAccountItem, ...]
     discoveries: tuple[MetaDiscoveryItem, ...]
     oauth_start_available: bool
     reason: str
@@ -279,6 +287,7 @@ __all__ = [
     "ConnectionsResponse",
     "InsightsResponse",
     "MetaDiscoveryItem",
+    "MetaLinkedAccountItem",
     "MetaLinkResponse",
     "MetaSelfServiceReadinessResponse",
     "MetaSelfServiceStartResponse",

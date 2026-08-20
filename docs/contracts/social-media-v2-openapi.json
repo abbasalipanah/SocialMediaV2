@@ -1904,6 +1904,28 @@
         "title": "MetaLinkResponse",
         "type": "object"
       },
+      "MetaLinkedAccountItem": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/PlatformId"
+          }
+        },
+        "required": [
+          "platform",
+          "external_id",
+          "display_name"
+        ],
+        "title": "MetaLinkedAccountItem",
+        "type": "object"
+      },
       "MetaSelfServiceReadinessResponse": {
         "properties": {
           "brand_id": {
@@ -1938,6 +1960,13 @@
             "title": "Instagram Linked Count",
             "type": "integer"
           },
+          "linked_accounts": {
+            "items": {
+              "$ref": "#/components/schemas/MetaLinkedAccountItem"
+            },
+            "title": "Linked Accounts",
+            "type": "array"
+          },
           "oauth_start_available": {
             "title": "Oauth Start Available",
             "type": "boolean"
@@ -1960,6 +1989,7 @@
           "connection_state",
           "facebook_linked_count",
           "instagram_linked_count",
+          "linked_accounts",
           "discoveries",
           "oauth_start_available",
           "reason",
@@ -2383,6 +2413,11 @@
               }
             ],
             "title": "Last Synced At"
+          },
+          "link_status": {
+            "default": "active",
+            "title": "Link Status",
+            "type": "string"
           },
           "nightly_enabled": {
             "title": "Nightly Enabled",

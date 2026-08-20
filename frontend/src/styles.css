@@ -2003,7 +2003,7 @@ body { background: var(--sm-bg); }
 .meta-connect-icons svg:last-child { margin-left: -5px; color: #c026d3; filter: drop-shadow(0 0 2px white); }
 .meta-discovery-list { display: grid; gap: 8px; margin: 0; padding: 14px; border: 1px solid #dbeafe; border-radius: 13px; background: white; }
 .meta-discovery-list legend { padding: 0 5px; color: #334155; font-size: .67rem; font-weight: 850; }
-.meta-discovery-list label { display: grid; grid-template-columns: auto auto minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 10px; cursor: pointer; }
+.meta-discovery-list label { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 10px; cursor: pointer; }
 .meta-discovery-list label:has(input:checked) { border-color: #a5b4fc; background: #f8faff; }
 .meta-discovery-list input { width: 16px; height: 16px; accent-color: #4f46e5; }
 .meta-discovery-list .integration-platform-icon { width: 34px; height: 34px; border-radius: 9px; }
@@ -2011,6 +2011,18 @@ body { background: var(--sm-bg); }
 .meta-discovery-list strong, .meta-discovery-list small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .meta-discovery-list strong { color: #0f172a; font-size: .68rem; }
 .meta-discovery-list small { margin-top: 3px; color: #64748b; font-size: .57rem; font-weight: 600; }
+.meta-discovery-list em { padding: 4px 7px; border-radius: 99px; font-size: .52rem; font-style: normal; font-weight: 800; white-space: nowrap; }
+.meta-discovery-list em.linked { color: #047857; background: #d1fae5; }
+.meta-discovery-list em.available { color: #475569; background: #f1f5f9; }
+.meta-current-links { display: grid; gap: 9px; padding: 14px; border: 1px solid #a7f3d0; border-radius: 13px; background: #f0fdf4; }
+.meta-current-links > h3 { margin: 0; color: #166534; font-size: .68rem; }
+.meta-current-links > div { display: grid; gap: 7px; }
+.meta-current-links > div > span { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 9px; padding: 9px; border: 1px solid #d1fae5; border-radius: 9px; background: white; }
+.meta-current-links .integration-platform-icon { width: 32px; height: 32px; border-radius: 8px; }
+.meta-current-links strong, .meta-current-links small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meta-current-links strong { color: #14532d; font-size: .66rem; }
+.meta-current-links small { margin-top: 3px; color: #64748b; font-size: .55rem; font-weight: 600; }
+.meta-refresh-note { padding: 11px 13px; color: #475569; border: 1px dashed #cbd5e1; border-radius: 10px; background: white; }
 .meta-connect-modal > footer { grid-template-columns: minmax(0, 1fr) auto auto auto; }
 
 @media (max-width: 1180px) {
@@ -2033,6 +2045,8 @@ body { background: var(--sm-bg); }
   .tiktok-connect-modal > footer { grid-template-columns: 1fr 1fr; }
   .tiktok-connect-modal > footer p { grid-column: 1 / -1; }
   .meta-connect-modal > footer { grid-template-columns: 1fr 1fr; }
+  .meta-discovery-list label { grid-template-columns: auto auto minmax(0, 1fr); }
+  .meta-discovery-list em { grid-column: 2 / -1; justify-self: start; }
 }
 
 @media (max-width: 390px) {

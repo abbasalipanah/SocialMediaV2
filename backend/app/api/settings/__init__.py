@@ -17,6 +17,7 @@ from app.api.contracts import (
     BrandLinksResponse,
     ConnectionsResponse,
     MetaDiscoveryItem,
+    MetaLinkedAccountItem,
     MetaLinkResponse,
     MetaSelfServiceReadinessResponse,
     MetaSelfServiceStartResponse,
@@ -525,6 +526,14 @@ def create_settings_router(
             connection_state=connection_state,
             facebook_linked_count=sum(item.platform is PlatformId.FACEBOOK for item in accounts),
             instagram_linked_count=sum(item.platform is PlatformId.INSTAGRAM for item in accounts),
+            linked_accounts=tuple(
+                MetaLinkedAccountItem(
+                    platform=item.platform,
+                    external_id=item.external_id,
+                    display_name=item.display_name,
+                )
+                for item in accounts
+            ),
             discoveries=tuple(
                 MetaDiscoveryItem(
                     connection_id=item.connection_id,

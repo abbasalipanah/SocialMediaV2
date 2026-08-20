@@ -59,6 +59,12 @@ test("dashboard tabs, URL state, ranges and report exports follow the R1 contrac
 
 test("Settings keeps the Performance-style table-first workspace", async ({ page }, testInfo) => {
   test.skip(!testInfo.project.name.startsWith("desktop"), "desktop product assertion");
+  let metaLinkPayload: { connection_id: number; accounts: Array<{ platform: string; external_id: string }> } | null = null;
+  page.on("request", (request) => {
+    if (request.url().includes("/api/integrations/meta/accounts/link")) {
+      metaLinkPayload = request.postDataJSON() as typeof metaLinkPayload;
+    }
+  });
   await mockR5Api(page);
   await page.goto("/settings");
 
@@ -77,6 +83,23 @@ test("Settings keeps the Performance-style table-first workspace", async ({ page
   const setupDialog = page.getByRole("dialog", { name: "Brand Setup" });
   await expect(setupDialog).toBeVisible();
   await expect(setupDialog).toContainText("Brand #hotel-1 · 3 linked accounts");
+
+  const facebookRow = setupDialog.getByText("Facebook", { exact: true }).locator("xpath=ancestor::article[1]");
+  await facebookRow.getByRole("button", { name: "Edit" }).click();
+  const metaDialog = page.getByRole("dialog", { name: "Manage Meta accounts" });
+  await expect(metaDialog).toBeVisible();
+  await expect(metaDialog.getByLabel("Accounts linked to Coastal One")).toContainText("Coastal Facebook");
+  await expect(metaDialog.getByLabel("Accounts linked to Coastal One")).toContainText("Coastal Instagram");
+  await expect(metaDialog.getByRole("checkbox")).toHaveCount(2);
+  await expect(metaDialog.getByRole("checkbox").nth(0)).toBeChecked();
+  await expect(metaDialog.getByRole("checkbox").nth(1)).toBeChecked();
+  await metaDialog.getByRole("checkbox").nth(1).uncheck();
+  await metaDialog.getByRole("button", { name: "Save selection (1)" }).click();
+  await expect(metaDialog.getByRole("status")).toContainText("1 Meta account saved for Coastal One");
+  expect(metaLinkPayload).toEqual({
+    connection_id: 91,
+    accounts: [{ platform: "facebook", external_id: "facebook-account" }],
+  });
 });
 
 test("direct TikTok activation remains GET-only without a signed owner launch", async ({ page }) => {
