@@ -1843,6 +1843,7 @@ body { background: var(--sm-bg); }
 .settings-table-card .settings-table td strong { color: #0f172a; }
 .settings-row-action { display: inline-flex; min-height: 32px; align-items: center; gap: 6px; padding: 6px 9px; color: #4338ca; border: 1px solid #c7d2fe; border-radius: 8px; background: #eef2ff; font-size: .64rem; font-weight: 750; cursor: pointer; }
 .settings-row-action:hover { border-color: #a5b4fc; background: #e0e7ff; }
+.settings-row-action:disabled { cursor: not-allowed; opacity: .5; }
 
 @media (max-width: 1220px) {
   .settings-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }

@@ -84,7 +84,7 @@ function SocialAccounts({
 }: {
   accounts: ReportingAccount[];
   connections: ReportingConnection[];
-  canManage: boolean;
+  canManage: (platform: Platform) => boolean;
   loading: boolean;
   onConnect: (platform: Platform) => void;
 }) {
@@ -100,6 +100,7 @@ function SocialAccounts({
           linked[0]?.connection_state ??
           connections.find((item) => item.platform === platform)?.state ??
           "not connected";
+        const platformCanBeManaged = canManage(platform);
         return (
           <article key={platform}>
             <div className={`setup-platform-icon setup-${platform}`}>
@@ -122,10 +123,12 @@ function SocialAccounts({
             </span>
             <button
               className="settings-row-action"
-              disabled={!canManage}
+              disabled={!platformCanBeManaged}
               onClick={() => onConnect(platform)}
               title={
-                canManage ? undefined : "Needs an agency admin or super admin, on a single Brand"
+                platformCanBeManaged
+                  ? undefined
+                  : `Needs permission to manage ${PLATFORM_LABELS[platform]} connections`
               }
               type="button"
             >
@@ -240,7 +243,7 @@ export function SetupDrawer({
   mutationAvailable: boolean;
 }) {
   const queryClient = useQueryClient();
-  const { capabilities, rollup } = useBrandScope();
+  const { capabilities } = useBrandScope();
   const [connecting, setConnecting] = useState<Platform | null>(null);
 
   // Fetched for the Brand whose row was clicked, not filtered out of the page's
@@ -278,13 +281,15 @@ export function SetupDrawer({
   const loadingAccounts = accountsQuery.isPending;
   const brandName = brand.name ?? `Brand ${brand.brand_id}`;
 
-  // Settings authority may set up any Brand its signed scope grants, which is
-  // what opening setup from a row means. The backend re-checks write access on
-  // this Brand before any exchange, so this only decides whether to offer it.
-  const canManage =
-    !rollup &&
-    capabilities?.permissions.meta_connection_manage === true &&
-    capabilities?.permissions.tiktok_connection_manage === true;
+  // This drawer always sends the exact Brand whose row was opened. The backend
+  // resolves that Brand with rollup=false and re-checks its authority before a
+  // provider action, so the page's current roll-up view must not disable the
+  // Brand's own Edit button. Meta and TikTok permissions are also independent:
+  // lacking one must not disable the other platform.
+  const canManageMeta = capabilities?.permissions.meta_connection_manage === true;
+  const canManageTikTok = capabilities?.permissions.tiktok_connection_manage === true;
+  const canManagePlatform = (platform: Platform) =>
+    platform === "tiktok" ? canManageTikTok : canManageMeta;
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["settings"] });
@@ -332,15 +337,14 @@ export function SetupDrawer({
           >
             <SocialAccounts
               accounts={brandAccounts}
-              canManage={canManage}
+              canManage={canManagePlatform}
               connections={brandConnections}
               loading={loadingAccounts}
               onConnect={setConnecting}
             />
-            {!canManage && (
+            {!canManageMeta && !canManageTikTok && (
               <p className="setup-note">
-                Linking accounts needs an agency admin or super admin on a single
-                Brand. Leave the roll-up view to set up {brandName}.
+                Linking accounts needs permission to manage social connections for {brandName}.
               </p>
             )}
           </Section>

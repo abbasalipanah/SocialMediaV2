@@ -56,11 +56,15 @@ describe("Brand Setup layout", () => {
     expect(SOURCE).toContain('"Checking…"');
   });
 
-  it("does not offer linking the backend would refuse", () => {
-    // A provider connection is bound to the Brand the session was launched
-    // with; the backend answers any other one with meta_self_service_brand_forbidden.
+  it("allows exact-Brand editing from a roll-up and keeps provider permissions independent", () => {
+    // The drawer sends the clicked Brand with rollup=false. The page itself may
+    // be displaying a parent roll-up, which must not disable that Brand's Edit
+    // button. Meta permission must not depend on TikTok permission either.
     expect(SOURCE).toContain("meta_connection_manage");
     expect(SOURCE).toContain("tiktok_connection_manage");
+    expect(SOURCE).toContain('platform === "tiktok" ? canManageTikTok : canManageMeta');
+    expect(SOURCE).not.toMatch(/!rollup\s*&&/);
+    expect(SOURCE).not.toMatch(/meta_connection_manage[\s\S]{0,120}&&[\s\S]{0,120}tiktok_connection_manage/);
   });
 
   it("drops the wizard chrome from the stylesheet too", () => {
