@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MetaConnectionModal } from "../features/integrations/MetaConnectionModal";
@@ -18,8 +17,8 @@ describe("MetaConnectionModal", () => {
     vi.unstubAllGlobals();
   });
 
-  it("loads every available account through saved access without opening OAuth", async () => {
-    const readiness = {
+  it("automatically loads every available account through saved access without opening OAuth", async () => {
+    const initialReadiness = {
       brand_id: "286272",
       can_manage: true,
       connection_state: "connected",
@@ -39,12 +38,20 @@ describe("MetaConnectionModal", () => {
       writes_enabled: true,
       checked_at: "2026-08-20T20:00:00Z",
     };
+    let refreshed = false;
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url.includes("/api/integrations/meta/self-service/readiness")) {
-        return json(readiness);
+        return json(refreshed ? {
+          ...initialReadiness,
+          discoveries: [
+            ...initialReadiness.discoveries,
+            { connection_id: 71, platform: "facebook", external_id: "30003", display_name: "Mountain Page", status: "available" },
+          ],
+        } : initialReadiness);
       }
       if (url.includes("/api/integrations/meta/accounts/refresh") && init?.method === "POST") {
+        refreshed = true;
         return json({
           connection_id: 71,
           facebook_count: 2,
@@ -70,13 +77,13 @@ describe("MetaConnectionModal", () => {
       </QueryClientProvider>,
     );
 
-    await userEvent.click(await screen.findByRole("button", { name: "Load available accounts" }));
-
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining("/api/integrations/meta/accounts/refresh"),
       expect.objectContaining({ method: "POST" }),
     ));
     expect(await screen.findByText(/3 accounts loaded from the saved Meta access/)).toBeVisible();
+    expect(await screen.findByText("Mountain Page")).toBeVisible();
+    expect(screen.getByText("Accounts available from Meta (3)")).toBeVisible();
     expect(open).not.toHaveBeenCalled();
   });
 });

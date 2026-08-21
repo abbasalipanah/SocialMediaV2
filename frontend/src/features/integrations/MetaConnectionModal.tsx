@@ -62,6 +62,7 @@ export function MetaConnectionModal({
 }) {
   const popupRef = useRef<Window | null>(null);
   const onConnectedRef = useRef(onConnected);
+  const automaticallyRefreshedBrand = useRef<string | null>(null);
   const queryClient = useQueryClient();
   const [isConnecting, setIsConnecting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -239,6 +240,23 @@ export function MetaConnectionModal({
     }
   };
 
+  useEffect(() => {
+    if (
+      automaticallyRefreshedBrand.current === brandId
+      || readiness.isPending
+      || !readiness.data?.oauth_start_available
+      || !hasSavedMetaAccess
+    ) {
+      return;
+    }
+    // The existing discovery rows can be an old, Brand-local migration
+    // snapshot (often only the account already linked). Opening Manage must
+    // show the current Meta user's complete Page/profile catalog without
+    // requiring the user to discover a second, easy-to-miss button.
+    automaticallyRefreshedBrand.current = brandId;
+    void refreshAccounts();
+  }, [brandId, hasSavedMetaAccess, readiness.data, readiness.isPending]);
+
   const linkSelected = async () => {
     if (activeConnectionId === null) return;
     const accounts = availableDiscoveries
@@ -353,7 +371,7 @@ export function MetaConnectionModal({
             <div><h3>Select accounts for this Brand</h3><p>Choose {focusLabel} and any other Meta accounts this Brand should use. Saving replaces the current selection for {brandName}.</p></div>
           </article>
 
-          {readiness.isPending ? <div className="tiktok-connect-readiness"><RefreshCw className="spin" size={16} />Checking Meta connection readiness…</div> : readiness.isError || !readiness.data ? <div className="tiktok-connect-readiness error"><AlertTriangle size={16} />Self-service access could not be verified.</div> : <div className={`tiktok-connect-readiness ${readiness.data.oauth_start_available ? "ready" : "blocked"}`}><ShieldCheck size={16} /><span><strong>{hasSavedMetaAccess ? "Saved Meta access is ready" : readiness.data.oauth_start_available ? "Ready to connect" : "Connection not active"}</strong>{unavailableReason && <small>{unavailableReason}</small>}<small>{readiness.data.facebook_linked_count} Facebook · {readiness.data.instagram_linked_count} Instagram currently linked.</small></span></div>}
+          {readiness.isPending ? <div className="tiktok-connect-readiness"><RefreshCw className="spin" size={16} />Checking Meta connection readiness…</div> : readiness.isError || !readiness.data ? <div className="tiktok-connect-readiness error"><AlertTriangle size={16} />Self-service access could not be verified.</div> : isRefreshing ? <div className="tiktok-connect-readiness ready"><RefreshCw className="spin" size={16} /><span><strong>Loading every available Meta account</strong><small>Refreshing Facebook Pages and linked Instagram Business accounts…</small></span></div> : <div className={`tiktok-connect-readiness ${readiness.data.oauth_start_available ? "ready" : "blocked"}`}><ShieldCheck size={16} /><span><strong>{hasSavedMetaAccess ? "Saved Meta access is ready" : readiness.data.oauth_start_available ? "Ready to connect" : "Connection not active"}</strong>{unavailableReason && <small>{unavailableReason}</small>}<small>{readiness.data.facebook_linked_count} Facebook · {readiness.data.instagram_linked_count} Instagram currently linked.</small></span></div>}
 
           {readiness.data && readiness.data.linked_accounts.length > 0 && (
             <section className="meta-current-links" aria-label={`Accounts linked to ${brandName}`}>
