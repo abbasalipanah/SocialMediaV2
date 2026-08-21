@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MetaConnectionModal } from "../features/integrations/MetaConnectionModal";
@@ -83,7 +84,13 @@ describe("MetaConnectionModal", () => {
     ));
     expect(await screen.findByText(/3 accounts loaded from the saved Meta access/)).toBeVisible();
     expect(await screen.findByText("Mountain Page")).toBeVisible();
-    expect(screen.getByText("Accounts available from Meta (3)")).toBeVisible();
+    const catalog = screen.getByRole("region", { name: "Accounts available from Meta (3)" });
+    expect(catalog).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Load available accounts" })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /Instagram Accounts/ }));
+    expect(await within(catalog).findByText("aquamice_turkey")).toBeVisible();
+    expect(within(catalog).queryByText("Mountain Page")).not.toBeInTheDocument();
     expect(open).not.toHaveBeenCalled();
   });
 });

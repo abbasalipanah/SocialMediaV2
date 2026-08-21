@@ -1989,6 +1989,21 @@ body { background: var(--sm-bg); }
 .tiktok-connect-modal > footer .primary-button:disabled { cursor: not-allowed; opacity: .5; }
 .meta-connect-icons { display: flex; width: 46px; height: 46px; align-items: center; justify-content: center; color: #1877f2; border: 1px solid #dbeafe; border-radius: 13px; background: linear-gradient(145deg, #eff6ff, #fdf2f8); }
 .meta-connect-icons svg:last-child { margin-left: -5px; color: #c026d3; filter: drop-shadow(0 0 2px white); }
+.meta-account-catalog { overflow: hidden; border: 1px solid #dbeafe; border-radius: 13px; background: white; }
+.meta-account-catalog > header { display: grid; gap: 11px; padding: 14px; border-bottom: 1px solid #e2e8f0; }
+.meta-account-catalog > header > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.meta-account-catalog > header h3, .meta-account-catalog > header small { margin: 0; }
+.meta-account-catalog > header h3 { color: #334155; font-size: .7rem; }
+.meta-account-catalog > header > div small { color: #64748b; font-size: .58rem; font-weight: 750; }
+.meta-account-catalog nav { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.meta-account-catalog nav > button { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 9px; padding: 10px; color: #475569; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; text-align: left; cursor: pointer; }
+.meta-account-catalog nav > button.active { color: #3730a3; border-color: #a5b4fc; background: #eef2ff; box-shadow: 0 0 0 2px rgb(99 102 241 / 7%); }
+.meta-account-catalog nav strong, .meta-account-catalog nav small { display: block; }
+.meta-account-catalog nav strong { font-size: .65rem; }
+.meta-account-catalog nav small { margin-top: 2px; color: #64748b; font-size: .54rem; font-weight: 650; }
+.meta-account-catalog nav .integration-platform-icon { width: 31px; height: 31px; border-radius: 8px; }
+.meta-platform-account-list.meta-discovery-list { border: 0; border-radius: 0; }
+.meta-platform-account-list > h4 { margin: 0 0 2px; color: #334155; font-size: .66rem; }
 .meta-discovery-list { display: grid; gap: 8px; margin: 0; padding: 14px; border: 1px solid #dbeafe; border-radius: 13px; background: white; }
 .meta-discovery-list legend { padding: 0 5px; color: #334155; font-size: .67rem; font-weight: 850; }
 .meta-account-tools { display: grid; grid-template-columns: minmax(150px, 1fr) auto auto auto; align-items: center; gap: 7px; margin-bottom: 3px; }
