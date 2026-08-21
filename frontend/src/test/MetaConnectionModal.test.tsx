@@ -64,6 +64,7 @@ describe("MetaConnectionModal", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     const open = vi.spyOn(window, "open");
+    const manageTikTok = vi.fn();
     const queryCache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     render(
@@ -74,6 +75,21 @@ describe("MetaConnectionModal", () => {
           focusPlatform="facebook"
           onClose={vi.fn()}
           onConnected={vi.fn()}
+          onManageTikTok={manageTikTok}
+          tiktokAccounts={[{
+            account_id: 9,
+            brand_id: "286272",
+            platform: "tiktok",
+            external_id: "tt-44",
+            display_name: "AquaMICE TikTok",
+            status: "active",
+            connection_state: "connected",
+            health_status: "healthy",
+            backfill_status: "complete",
+            link_status: "linked",
+            nightly_enabled: true,
+            last_synced_at: "2026-08-21T07:00:00Z",
+          }]}
         />
       </QueryClientProvider>,
     );
@@ -82,15 +98,21 @@ describe("MetaConnectionModal", () => {
       expect.stringContaining("/api/integrations/meta/accounts/refresh"),
       expect.objectContaining({ method: "POST" }),
     ));
-    expect(await screen.findByText(/3 accounts loaded from the saved Meta access/)).toBeVisible();
+    expect(await screen.findByText(/3 Meta accounts loaded/)).toBeVisible();
     expect(await screen.findByText("Mountain Page")).toBeVisible();
-    const catalog = screen.getByRole("region", { name: "Accounts available from Meta (3)" });
+    const catalog = screen.getByRole("region", { name: "Social accounts for AquaMICE" });
     expect(catalog).toBeVisible();
     expect(screen.queryByRole("button", { name: "Load available accounts" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Accounts load automatically")).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: /Instagram Accounts/ }));
+    await userEvent.click(screen.getByRole("button", { name: /Instagram/ }));
     expect(await within(catalog).findByText("aquamice_turkey")).toBeVisible();
     expect(within(catalog).queryByText("Mountain Page")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /TikTok/ }));
+    expect(await within(catalog).findByText("AquaMICE TikTok")).toBeVisible();
+    await userEvent.click(screen.getByRole("button", { name: "Manage TikTok" }));
+    expect(manageTikTok).toHaveBeenCalledOnce();
     expect(open).not.toHaveBeenCalled();
   });
 });

@@ -30,6 +30,15 @@ describe("connection modal stacking", () => {
     // "Not Connected".
     expect(DRAWER).toContain("linked[0]?.connection_state");
   });
+
+  it("keeps the account list scrollable between the fixed header and footer", () => {
+    // A flex child defaults to min-height:auto. With a long Meta catalog that
+    // made the body keep its content height instead of becoming the scroll
+    // container, so the modal looked clipped even though overflow-y was set.
+    expect(STYLES).toContain(".tiktok-connect-body { display: grid; min-height: 0; flex: 1 1 auto;");
+    expect(STYLES).toContain("overflow-y: auto; overscroll-behavior: contain;");
+    expect(STYLES).toContain(".meta-connect-modal { width: min(680px, 100%); height:");
+  });
 });
 
 describe("connection modal mounting", () => {

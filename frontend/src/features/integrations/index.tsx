@@ -302,9 +302,16 @@ export default function IntegrationsPage() {
         <MetaConnectionModal
           brandId={selectedBrandId}
           brandName={brandName}
+          canManageMeta={canManageMeta}
+          canManageTikTok={canManageTikTok}
           focusPlatform={metaConnectPlatform}
           onClose={() => setMetaConnectPlatform(null)}
           onConnected={() => void refresh()}
+          onManageTikTok={() => {
+            setMetaConnectPlatform(null);
+            setTikTokConnectOpen(true);
+          }}
+          tiktokAccounts={(data.accounts.data?.items ?? []).filter((item) => item.platform === "tiktok")}
         />
       )}
     </main>

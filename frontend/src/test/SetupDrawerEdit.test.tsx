@@ -122,7 +122,7 @@ describe("Brand Setup account editing", () => {
     expect(edit).toBeEnabled();
     await userEvent.click(edit);
 
-    expect(await screen.findByRole("dialog", { name: "Manage Meta accounts" })).toBeVisible();
+    expect(await screen.findByRole("dialog", { name: "Manage social accounts" })).toBeVisible();
 
     const tiktokRow = within(setup).getByText("TikTok").closest("article");
     if (!tiktokRow) throw new Error("TikTok setup row was not rendered");

@@ -245,6 +245,7 @@ export function SetupDrawer({
   const queryClient = useQueryClient();
   const { capabilities } = useBrandScope();
   const [connecting, setConnecting] = useState<Platform | null>(null);
+  const [tiktokConnectionOpen, setTikTokConnectionOpen] = useState(false);
 
   // Fetched for the Brand whose row was clicked, not filtered out of the page's
   // lists: those are scoped to the Brand the workspace is currently on, so any
@@ -296,7 +297,7 @@ export function SetupDrawer({
   };
   const refreshAndCloseConnection = () => {
     refresh();
-    setConnecting(null);
+    setTikTokConnectionOpen(false);
   };
 
   return (
@@ -369,20 +370,27 @@ export function SetupDrawer({
         </div>
       </Dialog>
 
-      {(connecting === "facebook" || connecting === "instagram") && (
+      {connecting !== null && (
         <MetaConnectionModal
           brandId={brand.brand_id}
           brandName={brandName}
+          canManageMeta={canManageMeta}
+          canManageTikTok={canManageTikTok}
           focusPlatform={connecting}
           onClose={() => setConnecting(null)}
           onConnected={refresh}
+          onManageTikTok={() => {
+            setConnecting(null);
+            setTikTokConnectionOpen(true);
+          }}
+          tiktokAccounts={brandAccounts.filter((item) => item.platform === "tiktok")}
         />
       )}
-      {connecting === "tiktok" && (
+      {tiktokConnectionOpen && (
         <TikTokConnectionModal
           brandId={brand.brand_id}
           brandName={brandName}
-          onClose={() => setConnecting(null)}
+          onClose={() => setTikTokConnectionOpen(false)}
           onConnected={refreshAndCloseConnection}
         />
       )}

@@ -7,7 +7,6 @@ import {
   Link2,
   RefreshCw,
   Search,
-  ShieldCheck,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -24,6 +23,7 @@ import {
   queryString,
   type MetaDiscovery,
   type Platform,
+  type ReportingAccount,
 } from "../../api";
 
 type MetaOAuthMessage = {
@@ -51,14 +51,22 @@ export function MetaConnectionModal({
   brandId,
   brandName,
   focusPlatform,
+  tiktokAccounts,
+  canManageMeta = true,
+  canManageTikTok = true,
   onClose,
   onConnected,
+  onManageTikTok,
 }: {
   brandId: string;
   brandName: string;
-  focusPlatform: Extract<Platform, "facebook" | "instagram">;
+  focusPlatform: Platform;
+  tiktokAccounts: ReportingAccount[];
+  canManageMeta?: boolean;
+  canManageTikTok?: boolean;
   onClose: () => void;
   onConnected: () => void;
+  onManageTikTok: () => void;
 }) {
   const popupRef = useRef<Window | null>(null);
   const onConnectedRef = useRef(onConnected);
@@ -71,11 +79,12 @@ export function MetaConnectionModal({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [selectionInitialized, setSelectionInitialized] = useState(false);
   const [accountSearch, setAccountSearch] = useState("");
-  const [catalogPlatform, setCatalogPlatform] = useState<Extract<Platform, "facebook" | "instagram">>(focusPlatform);
+  const [catalogPlatform, setCatalogPlatform] = useState<Platform>(focusPlatform);
   const [requiresAuthorization, setRequiresAuthorization] = useState(false);
   const [refreshFailed, setRefreshFailed] = useState(false);
   const [status, setStatus] = useState<{ tone: "success" | "error"; message: string } | null>(null);
   const readiness = useQuery({
+    enabled: canManageMeta,
     queryKey: ["integrations", "meta", "self-service", brandId],
     queryFn: ({ signal }) => apiQuery(
       `/api/integrations/meta/self-service/readiness${queryString({ brand_id: brandId })}`,
@@ -226,7 +235,7 @@ export function MetaConnectionModal({
       setAccountSearch("");
       setStatus({
         tone: "success",
-        message: `${refreshed.discovered_count} account${refreshed.discovered_count === 1 ? "" : "s"} loaded from the saved Meta access (${refreshed.facebook_count} Facebook · ${refreshed.instagram_count} Instagram). Select any accounts for ${brandName}.`,
+        message: `${refreshed.discovered_count} Meta account${refreshed.discovered_count === 1 ? "" : "s"} loaded (${refreshed.facebook_count} Facebook · ${refreshed.instagram_count} Instagram).`,
       });
       await queryClient.invalidateQueries({
         queryKey: ["integrations", "meta", "self-service", brandId],
@@ -251,6 +260,8 @@ export function MetaConnectionModal({
   useEffect(() => {
     if (
       automaticallyRefreshedBrand.current === brandId
+      || catalogPlatform === "tiktok"
+      || !canManageMeta
       || readiness.isPending
       || !readiness.data?.oauth_start_available
       || !hasSavedMetaAccess
@@ -263,7 +274,7 @@ export function MetaConnectionModal({
     // requiring the user to discover a second, easy-to-miss button.
     automaticallyRefreshedBrand.current = brandId;
     void refreshAccounts();
-  }, [brandId, hasSavedMetaAccess, readiness.data, readiness.isPending]);
+  }, [brandId, canManageMeta, catalogPlatform, hasSavedMetaAccess, readiness.data, readiness.isPending]);
 
   const linkSelected = async () => {
     if (activeConnectionId === null) return;
@@ -312,23 +323,6 @@ export function MetaConnectionModal({
     });
   };
 
-  const toggleCurrentLink = (item: Pick<MetaDiscovery, "external_id" | "platform">) => {
-    const key = discoveryKey(item);
-    setSelected((current) => {
-      const next = selectionInitialized
-        ? new Set(current)
-        : new Set(
-          availableDiscoveries
-            .filter((candidate) => linkedAccountKeys.has(discoveryKey(candidate)))
-            .map(discoveryKey),
-        );
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-    setSelectionInitialized(true);
-  };
-
   const selectAllShown = () => {
     setSelected((current) => {
       const next = new Set(current);
@@ -347,7 +341,7 @@ export function MetaConnectionModal({
     setSelectionInitialized(true);
   };
 
-  const showCatalogPlatform = (platform: Extract<Platform, "facebook" | "instagram">) => {
+  const showCatalogPlatform = (platform: Platform) => {
     setCatalogPlatform(platform);
     setAccountSearch("");
   };
@@ -355,7 +349,8 @@ export function MetaConnectionModal({
   const unavailableReason = readiness.data && !readiness.data.oauth_start_available
     ? READINESS_COPY[readiness.data.reason] ?? "Meta self-service is unavailable in this runtime."
     : null;
-  const focusLabel = focusPlatform === "facebook" ? "Facebook Pages" : "Instagram Business accounts";
+  const metaPlatform = catalogPlatform !== "tiktok";
+  const platformLabel = catalogPlatform === "facebook" ? "Facebook Pages" : "Instagram Accounts";
 
   // Through a portal, like the dialog this can be opened from. That dialog
   // portals to the document body, so a modal left inside the page tree sits in
@@ -364,93 +359,117 @@ export function MetaConnectionModal({
   // dimmed by its backdrop and impossible to click.
   return createPortal(
     <div className="tiktok-connect-layer">
-      <button aria-label="Close Meta connection modal" className="tiktok-connect-backdrop" onClick={dismiss} type="button" />
+      <button aria-label="Close social account manager" className="tiktok-connect-backdrop" onClick={dismiss} type="button" />
       <section aria-labelledby="meta-connect-title" aria-modal="true" className="tiktok-connect-modal meta-connect-modal" role="dialog">
         <header>
-          <div className="meta-connect-icons" aria-hidden="true"><Facebook size={20} /><Instagram size={20} /></div>
-          <div><h2 id="meta-connect-title">Manage Meta accounts</h2><p>Review or change the Facebook and Instagram accounts linked to {brandName}.</p></div>
-          <button aria-label="Close Meta connection modal" onClick={dismiss} type="button"><X size={18} /></button>
+          <div className="meta-connect-icons" aria-hidden="true"><Link2 size={21} /></div>
+          <div><h2 id="meta-connect-title">Manage social accounts</h2><p>{brandName} · Select the accounts this Brand should use.</p></div>
+          <button aria-label="Close social account manager" onClick={dismiss} type="button"><X size={18} /></button>
         </header>
 
         {status && <div className={`tiktok-connect-status ${status.tone}`} role="status">{status.tone === "success" ? <Check size={17} /> : <AlertTriangle size={17} />}<span>{status.message}</span></div>}
 
         <div className="tiktok-connect-body">
-          <article>
-            <span className="tiktok-connect-step">1</span>
-            <div><h3>{hasSavedMetaAccess ? "Accounts load automatically" : "Connect Meta once"}</h3><p>{hasSavedMetaAccess ? "Opening Edit automatically refreshes every Facebook Page and linked Instagram Business account available to the connected Meta user." : "Authorize once so Meta can return the Pages you manage and their linked Instagram Business accounts. Provider tokens remain encrypted on the backend."}</p></div>
-          </article>
-          <article>
-            <span className="tiktok-connect-step">2</span>
-            <div><h3>Select accounts for this Brand</h3><p>Choose {focusLabel} and any other Meta accounts this Brand should use. Saving replaces the current selection for {brandName}.</p></div>
-          </article>
-
-          {readiness.isPending ? <div className="tiktok-connect-readiness"><RefreshCw className="spin" size={16} />Checking Meta connection readiness…</div> : readiness.isError || !readiness.data ? <div className="tiktok-connect-readiness error"><AlertTriangle size={16} />Self-service access could not be verified.</div> : isRefreshing ? <div className="tiktok-connect-readiness ready"><RefreshCw className="spin" size={16} /><span><strong>Loading every available Meta account</strong><small>Refreshing Facebook Pages and linked Instagram Business accounts…</small></span></div> : <div className={`tiktok-connect-readiness ${readiness.data.oauth_start_available ? "ready" : "blocked"}`}><ShieldCheck size={16} /><span><strong>{hasSavedMetaAccess ? "Saved Meta access is ready" : readiness.data.oauth_start_available ? "Ready to connect" : "Connection not active"}</strong>{unavailableReason && <small>{unavailableReason}</small>}<small>{readiness.data.facebook_linked_count} Facebook · {readiness.data.instagram_linked_count} Instagram currently linked.</small></span></div>}
-
-          {readiness.data && readiness.data.linked_accounts.length > 0 && (
-            <section className="meta-current-links" aria-label={`Accounts linked to ${brandName}`}>
-              <h3>Currently linked to {brandName}</h3>
-              <div>
-                {readiness.data.linked_accounts.map((item) => (
-                  <span className={selectionInitialized && !selected.has(discoveryKey(item)) ? "pending-unlink" : ""} key={discoveryKey(item)}>
-                    <span className={`integration-platform-icon platform-${item.platform}`}>{item.platform === "facebook" ? <Facebook size={16} /> : <Instagram size={16} />}</span>
-                    <span><strong>{item.display_name}</strong><small>{item.platform === "facebook" ? "Facebook Page" : "Instagram Business"} · {item.external_id}</small></span>
-                    <button onClick={() => toggleCurrentLink(item)} type="button">
-                      {selectionInitialized && !selected.has(discoveryKey(item)) ? "Keep linked" : "Unlink"}
+          <section className="meta-account-catalog" aria-label={`Social accounts for ${brandName}`}>
+            <header>
+              <nav aria-label="Social account platform">
+                {(["facebook", "instagram", "tiktok"] as const).map((platform) => {
+                  const availableCount = platform === "tiktok"
+                    ? tiktokAccounts.length
+                    : availableDiscoveries.filter((item) => item.platform === platform).length;
+                  const linkedCount = platform === "tiktok"
+                    ? tiktokAccounts.length
+                    : readiness.data?.linked_accounts.filter((item) => item.platform === platform).length ?? 0;
+                  const active = catalogPlatform === platform;
+                  return (
+                    <button aria-expanded={active} className={active ? "active" : ""} key={platform} onClick={() => showCatalogPlatform(platform)} type="button">
+                      <span className={`integration-platform-icon platform-${platform}`}>{platform === "facebook" ? <Facebook size={16} /> : platform === "instagram" ? <Instagram size={16} /> : <span className="meta-tiktok-mark">♪</span>}</span>
+                      <span><strong>{platform === "facebook" ? "Facebook" : platform === "instagram" ? "Instagram" : "TikTok"}</strong><small>{availableCount} account{availableCount === 1 ? "" : "s"} · {linkedCount} linked</small></span>
                     </button>
-                  </span>
-                ))}
-              </div>
-            </section>
-          )}
+                  );
+                })}
+              </nav>
+            </header>
 
-          {availableDiscoveries.length > 0 && (
-            <section className="meta-account-catalog" aria-label={`Accounts available from Meta (${availableDiscoveries.length})`}>
-              <header>
-                <div><h3>Accounts available from Meta</h3><small>{availableDiscoveries.length} accounts</small></div>
-                <nav aria-label="Meta account platform">
-                  {(["facebook", "instagram"] as const).map((platform) => {
-                    const count = availableDiscoveries.filter((item) => item.platform === platform).length;
-                    const active = catalogPlatform === platform;
-                    return <button aria-expanded={active} className={active ? "active" : ""} key={platform} onClick={() => showCatalogPlatform(platform)} type="button"><span className={`integration-platform-icon platform-${platform}`}>{platform === "facebook" ? <Facebook size={16} /> : <Instagram size={16} />}</span><span><strong>{platform === "facebook" ? "Facebook Pages" : "Instagram Accounts"}</strong><small>{count} available</small></span></button>;
-                  })}
-                </nav>
-              </header>
+            {metaPlatform ? (
               <div className="meta-platform-account-list meta-discovery-list">
-                <h4>{catalogPlatform === "facebook" ? "Facebook Pages" : "Instagram Accounts"}</h4>
-              {platformDiscoveries.length > 8 && (
-                <div className="meta-account-tools">
-                  <label><Search size={15} /><input aria-label={`Search ${catalogPlatform === "facebook" ? "Facebook Pages" : "Instagram accounts"}`} onChange={(event) => setAccountSearch(event.target.value)} placeholder="Search by name or ID" type="search" value={accountSearch} /></label>
-                  <span>{filteredDiscoveries.length} shown</span>
-                  <button disabled={filteredDiscoveries.length === 0} onClick={selectAllShown} type="button">Select shown</button>
-                  <button disabled={filteredDiscoveries.length === 0} onClick={clearShown} type="button">Clear shown</button>
+                <div className="meta-platform-heading">
+                  <h3>{platformLabel}</h3>
+                  <p>Checked accounts will be linked after saving.</p>
                 </div>
-              )}
-              {filteredDiscoveries.map((item) => (
-                <label key={discoveryKey(item)}>
-                  <input checked={selected.has(discoveryKey(item))} onChange={() => toggle(item)} type="checkbox" />
-                  <span className={`integration-platform-icon platform-${item.platform}`}>{item.platform === "facebook" ? <Facebook size={17} /> : <Instagram size={17} />}</span>
-                  <span><strong>{item.display_name}</strong><small>{item.platform === "facebook" ? "Facebook Page" : "Instagram Business"} · {item.external_id}</small></span>
-                  <em className={linkedAccountKeys.has(discoveryKey(item)) ? "linked" : "available"}>{linkedAccountKeys.has(discoveryKey(item)) ? "Currently linked" : "Available"}</em>
-                </label>
-              ))}
-              {filteredDiscoveries.length === 0 && <p className="meta-account-empty">No {catalogPlatform === "facebook" ? "Facebook Page" : "Instagram account"} matches this search.</p>}
-              </div>
-            </section>
-          )}
 
-          {readiness.data && (
-            <p className="meta-refresh-note">Refresh uses the encrypted Meta access already stored for this Brand. Facebook authorization opens only when connecting for the first time, switching Meta users, or restoring expired access.</p>
-          )}
+                {!canManageMeta ? (
+                  <p className="meta-account-empty">You do not have permission to manage Meta accounts.</p>
+                ) : readiness.isPending || isRefreshing ? (
+                  <p className="meta-account-loading"><RefreshCw className="spin" size={16} />Loading available {platformLabel.toLowerCase()}…</p>
+                ) : readiness.isError || !readiness.data ? (
+                  <p className="meta-account-empty">Meta access could not be checked.</p>
+                ) : unavailableReason ? (
+                  <p className="meta-account-empty">{unavailableReason}</p>
+                ) : platformDiscoveries.length === 0 ? (
+                  <p className="meta-account-empty">No {catalogPlatform === "facebook" ? "Facebook Page" : "Instagram Business account"} is available.</p>
+                ) : (
+                  <>
+                    {platformDiscoveries.length > 8 && (
+                      <div className="meta-account-tools">
+                        <label><Search size={15} /><input aria-label={`Search ${platformLabel}`} onChange={(event) => setAccountSearch(event.target.value)} placeholder="Search by name or ID" type="search" value={accountSearch} /></label>
+                        <span>{filteredDiscoveries.length} shown</span>
+                        <button disabled={filteredDiscoveries.length === 0} onClick={selectAllShown} type="button">Select shown</button>
+                        <button disabled={filteredDiscoveries.length === 0} onClick={clearShown} type="button">Clear shown</button>
+                      </div>
+                    )}
+                    {filteredDiscoveries.map((item) => {
+                      const key = discoveryKey(item);
+                      const isLinked = linkedAccountKeys.has(key);
+                      const isSelected = selected.has(key);
+                      const badge = isLinked && !isSelected
+                        ? { className: "unlink", label: "Will unlink" }
+                        : isLinked
+                          ? { className: "linked", label: "Linked" }
+                          : isSelected
+                            ? { className: "selected", label: "Selected" }
+                            : { className: "available", label: "Available" };
+                      return (
+                        <label key={key}>
+                          <input checked={isSelected} onChange={() => toggle(item)} type="checkbox" />
+                          <span className={`integration-platform-icon platform-${item.platform}`}>{item.platform === "facebook" ? <Facebook size={17} /> : <Instagram size={17} />}</span>
+                          <span><strong>{item.display_name}</strong><small>{item.platform === "facebook" ? "Facebook Page" : "Instagram Business"} · {item.external_id}</small></span>
+                          <em className={badge.className}>{badge.label}</em>
+                        </label>
+                      );
+                    })}
+                    {filteredDiscoveries.length === 0 && <p className="meta-account-empty">No account matches this search.</p>}
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="social-manager-tiktok-panel">
+                <div className="meta-platform-heading">
+                  <h3>TikTok Accounts</h3>
+                  <p>TikTok authorization and account selection are managed separately.</p>
+                </div>
+                {tiktokAccounts.length > 0 ? tiktokAccounts.map((account) => (
+                  <article key={account.account_id}>
+                    <span className="integration-platform-icon platform-tiktok"><span className="meta-tiktok-mark">♪</span></span>
+                    <span><strong>{account.display_name || account.external_id}</strong><small>TikTok · {account.external_id}</small></span>
+                    <em>{account.connection_state === "connected" ? "Linked" : account.connection_state}</em>
+                  </article>
+                )) : <p className="meta-account-empty">No TikTok account is linked to this Brand.</p>}
+              </div>
+            )}
+          </section>
         </div>
 
         <footer>
-          <p>Loading accounts reads Meta with the saved encrypted access; it does not open Facebook authorization.</p>
           <button className="secondary-button" onClick={dismiss} type="button">Cancel</button>
-          {availableDiscoveries.length > 0 && <button className={`secondary-button ${selected.size === 0 ? "meta-unlink-all-button" : ""}`} disabled={isLinking || isRefreshing || !readiness.data?.oauth_start_available} onClick={() => void linkSelected()} type="button">{isLinking ? <RefreshCw className="spin" size={15} /> : <Check size={15} />}{isLinking ? "Saving…" : selected.size === 0 ? "Save and unlink all" : `Save changes (${selected.size} linked)`}</button>}
-          {refreshFailed && hasSavedMetaAccess ? (
+          {catalogPlatform === "tiktok" ? (
+            <button className="primary-button compact-button" disabled={!canManageTikTok} onClick={onManageTikTok} type="button"><Link2 size={15} />{tiktokAccounts.length > 0 ? "Manage TikTok" : "Connect TikTok"}</button>
+          ) : !canManageMeta ? null : refreshFailed && hasSavedMetaAccess ? (
             <button className="primary-button compact-button" disabled={!readiness.data?.oauth_start_available || isRefreshing || isLinking} onClick={() => void refreshAccounts()} type="button"><RefreshCw size={15} />Retry loading accounts</button>
           ) : !hasSavedMetaAccess ? (
             <button className="primary-button compact-button" disabled={!readiness.data?.oauth_start_available || isConnecting} onClick={() => void connect()} type="button">{isConnecting ? <RefreshCw className="spin" size={15} /> : <Link2 size={15} />}{isConnecting ? "Connecting…" : "Connect Meta"}</button>
+          ) : availableDiscoveries.length > 0 ? (
+            <button className={`primary-button compact-button ${selected.size === 0 ? "meta-unlink-all-button" : ""}`} disabled={isLinking || isRefreshing || !readiness.data?.oauth_start_available} onClick={() => void linkSelected()} type="button">{isLinking ? <RefreshCw className="spin" size={15} /> : <Check size={15} />}{isLinking ? "Saving…" : selected.size === 0 ? "Save and unlink all" : `Save changes (${selected.size})`}</button>
           ) : null}
         </footer>
       </section>
