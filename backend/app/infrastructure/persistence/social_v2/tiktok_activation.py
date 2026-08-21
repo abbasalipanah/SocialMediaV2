@@ -121,12 +121,44 @@ class ProjectionTikTokActivationStore:
             ).mappings().one_or_none()
             if existing is not None:
                 if (
-                    existing["status"] != "pending_verification"
-                    or existing["connection_id"] is None
+                    existing["status"] == "pending_verification"
+                    and existing["connection_id"] is not None
                 ):
+                    connection_id = int(existing["connection_id"])
+                    link_id = int(existing["id"])
+                elif existing["status"] in {"disconnected", "revoked"}:
+                    connection_id = int(
+                        connection.execute(
+                            text(
+                                """INSERT INTO platform_connections
+                                   (tenant_id, brand_id, platform, status, expires_at,
+                                    projected_at, projection_source)
+                                   VALUES (:tenant_id, :brand_id, 'tiktok',
+                                           'pending_verification', :expires_at, now(),
+                                           'v2_owner_activation')
+                                   RETURNING id"""
+                            ),
+                            {
+                                "tenant_id": tenant_id,
+                                "brand_id": brand_id,
+                                "expires_at": access_expires_at,
+                            },
+                        ).scalar_one()
+                    )
+                    link_id = int(existing["id"])
+                    connection.execute(
+                        text(
+                            """UPDATE linked_social_accounts
+                               SET connection_id=:connection_id,
+                                   status='pending_verification',
+                                   health_status='unknown', backfill_status='pending',
+                                   nightly_enabled=false, updated_at=now()
+                               WHERE id=:link_id"""
+                        ),
+                        {"connection_id": connection_id, "link_id": link_id},
+                    )
+                else:
                     raise TikTokActivationError("activation_link_conflict")
-                connection_id = int(existing["connection_id"])
-                link_id = int(existing["id"])
             else:
                 connection_id = int(
                     connection.execute(
@@ -192,6 +224,125 @@ class ProjectionTikTokActivationStore:
             brand_id=brand_id,
             business_id=business_id,
             state="pending_verification",
+            display_name=business_id,
+            credential_reference=credential_reference,
+        )
+
+    def list_for_brand(self, *, brand_id: int) -> tuple[ActivationLink, ...]:
+        if brand_id < 1:
+            raise TikTokActivationError("activation_brand_unavailable")
+        with self.engine.connect() as connection:
+            rows = connection.execute(
+                text(
+                    """SELECT lsa.id AS link_id, lsa.connection_id,
+                              lsa.external_id AS business_id, lsa.status,
+                              COALESCE(NULLIF(a.display_name, ''),
+                                       NULLIF(lsa.display_name, ''),
+                                       lsa.external_id) AS display_name,
+                              COALESCE(ps.payload_json->>'credential_reference', '')
+                                  AS credential_reference
+                       FROM linked_social_accounts AS lsa
+                       LEFT JOIN assets AS a ON a.id=lsa.asset_id
+                       LEFT JOIN social_projection_state AS ps
+                         ON ps.projection_key=(
+                           'v2:tiktok:connection-credential:' || lsa.connection_id::text
+                         )
+                       WHERE lsa.brand_id=:brand_id AND lsa.platform='tiktok'
+                         AND lsa.status NOT IN ('disconnected', 'revoked')
+                       ORDER BY lsa.updated_at DESC, lsa.id DESC"""
+                ),
+                {"brand_id": brand_id},
+            ).mappings()
+            return tuple(
+                ActivationLink(
+                    connection_id=int(row["connection_id"]),
+                    link_id=int(row["link_id"]),
+                    brand_id=brand_id,
+                    business_id=str(row["business_id"]),
+                    state=str(row["status"]),
+                    display_name=str(row["display_name"]),
+                    credential_reference=str(row["credential_reference"]),
+                )
+                for row in rows
+                if row["connection_id"] is not None
+            )
+
+    def disconnect(
+        self,
+        *,
+        brand_id: int,
+        business_id: str,
+    ) -> ActivationLink | None:
+        self._write_policy.assert_allows_mutation("tiktok_activation_link_disconnect")
+        if brand_id < 1 or not business_id:
+            raise TikTokActivationError("activation_link_invalid")
+        with self.engine.begin() as connection:
+            row = connection.execute(
+                text(
+                    """SELECT lsa.id AS link_id, lsa.connection_id, lsa.status,
+                              COALESCE(NULLIF(a.display_name, ''),
+                                       NULLIF(lsa.display_name, ''),
+                                       lsa.external_id) AS display_name,
+                              COALESCE(ps.payload_json->>'credential_reference', '')
+                                  AS credential_reference
+                       FROM linked_social_accounts AS lsa
+                       LEFT JOIN assets AS a ON a.id=lsa.asset_id
+                       LEFT JOIN social_projection_state AS ps
+                         ON ps.projection_key=(
+                           'v2:tiktok:connection-credential:' || lsa.connection_id::text
+                         )
+                       WHERE lsa.brand_id=:brand_id AND lsa.platform='tiktok'
+                         AND lsa.external_id=:business_id
+                       FOR UPDATE OF lsa"""
+                ),
+                {"brand_id": brand_id, "business_id": business_id},
+            ).mappings().one_or_none()
+            if row is None or row["connection_id"] is None:
+                return None
+            connection_id = int(row["connection_id"])
+            connection.execute(
+                text(
+                    """UPDATE linked_social_accounts
+                       SET status='disconnected', nightly_enabled=false, updated_at=now()
+                       WHERE id=:link_id"""
+                ),
+                {"link_id": int(row["link_id"])},
+            )
+            connection.execute(
+                text(
+                    """UPDATE assets
+                       SET status='inactive', updated_at=now()
+                       WHERE brand_id=:brand_id AND platform='tiktok'
+                         AND external_id=:business_id"""
+                ),
+                {"brand_id": brand_id, "business_id": business_id},
+            )
+            connection.execute(
+                text(
+                    """UPDATE platform_connections
+                       SET status='disconnected', updated_at=now()
+                       WHERE id=:connection_id AND brand_id=:brand_id
+                         AND platform='tiktok'"""
+                ),
+                {"connection_id": connection_id, "brand_id": brand_id},
+            )
+            connection.execute(
+                text(
+                    """UPDATE social_projection_state
+                       SET payload_json=payload_json || jsonb_build_object('state', 'disconnected'),
+                           updated_at=now()
+                       WHERE projection_key=:key"""
+                ),
+                {"key": f"v2:tiktok:connection-credential:{connection_id}"},
+            )
+        return ActivationLink(
+            connection_id=connection_id,
+            link_id=int(row["link_id"]),
+            brand_id=brand_id,
+            business_id=business_id,
+            state="disconnected",
+            display_name=str(row["display_name"]),
+            credential_reference=str(row["credential_reference"]),
         )
 
     @staticmethod

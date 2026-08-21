@@ -127,11 +127,19 @@ class TikTokActivationReadinessResponse:
 
 
 @dataclass(frozen=True)
+class TikTokLinkedAccountItem:
+    external_id: str
+    display_name: str
+    state: str
+
+
+@dataclass(frozen=True)
 class TikTokSelfServiceReadinessResponse:
     brand_id: str
     can_manage: bool
     connection_state: str
     linked_account_count: int
+    linked_accounts: tuple[TikTokLinkedAccountItem, ...]
     oauth_start_available: bool
     reason: str
     runtime_mode: RuntimeMode
@@ -143,6 +151,13 @@ class TikTokSelfServiceReadinessResponse:
 class TikTokSelfServiceStartResponse:
     authorization_url: str
     expires_at: datetime
+
+
+@dataclass(frozen=True)
+class TikTokUnlinkResponse:
+    brand_id: str
+    external_id: str
+    state: str
 
 
 @dataclass(frozen=True)
@@ -313,6 +328,8 @@ __all__ = [
     "TikTokActivationReadinessResponse",
     "TikTokSelfServiceReadinessResponse",
     "TikTokSelfServiceStartResponse",
+    "TikTokLinkedAccountItem",
+    "TikTokUnlinkResponse",
     "WorkspaceCapabilitiesResponse",
     "WorkspacePermissions",
 ]

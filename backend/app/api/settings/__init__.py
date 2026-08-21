@@ -28,8 +28,10 @@ from app.api.contracts import (
     SyncJobsResponse,
     TikTokActivationReadinessResponse,
     TikTokConnectionResponse,
+    TikTokLinkedAccountItem,
     TikTokSelfServiceReadinessResponse,
     TikTokSelfServiceStartResponse,
+    TikTokUnlinkResponse,
 )
 from app.api.scope import RequestScope, resolve_request_scope
 from app.application.ports import (
@@ -796,6 +798,27 @@ def create_settings_router(
             for account in reporting_store.list_accounts(brand_ids=(brand_id,))
             if account.platform is PlatformId.TIKTOK
         )
+        if activation is not None:
+            try:
+                linked_accounts = tuple(
+                    TikTokLinkedAccountItem(
+                        external_id=item.business_id,
+                        display_name=item.display_name or item.business_id,
+                        state=item.state,
+                    )
+                    for item in activation.linked_accounts(context)
+                )
+            except TikTokActivationError as exc:
+                _raise_self_service_activation_error(exc)
+        else:
+            linked_accounts = tuple(
+                TikTokLinkedAccountItem(
+                    external_id=item.external_id,
+                    display_name=item.display_name or item.external_id,
+                    state=item.link_status,
+                )
+                for item in accounts
+            )
         rows = tuple(
             row
             for row in reporting_store.list_connections(brand_ids=(brand_id,))
@@ -822,7 +845,8 @@ def create_settings_router(
             brand_id=scope.workspace.scope.requested_brand_id,
             can_manage=True,
             connection_state=connection_state,
-            linked_account_count=len(accounts),
+            linked_account_count=len(linked_accounts),
+            linked_accounts=linked_accounts,
             oauth_start_available=start_available,
             reason=reason,
             runtime_mode=policy.runtime_mode,
@@ -854,6 +878,34 @@ def create_settings_router(
         return TikTokSelfServiceStartResponse(
             authorization_url=started.authorization_url,
             expires_at=started.expires_at,
+        )
+
+    @router.delete(
+        "/api/integrations/tiktok/accounts/unlink",
+        response_model=TikTokUnlinkResponse,
+    )
+    @mark_boundary(Boundary.COMMAND)
+    async def tiktok_self_service_unlink(
+        request: Request,
+        brand_id: str = Query(min_length=1),
+        external_id: str = Query(min_length=1, max_length=255),
+        session: str | None = Cookie(default=None, alias=COOKIE_NAME),
+    ) -> TikTokUnlinkResponse:
+        _same_origin(request)
+        if activation is None:
+            raise HTTPException(503, "tiktok_self_service_unavailable")
+        scope, context = _self_service_context(
+            raw_session=session,
+            requested_brand_id=brand_id,
+        )
+        try:
+            result = activation.unlink(context=context, business_id=external_id)
+        except TikTokActivationError as exc:
+            _raise_self_service_activation_error(exc)
+        return TikTokUnlinkResponse(
+            brand_id=scope.workspace.scope.requested_brand_id,
+            external_id=result.business_id,
+            state=result.state,
         )
 
     @router.post("/api/settings/tiktok/oauth/account/start", status_code=303)
@@ -1120,6 +1172,10 @@ def _raise_self_service_activation_error(exc: TikTokActivationError) -> None:
         raise HTTPException(403, reason) from exc
     if reason == "tiktok_self_service_callback_rejected":
         raise HTTPException(400, reason) from exc
+    if reason == "tiktok_self_service_account_invalid":
+        raise HTTPException(400, reason) from exc
+    if reason == "tiktok_self_service_account_not_found":
+        raise HTTPException(404, reason) from exc
     raise HTTPException(503, reason) from exc
 
 
@@ -1133,6 +1189,10 @@ def _self_service_error_code(exc: TikTokActivationError) -> str:
         return "tiktok_self_service_scope_denied"
     if reason == "activation_callback_rejected":
         return "tiktok_self_service_callback_rejected"
+    if reason == "activation_link_invalid":
+        return "tiktok_self_service_account_invalid"
+    if reason == "activation_link_not_found":
+        return "tiktok_self_service_account_not_found"
     return "tiktok_self_service_completion_failed"
 
 

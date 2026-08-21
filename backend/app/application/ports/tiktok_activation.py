@@ -97,6 +97,8 @@ class ActivationLink:
     brand_id: int
     business_id: str
     state: str
+    display_name: str = ""
+    credential_reference: str = field(default="", repr=False)
 
 
 @dataclass(frozen=True)
@@ -162,6 +164,15 @@ class ActivationLinkStore(Protocol):
         credential_reference: str,
         access_expires_at: datetime,
     ) -> ActivationLink: ...
+
+    def list_for_brand(self, *, brand_id: int) -> tuple[ActivationLink, ...]: ...
+
+    def disconnect(
+        self,
+        *,
+        brand_id: int,
+        business_id: str,
+    ) -> ActivationLink | None: ...
 
 
 class ActivationAuthority(Protocol):

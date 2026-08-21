@@ -3086,6 +3086,29 @@
         "title": "TikTokConnectionResponse",
         "type": "object"
       },
+      "TikTokLinkedAccountItem": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "external_id",
+          "display_name",
+          "state"
+        ],
+        "title": "TikTokLinkedAccountItem",
+        "type": "object"
+      },
       "TikTokSelfServiceReadinessResponse": {
         "properties": {
           "brand_id": {
@@ -3109,6 +3132,13 @@
             "title": "Linked Account Count",
             "type": "integer"
           },
+          "linked_accounts": {
+            "items": {
+              "$ref": "#/components/schemas/TikTokLinkedAccountItem"
+            },
+            "title": "Linked Accounts",
+            "type": "array"
+          },
           "oauth_start_available": {
             "title": "Oauth Start Available",
             "type": "boolean"
@@ -3130,6 +3160,7 @@
           "can_manage",
           "connection_state",
           "linked_account_count",
+          "linked_accounts",
           "oauth_start_available",
           "reason",
           "runtime_mode",
@@ -3156,6 +3187,29 @@
           "expires_at"
         ],
         "title": "TikTokSelfServiceStartResponse",
+        "type": "object"
+      },
+      "TikTokUnlinkResponse": {
+        "properties": {
+          "brand_id": {
+            "title": "Brand Id",
+            "type": "string"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "brand_id",
+          "external_id",
+          "state"
+        ],
+        "title": "TikTokUnlinkResponse",
         "type": "object"
       },
       "Unit": {
@@ -4854,6 +4908,73 @@
           }
         },
         "summary": "Integration Sync Jobs"
+      }
+    },
+    "/api/integrations/tiktok/accounts/unlink": {
+      "delete": {
+        "operationId": "tiktok_self_service_unlink_api_integrations_tiktok_accounts_unlink_delete",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Brand Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "external_id",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "title": "External Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TikTokUnlinkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tiktok Self Service Unlink"
       }
     },
     "/api/integrations/tiktok/oauth/start": {

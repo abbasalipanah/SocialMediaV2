@@ -13,6 +13,7 @@ from app.application.ports import (
     ActivationContext,
     ActivationIntent,
     ActivationIntentStore,
+    ActivationLink,
     ActivationLinkStore,
     ActivationResult,
     ActivationStart,
@@ -281,6 +282,53 @@ class TikTokActivationCoordinator:
             state=link.state,
             optional_scopes_available=optional,
         )
+
+    def linked_accounts(self, context: ActivationContext) -> tuple[ActivationLink, ...]:
+        self._assert_authorized(context, require_gate_context=False)
+        return self._link_store.list_for_brand(brand_id=context.brand_id)
+
+    def unlink(self, *, context: ActivationContext, business_id: str) -> ActivationLink:
+        try:
+            self._write_policy.assert_allows_mutation("tiktok_activation_unlink")
+        except PermissionError as exc:
+            raise TikTokActivationError("activation_disabled") from exc
+        self._assert_authorized(context, require_gate_context=False)
+        if not business_id or len(business_id.encode("utf-8")) > 255:
+            raise TikTokActivationError("activation_link_invalid")
+        link = self._link_store.disconnect(
+            brand_id=context.brand_id,
+            business_id=business_id,
+        )
+        if link is None:
+            raise TikTokActivationError("activation_link_not_found")
+
+        # The Brand link is already disabled before any provider call, so a
+        # temporary TikTok revoke failure cannot leave collection enabled. The
+        # locally encrypted access and refresh credentials are then revoked on
+        # a best-effort basis as defense in depth.
+        if link.credential_reference:
+            access_reference = CredentialRef(
+                platform=PlatformId.TIKTOK,
+                connection_id=link.credential_reference,
+                token_kind=TokenKind.ACCESS,
+            )
+            refresh_reference = CredentialRef(
+                platform=PlatformId.TIKTOK,
+                connection_id=link.credential_reference,
+                token_kind=TokenKind.REFRESH,
+            )
+            try:
+                access_token = self._credential_store.get(access_reference)
+                if access_token is not None:
+                    self._provider.revoke(access_token=access_token.value)
+            except Exception:
+                pass
+            for reference in (access_reference, refresh_reference):
+                try:
+                    self._credential_store.revoke(reference)
+                except Exception:
+                    pass
+        return link
 
     def _assert_enabled(self, command: str) -> datetime:
         try:

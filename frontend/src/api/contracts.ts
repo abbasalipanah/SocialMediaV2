@@ -587,6 +587,11 @@ export const tiktokSelfServiceReadinessSchema = z.object({
   can_manage: z.boolean(),
   connection_state: z.string(),
   linked_account_count: z.number().int().nonnegative(),
+  linked_accounts: z.array(z.object({
+    external_id: z.string(),
+    display_name: z.string(),
+    state: z.string(),
+  })),
   oauth_start_available: z.boolean(),
   reason: z.string(),
   runtime_mode: z.string(),
@@ -600,6 +605,13 @@ export const tiktokSelfServiceStartSchema = z.object({
   expires_at: z.string(),
 });
 export type TikTokSelfServiceStart = z.infer<typeof tiktokSelfServiceStartSchema>;
+
+export const tiktokUnlinkResponseSchema = z.object({
+  brand_id: z.string(),
+  external_id: z.string(),
+  state: z.literal("disconnected"),
+});
+export type TikTokUnlinkResponse = z.infer<typeof tiktokUnlinkResponseSchema>;
 
 export const metaDiscoverySchema = z.object({
   connection_id: z.number().int().positive(),

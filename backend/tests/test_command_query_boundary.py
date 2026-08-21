@@ -44,6 +44,7 @@ def test_all_routes_have_explicit_boundary_semantics() -> None:
         ("/api/integrations/status/social-accounts", ("GET",)),
         ("/api/integrations/status/sync-jobs", ("GET",)),
         ("/api/integrations/tiktok/oauth/start", ("POST",)),
+        ("/api/integrations/tiktok/accounts/unlink", ("DELETE",)),
         ("/api/integrations/tiktok/self-service/readiness", ("GET",)),
         ("/api/media/{platform}/{content_id}", ("GET",)),
         ("/api/operations/backfill", ("POST",)),

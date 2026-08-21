@@ -2051,6 +2051,10 @@ body { background: var(--sm-bg); }
 .social-manager-tiktok-panel strong { color: #0f172a; font-size: .68rem; }
 .social-manager-tiktok-panel small { margin-top: 3px; color: #64748b; font-size: .57rem; font-weight: 600; }
 .social-manager-tiktok-panel em { padding: 4px 7px; color: #047857; border-radius: 99px; background: #d1fae5; font-size: .52rem; font-style: normal; font-weight: 800; text-transform: capitalize; }
+.social-manager-tiktok-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.social-manager-tiktok-actions button { min-height: 28px; padding: 5px 8px; color: #b91c1c; border: 1px solid #fecaca; border-radius: 7px; background: white; font-size: .54rem; font-weight: 800; white-space: nowrap; }
+.social-manager-tiktok-actions button.confirm { display: inline-flex; align-items: center; gap: 4px; color: white; border-color: #dc2626; background: #dc2626; }
+.social-manager-tiktok-actions button:disabled { cursor: not-allowed; opacity: .5; }
 .meta-unlink-all-button { color: #b91c1c !important; border-color: #fecaca !important; background: #fff7f7 !important; }
 
 @media (max-width: 1180px) {
@@ -2081,6 +2085,8 @@ body { background: var(--sm-bg); }
   .meta-account-tools > label { grid-column: 1 / -1; }
   .meta-discovery-list label { grid-template-columns: auto auto minmax(0, 1fr); }
   .meta-discovery-list em { grid-column: 2 / -1; justify-self: start; }
+  .social-manager-tiktok-panel article { grid-template-columns: auto minmax(0, 1fr); }
+  .social-manager-tiktok-actions { grid-column: 2; flex-wrap: wrap; justify-content: flex-start; }
 }
 
 @media (max-width: 390px) {

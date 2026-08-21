@@ -246,6 +246,7 @@ const tiktokSelfServiceReadiness = {
   can_manage: true,
   connection_state: "disconnected",
   linked_account_count: 0,
+  linked_accounts: [],
   oauth_start_available: false,
   reason: "provider_activation_not_configured",
   runtime_mode: "dormant",

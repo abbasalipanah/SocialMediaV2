@@ -87,11 +87,11 @@ describe("Brand Setup account editing", () => {
       throw new Error(`Unexpected request: ${url}`);
     }));
 
-    const queryClient = new QueryClient({
+    const queryCache = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
     render(
-      <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={queryCache}>
         <SetupDrawer
           accounts={[]}
           brand={{

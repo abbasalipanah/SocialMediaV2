@@ -21,6 +21,8 @@ import {
   metaSelfServiceReadinessSchema,
   metaSelfServiceStartSchema,
   queryString,
+  tiktokSelfServiceReadinessSchema,
+  tiktokUnlinkResponseSchema,
   type MetaDiscovery,
   type Platform,
   type ReportingAccount,
@@ -75,6 +77,8 @@ export function MetaConnectionModal({
   const [isConnecting, setIsConnecting] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLinking, setIsLinking] = useState(false);
+  const [unlinkingTikTokId, setUnlinkingTikTokId] = useState<string | null>(null);
+  const [confirmTikTokUnlinkId, setConfirmTikTokUnlinkId] = useState<string | null>(null);
   const [activeConnectionId, setActiveConnectionId] = useState<number | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [selectionInitialized, setSelectionInitialized] = useState(false);
@@ -89,6 +93,16 @@ export function MetaConnectionModal({
     queryFn: ({ signal }) => apiQuery(
       `/api/integrations/meta/self-service/readiness${queryString({ brand_id: brandId })}`,
       metaSelfServiceReadinessSchema,
+      signal,
+    ),
+    retry: false,
+  });
+  const tiktokReadiness = useQuery({
+    enabled: canManageTikTok,
+    queryKey: ["integrations", "tiktok", "self-service", brandId],
+    queryFn: ({ signal }) => apiQuery(
+      `/api/integrations/tiktok/self-service/readiness${queryString({ brand_id: brandId })}`,
+      tiktokSelfServiceReadinessSchema,
       signal,
     ),
     retry: false,
@@ -125,6 +139,14 @@ export function MetaConnectionModal({
     && !requiresAuthorization
     && (readiness.data.linked_accounts.length > 0 || readiness.data.discoveries.length > 0)
   );
+  const visibleTikTokAccounts = useMemo(() => {
+    if (tiktokReadiness.data) return tiktokReadiness.data.linked_accounts;
+    return tiktokAccounts.map((item) => ({
+      external_id: item.external_id,
+      display_name: item.display_name || item.external_id,
+      state: item.link_status || item.connection_state,
+    }));
+  }, [tiktokAccounts, tiktokReadiness.data]);
 
   useEffect(() => {
     if (selectionInitialized || availableDiscoveries.length === 0) return;
@@ -313,6 +335,31 @@ export function MetaConnectionModal({
     }
   };
 
+  const unlinkTikTok = async (externalId: string) => {
+    setUnlinkingTikTokId(externalId);
+    setStatus(null);
+    try {
+      await apiMutation(
+        `/api/integrations/tiktok/accounts/unlink${queryString({ brand_id: brandId, external_id: externalId })}`,
+        tiktokUnlinkResponseSchema,
+        { method: "DELETE" },
+      );
+      setConfirmTikTokUnlinkId(null);
+      setStatus({ tone: "success", message: `TikTok account unlinked from ${brandName}.` });
+      await queryClient.invalidateQueries({
+        queryKey: ["integrations", "tiktok", "self-service", brandId],
+      });
+      onConnectedRef.current();
+    } catch (error) {
+      setStatus({
+        tone: "error",
+        message: error instanceof Error ? error.message.replaceAll("_", " ") : "TikTok account could not be unlinked.",
+      });
+    } finally {
+      setUnlinkingTikTokId(null);
+    }
+  };
+
   const toggle = (item: MetaDiscovery) => {
     const key = discoveryKey(item);
     setSelected((current) => {
@@ -375,10 +422,10 @@ export function MetaConnectionModal({
               <nav aria-label="Social account platform">
                 {(["facebook", "instagram", "tiktok"] as const).map((platform) => {
                   const availableCount = platform === "tiktok"
-                    ? tiktokAccounts.length
+                    ? visibleTikTokAccounts.length
                     : availableDiscoveries.filter((item) => item.platform === platform).length;
                   const linkedCount = platform === "tiktok"
-                    ? tiktokAccounts.length
+                    ? visibleTikTokAccounts.length
                     : readiness.data?.linked_accounts.filter((item) => item.platform === platform).length ?? 0;
                   const active = catalogPlatform === platform;
                   return (
@@ -448,13 +495,23 @@ export function MetaConnectionModal({
                   <h3>TikTok Accounts</h3>
                   <p>TikTok authorization and account selection are managed separately.</p>
                 </div>
-                {tiktokAccounts.length > 0 ? tiktokAccounts.map((account) => (
-                  <article key={account.account_id}>
+                {tiktokReadiness.isPending ? (
+                  <p className="meta-account-loading"><RefreshCw className="spin" size={16} />Loading TikTok accounts…</p>
+                ) : visibleTikTokAccounts.length > 0 ? visibleTikTokAccounts.map((account) => (
+                  <article key={account.external_id}>
                     <span className="integration-platform-icon platform-tiktok"><span className="meta-tiktok-mark">♪</span></span>
                     <span><strong>{account.display_name || account.external_id}</strong><small>TikTok · {account.external_id}</small></span>
-                    <em>{account.connection_state === "connected" ? "Linked" : account.connection_state}</em>
+                    <div className="social-manager-tiktok-actions">
+                      <em>{account.state === "connected" || account.state === "active" ? "Linked" : account.state.replaceAll("_", " ")}</em>
+                      {confirmTikTokUnlinkId === account.external_id ? (
+                        <>
+                          <button disabled={unlinkingTikTokId !== null} onClick={() => setConfirmTikTokUnlinkId(null)} type="button">Cancel</button>
+                          <button className="confirm" disabled={unlinkingTikTokId !== null} onClick={() => void unlinkTikTok(account.external_id)} type="button">{unlinkingTikTokId === account.external_id ? <RefreshCw className="spin" size={13} /> : null}Confirm unlink</button>
+                        </>
+                      ) : <button disabled={!canManageTikTok || unlinkingTikTokId !== null} onClick={() => setConfirmTikTokUnlinkId(account.external_id)} type="button">Unlink</button>}
+                    </div>
                   </article>
-                )) : <p className="meta-account-empty">No TikTok account is linked to this Brand.</p>}
+                )) : <p className="meta-account-empty">No TikTok account is linked yet. Use Connect TikTok below to add one.</p>}
               </div>
             )}
           </section>
@@ -463,7 +520,7 @@ export function MetaConnectionModal({
         <footer>
           <button className="secondary-button" onClick={dismiss} type="button">Cancel</button>
           {catalogPlatform === "tiktok" ? (
-            <button className="primary-button compact-button" disabled={!canManageTikTok} onClick={onManageTikTok} type="button"><Link2 size={15} />{tiktokAccounts.length > 0 ? "Manage TikTok" : "Connect TikTok"}</button>
+            <button className="primary-button compact-button" disabled={!canManageTikTok || unlinkingTikTokId !== null} onClick={onManageTikTok} type="button"><Link2 size={15} />{visibleTikTokAccounts.length > 0 ? "Add TikTok account" : "Connect TikTok"}</button>
           ) : !canManageMeta ? null : refreshFailed && hasSavedMetaAccess ? (
             <button className="primary-button compact-button" disabled={!readiness.data?.oauth_start_available || isRefreshing || isLinking} onClick={() => void refreshAccounts()} type="button"><RefreshCw size={15} />Retry loading accounts</button>
           ) : !hasSavedMetaAccess ? (

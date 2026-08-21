@@ -6,7 +6,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.api.auth import COOKIE_NAME
-from app.application.ports import ActivationResult, ActivationStart
+from app.application.ports import ActivationLink, ActivationResult, ActivationStart
 from app.core.security import sha256_text
 from app.main import create_app
 from tests.test_phase6_dashboard_api import MemoryAuthority, MemoryReporting
@@ -15,6 +15,28 @@ from tests.test_phase6_dashboard_api import MemoryAuthority, MemoryReporting
 class FakeSelfServiceActivation:
     def __init__(self) -> None:
         self.calls: list[tuple[str, bool]] = []
+        self.links: tuple[ActivationLink, ...] = ()
+
+    def linked_accounts(self, context) -> tuple[ActivationLink, ...]:
+        assert context.brand_id == 101
+        self.calls.append(("links", False))
+        return self.links
+
+    def unlink(self, *, context, business_id: str) -> ActivationLink:
+        assert context.brand_id == 101
+        self.calls.append((f"unlink:{business_id}", False))
+        link = next((item for item in self.links if item.business_id == business_id), None)
+        if link is None:
+            raise RuntimeError("missing fake TikTok link")
+        self.links = tuple(item for item in self.links if item.business_id != business_id)
+        return ActivationLink(
+            connection_id=link.connection_id,
+            link_id=link.link_id,
+            brand_id=link.brand_id,
+            business_id=link.business_id,
+            state="disconnected",
+            display_name=link.display_name,
+        )
 
     def ready_for_start(self, context, *, require_gate_context: bool = True) -> bool:
         assert context.brand_id == 101
@@ -119,6 +141,7 @@ async def test_self_service_readiness_is_brand_scoped_without_owner_sso(
             "can_manage": True,
             "connection_state": "disconnected",
             "linked_account_count": 0,
+            "linked_accounts": [],
             "oauth_start_available": False,
             "reason": "provider_activation_not_configured",
             "runtime_mode": "development",
@@ -202,7 +225,60 @@ async def test_self_service_start_and_callback_use_non_sso_context(tmp_path) -> 
     assert '"brandId":"101"' in callback.text
     assert '"connectionState":"pending_verification"' in callback.text
     assert activation.calls == [
+        ("links", False),
         ("ready", False),
         ("start", False),
         ("complete", False),
     ]
+
+
+@pytest.mark.asyncio
+async def test_self_service_readiness_lists_pending_account_and_unlinks_it(tmp_path) -> None:
+    authority = MemoryAuthority()
+    _make_self_service_session(authority)
+    activation = FakeSelfServiceActivation()
+    activation.links = (
+        ActivationLink(
+            connection_id=77,
+            link_id=88,
+            brand_id=101,
+            business_id="business-1",
+            state="pending_verification",
+            display_name="TikTok Business",
+        ),
+    )
+    app = create_app(
+        authority,
+        _reporting(tmp_path),
+        tiktok_activation=activation,
+    )
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        cookies={COOKIE_NAME: authority.raw_session},
+    ) as client:
+        readiness = await client.get(
+            "/api/integrations/tiktok/self-service/readiness",
+            params={"brand_id": "101"},
+        )
+        unlinked = await client.delete(
+            "/api/integrations/tiktok/accounts/unlink",
+            params={"brand_id": "101", "external_id": "business-1"},
+            headers={"Origin": "http://test"},
+        )
+
+    assert readiness.status_code == 200
+    assert readiness.json()["linked_accounts"] == [
+        {
+            "external_id": "business-1",
+            "display_name": "TikTok Business",
+            "state": "pending_verification",
+        }
+    ]
+    assert unlinked.status_code == 200
+    assert unlinked.json() == {
+        "brand_id": "101",
+        "external_id": "business-1",
+        "state": "disconnected",
+    }

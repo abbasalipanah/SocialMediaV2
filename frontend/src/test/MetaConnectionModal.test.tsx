@@ -40,8 +40,29 @@ describe("MetaConnectionModal", () => {
       checked_at: "2026-08-20T20:00:00Z",
     };
     let refreshed = false;
+    let tiktokLinked = true;
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
+      if (url.includes("/api/integrations/tiktok/self-service/readiness")) {
+        return json({
+          brand_id: "286272",
+          can_manage: true,
+          connection_state: tiktokLinked ? "pending_verification" : "disconnected",
+          linked_account_count: tiktokLinked ? 1 : 0,
+          linked_accounts: tiktokLinked
+            ? [{ external_id: "tt-44", display_name: "AquaMICE TikTok", state: "pending_verification" }]
+            : [],
+          oauth_start_available: true,
+          reason: "self_service_available",
+          runtime_mode: "active",
+          writes_enabled: true,
+          checked_at: "2026-08-21T07:00:00Z",
+        });
+      }
+      if (url.includes("/api/integrations/tiktok/accounts/unlink") && init?.method === "DELETE") {
+        tiktokLinked = false;
+        return json({ brand_id: "286272", external_id: "tt-44", state: "disconnected" });
+      }
       if (url.includes("/api/integrations/meta/self-service/readiness")) {
         return json(refreshed ? {
           ...initialReadiness,
@@ -111,7 +132,12 @@ describe("MetaConnectionModal", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /TikTok/ }));
     expect(await within(catalog).findByText("AquaMICE TikTok")).toBeVisible();
-    await userEvent.click(screen.getByRole("button", { name: "Manage TikTok" }));
+    expect(within(catalog).getByText("pending verification")).toBeVisible();
+    await userEvent.click(within(catalog).getByRole("button", { name: "Unlink" }));
+    await userEvent.click(within(catalog).getByRole("button", { name: "Confirm unlink" }));
+    expect(await screen.findByText("TikTok account unlinked from AquaMICE.")).toBeVisible();
+    expect(within(catalog).queryByText("AquaMICE TikTok")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Connect TikTok" }));
     expect(manageTikTok).toHaveBeenCalledOnce();
     expect(open).not.toHaveBeenCalled();
   });

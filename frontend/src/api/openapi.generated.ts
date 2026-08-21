@@ -293,6 +293,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/integrations/tiktok/accounts/unlink": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Tiktok Self Service Unlink */
+        delete: operations["tiktok_self_service_unlink_api_integrations_tiktok_accounts_unlink_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/integrations/tiktok/oauth/start": {
         parameters: {
             query?: never;
@@ -1636,6 +1653,15 @@ export interface components {
             /** State */
             state: string;
         };
+        /** TikTokLinkedAccountItem */
+        TikTokLinkedAccountItem: {
+            /** Display Name */
+            display_name: string;
+            /** External Id */
+            external_id: string;
+            /** State */
+            state: string;
+        };
         /** TikTokSelfServiceReadinessResponse */
         TikTokSelfServiceReadinessResponse: {
             /** Brand Id */
@@ -1651,6 +1677,8 @@ export interface components {
             connection_state: string;
             /** Linked Account Count */
             linked_account_count: number;
+            /** Linked Accounts */
+            linked_accounts: components["schemas"]["TikTokLinkedAccountItem"][];
             /** Oauth Start Available */
             oauth_start_available: boolean;
             /** Reason */
@@ -1668,6 +1696,15 @@ export interface components {
              * Format: date-time
              */
             expires_at: string;
+        };
+        /** TikTokUnlinkResponse */
+        TikTokUnlinkResponse: {
+            /** Brand Id */
+            brand_id: string;
+            /** External Id */
+            external_id: string;
+            /** State */
+            state: string;
         };
         /**
          * Unit
@@ -2312,6 +2349,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncJobsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    tiktok_self_service_unlink_api_integrations_tiktok_accounts_unlink_delete: {
+        parameters: {
+            query: {
+                brand_id: string;
+                external_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TikTokUnlinkResponse"];
                 };
             };
             /** @description Validation Error */
