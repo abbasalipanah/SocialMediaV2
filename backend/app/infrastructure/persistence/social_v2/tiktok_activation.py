@@ -248,7 +248,7 @@ class ProjectionTikTokActivationStore:
                            'v2:tiktok:connection-credential:' || lsa.connection_id::text
                          )
                        WHERE lsa.brand_id=:brand_id AND lsa.platform='tiktok'
-                         AND lsa.status NOT IN ('disconnected', 'revoked')
+                         AND lsa.status IN ('active', 'connected', 'pending_verification')
                        ORDER BY lsa.updated_at DESC, lsa.id DESC"""
                 ),
                 {"brand_id": brand_id},
