@@ -34,6 +34,9 @@ CANONICAL_METRICS = {
     "views",
     "views_paid",
     "views_organic",
+    "likes",
+    "comments",
+    "shares",
     "interactions",
     "page_views",
     "profile_views",
@@ -47,10 +50,10 @@ AUDIENCE_METRIC_MAP = {
     "audience_city": ("followers", "audience_city"),
     "audience_gender_age": ("followers", "audience_gender_age"),
     "audience_heatmap": ("interactions", "best_time_to_engage"),
-    "audience_countries": ("followers", "audience_country"),
-    "audience_cities": ("followers", "audience_city"),
-    "audience_ages": ("followers", "audience_age"),
-    "audience_genders": ("followers", "audience_gender"),
+    "audience_countries": ("followers", "audience_countries"),
+    "audience_cities": ("followers", "audience_cities"),
+    "audience_ages": ("followers", "audience_ages"),
+    "audience_genders": ("followers", "audience_genders"),
     "audience_activity": ("interactions", "audience_activity"),
 }
 TIKTOK_TOTAL_MAP = {
@@ -58,6 +61,11 @@ TIKTOK_TOTAL_MAP = {
     "likes": "video_likes_total",
     "comments": "video_comments_total",
     "shares": "video_shares_total",
+}
+TIKTOK_DAILY_INTERACTION_MAP = {
+    "likes": "video_likes_daily",
+    "comments": "video_comments_daily",
+    "shares": "video_shares_daily",
 }
 CONTENT_METRICS = (
     "views",
@@ -237,10 +245,10 @@ def _source_snapshot(connection: Any, brand_slug: str) -> dict[str, Any]:
         account_id = int(row["asset_id"])
         metric_id = str(row["metric_id"])
         if platform_by_account[account_id] == "tiktok" and metric_id in TIKTOK_TOTAL_MAP:
-            # The account-level ``views`` row is a daily flow and powers the
-            # selected-period trend. Content-id rows are separately projected
-            # to cumulative ``video_views_total`` below.
-            if metric_id != "views" or row["breakdown_key"] is not None:
+            # Account-level views/likes/comments/shares are daily flows and
+            # power the selected-period trends. Content-id rows are separately
+            # projected to cumulative video totals below.
+            if row["breakdown_key"] is not None:
                 continue
         if metric_id in AUDIENCE_METRIC_MAP:
             target_metric, target_breakdown = AUDIENCE_METRIC_MAP[metric_id]
@@ -250,6 +258,12 @@ def _source_snapshot(connection: Any, brand_slug: str) -> dict[str, Any]:
             breakdown_key = target_breakdown
         else:
             breakdown_key = row["breakdown_key"]
+        if (
+            platform_by_account[account_id] == "tiktok"
+            and breakdown_key is None
+            and metric_id in TIKTOK_DAILY_INTERACTION_MAP
+        ):
+            metric_id = TIKTOK_DAILY_INTERACTION_MAP[metric_id]
         metrics.append(
             {
                 "asset_id": account_id,

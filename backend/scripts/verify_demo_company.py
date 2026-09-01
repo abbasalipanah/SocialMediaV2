@@ -23,21 +23,28 @@ from app.domain.platforms import PlatformId  # noqa: E402
 from app.infrastructure.persistence.social_v2 import SocialReportingStore  # noqa: E402
 
 REQUIRED_BREAKDOWNS = {
-    PlatformId.FACEBOOK: {"audience_country", "audience_city", "comment_sentiment"},
-    PlatformId.INSTAGRAM: {
-        "audience_country",
-        "audience_city",
-        "audience_age",
-        "audience_gender",
+    PlatformId.FACEBOOK: {
+        "audience_countries",
+        "audience_cities",
+        "audience_ages",
+        "audience_genders",
         "audience_activity",
-        "comment_sentiment",
+        "best_time_to_engage",
+    },
+    PlatformId.INSTAGRAM: {
+        "audience_countries",
+        "audience_cities",
+        "audience_ages",
+        "audience_genders",
+        "audience_activity",
+        "best_time_to_engage",
     },
     PlatformId.TIKTOK: {
-        "audience_country",
-        "audience_age",
-        "audience_gender",
+        "audience_countries",
+        "audience_ages",
+        "audience_genders",
         "audience_activity",
-        "comment_sentiment",
+        "best_time_to_engage",
     },
 }
 
@@ -110,7 +117,8 @@ def main() -> None:
                     f"status={dashboard.meta.data_status.value}:"
                     f"warnings={dashboard.meta.warnings}:"
                     f"days={dashboard.meta.observed_days}/{dashboard.meta.expected_days}:"
-                    f"unavailable={unavailable}:missing={sorted(missing)}"
+                    f"unavailable={unavailable}:"
+                    f"breakdowns={sorted(dimensions)}:missing={sorted(missing)}"
                 )
             print(
                 f"{platform.value}=available:"

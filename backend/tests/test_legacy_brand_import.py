@@ -44,7 +44,7 @@ def test_media_url_guard_rejects_oauth_material() -> None:
 
 
 def test_demo_audience_city_rows_are_projected() -> None:
-    assert AUDIENCE_METRIC_MAP["audience_cities"] == ("followers", "audience_city")
+    assert AUDIENCE_METRIC_MAP["audience_cities"] == ("followers", "audience_cities")
 
 
 def test_media_copy_checks_the_source_checksum(tmp_path: Path) -> None:

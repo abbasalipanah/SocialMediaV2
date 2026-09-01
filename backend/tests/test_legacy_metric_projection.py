@@ -86,6 +86,14 @@ def test_audience_rows_are_normalized_without_mutating_raw_storage() -> None:
                 breakdown_key="audience_activity",
                 breakdown_value="monday|13",
             ),
+            _row(
+                PlatformId.TIKTOK,
+                "audience_ages",
+                0.45,
+                account_id=2,
+                breakdown_key="audience_ages",
+                breakdown_value="25-34",
+            ),
         )
     )
     by_dimension = {row.breakdown_key: row for row in projected}
@@ -93,6 +101,8 @@ def test_audience_rows_are_normalized_without_mutating_raw_storage() -> None:
     assert by_dimension["audience_country"].breakdown_value == "TR"
     assert by_dimension["audience_activity"].metric_id is MetricId.FOLLOWERS
     assert by_dimension["audience_activity"].breakdown_value == "monday|13"
+    assert by_dimension["audience_ages"].metric_id is MetricId.FOLLOWERS
+    assert by_dimension["audience_ages"].breakdown_value == "25-34"
 
 
 def test_tiktok_content_rows_build_daily_canonical_totals() -> None:
@@ -127,6 +137,36 @@ def test_tiktok_content_rows_build_daily_canonical_totals() -> None:
     assert by_id[MetricId.VIDEO_VIEWS_TOTAL].value == 150
     assert by_id[MetricId.VIDEO_LIKES_TOTAL].value == 7
     assert all(row.breakdown_key is None for row in projected)
+
+
+def test_tiktok_daily_interaction_components_survive_the_legacy_projection() -> None:
+    projected = project_legacy_metrics(
+        (
+            _row(PlatformId.TIKTOK, "likes", 20),
+            _row(PlatformId.TIKTOK, "comments", 4),
+            _row(PlatformId.TIKTOK, "shares", 2),
+        )
+    )
+
+    assert {row.metric_id: row.value for row in projected} == {
+        MetricId.VIDEO_LIKES_DAILY: 20,
+        MetricId.VIDEO_COMMENTS_DAILY: 4,
+        MetricId.VIDEO_SHARES_DAILY: 2,
+    }
+
+
+def test_canonical_metric_from_another_platform_is_not_projected() -> None:
+    assert (
+        legacy_metric_disposition(
+            PlatformId.FACEBOOK,
+            MetricId.PROFILE_VIEWS.value,
+            None,
+        )
+        is LegacyMetricDisposition.UNKNOWN
+    )
+    assert project_legacy_metrics(
+        (_row(PlatformId.FACEBOOK, MetricId.PROFILE_VIEWS.value, 42),)
+    ) == ()
 
 
 def test_native_v2_total_wins_over_legacy_tiktok_projection() -> None:
@@ -189,8 +229,7 @@ def test_dashboard_breakdowns_are_typed_and_content_rows_are_not_duplicated() ->
         )
     )
     identities = {
-        (row.metric_id, row.breakdown_key, row.breakdown_value): row.value
-        for row in projected
+        (row.metric_id, row.breakdown_key, row.breakdown_value): row.value for row in projected
     }
     assert identities[(MetricId.FOLLOWERS, "page_like_type", "organic")] == 20
     assert identities[(MetricId.INTERACTIONS, "reaction_type", "love")] == 4
