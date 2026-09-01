@@ -732,6 +732,17 @@
             "title": "Permalink",
             "type": "string"
           },
+          "profile_visits": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Visits"
+          },
           "published_at": {
             "anyOf": [
               {
@@ -754,6 +765,17 @@
               }
             ],
             "title": "Reach"
+          },
+          "saves_count": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saves Count"
           },
           "shares_count": {
             "anyOf": [
@@ -829,6 +851,8 @@
           "full_video_watched_rate",
           "total_time_watched",
           "average_time_watched",
+          "saves_count",
+          "profile_visits",
           "data_status"
         ],
         "title": "DashboardContent",

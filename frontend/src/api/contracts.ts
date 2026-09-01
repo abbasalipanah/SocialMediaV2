@@ -250,6 +250,8 @@ export const dashboardContentSchema = z.object({
   full_video_watched_rate: z.number().nullable(),
   total_time_watched: z.number().nullable(),
   average_time_watched: z.number().nullable(),
+  saves_count: z.number().nullable(),
+  profile_visits: z.number().nullable(),
   data_status: dataStatusSchema,
 });
 export type DashboardContent = z.infer<typeof dashboardContentSchema>;

@@ -1260,10 +1260,14 @@ export interface components {
             message: string;
             /** Permalink */
             permalink: string;
+            /** Profile Visits */
+            profile_visits: number | null;
             /** Published At */
             published_at: string | null;
             /** Reach */
             reach: number | null;
+            /** Saves Count */
+            saves_count: number | null;
             /** Shares Count */
             shares_count: number | null;
             /** Thumbnail Candidates */

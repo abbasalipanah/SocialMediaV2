@@ -579,6 +579,8 @@ def content_cards(rows: tuple[ReportingContent, ...]) -> tuple[DashboardContent,
             full_video_watched_rate=row.full_video_watched_rate,
             total_time_watched=row.total_time_watched,
             average_time_watched=row.average_time_watched,
+            saves_count=row.saves_count,
+            profile_visits=row.profile_visits,
             data_status=(
                 DataStatus.AVAILABLE
                 if row.views_count is not None and row.reach_count is not None

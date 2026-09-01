@@ -61,6 +61,8 @@ def test_content_contract_preserves_unavailable_provider_counters() -> None:
         comments_count=None,
         shares_count=None,
         views_count=100,
+        saves_count=4,
+        profile_visits=9,
     )
 
     card = content_cards((row,))[0]
@@ -70,6 +72,8 @@ def test_content_contract_preserves_unavailable_provider_counters() -> None:
     assert card.comments_count is None
     assert card.shares_count is None
     assert card.interactions is None
+    assert card.saves_count == 4
+    assert card.profile_visits == 9
     assert comparisons.likes.value == 7
     assert comparisons.comments.value is None
     assert comparisons.shares.value is None

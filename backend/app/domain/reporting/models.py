@@ -102,6 +102,8 @@ class DashboardContent:
     full_video_watched_rate: float | None
     total_time_watched: float | None
     average_time_watched: float | None
+    saves_count: float | None
+    profile_visits: float | None
     data_status: DataStatus
 
 
