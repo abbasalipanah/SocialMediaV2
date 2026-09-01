@@ -50,7 +50,14 @@ async def test_local_demo_opens_a_scoped_session_and_serves_product_data() -> No
         assert {
             item["platform"]: item["navigation_available"]
             for item in capabilities.json()["platforms"]
-        } == {"facebook": True, "instagram": True, "tiktok": True}
+        } == {
+            "facebook": True,
+            "instagram": True,
+            "tiktok": True,
+            "x": False,
+            "linkedin": False,
+            "youtube": False,
+        }
 
         dashboard = await browser.get(
             "/api/dashboards/overview", params={"brand_id": "101", "range": "last_30_days"}

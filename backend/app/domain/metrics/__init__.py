@@ -429,6 +429,48 @@ def _profile_ratio(
     )
 
 
+def _organic_platform_metrics(
+    platform: PlatformId,
+    *,
+    followers_field: str,
+    media_count_field: str,
+    views_field: str,
+    interactions_field: str,
+) -> tuple[MetricDefinition, ...]:
+    return (
+        _profile_snapshot(platform, MetricId.FOLLOWERS, followers_field),
+        _profile_snapshot(platform, MetricId.MEDIA_COUNT, media_count_field),
+        _profile_snapshot_delta(
+            platform,
+            MetricId.NEW_FOLLOWERS,
+            operator=DerivationOperator.POSITIVE_SNAPSHOT_DELTA,
+        ),
+        _profile_snapshot_delta(
+            platform,
+            MetricId.FOLLOWS,
+            operator=DerivationOperator.POSITIVE_SNAPSHOT_DELTA,
+        ),
+        _profile_snapshot_delta(
+            platform,
+            MetricId.UNFOLLOWS,
+            operator=DerivationOperator.NEGATIVE_SNAPSHOT_DELTA,
+        ),
+        _profile_snapshot_delta(
+            platform,
+            MetricId.FOLLOWERS_NET,
+            operator=DerivationOperator.SIGNED_SNAPSHOT_DELTA,
+        ),
+        _profile_flow(platform, MetricId.VIEWS, views_field),
+        _profile_flow(platform, MetricId.INTERACTIONS, interactions_field),
+        _profile_ratio(
+            platform,
+            MetricId.ENGAGEMENT_RATE,
+            MetricId.INTERACTIONS,
+            MetricId.VIEWS,
+        ),
+    )
+
+
 FACEBOOK_DAILY_SOURCE_METRICS = (
     ("page_media_view", MetricId.VIEWS),
     ("page_posts_impressions", MetricId.VIEWS),
@@ -756,6 +798,27 @@ def bootstrap_metric_catalog() -> MetricCatalog:
             *engagement_counters,
             engagements_total,
             engagement_rate,
+            *_organic_platform_metrics(
+                PlatformId.X,
+                followers_field="followers_count",
+                media_count_field="tweet_count",
+                views_field="impression_count",
+                interactions_field="interactions",
+            ),
+            *_organic_platform_metrics(
+                PlatformId.LINKEDIN,
+                followers_field="follower_count",
+                media_count_field="post_count",
+                views_field="impressions",
+                interactions_field="interactions",
+            ),
+            *_organic_platform_metrics(
+                PlatformId.YOUTUBE,
+                followers_field="subscriber_count",
+                media_count_field="video_count",
+                views_field="views",
+                interactions_field="interactions",
+            ),
         )
     )
 

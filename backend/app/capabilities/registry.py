@@ -127,6 +127,16 @@ def bootstrap_registry(settings: AppSettings | None = None) -> PlatformCapabilit
             ),
         )
     )
+    for platform in (PlatformId.X, PlatformId.LINKEDIN, PlatformId.YOUTUBE):
+        records.extend(
+            CapabilityRecord(
+                platform=platform,
+                capability=capability,
+                status=CapabilityStatus.NOT_CONFIGURED,
+                reason="provider_not_configured",
+            )
+            for capability in CapabilityId
+        )
     return PlatformCapabilityRegistry(tuple(records))
 
 

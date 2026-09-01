@@ -28,6 +28,7 @@ from app.application.queries.dashboard_aggregation import (
 from app.application.queries.reporting_range import previous_reporting_range
 from app.domain.metrics import MetricCatalog, MetricId, SemanticType
 from app.domain.platforms import PlatformId
+from app.domain.platforms.catalog import overview_platforms
 from app.domain.reporting import (
     CommunitySummary,
     DashboardMeta,
@@ -525,7 +526,7 @@ def build_overview_dashboard(
             query=query,
             now=generated,
         )
-        for platform in PlatformId
+        for platform in overview_platforms()
     )
     metrics = tuple(
         result

@@ -7,6 +7,9 @@ class PlatformId(StrEnum):
     FACEBOOK = "facebook"
     INSTAGRAM = "instagram"
     TIKTOK = "tiktok"
+    X = "x"
+    LINKEDIN = "linkedin"
+    YOUTUBE = "youtube"
 
     @classmethod
     def exact_set(cls) -> set[str]:

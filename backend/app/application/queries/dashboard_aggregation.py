@@ -23,6 +23,7 @@ from app.domain.metrics import (
     MetricId,
 )
 from app.domain.platforms import PlatformId
+from app.domain.platforms.catalog import platform_definition
 from app.domain.reporting import (
     AvailabilityStatus,
     CommunitySummary,
@@ -496,12 +497,6 @@ def best_time_to_engage_breakdown(
     recommendation.
     """
 
-    if platform not in {
-        PlatformId.FACEBOOK,
-        PlatformId.INSTAGRAM,
-        PlatformId.TIKTOK,
-    }:
-        return None
     buckets: dict[tuple[int, int], list[float]] = defaultdict(list)
     for row in rows:
         if row.published_at is None or "story" in row.content_type.strip().lower():
@@ -983,7 +978,7 @@ def audience_capabilities(
         else AvailabilityStatus.UNAVAILABLE
     )
     return DashboardAudienceCapabilities(
-        source="meta_graph_api_v23" if platform is PlatformId.INSTAGRAM else "tiktok_display_api",
+        source=platform_definition(platform).audience_source,
         geo=geo_status,
         age_gender=age_status,
         activity=(

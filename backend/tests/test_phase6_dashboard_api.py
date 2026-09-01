@@ -1179,9 +1179,15 @@ def test_phase6_openapi_publishes_typed_response_contracts() -> None:
         "/api/dashboards/facebook": "PlatformDashboard",
         "/api/dashboards/instagram": "PlatformDashboard",
         "/api/dashboards/tiktok": "PlatformDashboard",
+        "/api/dashboards/x": "PlatformDashboard",
+        "/api/dashboards/linkedin": "PlatformDashboard",
+        "/api/dashboards/youtube": "PlatformDashboard",
         "/api/platforms/facebook/accounts": "PlatformAccountsResponse",
         "/api/platforms/instagram/accounts": "PlatformAccountsResponse",
         "/api/platforms/tiktok/accounts": "PlatformAccountsResponse",
+        "/api/platforms/x/accounts": "PlatformAccountsResponse",
+        "/api/platforms/linkedin/accounts": "PlatformAccountsResponse",
+        "/api/platforms/youtube/accounts": "PlatformAccountsResponse",
         "/api/settings/brands": "SettingsBrandsResponse",
         "/api/settings/social-accounts": "SocialAccountsResponse",
         "/api/settings/brand-links": "BrandLinksResponse",
@@ -1289,6 +1295,9 @@ async def test_phase6_routes_are_scoped_read_only_and_honest(phase6_fixture) -> 
             "facebook": (2, True),
             "instagram": (1, True),
             "tiktok": (1, True),
+            "x": (0, False),
+            "linkedin": (0, False),
+            "youtube": (0, False),
         }
         readiness = await client.get(
             "/api/operations/readiness",
@@ -1297,7 +1306,14 @@ async def test_phase6_routes_are_scoped_read_only_and_honest(phase6_fixture) -> 
         assert readiness.status_code == 200
         assert {
             item["platform"]: item["account_count"] for item in readiness.json()["platforms"]
-        } == {"facebook": 2, "instagram": 1, "tiktok": 1}
+        } == {
+            "facebook": 2,
+            "instagram": 1,
+            "tiktok": 1,
+            "x": 0,
+            "linkedin": 0,
+            "youtube": 0,
+        }
         assert (
             await client.get(
                 "/api/settings/social-accounts",
