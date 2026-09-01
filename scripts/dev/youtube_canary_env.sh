@@ -12,7 +12,7 @@ fi
 prepare_youtube_canary_env() {
   local root="${1:?Repository root is required}"
   local local_state="$root/.local"
-  local credential_file="${SOCIAL_YOUTUBE_DEV_CLIENT_FILE:-/home/api/.secrets/socialmedia/youtube-dev-client.json}"
+  local credential_file="${SOCIAL_YOUTUBE_DEV_CLIENT_FILE:-$root/.secrets/socialmedia/youtube-dev-client.json}"
   local oauth_state_file="$local_state/youtube-canary-oauth-state.secret"
   local vault_key_file="$local_state/youtube-canary-vault.key"
   local expected_redirect_uri="http://localhost:8126/api/social/youtube/oauth/callback"
@@ -74,8 +74,8 @@ prepare_youtube_canary_env() {
   export SOCIAL_LOCAL_DB_VOLUME="social_media_v2_platforms_data"
   export SOCIAL_LOCAL_DB_PORT="56432"
   export SOCIAL_LOCAL_DB_NAME="social_media_v2_platforms_dev"
-  export SOCIAL_LOCAL_API_PORT="8126"
-  export SOCIAL_LOCAL_FRONTEND_PORT="3126"
+  export SOCIAL_LOCAL_API_PORT="8127"
+  export SOCIAL_LOCAL_FRONTEND_PORT="8126"
   export SOCIAL_LOCAL_ACTIVATION_PROFILE="youtube_canary"
   export SOCIAL_VAULT_ENABLED=true
   export SOCIAL_WORKER_SCHEDULE_ENABLED=false

@@ -5,6 +5,7 @@
 .idea/
 .vscode/
 .local/
+.secrets/
 
 __pycache__/
 *.py[cod]

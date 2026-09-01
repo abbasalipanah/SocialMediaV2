@@ -7,9 +7,10 @@
     "#topology": "topojson-client"
   },
   "scripts": {
-    "dev": "../scripts/dev/start_local.sh",
+    "dev": "../scripts/dev/start_youtube_canary.sh",
     "dev:frontend": "vite",
     "dev:local": "../scripts/dev/start_local.sh",
+    "dev:youtube": "../scripts/dev/start_youtube_canary.sh",
     "generate:api": "openapi-typescript ../docs/contracts/social-media-v2-openapi.json -o src/api/openapi.generated.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",
