@@ -12,6 +12,7 @@ from app.application.ports.platforms.content import ContentPage
 from app.application.ports.platforms.profile import ProfileSnapshot
 from app.domain.metrics import MetricId
 from app.domain.platforms import PlatformId
+from app.infrastructure.providers.x import XMentionPage
 from app.workers.x import XReaders, collect_x_account
 
 NOW = datetime(2026, 9, 1, 12, tzinfo=UTC)
@@ -77,6 +78,29 @@ class Content:
         )
 
 
+class Mentions:
+    def list_mentions(self, account, *, cursor=None):
+        del account, cursor
+        return XMentionPage(
+            items=(
+                ProviderRecord(
+                    external_id="1900000000000000003",
+                    observed_at=NOW,
+                    fields={
+                        "author_id": "987654321",
+                        "author_name": "reader",
+                        "text": "@example useful report",
+                        "like_count": 4,
+                        "reply_count": 2,
+                        "commented_at": NOW,
+                    },
+                ),
+            ),
+            next_cursor=None,
+            observed_at=NOW,
+        )
+
+
 class PagingContent:
     def __init__(self) -> None:
         self.cursors: list[str | None] = []
@@ -109,9 +133,10 @@ class PagingContent:
         )
 
 
-def test_x_worker_collects_profile_and_content_without_comments_or_audience() -> None:
+def test_x_worker_collects_profile_content_and_mentions_without_audience() -> None:
     metrics = Records()
     content = Records()
+    comments = Records()
     checkpoints = Checkpoints()
     account = ProviderAccount(
         platform=PlatformId.X,
@@ -123,9 +148,10 @@ def test_x_worker_collects_profile_and_content_without_comments_or_audience() ->
         account=account,
         local_account_id=81,
         brand_id=17,
-        readers=XReaders(profile=Profile(), content=Content()),
+        readers=XReaders(profile=Profile(), content=Content(), mentions=Mentions()),
         metric_store=metrics,
         content_store=content,
+        comment_store=comments,
         checkpoint_store=checkpoints,
         persist_media=lambda _target, _item: 0,
         backfill_complete=False,
@@ -134,12 +160,15 @@ def test_x_worker_collects_profile_and_content_without_comments_or_audience() ->
     assert result.status == "success"
     assert result.metric_count == 2
     assert result.content_count == 1
+    assert result.comment_count == 1
     assert result.backfill_complete is True
     assert [point.metric_id for point in metrics.items] == [
         MetricId.FOLLOWERS,
         MetricId.MEDIA_COUNT,
     ]
     assert content.items[0].external_content_id == "1900000000000000001"
+    assert comments.items[0].external_content_id == "__x_mentions__"
+    assert comments.items[0].author_id == "987654321"
 
 
 def test_x_worker_resumes_bounded_backfill_from_durable_cursor() -> None:
@@ -156,9 +185,10 @@ def test_x_worker_resumes_bounded_backfill_from_durable_cursor() -> None:
         "account": account,
         "local_account_id": 81,
         "brand_id": 17,
-        "readers": XReaders(profile=Profile(), content=reader),
+        "readers": XReaders(profile=Profile(), content=reader, mentions=Mentions()),
         "metric_store": metrics,
         "content_store": content,
+        "comment_store": Records(),
         "checkpoint_store": checkpoints,
         "persist_media": lambda _target, _item: 0,
         "backfill_complete": False,

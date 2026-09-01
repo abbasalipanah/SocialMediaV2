@@ -135,6 +135,9 @@ def bootstrap_registry(settings: AppSettings | None = None) -> PlatformCapabilit
         elif capability in {CapabilityId.PROFILE, CapabilityId.CONTENT}:
             status = CapabilityStatus.AVAILABLE
             reason = "standalone_collector_available"
+        elif capability is CapabilityId.COMMENTS:
+            status = CapabilityStatus.PARTIAL
+            reason = "account_mentions_only"
         else:
             status = CapabilityStatus.UNSUPPORTED
             reason = f"x_{capability.value}_not_implemented"

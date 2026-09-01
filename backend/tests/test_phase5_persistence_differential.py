@@ -104,6 +104,11 @@ def _prepare(engine: Engine) -> None:
                        taps_forward double precision, taps_back double precision,
                        swipe_forward double precision, exits double precision,
                        navigation_count double precision, completion_rate double precision,
+                       reposts_count integer, quotes_count integer, link_clicks integer,
+                       profile_clicks integer, video_views_count integer,
+                       video_playback_0_count integer, video_playback_25_count integer,
+                       video_playback_50_count integer, video_playback_75_count integer,
+                       video_playback_100_count integer,
                        created_at timestamptz NOT NULL,
                        updated_at timestamptz NOT NULL DEFAULT now(),
                        UNIQUE (asset_id, content_id)

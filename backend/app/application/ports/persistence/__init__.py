@@ -79,12 +79,36 @@ class ContentRecord:
     exits: float | None = None
     navigation_count: float | None = None
     completion_rate: float | None = None
+    reposts_count: int | None = None
+    quotes_count: int | None = None
+    link_clicks: int | None = None
+    profile_clicks: int | None = None
+    video_views_count: int | None = None
+    video_playback_0_count: int | None = None
+    video_playback_25_count: int | None = None
+    video_playback_50_count: int | None = None
+    video_playback_75_count: int | None = None
+    video_playback_100_count: int | None = None
 
     def __post_init__(self) -> None:
         _positive(self.account_id, "account_id")
         _positive(self.brand_id, "brand_id")
         _required(self.external_content_id, "external_content_id")
-        counters = (self.likes_count, self.comments_count, self.shares_count)
+        counters = (
+            self.likes_count,
+            self.comments_count,
+            self.shares_count,
+            self.reposts_count,
+            self.quotes_count,
+            self.link_clicks,
+            self.profile_clicks,
+            self.video_views_count,
+            self.video_playback_0_count,
+            self.video_playback_25_count,
+            self.video_playback_50_count,
+            self.video_playback_75_count,
+            self.video_playback_100_count,
+        )
         if any(
             value is not None
             and (isinstance(value, bool) or not isinstance(value, int) or value < 0)

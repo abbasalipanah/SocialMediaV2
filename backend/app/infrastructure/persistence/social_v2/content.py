@@ -40,6 +40,10 @@ class SocialContentStore(SocialStoreBase):
                         saves_count, sticker_taps, profile_visits, follows_count,
                         taps_forward, taps_back,
                         swipe_forward, exits, navigation_count, completion_rate,
+                        reposts_count, quotes_count, link_clicks, profile_clicks,
+                        video_views_count, video_playback_0_count,
+                        video_playback_25_count, video_playback_50_count,
+                        video_playback_75_count, video_playback_100_count,
                         created_at
                     ) VALUES (
                         :account_id, :brand_id, :content_id, :content_type, :permalink,
@@ -53,6 +57,10 @@ class SocialContentStore(SocialStoreBase):
                         :saves_count, :sticker_taps, :profile_visits, :follows_count,
                         :taps_forward, :taps_back,
                         :swipe_forward, :exits, :navigation_count, :completion_rate,
+                        :reposts_count, :quotes_count, :link_clicks, :profile_clicks,
+                        :video_views_count, :video_playback_0_count,
+                        :video_playback_25_count, :video_playback_50_count,
+                        :video_playback_75_count, :video_playback_100_count,
                         now()
                     )
                     ON CONFLICT (asset_id, content_id) DO UPDATE SET
@@ -87,6 +95,16 @@ class SocialContentStore(SocialStoreBase):
                         exits=EXCLUDED.exits,
                         navigation_count=EXCLUDED.navigation_count,
                         completion_rate=EXCLUDED.completion_rate,
+                        reposts_count=EXCLUDED.reposts_count,
+                        quotes_count=EXCLUDED.quotes_count,
+                        link_clicks=EXCLUDED.link_clicks,
+                        profile_clicks=EXCLUDED.profile_clicks,
+                        video_views_count=EXCLUDED.video_views_count,
+                        video_playback_0_count=EXCLUDED.video_playback_0_count,
+                        video_playback_25_count=EXCLUDED.video_playback_25_count,
+                        video_playback_50_count=EXCLUDED.video_playback_50_count,
+                        video_playback_75_count=EXCLUDED.video_playback_75_count,
+                        video_playback_100_count=EXCLUDED.video_playback_100_count,
                         updated_at=now()"""
                 ),
                 {
@@ -123,6 +141,16 @@ class SocialContentStore(SocialStoreBase):
                     "exits": record.exits,
                     "navigation_count": record.navigation_count,
                     "completion_rate": record.completion_rate,
+                    "reposts_count": record.reposts_count,
+                    "quotes_count": record.quotes_count,
+                    "link_clicks": record.link_clicks,
+                    "profile_clicks": record.profile_clicks,
+                    "video_views_count": record.video_views_count,
+                    "video_playback_0_count": record.video_playback_0_count,
+                    "video_playback_25_count": record.video_playback_25_count,
+                    "video_playback_50_count": record.video_playback_50_count,
+                    "video_playback_75_count": record.video_playback_75_count,
+                    "video_playback_100_count": record.video_playback_100_count,
                 },
             )
 
@@ -143,7 +171,12 @@ class SocialContentStore(SocialStoreBase):
                               i.replies_count, i.saves_count, i.sticker_taps,
                               i.profile_visits, i.follows_count,
                               i.taps_forward, i.taps_back, i.swipe_forward,
-                              i.exits, i.navigation_count, i.completion_rate
+                              i.exits, i.navigation_count, i.completion_rate,
+                              i.reposts_count, i.quotes_count, i.link_clicks,
+                              i.profile_clicks, i.video_views_count,
+                              i.video_playback_0_count, i.video_playback_25_count,
+                              i.video_playback_50_count, i.video_playback_75_count,
+                              i.video_playback_100_count
                        FROM content_items AS i
                        JOIN assets AS a ON a.id=i.asset_id
                        WHERE i.asset_id=:account_id
@@ -187,6 +220,16 @@ class SocialContentStore(SocialStoreBase):
                     exits=_optional_float(row["exits"]),
                     navigation_count=_optional_float(row["navigation_count"]),
                     completion_rate=_optional_float(row["completion_rate"]),
+                    reposts_count=_optional_int(row["reposts_count"]),
+                    quotes_count=_optional_int(row["quotes_count"]),
+                    link_clicks=_optional_int(row["link_clicks"]),
+                    profile_clicks=_optional_int(row["profile_clicks"]),
+                    video_views_count=_optional_int(row["video_views_count"]),
+                    video_playback_0_count=_optional_int(row["video_playback_0_count"]),
+                    video_playback_25_count=_optional_int(row["video_playback_25_count"]),
+                    video_playback_50_count=_optional_int(row["video_playback_50_count"]),
+                    video_playback_75_count=_optional_int(row["video_playback_75_count"]),
+                    video_playback_100_count=_optional_int(row["video_playback_100_count"]),
                 )
                 for row in rows
             )

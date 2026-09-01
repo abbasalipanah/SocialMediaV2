@@ -9,8 +9,11 @@ from app.domain.metrics import MetricId, bootstrap_metric_catalog
 from app.domain.platforms import CapabilityId, PlatformId
 from app.infrastructure.providers.x import (
     XContentReader,
+    XMentionsReader,
     XProfileReader,
     authenticated_user_query,
+    user_mentions_query,
+    user_mentions_url,
     user_posts_query,
     user_posts_url,
 )
@@ -34,12 +37,22 @@ def test_x_queries_are_bounded_and_request_only_owned_posts() -> None:
     assert user_posts_url("https://api.x.com/2", "123456789") == (
         "https://api.x.com/2/users/123456789/tweets"
     )
+    assert user_mentions_url("https://api.x.com/2", "123456789") == (
+        "https://api.x.com/2/users/123456789/mentions"
+    )
+    assert user_mentions_query(cursor="mention-token") == {
+        "max_results": "25",
+        "tweet.fields": "author_id,created_at,public_metrics",
+        "expansions": "author_id",
+        "user.fields": "id,name,username",
+        "pagination_token": "mention-token",
+    }
     assert user_posts_query(cursor="next-token") == {
         "max_results": "25",
         "exclude": "retweets,replies",
-        "tweet.fields": "attachments,created_at,non_public_metrics,public_metrics",
+        "tweet.fields": "attachments,created_at,entities,non_public_metrics,public_metrics",
         "expansions": "attachments.media_keys",
-        "media.fields": "type,url,preview_image_url",
+        "media.fields": "type,url,preview_image_url,public_metrics,non_public_metrics",
         "pagination_token": "next-token",
     }
 
@@ -96,6 +109,7 @@ def test_x_content_maps_public_and_owned_post_metrics_with_media() -> None:
                     },
                     "non_public_metrics": {
                         "engagements": 20,
+                        "url_link_clicks": 6,
                         "user_profile_clicks": 5,
                     },
                 }
@@ -129,7 +143,79 @@ def test_x_content_maps_public_and_owned_post_metrics_with_media() -> None:
     assert fields["views_count"] == 100
     assert fields["interactions_count"] == 20
     assert fields["saves_count"] == 4
-    assert fields["profile_visits"] == 5
+    assert fields["reposts_count"] == 2
+    assert fields["quotes_count"] == 1
+    assert fields["link_clicks"] == 6
+    assert fields["profile_clicks"] == 5
+    assert fields["video_views_count"] is None
+
+
+def test_x_content_maps_video_playback_and_derives_completion_rate() -> None:
+    reader = XContentReader(
+        lambda _account, _cursor: {
+            "data": [
+                {
+                    "id": "1900000000000000002",
+                    "text": "Watch this",
+                    "created_at": "2026-08-31T10:00:00Z",
+                    "attachments": {"media_keys": ["7_video"]},
+                    "public_metrics": {},
+                }
+            ],
+            "includes": {
+                "media": [
+                    {
+                        "media_key": "7_video",
+                        "type": "video",
+                        "preview_image_url": "https://pbs.twimg.com/video_thumb/example.jpg",
+                        "public_metrics": {"view_count": 80},
+                        "non_public_metrics": {
+                            "playback_0_count": 60,
+                            "playback_25_count": 50,
+                            "playback_50_count": 40,
+                            "playback_75_count": 30,
+                            "playback_100_count": 24,
+                        },
+                    }
+                ]
+            },
+        },
+        clock=lambda: NOW,
+    )
+
+    fields = reader.list_content(_account()).items[0].fields
+
+    assert fields["content_type"] == "video"
+    assert fields["video_views_count"] == 80
+    assert fields["video_playback_0_count"] == 60
+    assert fields["video_playback_25_count"] == 50
+    assert fields["video_playback_50_count"] == 40
+    assert fields["video_playback_75_count"] == 30
+    assert fields["video_playback_100_count"] == 24
+    assert fields["completion_rate"] == pytest.approx(0.4)
+
+
+def test_x_content_classifies_text_and_link_posts_from_entities() -> None:
+    def payload(with_url: bool):
+        return {
+            "data": [
+                {
+                    "id": "1900000000000000003",
+                    "text": "Read more" if with_url else "Plain post",
+                    "entities": {"urls": [{"expanded_url": "https://example.test"}]}
+                    if with_url
+                    else {},
+                    "public_metrics": {},
+                }
+            ]
+        }
+
+    assert XContentReader(lambda _account, _cursor: payload(False)).list_content(
+        _account()
+    ).items[0].fields["content_type"] == "text"
+    assert XContentReader(lambda _account, _cursor: payload(True)).list_content(
+        _account()
+    ).items[0].fields["content_type"] == "link"
 
 
 def test_x_content_derives_public_interactions_and_rejects_missing_media() -> None:
@@ -174,3 +260,42 @@ def test_x_readers_reject_wrong_provider_family() -> None:
         profile.fetch_profile(_account(PlatformId.YOUTUBE))
     with pytest.raises(ValueError, match="^provider_family_mismatch$"):
         content.list_content(_account(PlatformId.YOUTUBE))
+
+
+def test_x_mentions_map_author_identity_and_public_activity() -> None:
+    reader = XMentionsReader(
+        lambda _account, _cursor: {
+            "data": [
+                {
+                    "id": "1900000000000000004",
+                    "author_id": "987654321",
+                    "text": "@example useful report",
+                    "created_at": "2026-08-31T11:00:00Z",
+                    "public_metrics": {"like_count": 4, "reply_count": 2},
+                }
+            ],
+            "includes": {
+                "users": [
+                    {
+                        "id": "987654321",
+                        "name": "Reader",
+                        "username": "reader",
+                    }
+                ]
+            },
+            "meta": {"next_token": "mention-next"},
+        },
+        clock=lambda: NOW,
+    )
+
+    page = reader.list_mentions(_account())
+
+    assert page.next_cursor == "mention-next"
+    assert page.items[0].fields == {
+        "author_id": "987654321",
+        "author_name": "reader",
+        "text": "@example useful report",
+        "like_count": 4,
+        "reply_count": 2,
+        "commented_at": datetime(2026, 8, 31, 11, tzinfo=UTC),
+    }

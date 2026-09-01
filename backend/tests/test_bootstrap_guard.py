@@ -471,7 +471,11 @@ def test_complete_local_x_configuration_is_fail_closed_then_accepted(
     assert registry.get(
         PlatformId.X,
         CapabilityId.COMMENTS,
-    ).status is CapabilityStatus.UNSUPPORTED
+    ).status is CapabilityStatus.PARTIAL
+    assert registry.get(
+        PlatformId.X,
+        CapabilityId.COMMENTS,
+    ).reason == "account_mentions_only"
     engine = create_engine(settings.db.url)
     try:
         coordinator = create_x_activation_runtime(

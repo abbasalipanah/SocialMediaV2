@@ -23,4 +23,7 @@ class CapabilityId(StrEnum):
     AUDIENCE = "audience"
 
 
-__all__ = ["CapabilityId", "PlatformId"]
+X_MENTIONS_CONTENT_ID = "__x_mentions__"
+
+
+__all__ = ["CapabilityId", "PlatformId", "X_MENTIONS_CONTENT_ID"]

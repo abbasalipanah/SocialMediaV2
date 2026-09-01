@@ -147,6 +147,16 @@ def _content_record(target: CollectionTarget, item: ProviderRecord) -> ContentRe
         exits=_optional_number(fields, "exits"),
         navigation_count=_optional_number(fields, "navigation_count"),
         completion_rate=_optional_number(fields, "completion_rate"),
+        reposts_count=_optional_count(fields, "reposts_count"),
+        quotes_count=_optional_count(fields, "quotes_count"),
+        link_clicks=_optional_count(fields, "link_clicks"),
+        profile_clicks=_optional_count(fields, "profile_clicks"),
+        video_views_count=_optional_count(fields, "video_views_count"),
+        video_playback_0_count=_optional_count(fields, "video_playback_0_count"),
+        video_playback_25_count=_optional_count(fields, "video_playback_25_count"),
+        video_playback_50_count=_optional_count(fields, "video_playback_50_count"),
+        video_playback_75_count=_optional_count(fields, "video_playback_75_count"),
+        video_playback_100_count=_optional_count(fields, "video_playback_100_count"),
     )
 
 

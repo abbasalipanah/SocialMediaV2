@@ -72,6 +72,8 @@ def _record(
     reposts = optional_count(public, "retweet_count")
     quotes = optional_count(public, "quote_count")
     bookmarks = optional_count(public, "bookmark_count")
+    link_clicks = optional_count(private, "url_link_clicks")
+    profile_clicks = optional_count(private, "user_profile_clicks")
     interactions = optional_count(private, "engagements")
     if interactions is None:
         values = (likes, replies, reposts, quotes, bookmarks)
@@ -79,11 +81,12 @@ def _record(
             value is not None for value in values
         ) else None
     media_url = candidates[0] if candidates else ""
+    video_metrics = _video_metrics(attached)
     return ProviderRecord(
         external_id=tweet_id,
         observed_at=observed_at,
         fields={
-            "content_type": _content_type(attached),
+            "content_type": _content_type(raw, attached),
             "permalink": f"https://x.com/i/web/status/{tweet_id}",
             "message": optional_text(raw, "text") or "",
             "media_url": media_url,
@@ -97,11 +100,15 @@ def _record(
             "comments_count": replies,
             "replies_count": replies,
             "shares_count": _sum_optional(reposts, quotes),
+            "reposts_count": reposts,
+            "quotes_count": quotes,
             "views_count": optional_count(public, "impression_count"),
             "reach_count": None,
             "interactions_count": interactions,
             "saves_count": bookmarks,
-            "profile_visits": optional_count(private, "user_profile_clicks"),
+            "link_clicks": link_clicks,
+            "profile_clicks": profile_clicks,
+            **video_metrics,
         },
     )
 
@@ -140,13 +147,71 @@ def _attached_media(
         raise XResponseError("x_timeline_response_invalid") from exc
 
 
-def _content_type(items: tuple[Mapping[str, Any], ...]) -> str:
+def _content_type(
+    tweet: Mapping[str, Any],
+    items: tuple[Mapping[str, Any], ...],
+) -> str:
     kinds = {optional_text(item, "type") for item in items}
     if "video" in kinds or "animated_gif" in kinds:
         return "video"
     if "photo" in kinds:
         return "image"
-    return "post"
+    entities = tweet.get("entities", {})
+    if not isinstance(entities, Mapping):
+        raise XResponseError("x_timeline_response_invalid")
+    urls = entities.get("urls", [])
+    if not isinstance(urls, list):
+        raise XResponseError("x_timeline_response_invalid")
+    return "link" if urls else "text"
+
+
+def _video_metrics(items: tuple[Mapping[str, Any], ...]) -> dict[str, int | float | None]:
+    videos = tuple(
+        item
+        for item in items
+        if optional_text(item, "type") in {"video", "animated_gif"}
+    )
+    if not videos:
+        return {
+            "video_views_count": None,
+            "video_playback_0_count": None,
+            "video_playback_25_count": None,
+            "video_playback_50_count": None,
+            "video_playback_75_count": None,
+            "video_playback_100_count": None,
+            "completion_rate": None,
+        }
+
+    public_rows = tuple(_optional_metrics(item, "public_metrics") for item in videos)
+    private_rows = tuple(_optional_metrics(item, "non_public_metrics") for item in videos)
+    starts = _sum_metric(private_rows, "playback_0_count")
+    completions = _sum_metric(private_rows, "playback_100_count")
+    return {
+        "video_views_count": _sum_metric(public_rows, "view_count"),
+        "video_playback_0_count": starts,
+        "video_playback_25_count": _sum_metric(private_rows, "playback_25_count"),
+        "video_playback_50_count": _sum_metric(private_rows, "playback_50_count"),
+        "video_playback_75_count": _sum_metric(private_rows, "playback_75_count"),
+        "video_playback_100_count": completions,
+        "completion_rate": (
+            completions / starts
+            if starts is not None and starts > 0 and completions is not None
+            else None
+        ),
+    }
+
+
+def _optional_metrics(
+    item: Mapping[str, Any], key: str
+) -> Mapping[str, Any]:
+    value = item.get(key, {})
+    if not isinstance(value, Mapping):
+        raise XResponseError("x_timeline_response_invalid")
+    return value
+
+
+def _sum_metric(rows: tuple[Mapping[str, Any], ...], key: str) -> int | None:
+    return _sum_optional(*(optional_count(row, key) for row in rows))
 
 
 def _next_cursor(payload: Mapping[str, Any]) -> str | None:

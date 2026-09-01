@@ -45,6 +45,7 @@ def test_standalone_collector_wires_verified_x_access_to_runner(monkeypatch) -> 
             status="success",
             metric_count=2,
             content_count=3,
+            comment_count=4,
             media_count=1,
             error_code=None,
             backfill_complete=True,
@@ -68,6 +69,7 @@ def test_standalone_collector_wires_verified_x_access_to_runner(monkeypatch) -> 
     collector.credentials = object()
     collector.metrics = object()
     collector.content = object()
+    collector.comments = object()
     collector.checkpoints = object()
     collector._persist_media = lambda _target, _item: 0
     timings: dict[str, float] = {}
@@ -89,6 +91,7 @@ def test_standalone_collector_wires_verified_x_access_to_runner(monkeypatch) -> 
 
     assert result.status == "success"
     assert result.metric_count == 2
+    assert result.comment_count == 4
     assert result.backfill_complete is True
     assert "x" in timings
     assert [name for name, _value in calls] == [
