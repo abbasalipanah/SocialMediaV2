@@ -8,7 +8,7 @@ from app.application.ports.platforms import ProviderAccount
 from app.application.ports.platforms.profile import DailyMetricSnapshot
 from app.domain.metrics import FACEBOOK_DAILY_SOURCE_METRICS, MetricId
 from app.domain.platforms import PlatformId
-from app.infrastructure.providers.meta.fields import nonnegative_int
+from app.infrastructure.providers.meta.fields import nonnegative_int_or_none
 from app.infrastructure.providers.meta.transport import MetaTransport, MetaTransportError
 
 FACEBOOK_MEDIA_VIEW_BREAKDOWN_METRICS = (
@@ -59,6 +59,12 @@ class FacebookDailyMetricsReader:
             ] = {}
             request_day = day + timedelta(days=1)
             for source_field, metric_id in FACEBOOK_DAILY_SOURCE_METRICS:
+                # The source list is ordered current field first, historical
+                # fallbacks afterwards. Once the current field returned a real
+                # value, asking every retired alias again only adds two HTTP
+                # round trips per day and materially slows a 30-day backfill.
+                if values.get(metric_id) is not None:
+                    continue
                 try:
                     page = self._transport.page(
                         f"{account.account_id}/insights",
@@ -78,6 +84,36 @@ class FacebookDailyMetricsReader:
                     values[metric_id] is None and metric_value is not None
                 ):
                     values[metric_id] = metric_value
+            follower_flows: dict[MetricId, int | None] = {}
+            for source_field, metric_id in (
+                ("page_daily_follows", MetricId.FOLLOWS),
+                ("page_daily_unfollows", MetricId.UNFOLLOWS),
+            ):
+                try:
+                    page = self._transport.page(
+                        f"{account.account_id}/insights",
+                        {
+                            "metric": source_field,
+                            "period": "day",
+                            "since": request_day.isoformat(),
+                            "until": request_day.isoformat(),
+                        },
+                    )
+                except MetaTransportError as exc:
+                    if _metric_refused(exc):
+                        follower_flows[metric_id] = None
+                        continue
+                    raise
+                follower_flows[metric_id] = _first_value(page.items, source_field)
+            follows = follower_flows.get(MetricId.FOLLOWS)
+            unfollows = follower_flows.get(MetricId.UNFOLLOWS)
+            values.update(follower_flows)
+            values[MetricId.NEW_FOLLOWERS] = follows
+            values[MetricId.FOLLOWERS_NET] = (
+                follows - unfollows
+                if follows is not None and unfollows is not None
+                else None
+            )
             try:
                 source_values = _media_view_source_values(
                     self._transport.page(
@@ -130,7 +166,7 @@ def _first_value(items, source_field: str) -> int | None:
         if isinstance(raw_value, dict):
             numeric = [value for value in raw_value.values() if isinstance(value, int | float)]
             raw_value = sum(numeric)
-        return nonnegative_int({"value": raw_value}, "value")
+        return nonnegative_int_or_none({"value": raw_value}, "value")
     return None
 
 
@@ -154,7 +190,7 @@ def _media_view_source_values(items) -> dict[str, int]:
                 raw_value = sum(
                     value for value in raw_value.values() if isinstance(value, int | float)
                 )
-            parsed = nonnegative_int({"value": raw_value}, "value")
+            parsed = nonnegative_int_or_none({"value": raw_value}, "value")
             if parsed is not None:
                 values[label] = parsed
         break

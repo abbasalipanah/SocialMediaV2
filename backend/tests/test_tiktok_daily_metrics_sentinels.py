@@ -42,7 +42,11 @@ def test_minus_one_metric_sentinel_is_treated_as_unavailable() -> None:
         lambda _account_id, _since, _until: _response(-1)
     ).fetch_daily_metrics(ACCOUNT, since=DAY, until=DAY)
 
-    assert snapshots[0].metric_values == {MetricId.FOLLOWERS: 10.0}
+    assert snapshots[0].metric_values == {
+        MetricId.FOLLOWERS: 10.0,
+        MetricId.VIDEO_LIKES_DAILY: 4.0,
+        MetricId.VIDEO_SHARES_DAILY: 2.0,
+    }
 
 
 def test_values_below_minus_one_remain_invalid() -> None:

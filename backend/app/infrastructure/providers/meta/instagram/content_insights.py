@@ -18,16 +18,14 @@ MEDIA_INSIGHT_METRICS = (
     "saved",
 )
 STORY_INSIGHT_METRICS = (
-    *MEDIA_INSIGHT_METRICS,
+    MetricId.VIEWS.value,
+    MetricId.REACH.value,
+    "total_interactions",
+    "shares",
     "replies",
-    "impressions",
-    "taps_forward",
-    "taps_back",
-    "exits",
     "navigation",
     "profile_visits",
     MetricId.FOLLOWS.value,
-    "swipe_forward",
 )
 
 

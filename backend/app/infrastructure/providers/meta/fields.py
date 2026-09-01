@@ -34,6 +34,20 @@ def nonnegative_int(payload: Mapping[str, Any], field: str) -> int | None:
     return parsed
 
 
+def nonnegative_int_or_none(payload: Mapping[str, Any], field: str) -> int | None:
+    """Treat one malformed provider counter as unavailable.
+
+    Daily insight responses occasionally contain a transient negative or
+    otherwise non-numeric value for one metric while every other metric in the
+    same response is valid. Capability readers use this converter at that
+    field-isolation boundary so one bad counter cannot discard the whole day.
+    """
+    try:
+        return nonnegative_int(payload, field)
+    except ValueError:
+        return None
+
+
 def nested_count(payload: Mapping[str, Any], field: str) -> int:
     raw = payload.get(field)
     if raw is None:
@@ -68,6 +82,7 @@ def timestamp(payload: Mapping[str, Any], field: str) -> datetime | None:
 __all__ = [
     "nested_count",
     "nonnegative_int",
+    "nonnegative_int_or_none",
     "optional_text",
     "required_text",
     "timestamp",

@@ -38,6 +38,9 @@ class MetricId(StrEnum):
     MEDIA_COUNT = "media_count"
     VIDEO_VIEWS_TOTAL = "video_views_total"
     VIDEO_VIEWS_CHANGE = "video_views_change"
+    VIDEO_LIKES_DAILY = "video_likes_daily"
+    VIDEO_COMMENTS_DAILY = "video_comments_daily"
+    VIDEO_SHARES_DAILY = "video_shares_daily"
     VIDEO_LIKES_TOTAL = "video_likes_total"
     VIDEO_COMMENTS_TOTAL = "video_comments_total"
     VIDEO_SHARES_TOTAL = "video_shares_total"
@@ -429,6 +432,11 @@ def _profile_ratio(
 FACEBOOK_DAILY_SOURCE_METRICS = (
     ("page_media_view", MetricId.VIEWS),
     ("page_posts_impressions", MetricId.VIEWS),
+    # Meta retired the legacy unique-impression Page reach metric in June
+    # 2026. The replacement is the Page's unique media-viewer count. Keep the
+    # old fields as fallbacks for accounts/API versions that still return
+    # historical rows, but prefer the current contract.
+    ("page_total_media_view_unique", MetricId.REACH),
     ("page_impressions_unique", MetricId.REACH),
     ("page_posts_impressions_unique", MetricId.REACH),
     ("page_views_total", MetricId.PAGE_VIEWS),
@@ -444,6 +452,7 @@ INSTAGRAM_DAILY_SOURCE_METRICS = (
     ("website_clicks", MetricId.WEBSITE_CLICKS),
     ("total_interactions", MetricId.INTERACTIONS),
 )
+INSTAGRAM_DAILY_BREAKDOWNS = ("follow_type", "media_product_type")
 
 
 def bootstrap_metric_catalog() -> MetricCatalog:
@@ -679,7 +688,16 @@ def bootstrap_metric_catalog() -> MetricCatalog:
             _profile_flow(PlatformId.INSTAGRAM, MetricId.REACH_ORGANIC, "reach_organic"),
             _profile_flow(PlatformId.INSTAGRAM, MetricId.REACH_PAID, "reach_paid"),
             *(
-                _profile_flow(PlatformId.INSTAGRAM, metric_id, source_field)
+                _profile_flow(
+                    PlatformId.INSTAGRAM,
+                    metric_id,
+                    source_field,
+                    allowed_breakdowns=(
+                        INSTAGRAM_DAILY_BREAKDOWNS
+                        if metric_id in {MetricId.REACH, MetricId.VIEWS}
+                        else ()
+                    ),
+                )
                 for source_field, metric_id in INSTAGRAM_DAILY_SOURCE_METRICS
             ),
             _profile_ratio(
@@ -723,7 +741,16 @@ def bootstrap_metric_catalog() -> MetricCatalog:
             _profile_flow(PlatformId.TIKTOK, MetricId.VIEWS, "views"),
             _profile_flow(PlatformId.TIKTOK, MetricId.REACH, "reach"),
             _profile_flow(PlatformId.TIKTOK, MetricId.PROFILE_VIEWS, "profile_views"),
+            _profile_flow(PlatformId.TIKTOK, MetricId.VIDEO_LIKES_DAILY, "likes"),
+            _profile_flow(PlatformId.TIKTOK, MetricId.VIDEO_COMMENTS_DAILY, "comments"),
+            _profile_flow(PlatformId.TIKTOK, MetricId.VIDEO_SHARES_DAILY, "shares"),
             _profile_flow(PlatformId.TIKTOK, MetricId.INTERACTIONS, "interactions"),
+            _profile_ratio(
+                PlatformId.TIKTOK,
+                MetricId.ENGAGEMENT_RATE,
+                MetricId.INTERACTIONS,
+                MetricId.VIEWS,
+            ),
             views_total,
             views_change,
             *engagement_counters,
@@ -741,6 +768,7 @@ __all__ = [
     "FirstSamplePolicy",
     "FACEBOOK_DAILY_SOURCE_METRICS",
     "INSTAGRAM_DAILY_SOURCE_METRICS",
+    "INSTAGRAM_DAILY_BREAKDOWNS",
     "MetricCatalog",
     "MetricCatalogError",
     "MetricDefinition",

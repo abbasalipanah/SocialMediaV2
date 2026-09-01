@@ -36,6 +36,9 @@ _ACCOUNT_METRICS = {
     "video_views": MetricId.VIEWS,
     "unique_video_views": MetricId.REACH,
     MetricId.PROFILE_VIEWS.value: MetricId.PROFILE_VIEWS,
+    "likes": MetricId.VIDEO_LIKES_DAILY,
+    "comments": MetricId.VIDEO_COMMENTS_DAILY,
+    "shares": MetricId.VIDEO_SHARES_DAILY,
 }
 TIKTOK_DAILY_METRIC_IDS = (
     *_ACCOUNT_METRICS.values(),

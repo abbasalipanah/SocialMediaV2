@@ -95,11 +95,14 @@ def test_facebook_daily_metrics_preserve_request_order_and_d_plus_one() -> None:
     values = {
         "page_media_view": 10,
         "page_posts_impressions": 20,
+        "page_total_media_view_unique": 35,
         "page_impressions_unique": 30,
         "page_posts_impressions_unique": 40,
         "page_views_total": 5,
         "page_post_engagements": 7,
         "page_actions_post_reactions_total": {"like": 2, "love": 3},
+        "page_daily_follows": 6,
+        "page_daily_unfollows": 2,
     }
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -158,22 +161,26 @@ def test_facebook_daily_metrics_preserve_request_order_and_d_plus_one() -> None:
     assert outcome.status is CollectionStatus.SUCCESS
     assert by_metric == {
         MetricId.VIEWS: 10,
-        MetricId.REACH: 30,
+        MetricId.REACH: 35,
         MetricId.PAGE_VIEWS: 5,
         MetricId.INTERACTIONS: 7,
         MetricId.REACTIONS: 5,
         MetricId.VIEWS_ORGANIC: 8,
         MetricId.VIEWS_PAID: 2,
+        MetricId.FOLLOWS: 6,
+        MetricId.NEW_FOLLOWERS: 6,
+        MetricId.UNFOLLOWS: 2,
+        MetricId.FOLLOWERS_NET: 4,
     }
     assert [request["metric"] for request in requests] == [
         "page_media_view",
-        "page_posts_impressions",
-        "page_impressions_unique",
-        "page_posts_impressions_unique",
+        "page_total_media_view_unique",
         "page_views_total",
         "page_post_engagements",
         "page_total_actions",
         "page_actions_post_reactions_total",
+        "page_daily_follows",
+        "page_daily_unfollows",
         "page_media_view",
     ]
     assert all(request["since"] == request["until"] == "2026-07-14" for request in requests)
@@ -183,6 +190,41 @@ def test_facebook_daily_metrics_preserve_request_order_and_d_plus_one() -> None:
         for row in store.rows
         if row.breakdown_key == "is_from_ads"
     } == {("Organic", 8), ("Paid", 2)}
+
+
+def test_facebook_daily_metrics_use_the_next_alias_when_the_primary_is_empty() -> None:
+    requests: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        query = {key: rows[-1] for key, rows in parse_qs(request.url.query.decode()).items()}
+        metric = query["metric"]
+        requests.append(metric)
+        if query.get("breakdown") == "is_from_ads":
+            return httpx.Response(200, json={"data": []}, request=request)
+        values = {
+            "page_posts_impressions": 20,
+            "page_impressions_unique": 30,
+            "page_daily_follows": 0,
+            "page_daily_unfollows": 0,
+        }
+        value = values.get(metric)
+        data = [] if value is None else [{"name": metric, "values": [{"value": value}]}]
+        return httpx.Response(200, json={"data": data}, request=request)
+
+    rows = FacebookDailyMetricsReader(_transport(handler)).fetch_daily_metrics(
+        _account(PlatformId.FACEBOOK, "page-1"),
+        since=DAY,
+        until=DAY,
+    )
+
+    assert rows[0].metric_values[MetricId.VIEWS] == 20
+    assert rows[0].metric_values[MetricId.REACH] == 30
+    assert requests[:4] == [
+        "page_media_view",
+        "page_posts_impressions",
+        "page_total_media_view_unique",
+        "page_impressions_unique",
+    ]
 
 
 def test_instagram_partial_daily_metrics_preserve_null_instead_of_zero() -> None:
@@ -197,10 +239,65 @@ def test_instagram_partial_daily_metrics_preserve_null_instead_of_zero() -> None
     def handler(request: httpx.Request) -> httpx.Response:
         query = parse_qs(request.url.query.decode())
         metric = query["metric"][-1]
-        total_value = {} if values[metric] is None else {"value": values[metric]}
+        if metric == "follows_and_unfollows":
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {
+                            "name": metric,
+                            "total_value": {
+                                "breakdowns": [
+                                    {
+                                        "dimension_keys": ["follow_type"],
+                                        "results": [
+                                            {"dimension_values": ["FOLLOWER"], "value": 9},
+                                            {"dimension_values": ["NON_FOLLOWER"], "value": 3},
+                                        ],
+                                    }
+                                ]
+                            },
+                        }
+                    ]
+                },
+                request=request,
+            )
+        if metric == "reach,views":
+            breakdown = query["breakdown"][-1]
+            data = []
+            for name in ("reach", "views"):
+                results = (
+                    [
+                        {"dimension_values": ["FOLLOWER"], "value": 60},
+                        {"dimension_values": ["NON_FOLLOWER"], "value": 20},
+                    ]
+                    if breakdown == "follow_type"
+                    else [
+                        {"dimension_values": ["STORY"], "value": 50},
+                        {"dimension_values": ["REELS"], "value": 30},
+                    ]
+                )
+                data.append(
+                    {
+                        "name": name,
+                        "total_value": {
+                            "breakdowns": [
+                                {
+                                    "dimension_keys": [breakdown],
+                                    "results": results,
+                                }
+                            ]
+                        },
+                    }
+                )
+            return httpx.Response(200, json={"data": data}, request=request)
+        data = []
+        for name in metric.split(","):
+            total_value = {} if values[name] is None else {"value": values[name]}
+            data.append({"name": name, "total_value": total_value})
         return httpx.Response(
             200,
-            json={"data": [{"name": metric, "total_value": total_value}]},
+            json={"data": data},
             request=request,
         )
 
@@ -213,12 +310,195 @@ def test_instagram_partial_daily_metrics_preserve_null_instead_of_zero() -> None
         since=DAY,
         until=DAY,
     )
-    by_metric = {row.metric_id: row.value for row in store.rows}
+    by_metric = {
+        row.metric_id: row.value for row in store.rows if row.breakdown_key is None
+    }
     assert outcome.status is CollectionStatus.PARTIAL
     assert outcome.error_code == "metric_unavailable"
     assert MetricId.PROFILE_VIEWS not in by_metric
     assert by_metric[MetricId.REACH] == 80
     assert by_metric[MetricId.INTERACTIONS] == 24
+    assert by_metric[MetricId.FOLLOWS] == 9
+    assert by_metric[MetricId.NEW_FOLLOWERS] == 9
+    assert by_metric[MetricId.UNFOLLOWS] == 3
+    assert by_metric[MetricId.FOLLOWERS_NET] == 6
+    assert {
+        (row.metric_id, row.breakdown_key, row.breakdown_value, row.value)
+        for row in store.rows
+        if row.breakdown_key is not None
+    } == {
+        (MetricId.REACH, "follow_type", "FOLLOWER", 60),
+        (MetricId.REACH, "follow_type", "NON_FOLLOWER", 20),
+        (MetricId.VIEWS, "follow_type", "FOLLOWER", 60),
+        (MetricId.VIEWS, "follow_type", "NON_FOLLOWER", 20),
+        (MetricId.REACH, "media_product_type", "STORY", 50),
+        (MetricId.REACH, "media_product_type", "REELS", 30),
+        (MetricId.VIEWS, "media_product_type", "STORY", 50),
+        (MetricId.VIEWS, "media_product_type", "REELS", 30),
+    }
+
+
+def test_instagram_negative_daily_metric_isolated_as_unavailable() -> None:
+    values = {
+        MetricId.REACH.value: 66,
+        MetricId.VIEWS.value: 99,
+        MetricId.PROFILE_VIEWS.value: 8,
+        MetricId.WEBSITE_CLICKS.value: 0,
+        "total_interactions": -2,
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        query = parse_qs(request.url.query.decode())
+        metric = query["metric"][-1]
+        if "breakdown" in query:
+            return httpx.Response(
+                400,
+                json={"error": {"message": "unavailable in fixture"}},
+                request=request,
+            )
+        return httpx.Response(
+            200,
+            json={
+                "data": [
+                    {"name": name, "total_value": {"value": values[name]}}
+                    for name in metric.split(",")
+                ]
+            },
+            request=request,
+        )
+
+    store = MemoryMetricStore()
+    outcome = collect_daily_metrics(
+        target=CollectionTarget(
+            account=_account(PlatformId.INSTAGRAM, "ig-1"),
+            local_account_id=12,
+            brand_id=7,
+        ),
+        reader=InstagramDailyMetricsReader(_transport(handler)),
+        metric_store=store,
+        since=DAY,
+        until=DAY,
+    )
+    by_metric = {
+        row.metric_id: row.value for row in store.rows if row.breakdown_key is None
+    }
+
+    assert outcome.status is CollectionStatus.PARTIAL
+    assert outcome.error_code == "metric_unavailable"
+    assert MetricId.INTERACTIONS not in by_metric
+    assert by_metric[MetricId.REACH] == 66
+    assert by_metric[MetricId.VIEWS] == 99
+    assert by_metric[MetricId.PROFILE_VIEWS] == 8
+    assert by_metric[MetricId.WEBSITE_CLICKS] == 0
+
+
+def test_instagram_empty_follow_breakdown_is_a_completed_zero_day() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        query = parse_qs(request.url.query.decode())
+        metric = query["metric"][-1]
+        if metric == "follows_and_unfollows":
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {
+                            "name": metric,
+                            "total_value": {
+                                "breakdowns": [
+                                    {"dimension_keys": ["follow_type"]}
+                                ]
+                            },
+                        }
+                    ]
+                },
+                request=request,
+            )
+        if "breakdown" in query:
+            return httpx.Response(
+                400,
+                json={"error": {"message": "unavailable in fixture"}},
+                request=request,
+            )
+        return httpx.Response(
+            200,
+            json={
+                "data": [
+                    {"name": name, "total_value": {"value": 1}}
+                    for name in metric.split(",")
+                ]
+            },
+            request=request,
+        )
+
+    rows = InstagramDailyMetricsReader(_transport(handler)).fetch_daily_metrics(
+        _account(PlatformId.INSTAGRAM, "ig-1"),
+        since=DAY,
+        until=DAY,
+    )
+
+    assert rows[0].metric_values[MetricId.FOLLOWS] == 0
+    assert rows[0].metric_values[MetricId.NEW_FOLLOWERS] == 0
+    assert rows[0].metric_values[MetricId.UNFOLLOWS] == 0
+    assert rows[0].metric_values[MetricId.FOLLOWERS_NET] == 0
+
+
+def test_facebook_negative_daily_metric_isolated_as_unavailable() -> None:
+    values = {
+        "page_media_view": 10,
+        "page_total_media_view_unique": 35,
+        "page_views_total": 5,
+        "page_post_engagements": -2,
+        "page_actions_post_reactions_total": {"like": 2},
+        "page_daily_follows": 1,
+        "page_daily_unfollows": 0,
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        query = parse_qs(request.url.query.decode())
+        metric = query["metric"][-1]
+        if "breakdown" in query or metric == "page_total_actions":
+            return httpx.Response(
+                400,
+                json={"error": {"message": "unavailable in fixture"}},
+                request=request,
+            )
+        if metric not in values:
+            return httpx.Response(200, json={"data": []}, request=request)
+        return httpx.Response(
+            200,
+            json={
+                "data": [
+                    {
+                        "name": metric,
+                        "values": [{"value": values[metric]}],
+                    }
+                ]
+            },
+            request=request,
+        )
+
+    store = MemoryMetricStore()
+    outcome = collect_daily_metrics(
+        target=CollectionTarget(
+            account=_account(PlatformId.FACEBOOK, "page-1"),
+            local_account_id=11,
+            brand_id=7,
+        ),
+        reader=FacebookDailyMetricsReader(_transport(handler)),
+        metric_store=store,
+        since=DAY,
+        until=DAY,
+    )
+    by_metric = {
+        row.metric_id: row.value for row in store.rows if row.breakdown_key is None
+    }
+
+    assert outcome.status is CollectionStatus.PARTIAL
+    assert outcome.error_code == "metric_unavailable"
+    assert MetricId.INTERACTIONS not in by_metric
+    assert by_metric[MetricId.VIEWS] == 10
+    assert by_metric[MetricId.REACH] == 35
+    assert by_metric[MetricId.PAGE_VIEWS] == 5
 
 
 def test_facebook_and_instagram_audience_breakdowns_are_normalized() -> None:
