@@ -55,7 +55,9 @@ def dormant_worker_config(settings: AppSettings) -> WorkerRuntimeConfig:
 
 def settings_worker_config(settings: AppSettings) -> WorkerRuntimeConfig:
     provider_enabled = (
-        settings.meta.collection_enabled or settings.tiktok.collection_enabled
+        settings.meta.collection_enabled
+        or settings.tiktok.collection_enabled
+        or settings.youtube.collection_enabled
     )
     return WorkerRuntimeConfig(
         runtime_mode=settings.runtime_mode,

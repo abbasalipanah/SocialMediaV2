@@ -8,7 +8,9 @@ from .config import (
     AiSummaryConfig,
     AppSettings,
     ConfigurationError,
+    OAuthChannelActivationRuntimeConfig,
     RuntimeMode,
+    YouTubeConfig,
     load_settings,
 )
 from .write_policy import WritePolicy
@@ -16,12 +18,14 @@ from .write_policy import WritePolicy
 __all__ = [
     "AI_SUMMARY_OPENROUTER_BASE_URL",
     "COMMENT_SENTIMENT_MODEL",
+    "OAuthChannelActivationRuntimeConfig",
     "AiSummaryConfig",
     "AppSettings",
     "Boundary",
     "ConfigurationError",
     "RUNTIME_MODE_SEQUENCE",
     "RuntimeMode",
+    "YouTubeConfig",
     "WritePolicy",
     "load_settings",
     "mark_boundary",

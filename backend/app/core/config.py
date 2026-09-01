@@ -82,6 +82,23 @@ AI_SUMMARY_MODELS = (
 )
 COMMENT_SENTIMENT_MODEL = "google/gemini-2.5-flash-lite"
 
+YOUTUBE_PROVIDER_PROFILE = "youtube_data_analytics_v3_v2"
+YOUTUBE_AUTHORIZATION_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+YOUTUBE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+YOUTUBE_REVOKE_URL = "https://oauth2.googleapis.com/revoke"
+YOUTUBE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
+YOUTUBE_CHANNELS_URL = "https://www.googleapis.com/youtube/v3/channels"
+YOUTUBE_PLAYLIST_ITEMS_URL = "https://www.googleapis.com/youtube/v3/playlistItems"
+YOUTUBE_VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos"
+YOUTUBE_COMMENT_THREADS_URL = "https://www.googleapis.com/youtube/v3/commentThreads"
+YOUTUBE_ANALYTICS_REPORTS_URL = "https://youtubeanalytics.googleapis.com/v2/reports"
+YOUTUBE_REDIRECT_URI = "https://social.theaccumulate.com/api/social/youtube/oauth/callback"
+YOUTUBE_REQUIRED_SCOPES = (
+    "openid",
+    "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/yt-analytics.readonly",
+)
+
 LOCAL_DB_HOSTS = {"127.0.0.1", "localhost", "::1", "postgres", "db"}
 BLOCKED_SOURCE_DB_NAMES = {"socialmedia_adv"}
 V2_DATABASE_PREFIX = "social_media_v2"
@@ -229,6 +246,38 @@ class MetaActivationRuntimeConfig:
 
 
 @dataclass(frozen=True)
+class YouTubeConfig:
+    provider_profile: str
+    client_id: str
+    client_secret: str
+    account_enabled: bool
+    oauth_mode: str
+    collection_enabled: bool
+    required_scopes: tuple[str, ...]
+    authorization_url: str
+    token_url: str
+    revoke_url: str
+    userinfo_url: str
+    channels_url: str
+    playlist_items_url: str
+    videos_url: str
+    comment_threads_url: str
+    analytics_reports_url: str
+    redirect_uri: str
+
+
+@dataclass(frozen=True)
+class OAuthChannelActivationRuntimeConfig:
+    gate_enabled: bool
+    gate_enabled_at: datetime | None
+    gate_expires_at: datetime | None
+    oauth_state_secret: str
+    credential_active_key_id: str
+    credential_keyring_json: str
+    provider_timeout_seconds: float
+
+
+@dataclass(frozen=True)
 class AiSummaryConfig:
     enabled: bool
     api_key: str
@@ -259,6 +308,8 @@ class AppSettings:
     tiktok_activation: TikTokActivationRuntimeConfig
     meta: MetaConfig
     meta_activation: MetaActivationRuntimeConfig
+    youtube: YouTubeConfig
+    youtube_activation: OAuthChannelActivationRuntimeConfig
     ai_summary: AiSummaryConfig
 
 
@@ -490,6 +541,68 @@ def _validate_meta(
         raise ConfigurationError("Meta collection requires the credential vault")
 
 
+def _validate_youtube(
+    config: YouTubeConfig,
+    activation: OAuthChannelActivationRuntimeConfig,
+    *,
+    writes: bool,
+    db: DatabaseConfig,
+    vault_enabled: bool,
+    production_like: bool,
+) -> None:
+    if config.provider_profile != YOUTUBE_PROVIDER_PROFILE:
+        raise ConfigurationError("YouTube provider profile differs from the approved contract")
+    if config.oauth_mode not in {"disabled", "manual_intent_only"}:
+        raise ConfigurationError("Unsupported YouTube OAuth mode")
+    canonical_endpoints = (
+        (config.authorization_url, YOUTUBE_AUTHORIZATION_URL),
+        (config.token_url, YOUTUBE_TOKEN_URL),
+        (config.revoke_url, YOUTUBE_REVOKE_URL),
+        (config.userinfo_url, YOUTUBE_USERINFO_URL),
+        (config.channels_url, YOUTUBE_CHANNELS_URL),
+        (config.playlist_items_url, YOUTUBE_PLAYLIST_ITEMS_URL),
+        (config.videos_url, YOUTUBE_VIDEOS_URL),
+        (config.comment_threads_url, YOUTUBE_COMMENT_THREADS_URL),
+        (config.analytics_reports_url, YOUTUBE_ANALYTICS_REPORTS_URL),
+    )
+    if any(actual != expected for actual, expected in canonical_endpoints):
+        raise ConfigurationError("YouTube endpoint set differs from the approved contract")
+    _validate_public_endpoint(
+        config.redirect_uri,
+        expected_path="/api/social/youtube/oauth/callback",
+        label="YouTube OAuth redirect URI",
+        production_like=production_like,
+    )
+    if config.required_scopes != YOUTUBE_REQUIRED_SCOPES:
+        raise ConfigurationError("YouTube OAuth scope set differs from the approved contract")
+    if not config.account_enabled:
+        if config.oauth_mode != "disabled" or activation.gate_enabled:
+            raise ConfigurationError("YouTube OAuth gates must remain disabled together")
+        if config.collection_enabled:
+            raise ConfigurationError("YouTube collection requires the account integration")
+        return
+    if config.oauth_mode != "manual_intent_only":
+        raise ConfigurationError("YouTube activation requires manual_intent_only mode")
+    if not writes or not db.url:
+        raise ConfigurationError("YouTube activation requires a writable database URL")
+    if not config.client_id or not config.client_secret:
+        raise ConfigurationError("YouTube activation requires Google OAuth credentials")
+    if not vault_enabled:
+        raise ConfigurationError("YouTube activation requires the credential vault")
+    if not activation.gate_enabled:
+        raise ConfigurationError("YouTube activation requires the time-boxed gate")
+    if (
+        activation.gate_enabled_at is None
+        or activation.gate_expires_at is None
+        or activation.gate_enabled_at >= activation.gate_expires_at
+    ):
+        raise ConfigurationError("YouTube activation gate window is invalid")
+    if len(activation.oauth_state_secret.encode("utf-8")) < 32:
+        raise ConfigurationError("YouTube OAuth state secret must contain at least 32 bytes")
+    if not activation.credential_active_key_id or not activation.credential_keyring_json:
+        raise ConfigurationError("YouTube credential keyring is not configured")
+
+
 def _origin(value: str) -> tuple[str, str, int | None]:
     parsed = urlparse(value)
     return parsed.scheme.lower(), (parsed.hostname or "").lower(), parsed.port
@@ -611,6 +724,52 @@ def load_settings() -> AppSettings:
             "30",
         ),
     )
+    youtube = YouTubeConfig(
+        provider_profile=_env("SOCIAL_YOUTUBE_PROVIDER_PROFILE", YOUTUBE_PROVIDER_PROFILE),
+        client_id=_env("SOCIAL_YOUTUBE_CLIENT_ID"),
+        client_secret=_env("SOCIAL_YOUTUBE_CLIENT_SECRET"),
+        account_enabled=_bool("SOCIAL_YOUTUBE_ACCOUNT_ENABLED"),
+        oauth_mode=_env("SOCIAL_YOUTUBE_ACCOUNT_OAUTH_MODE", "disabled"),
+        collection_enabled=_bool("SOCIAL_YOUTUBE_COLLECTION_ENABLED"),
+        required_scopes=_csv(
+            "SOCIAL_YOUTUBE_ACCOUNT_REQUIRED_SCOPES",
+            YOUTUBE_REQUIRED_SCOPES,
+        ),
+        authorization_url=_env(
+            "SOCIAL_YOUTUBE_AUTHORIZATION_URL",
+            YOUTUBE_AUTHORIZATION_URL,
+        ),
+        token_url=_env("SOCIAL_YOUTUBE_TOKEN_URL", YOUTUBE_TOKEN_URL),
+        revoke_url=_env("SOCIAL_YOUTUBE_REVOKE_URL", YOUTUBE_REVOKE_URL),
+        userinfo_url=_env("SOCIAL_YOUTUBE_USERINFO_URL", YOUTUBE_USERINFO_URL),
+        channels_url=_env("SOCIAL_YOUTUBE_CHANNELS_URL", YOUTUBE_CHANNELS_URL),
+        playlist_items_url=_env(
+            "SOCIAL_YOUTUBE_PLAYLIST_ITEMS_URL",
+            YOUTUBE_PLAYLIST_ITEMS_URL,
+        ),
+        videos_url=_env("SOCIAL_YOUTUBE_VIDEOS_URL", YOUTUBE_VIDEOS_URL),
+        comment_threads_url=_env(
+            "SOCIAL_YOUTUBE_COMMENT_THREADS_URL",
+            YOUTUBE_COMMENT_THREADS_URL,
+        ),
+        analytics_reports_url=_env(
+            "SOCIAL_YOUTUBE_ANALYTICS_REPORTS_URL",
+            YOUTUBE_ANALYTICS_REPORTS_URL,
+        ),
+        redirect_uri=_env("SOCIAL_YOUTUBE_REDIRECT_URI", YOUTUBE_REDIRECT_URI),
+    )
+    youtube_activation = OAuthChannelActivationRuntimeConfig(
+        gate_enabled=_bool("SOCIAL_YOUTUBE_ACTIVATION_GATE_ENABLED"),
+        gate_enabled_at=_optional_datetime("SOCIAL_YOUTUBE_ACTIVATION_ENABLED_AT"),
+        gate_expires_at=_optional_datetime("SOCIAL_YOUTUBE_ACTIVATION_EXPIRES_AT"),
+        oauth_state_secret=_env("SOCIAL_YOUTUBE_OAUTH_STATE_SECRET"),
+        credential_active_key_id=_env("SOCIAL_CREDENTIAL_ACTIVE_KEY_ID"),
+        credential_keyring_json=_env("SOCIAL_CREDENTIAL_KEYRING_JSON"),
+        provider_timeout_seconds=_positive_float(
+            "SOCIAL_YOUTUBE_PROVIDER_TIMEOUT_SECONDS",
+            "30",
+        ),
+    )
     ai_summary = AiSummaryConfig(
         enabled=_bool("SOCIAL_AI_SUMMARY_ENABLED"),
         api_key=_env("SOCIAL_AI_OPENROUTER_API_KEY"),
@@ -647,6 +806,14 @@ def load_settings() -> AppSettings:
         vault_enabled=vault_enabled,
         production_like=app_env in PRODUCTION_LIKE_ENVS,
     )
+    _validate_youtube(
+        youtube,
+        youtube_activation,
+        writes=writes,
+        db=db,
+        vault_enabled=vault_enabled,
+        production_like=app_env in PRODUCTION_LIKE_ENVS,
+    )
     _validate_ai_summary(
         ai_summary,
         app_env=app_env,
@@ -659,7 +826,11 @@ def load_settings() -> AppSettings:
     if worker_schedule_enabled and (
         not writes
         or not db.url
-        or not (meta.collection_enabled or tiktok.collection_enabled)
+        or not (
+            meta.collection_enabled
+            or tiktok.collection_enabled
+            or youtube.collection_enabled
+        )
     ):
         raise ConfigurationError(
             "Worker schedule requires a writable V2 database and an enabled collector"
@@ -685,5 +856,7 @@ def load_settings() -> AppSettings:
         tiktok_activation=tiktok_activation,
         meta=meta,
         meta_activation=meta_activation,
+        youtube=youtube,
+        youtube_activation=youtube_activation,
         ai_summary=ai_summary,
     )

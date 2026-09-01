@@ -127,7 +127,7 @@ def bootstrap_registry(settings: AppSettings | None = None) -> PlatformCapabilit
             ),
         )
     )
-    for platform in (PlatformId.X, PlatformId.LINKEDIN, PlatformId.YOUTUBE):
+    for platform in (PlatformId.X, PlatformId.LINKEDIN):
         records.extend(
             CapabilityRecord(
                 platform=platform,
@@ -136,6 +136,25 @@ def bootstrap_registry(settings: AppSettings | None = None) -> PlatformCapabilit
                 reason="provider_not_configured",
             )
             for capability in CapabilityId
+        )
+    youtube_collection = settings is not None and settings.youtube.collection_enabled
+    for capability in CapabilityId:
+        if not youtube_collection:
+            status = CapabilityStatus.NOT_CONFIGURED
+            reason = "provider_not_configured"
+        elif capability is CapabilityId.AUDIENCE:
+            status = CapabilityStatus.UNSUPPORTED
+            reason = "youtube_audience_not_implemented"
+        else:
+            status = CapabilityStatus.AVAILABLE
+            reason = "standalone_collector_available"
+        records.append(
+            CapabilityRecord(
+                platform=PlatformId.YOUTUBE,
+                capability=capability,
+                status=status,
+                reason=reason,
+            )
         )
     return PlatformCapabilityRegistry(tuple(records))
 

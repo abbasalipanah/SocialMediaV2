@@ -6,6 +6,7 @@ import json
 import pytest
 from sqlalchemy import create_engine
 
+from app.capabilities import CapabilityStatus, bootstrap_registry
 from app.core import (
     RUNTIME_MODE_SEQUENCE,
     ConfigurationError,
@@ -13,8 +14,10 @@ from app.core import (
     WritePolicy,
     load_settings,
 )
+from app.domain.platforms import CapabilityId, PlatformId
 from app.infrastructure.providers.meta.runtime import create_meta_activation_runtime
 from app.infrastructure.providers.tiktok.runtime import create_tiktok_activation_runtime
+from app.workers.runtime import settings_worker_config
 from tests.test_phase6_dashboard_api import MemoryAuthority
 
 CONFIG_KEYS = (
@@ -50,6 +53,28 @@ CONFIG_KEYS = (
     "SOCIAL_META_ACTIVATION_ENABLED_AT",
     "SOCIAL_META_ACTIVATION_EXPIRES_AT",
     "SOCIAL_META_OAUTH_STATE_SECRET",
+    "SOCIAL_YOUTUBE_PROVIDER_PROFILE",
+    "SOCIAL_YOUTUBE_CLIENT_ID",
+    "SOCIAL_YOUTUBE_CLIENT_SECRET",
+    "SOCIAL_YOUTUBE_ACCOUNT_ENABLED",
+    "SOCIAL_YOUTUBE_ACCOUNT_OAUTH_MODE",
+    "SOCIAL_YOUTUBE_COLLECTION_ENABLED",
+    "SOCIAL_YOUTUBE_AUTHORIZATION_URL",
+    "SOCIAL_YOUTUBE_TOKEN_URL",
+    "SOCIAL_YOUTUBE_REVOKE_URL",
+    "SOCIAL_YOUTUBE_USERINFO_URL",
+    "SOCIAL_YOUTUBE_CHANNELS_URL",
+    "SOCIAL_YOUTUBE_PLAYLIST_ITEMS_URL",
+    "SOCIAL_YOUTUBE_VIDEOS_URL",
+    "SOCIAL_YOUTUBE_COMMENT_THREADS_URL",
+    "SOCIAL_YOUTUBE_ANALYTICS_REPORTS_URL",
+    "SOCIAL_YOUTUBE_ACCOUNT_REQUIRED_SCOPES",
+    "SOCIAL_YOUTUBE_REDIRECT_URI",
+    "SOCIAL_YOUTUBE_OAUTH_STATE_SECRET",
+    "SOCIAL_YOUTUBE_ACTIVATION_GATE_ENABLED",
+    "SOCIAL_YOUTUBE_ACTIVATION_ENABLED_AT",
+    "SOCIAL_YOUTUBE_ACTIVATION_EXPIRES_AT",
+    "SOCIAL_YOUTUBE_PROVIDER_TIMEOUT_SECONDS",
     "SOCIAL_VAULT_ENABLED",
     "SOCIAL_WORKER_SCHEDULE_ENABLED",
     "SOCIAL_AI_SUMMARY_ENABLED",
@@ -121,6 +146,7 @@ def test_production_standalone_ready_is_fail_closed(
     assert WritePolicy.from_settings(settings).allows("sso_consume") is False
     assert settings.meta.account_enabled is False
     assert settings.tiktok.account_enabled is False
+    assert settings.youtube.account_enabled is False
     assert settings.worker_schedule_enabled is False
 
     monkeypatch.setenv("SOCIAL_WRITES_ENABLED", "true")
@@ -301,3 +327,65 @@ def test_complete_local_meta_activation_configuration_is_accepted(
     finally:
         engine.dispose()
     assert coordinator is not None
+
+
+def test_complete_local_youtube_configuration_is_fail_closed_then_accepted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    keyring = {
+        "local-key": base64.b64encode(b"y" * 32).decode("ascii"),
+    }
+    values = {
+        "SOCIAL_WRITES_ENABLED": "true",
+        "SOCIAL_DB_URL": (
+            "postgresql+psycopg://local:local@127.0.0.1/social_media_v2_local"
+        ),
+        "SOCIAL_VAULT_ENABLED": "true",
+        "SOCIAL_YOUTUBE_ACCOUNT_ENABLED": "true",
+        "SOCIAL_YOUTUBE_ACCOUNT_OAUTH_MODE": "manual_intent_only",
+        "SOCIAL_YOUTUBE_CLIENT_ID": "local-client.apps.googleusercontent.com",
+        "SOCIAL_YOUTUBE_CLIENT_SECRET": "local-client-secret",
+        "SOCIAL_YOUTUBE_ACTIVATION_GATE_ENABLED": "true",
+        "SOCIAL_YOUTUBE_ACTIVATION_ENABLED_AT": "2026-08-31T10:00:00Z",
+        "SOCIAL_YOUTUBE_ACTIVATION_EXPIRES_AT": "2026-09-30T10:00:00Z",
+        "SOCIAL_CREDENTIAL_ACTIVE_KEY_ID": "local-key",
+        "SOCIAL_CREDENTIAL_KEYRING_JSON": json.dumps(keyring),
+    }
+    for key, value in values.items():
+        monkeypatch.setenv(key, value)
+
+    with pytest.raises(ConfigurationError, match="state secret"):
+        load_settings()
+
+    monkeypatch.setenv("SOCIAL_YOUTUBE_OAUTH_STATE_SECRET", "y" * 32)
+    settings = load_settings()
+
+    assert settings.youtube.account_enabled is True
+    assert settings.youtube.collection_enabled is False
+    assert settings.youtube_activation.gate_enabled is True
+
+    monkeypatch.setenv("SOCIAL_YOUTUBE_COLLECTION_ENABLED", "true")
+    settings = load_settings()
+    registry = bootstrap_registry(settings)
+    assert settings_worker_config(settings).provider_egress_enabled is True
+    assert registry.get(
+        PlatformId.YOUTUBE,
+        CapabilityId.PROFILE,
+    ).status is CapabilityStatus.AVAILABLE
+    assert registry.get(
+        PlatformId.YOUTUBE,
+        CapabilityId.AUDIENCE,
+    ).status is CapabilityStatus.UNSUPPORTED
+
+
+def test_youtube_endpoint_and_collection_gates_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SOCIAL_YOUTUBE_AUTHORIZATION_URL", "https://example.test/oauth")
+    with pytest.raises(ConfigurationError, match="endpoint set"):
+        load_settings()
+
+    monkeypatch.delenv("SOCIAL_YOUTUBE_AUTHORIZATION_URL")
+    monkeypatch.setenv("SOCIAL_YOUTUBE_COLLECTION_ENABLED", "true")
+    with pytest.raises(ConfigurationError, match="requires the account integration"):
+        load_settings()
