@@ -45,7 +45,7 @@ const dashboard: PlatformDashboard = {
     {
       account_id: 81,
       external_content_id: "1900000000000000001",
-      content_type: "image",
+      content_type: "video",
       permalink: "https://x.com/i/web/status/1900000000000000001",
       message: "Product launch #accumulate",
       media_url: "",
@@ -65,7 +65,18 @@ const dashboard: PlatformDashboard = {
       total_time_watched: null,
       average_time_watched: null,
       saves_count: 5,
-      profile_visits: 18,
+      profile_visits: null,
+      reposts_count: 6,
+      quotes_count: 3,
+      link_clicks: 11,
+      profile_clicks: 18,
+      video_views_count: 320,
+      video_playback_0_count: 200,
+      video_playback_25_count: 160,
+      video_playback_50_count: 120,
+      video_playback_75_count: 100,
+      video_playback_100_count: 80,
+      completion_rate: 0.4,
       data_status: "partial",
     },
   ],
@@ -108,6 +119,12 @@ const dashboard: PlatformDashboard = {
     activity: "unavailable",
   },
   stories: null,
+  mentions: {
+    total: 3,
+    unique_authors: 2,
+    daily: [{ observed_on: "2026-08-31", value: 3 }],
+    data_status: "available",
+  },
 };
 
 describe("X pulse dashboard", () => {
@@ -118,16 +135,25 @@ describe("X pulse dashboard", () => {
     expect(screen.getByRole("heading", { name: "Posts" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Audience Signals" })).toBeInTheDocument();
     expect(screen.getAllByText("Post Impressions").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Reposts & Quotes").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Reposts").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Quotes").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Bookmarks").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Profile Clicks").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "Content Type Performance" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Video Playback" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Mentions Trend" })).toBeInTheDocument();
     expect(screen.queryByText("Post Reach")).not.toBeInTheDocument();
-    expect(screen.getByText(/does not receive follower geography/i)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Audience Demographics" })).not.toBeInTheDocument();
+    expect(document.querySelectorAll(".facebook-pulse-kpi")).toHaveLength(18);
 
     const table = screen.getByRole("heading", { name: "All Performing Posts" }).closest("article");
     if (!table) throw new Error("Missing X performing posts table");
     expect(within(table).getByRole("columnheader", { name: "Replies" })).toBeInTheDocument();
-    expect(within(table).getByRole("columnheader", { name: "Reposts & Quotes" })).toBeInTheDocument();
-    expect(within(table).getByRole("columnheader", { name: "Profile Visits" })).toBeInTheDocument();
+    expect(within(table).getByRole("columnheader", { name: "Reposts" })).toBeInTheDocument();
+    expect(within(table).getByRole("columnheader", { name: "Quotes" })).toBeInTheDocument();
+    expect(within(table).getByRole("columnheader", { name: "Link Clicks" })).toBeInTheDocument();
+    expect(within(table).getByRole("columnheader", { name: "Profile Clicks" })).toBeInTheDocument();
+    expect(within(table).getByRole("columnheader", { name: "Video Views" })).toBeInTheDocument();
   });
 
   it("keeps provider-specific counters and derives publish-date chart series", () => {
@@ -136,9 +162,19 @@ describe("X pulse dashboard", () => {
       interactions: 96,
       likes: 70,
       replies: 12,
-      repostsAndQuotes: 9,
+      reposts: 6,
+      quotes: 3,
       bookmarks: 5,
-      profileVisits: 18,
+      linkClicks: 11,
+      profileClicks: 18,
+      videoViews: 320,
+      videoPlayback0: 200,
+      videoPlayback25: 160,
+      videoPlayback50: 120,
+      videoPlayback75: 100,
+      videoPlayback100: 80,
+      averageImpressions: 2400,
+      averageEngagements: 96,
     });
     const series = withXContentSeries(dashboard).series;
     expect(series.find((item) => item.metric_id === "views")?.points).toEqual([

@@ -1237,6 +1237,8 @@ export interface components {
             average_time_watched: number | null;
             /** Comments Count */
             comments_count: number | null;
+            /** Completion Rate */
+            completion_rate: number | null;
             /** Content Type */
             content_type: string;
             /** Cover Candidates */
@@ -1252,6 +1254,8 @@ export interface components {
             interactions: number | null;
             /** Likes Count */
             likes_count: number | null;
+            /** Link Clicks */
+            link_clicks: number | null;
             /** Media Url */
             media_url: string;
             /** Media Url Candidates */
@@ -1260,12 +1264,18 @@ export interface components {
             message: string;
             /** Permalink */
             permalink: string;
+            /** Profile Clicks */
+            profile_clicks: number | null;
             /** Profile Visits */
             profile_visits: number | null;
             /** Published At */
             published_at: string | null;
+            /** Quotes Count */
+            quotes_count: number | null;
             /** Reach */
             reach: number | null;
+            /** Reposts Count */
+            reposts_count: number | null;
             /** Saves Count */
             saves_count: number | null;
             /** Shares Count */
@@ -1276,6 +1286,18 @@ export interface components {
             thumbnail_url: string | null;
             /** Total Time Watched */
             total_time_watched: number | null;
+            /** Video Playback 0 Count */
+            video_playback_0_count: number | null;
+            /** Video Playback 100 Count */
+            video_playback_100_count: number | null;
+            /** Video Playback 25 Count */
+            video_playback_25_count: number | null;
+            /** Video Playback 50 Count */
+            video_playback_50_count: number | null;
+            /** Video Playback 75 Count */
+            video_playback_75_count: number | null;
+            /** Video Views Count */
+            video_views_count: number | null;
             /** Views */
             views: number | null;
         };
@@ -1307,6 +1329,16 @@ export interface components {
             count: number;
             /** Name */
             name: string;
+        };
+        /** DashboardMentionSummary */
+        DashboardMentionSummary: {
+            /** Daily */
+            daily: components["schemas"]["DashboardPoint"][];
+            data_status: components["schemas"]["DataStatus"];
+            /** Total */
+            total: number;
+            /** Unique Authors */
+            unique_authors: number;
         };
         /** DashboardMeta */
         DashboardMeta: {
@@ -1789,6 +1821,7 @@ export interface components {
             content: components["schemas"]["DashboardContent"][];
             content_metrics: components["schemas"]["DashboardContentMetrics"];
             content_summary: components["schemas"]["DashboardContentSummary"];
+            mentions: components["schemas"]["DashboardMentionSummary"] | null;
             meta: components["schemas"]["DashboardMeta"];
             metric_methodology: components["schemas"]["DashboardMetricMethodology"];
             /** Metrics */

@@ -93,6 +93,7 @@ const baseDashboard = {
   metric_methodology: { follower_flow: "unavailable", engagement_rate: "unavailable", reach: "unavailable" },
   audience_capabilities: { source: null, geo: "unavailable" as const, age_gender: "unavailable" as const, activity: "unavailable" as const },
   stories: null,
+  mentions: null,
 };
 
 const account: ReportingAccount = {
@@ -588,6 +589,17 @@ describe("Phase 8 product surfaces", () => {
         average_time_watched: null,
         saves_count: null,
         profile_visits: null,
+        reposts_count: null,
+        quotes_count: null,
+        link_clicks: null,
+        profile_clicks: null,
+        video_views_count: null,
+        video_playback_0_count: null,
+        video_playback_25_count: null,
+        video_playback_50_count: null,
+        video_playback_75_count: null,
+        video_playback_100_count: null,
+        completion_rate: null,
         data_status: "partial",
       }],
     };

@@ -252,6 +252,17 @@ export const dashboardContentSchema = z.object({
   average_time_watched: z.number().nullable(),
   saves_count: z.number().nullable(),
   profile_visits: z.number().nullable(),
+  reposts_count: z.number().int().nullable().default(null),
+  quotes_count: z.number().int().nullable().default(null),
+  link_clicks: z.number().int().nullable().default(null),
+  profile_clicks: z.number().int().nullable().default(null),
+  video_views_count: z.number().int().nullable().default(null),
+  video_playback_0_count: z.number().int().nullable().default(null),
+  video_playback_25_count: z.number().int().nullable().default(null),
+  video_playback_50_count: z.number().int().nullable().default(null),
+  video_playback_75_count: z.number().int().nullable().default(null),
+  video_playback_100_count: z.number().int().nullable().default(null),
+  completion_rate: z.number().nullable().default(null),
   data_status: dataStatusSchema,
 });
 export type DashboardContent = z.infer<typeof dashboardContentSchema>;
@@ -420,6 +431,12 @@ export const platformDashboardSchema = z.object({
   metric_methodology: dashboardMetricMethodologySchema,
   audience_capabilities: dashboardAudienceCapabilitiesSchema,
   stories: dashboardStoriesSchema,
+  mentions: z.object({
+    total: z.number().int().nonnegative(),
+    unique_authors: z.number().int().nonnegative(),
+    daily: z.array(z.object({ observed_on: z.string(), value: z.number() })),
+    data_status: dataStatusSchema,
+  }).nullable().default(null),
 });
 export type PlatformDashboard = z.infer<typeof platformDashboardSchema> &
   components["schemas"]["PlatformDashboard"];

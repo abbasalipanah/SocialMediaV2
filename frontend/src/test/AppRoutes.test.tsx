@@ -174,6 +174,7 @@ const dashboard = {
   metric_methodology: { follower_flow: "unavailable", engagement_rate: "unavailable", reach: "unavailable" },
   audience_capabilities: { source: null, geo: "unavailable", age_gender: "unavailable", activity: "unavailable" },
   stories: null,
+  mentions: null,
 };
 
 const overviewDashboard = {

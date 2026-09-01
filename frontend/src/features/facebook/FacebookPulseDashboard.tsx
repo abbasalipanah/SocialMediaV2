@@ -77,8 +77,13 @@ type ContentSortKey =
   | "likes"
   | "comments"
   | "shares"
+  | "reposts"
+  | "quotes"
   | "saves"
+  | "link_clicks"
+  | "profile_clicks"
   | "profile_visits"
+  | "video_views"
   | "engagement";
 type ContentSortDirection = "asc" | "desc";
 
@@ -148,8 +153,13 @@ function contentSortValue(item: DashboardContent, key: ContentSortKey): string |
   if (key === "likes") return item.likes_count;
   if (key === "comments") return item.comments_count;
   if (key === "shares") return item.shares_count;
+  if (key === "reposts") return item.reposts_count;
+  if (key === "quotes") return item.quotes_count;
   if (key === "saves") return item.saves_count;
+  if (key === "link_clicks") return item.link_clicks;
+  if (key === "profile_clicks") return item.profile_clicks;
   if (key === "profile_visits") return item.profile_visits;
+  if (key === "video_views") return item.video_views_count;
   return contentEngagement(item);
 }
 
@@ -844,15 +854,22 @@ export function PerformingContentTable({
         <SortableContentHeader activeDirection={sortDirection("date")} label="Date" onSort={() => sortBy("date")} />
         <SortableContentHeader activeDirection={sortDirection("type")} label="Type" onSort={() => sortBy("type")} />
         <SortableContentHeader activeDirection={sortDirection("views")} label={x ? "Impressions" : "Post Views"} onSort={() => sortBy("views")} />
-        <SortableContentHeader activeDirection={sortDirection("interactions")} label="Interactions" onSort={() => sortBy("interactions")} />
+        <SortableContentHeader activeDirection={sortDirection("interactions")} label={x ? "Engagements" : "Interactions"} onSort={() => sortBy("interactions")} />
         <SortableContentHeader activeDirection={sortDirection("likes")} label="Likes" onSort={() => sortBy("likes")} />
         <SortableContentHeader activeDirection={sortDirection("comments")} label={x ? "Replies" : "Comments"} onSort={() => sortBy("comments")} />
-        <SortableContentHeader activeDirection={sortDirection("shares")} label={x ? "Reposts & Quotes" : "Shares"} onSort={() => sortBy("shares")} />
+        {x
+          ? <>
+            <SortableContentHeader activeDirection={sortDirection("reposts")} label="Reposts" onSort={() => sortBy("reposts")} />
+            <SortableContentHeader activeDirection={sortDirection("quotes")} label="Quotes" onSort={() => sortBy("quotes")} />
+          </>
+          : <SortableContentHeader activeDirection={sortDirection("shares")} label="Shares" onSort={() => sortBy("shares")} />}
         {x && <SortableContentHeader activeDirection={sortDirection("saves")} label="Bookmarks" onSort={() => sortBy("saves")} />}
-        {x && <SortableContentHeader activeDirection={sortDirection("profile_visits")} label="Profile Visits" onSort={() => sortBy("profile_visits")} />}
-        <SortableContentHeader activeDirection={sortDirection("engagement")} label="Engagement" onSort={() => sortBy("engagement")} />
+        {x && <SortableContentHeader activeDirection={sortDirection("link_clicks")} label="Link Clicks" onSort={() => sortBy("link_clicks")} />}
+        {x && <SortableContentHeader activeDirection={sortDirection("profile_clicks")} label="Profile Clicks" onSort={() => sortBy("profile_clicks")} />}
+        {x && <SortableContentHeader activeDirection={sortDirection("video_views")} label="Video Views" onSort={() => sortBy("video_views")} />}
+        <SortableContentHeader activeDirection={sortDirection("engagement")} label={x ? "Engagement Rate" : "Engagement"} onSort={() => sortBy("engagement")} />
       </tr></thead><tbody>
-        {rows.length === 0 ? <tr><td colSpan={x ? 13 : 11}>{x ? "No posts were collected in this period." : "No content was collected in this period."}</td></tr> : rows.map((item, index) => {
+        {rows.length === 0 ? <tr><td colSpan={x ? 16 : 11}>{x ? "No posts were collected in this period." : "No content was collected in this period."}</td></tr> : rows.map((item, index) => {
           const contentUrl = safeContentUrl(item.permalink);
           const title = item.message || `Untitled ${humanize(item.content_type).toLowerCase()}`;
           const cover = (
@@ -883,9 +900,11 @@ export function PerformingContentTable({
               <td>{compact(item.interactions)}</td>
               <td>{compact(item.likes_count)}</td>
               <td>{compact(item.comments_count)}</td>
-              <td>{compact(item.shares_count)}</td>
+              {x ? <><td>{compact(item.reposts_count)}</td><td>{compact(item.quotes_count)}</td></> : <td>{compact(item.shares_count)}</td>}
               {x && <td>{compact(item.saves_count)}</td>}
-              {x && <td>{compact(item.profile_visits)}</td>}
+              {x && <td>{compact(item.link_clicks)}</td>}
+              {x && <td>{compact(item.profile_clicks)}</td>}
+              {x && <td>{compact(item.video_views_count)}</td>}
               <td>{engagement === null ? "—" : <span className="facebook-engagement-score">{engagement.toFixed(1)}%</span>}</td>
             </tr>
           );
