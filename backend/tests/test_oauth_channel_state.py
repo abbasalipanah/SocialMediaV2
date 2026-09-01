@@ -91,6 +91,35 @@ def test_oauth_channel_state_rejects_other_brand_and_provider() -> None:
         _adapter(PlatformId.LINKEDIN).verified_brand_id(token)
 
 
+def test_oauth_channel_state_allows_http_only_for_loopback_redirects() -> None:
+    adapter = OAuthActivationStateAdapter(
+        OAuthStateCodec(
+            platform=PlatformId.YOUTUBE,
+            provider_profile="youtube_oauth_v1",
+            redirect_uri="http://localhost:8126/api/social/youtube/oauth/callback",
+            secret=b"state-secret-that-is-at-least-32-bytes",
+            replay_store=ReplayStore(),
+            clock=lambda: NOW,
+        )
+    )
+    token = adapter.issue(
+        intent_hash="c" * 64,
+        context=_context(),
+        expires_at=NOW + timedelta(minutes=15),
+    )
+    assert adapter.verified_brand_id(token) == 17
+
+    with pytest.raises(OAuthStateError, match="^oauth_state_config_invalid$"):
+        OAuthStateCodec(
+            platform=PlatformId.YOUTUBE,
+            provider_profile="youtube_oauth_v1",
+            redirect_uri="http://social.example.test/api/social/youtube/oauth/callback",
+            secret=b"state-secret-that-is-at-least-32-bytes",
+            replay_store=ReplayStore(),
+            clock=lambda: NOW,
+        )
+
+
 def test_oauth_channel_state_rejects_tampering_and_expiry() -> None:
     adapter = _adapter(PlatformId.X)
     token = adapter.issue(

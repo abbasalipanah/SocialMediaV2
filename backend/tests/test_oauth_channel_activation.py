@@ -18,6 +18,7 @@ from app.application.ports import (
     OAuthProviderGrant,
 )
 from app.application.ports.credentials import CredentialRef, SecretToken
+from app.application.ports.tiktok_activation import TikTokActivationError
 from app.application.services.oauth_channel_activation import (
     OAuthChannelActivationCoordinator,
 )
@@ -185,6 +186,28 @@ def _coordinator():
         random_bytes=lambda size: b"r" * size,
     )
     return coordinator, provider, credentials, connections
+
+
+def test_activation_intent_allows_http_only_for_loopback_redirects() -> None:
+    values = {
+        "reference_hash": "c" * 64,
+        "context": _context(),
+        "requested_scopes": SCOPES,
+        "created_at": NOW,
+        "expires_at": NOW + timedelta(minutes=15),
+        "leased_at": NOW,
+    }
+    intent = ActivationIntent(
+        redirect_uri="http://localhost:8126/api/social/youtube/oauth/callback",
+        **values,
+    )
+    assert intent.redirect_uri.startswith("http://localhost:")
+
+    with pytest.raises(TikTokActivationError, match="^activation_intent_invalid$"):
+        ActivationIntent(
+            redirect_uri="http://social.example.test/api/social/youtube/oauth/callback",
+            **values,
+        )
 
 
 def test_oauth_channel_activation_discovers_accounts_and_stores_redacted_tokens() -> None:

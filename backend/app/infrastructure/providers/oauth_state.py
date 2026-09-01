@@ -21,6 +21,8 @@ from app.domain.platforms import CapabilityId, PlatformId
 
 from . import _oauth_platform
 
+_LOCAL_REDIRECT_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
+
 
 class OAuthStateError(ValueError):
     pass
@@ -54,7 +56,8 @@ class OAuthStateCodec:
         parsed = urlparse(redirect_uri)
         if (
             not re.fullmatch(r"[a-z0-9_]{3,64}", provider_profile)
-            or parsed.scheme != "https"
+            or parsed.scheme not in {"http", "https"}
+            or (parsed.scheme == "http" and parsed.hostname not in _LOCAL_REDIRECT_HOSTS)
             or not parsed.hostname
             or parsed.username
             or parsed.password
@@ -243,6 +246,3 @@ def _decode(value: str) -> bytes:
 
 def _json_bytes(payload: Mapping[str, Any]) -> bytes:
     return json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
-
-
-__all__ = ["OAuthActivationStateAdapter", "OAuthStateBinding", "OAuthStateCodec", "OAuthStateError"]
