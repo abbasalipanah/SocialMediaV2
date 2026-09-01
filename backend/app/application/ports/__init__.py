@@ -31,6 +31,19 @@ from .meta_activation import (
     MetaProviderGrant,
     MetaRefreshConnection,
 )
+from .oauth_channels import (
+    OAUTH_CHANNEL_PLATFORMS,
+    OAuthAccountGrant,
+    OAuthChannelError,
+    OAuthChannelProvider,
+    OAuthConnectionResult,
+    OAuthConnectionStore,
+    OAuthCredentialBinding,
+    OAuthDiscovery,
+    OAuthLinkResult,
+    OAuthLinkSelection,
+    OAuthProviderGrant,
+)
 from .reporting import ReportingStore
 from .session_store import SessionStore
 from .tiktok_activation import (
@@ -44,6 +57,7 @@ from .tiktok_activation import (
     ActivationStart,
     ActivationStateClaims,
     ActivationStatePort,
+    OAuthActivationStatePort,
     ProviderAccountGrant,
     ProviderPayloadTransport,
     ProviderTokenGrant,
@@ -79,6 +93,7 @@ __all__ = [
     "ActivationStart",
     "ActivationStateClaims",
     "ActivationStatePort",
+    "OAuthActivationStatePort",
     "TikTokActivationStatePort",
     "MetaActivationError",
     "MetaActivationProvider",
@@ -92,6 +107,17 @@ __all__ = [
     "MetaProviderAccount",
     "MetaProviderGrant",
     "MetaRefreshConnection",
+    "OAUTH_CHANNEL_PLATFORMS",
+    "OAuthAccountGrant",
+    "OAuthChannelError",
+    "OAuthChannelProvider",
+    "OAuthConnectionResult",
+    "OAuthConnectionStore",
+    "OAuthCredentialBinding",
+    "OAuthDiscovery",
+    "OAuthLinkResult",
+    "OAuthLinkSelection",
+    "OAuthProviderGrant",
     "PendingCommentSentiment",
     "ReportingStore",
     "SessionStore",
