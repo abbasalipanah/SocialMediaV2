@@ -54,4 +54,26 @@ npm run build
 
 Before any later staging rollout, verify the OAuth consent screen and redirect URI with a dedicated test channel, then run one collection and inspect its persisted profile, daily metrics, videos, and comments. Live deployment remains a separate, explicit decision.
 
+### Loopback OAuth canary
+
+The development canary uses a dedicated Google web client whose only redirect URI is:
+
+```text
+http://localhost:8126/api/social/youtube/oauth/callback
+```
+
+Place its downloaded JSON at `/home/api/.secrets/socialmedia/youtube-dev-client.json`
+with mode `0600`, then start the isolated runtime:
+
+```bash
+./scripts/dev/start_youtube_canary.sh
+```
+
+The launcher reads the client values without copying them into the repository, creates
+ignored local OAuth-state and credential-vault keys, enables writes only against the
+platform-expansion PostgreSQL database on `127.0.0.1:56432`, and keeps scheduled
+collection disabled. The frontend and callback listen only on loopback ports `3126`
+and `8126`; access from a workstation requires an SSH tunnel. The production callback
+and production client remain a separate cutover concern.
+
 Provider references: [Google web-server OAuth](https://developers.google.com/identity/protocols/oauth2/web-server), [YouTube OAuth](https://developers.google.com/youtube/reporting/guides/authorization/server-side-web-apps), [YouTube channel discovery](https://developers.google.com/youtube/v3/docs/channels/list), and [YouTube Analytics reports](https://developers.google.com/youtube/analytics/reference/reports/query).
