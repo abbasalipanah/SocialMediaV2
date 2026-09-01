@@ -275,6 +275,8 @@ export function dashboardFor(platform: Platform) {
       full_video_watched_rate: tiktok ? 0.43 : null,
       total_time_watched: tiktok ? 23000 : null,
       average_time_watched: tiktok ? 12.4 : null,
+      saves_count: null,
+      profile_visits: null,
       data_status: "available",
     }],
     community: {

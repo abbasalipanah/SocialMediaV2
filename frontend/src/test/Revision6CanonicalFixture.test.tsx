@@ -285,6 +285,8 @@ function adapt(payload: SourcePayload): PlatformDashboard {
       full_video_watched_rate: item.full_video_watched_rate ?? null,
       total_time_watched: item.total_time_watched ?? null,
       average_time_watched: item.average_time_watched ?? null,
+      saves_count: null,
+      profile_visits: null,
       data_status: item.views === undefined || item.reach === undefined ? "partial" : "available",
     })),
     community: {

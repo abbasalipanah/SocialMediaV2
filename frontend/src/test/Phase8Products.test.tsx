@@ -440,6 +440,8 @@ describe("Phase 8 product surfaces", () => {
         full_video_watched_rate: null,
         total_time_watched: null,
         average_time_watched: null,
+        saves_count: null,
+        profile_visits: null,
         data_status: "partial" as const,
       }],
     } as unknown as PlatformDashboard;
@@ -518,6 +520,8 @@ describe("Phase 8 product surfaces", () => {
         full_video_watched_rate: null,
         total_time_watched: null,
         average_time_watched: null,
+        saves_count: null,
+        profile_visits: null,
         data_status: "partial" as const,
       }],
     } as unknown as PlatformDashboard;
@@ -582,6 +586,8 @@ describe("Phase 8 product surfaces", () => {
         full_video_watched_rate: null,
         total_time_watched: null,
         average_time_watched: null,
+        saves_count: null,
+        profile_visits: null,
         data_status: "partial",
       }],
     };
