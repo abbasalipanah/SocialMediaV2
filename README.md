@@ -28,6 +28,15 @@ npm run dev
 
 Tarayıcı: `http://127.0.0.1:3010/`
 
+Üç yeni platform geliştirmesi için ayrılmış worktree yığını:
+
+```bash
+./scripts/dev/start_platform_expansion.sh
+```
+
+Bu komut ayrı PostgreSQL container/volume/veritabanı ile API'yi `8126`, frontend'i
+`3126` portunda çalıştırır. Varsayılan local demo kaynaklarına dokunmaz.
+
 Temel doğrulama:
 
 ```bash

@@ -38,7 +38,8 @@ if grep -REi "serviceWorker|service-worker|navigator\.serviceWorker|workbox" \
   exit 1
 fi
 
-grep -q 'port: 3010' "$FRONTEND/vite.config.ts"
+grep -q 'env.VITE_DEV_SERVER_PORT || "3010"' "$FRONTEND/vite.config.ts"
+grep -q 'port: devServerPort' "$FRONTEND/vite.config.ts"
 grep -q 'strictPort: true' "$FRONTEND/vite.config.ts"
 grep -q '@media (max-width: 1023px)' "$FRONTEND/src/styles.css"
 
