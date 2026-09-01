@@ -88,10 +88,10 @@ class DashboardContent:
     message: str
     media_url: str
     published_at: datetime | None
-    likes_count: int
-    comments_count: int
-    shares_count: int
-    interactions: int
+    likes_count: int | None
+    comments_count: int | None
+    shares_count: int | None
+    interactions: int | None
     views: float | None
     reach: float | None
     cover_url: str | None

@@ -641,8 +641,15 @@
             "title": "Average Time Watched"
           },
           "comments_count": {
-            "title": "Comments Count",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comments Count"
           },
           "content_type": {
             "title": "Content Type",
@@ -685,12 +692,26 @@
             "title": "Full Video Watched Rate"
           },
           "interactions": {
-            "title": "Interactions",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interactions"
           },
           "likes_count": {
-            "title": "Likes Count",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likes Count"
           },
           "media_url": {
             "title": "Media Url",
@@ -735,8 +756,15 @@
             "title": "Reach"
           },
           "shares_count": {
-            "title": "Shares Count",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shares Count"
           },
           "thumbnail_candidates": {
             "items": {

@@ -54,9 +54,9 @@ class ContentRecord:
     message: str
     media_url: str
     published_at: datetime | None
-    likes_count: int
-    comments_count: int
-    shares_count: int
+    likes_count: int | None
+    comments_count: int | None
+    shares_count: int | None
     views_count: float | None = None
     reach_count: float | None = None
     cover_url: str | None = None
@@ -84,7 +84,12 @@ class ContentRecord:
         _positive(self.account_id, "account_id")
         _positive(self.brand_id, "brand_id")
         _required(self.external_content_id, "external_content_id")
-        if min(self.likes_count, self.comments_count, self.shares_count) < 0:
+        counters = (self.likes_count, self.comments_count, self.shares_count)
+        if any(
+            value is not None
+            and (isinstance(value, bool) or not isinstance(value, int) or value < 0)
+            for value in counters
+        ):
             raise ValueError("content_count_invalid")
         optional_values = (
             self.views_count,

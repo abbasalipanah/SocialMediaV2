@@ -1066,7 +1066,7 @@ export interface components {
             /** Average Time Watched */
             average_time_watched: number | null;
             /** Comments Count */
-            comments_count: number;
+            comments_count: number | null;
             /** Content Type */
             content_type: string;
             /** Cover Candidates */
@@ -1079,9 +1079,9 @@ export interface components {
             /** Full Video Watched Rate */
             full_video_watched_rate: number | null;
             /** Interactions */
-            interactions: number;
+            interactions: number | null;
             /** Likes Count */
-            likes_count: number;
+            likes_count: number | null;
             /** Media Url */
             media_url: string;
             /** Media Url Candidates */
@@ -1095,7 +1095,7 @@ export interface components {
             /** Reach */
             reach: number | null;
             /** Shares Count */
-            shares_count: number;
+            shares_count: number | null;
             /** Thumbnail Candidates */
             thumbnail_candidates: string[];
             /** Thumbnail Url */

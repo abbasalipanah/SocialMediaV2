@@ -32,6 +32,8 @@ from app.application.queries import (
 from app.application.queries.dashboard_aggregation import (
     best_time_to_engage_breakdown,
     comment_sentiment_breakdown,
+    content_cards,
+    content_metric_comparisons,
     source_breakdown,
     top_hashtags,
 )
@@ -42,6 +44,36 @@ from app.domain.reporting import DataStatus, ReportingRange
 from app.main import create_app
 
 NOW = datetime(2026, 7, 14, 12, tzinfo=UTC)
+
+
+def test_content_contract_preserves_unavailable_provider_counters() -> None:
+    row = ReportingContent(
+        account_id=31,
+        brand_id="101",
+        platform=PlatformId.YOUTUBE,
+        external_content_id="video-a",
+        content_type="video",
+        permalink="https://www.youtube.com/watch?v=video-a",
+        message="Video",
+        media_url="",
+        published_at=datetime(2026, 7, 1, 8, tzinfo=UTC),
+        likes_count=7,
+        comments_count=None,
+        shares_count=None,
+        views_count=100,
+    )
+
+    card = content_cards((row,))[0]
+    comparisons = content_metric_comparisons((row,), ())
+
+    assert card.likes_count == 7
+    assert card.comments_count is None
+    assert card.shares_count is None
+    assert card.interactions is None
+    assert comparisons.likes.value == 7
+    assert comparisons.comments.value is None
+    assert comparisons.shares.value is None
+    assert comparisons.interactions.value is None
 
 
 class FakeAiSummary:

@@ -114,7 +114,7 @@ function safeContentUrl(rawUrl: string): string | null {
 
 function contentEngagement(item: DashboardContent): number | null {
   const delivery = item.reach !== null && item.reach > 0 ? item.reach : item.views;
-  return delivery !== null && delivery > 0
+  return delivery !== null && delivery > 0 && item.interactions !== null
     ? (item.interactions / delivery) * 100
     : null;
 }
@@ -189,15 +189,16 @@ function ContentTypeChip({ contentType }: { contentType: string }) {
 }
 
 export function derivedContentTotals(content: DashboardContent[]) {
-  return content.reduce(
-    (current, item) => ({
-      likes: current.likes + item.likes_count,
-      comments: current.comments + item.comments_count,
-      shares: current.shares + item.shares_count,
-      interactions: current.interactions + item.interactions,
-    }),
-    { likes: 0, comments: 0, shares: 0, interactions: 0 },
-  );
+  const total = (values: Array<number | null>): number | null => {
+    const available = values.filter((value): value is number => value !== null);
+    return available.length > 0 ? available.reduce((sum, value) => sum + value, 0) : null;
+  };
+  return {
+    likes: total(content.map((item) => item.likes_count)),
+    comments: total(content.map((item) => item.comments_count)),
+    shares: total(content.map((item) => item.shares_count)),
+    interactions: total(content.map((item) => item.interactions)),
+  };
 }
 
 export function comparisonDelta(value: number | null, previous: number | null): number | null {
@@ -250,7 +251,7 @@ function contentKpis(data: PlatformDashboard): PulseKpi[] {
   const views = viewsMetric?.value ?? data.content_metrics.views.value ?? collectedTotal("views");
   const reach = reachMetric?.value ?? data.content_metrics.reach.value ?? collectedTotal("reach");
   const interactions = data.content_metrics.interactions.value ?? totals.interactions;
-  const engagementRate = views && views > 0 ? interactions / views : null;
+  const engagementRate = views && views > 0 && interactions !== null ? interactions / views : null;
   const previousViews = viewsFromMetric
     ? viewsMetric.previous_value
     : data.content_metrics.views.previous_value;
@@ -648,11 +649,14 @@ export function summaryPieRows(
 
 function engagementRows(content: DashboardContent[]): PieRow[] {
   const totals = derivedContentTotals(content);
-  return [
+  const rows: Array<{ label: string; value: number | null; color: string }> = [
     { label: "Likes", value: totals.likes, color: V1_CHART_COLORS.likes },
     { label: "Comments", value: totals.comments, color: V1_CHART_COLORS.comments },
     { label: "Shares", value: totals.shares, color: V1_CHART_COLORS.shares },
-  ].filter((item) => item.value > 0);
+  ];
+  return rows.flatMap((item) => item.value !== null && item.value > 0
+    ? [{ ...item, value: item.value }]
+    : []);
 }
 
 export function SimplePulseTable({ title, subtitle, columns, rows, emptyCopy = "No data in selected range." }: { title: string; subtitle?: string; columns: string[]; rows: Array<Array<ReactNode>>; emptyCopy?: string }) {
@@ -863,10 +867,10 @@ export function PerformingContentTable({ content }: { content: DashboardContent[
               <td title={item.published_at ?? undefined}>{contentDateLabel(item.published_at)}</td>
               <td><ContentTypeChip contentType={item.content_type} /></td>
               <td>{item.views === null ? "—" : formatNumber(item.views)}</td>
-              <td>{formatNumber(item.interactions)}</td>
-              <td>{formatNumber(item.likes_count)}</td>
-              <td>{formatNumber(item.comments_count)}</td>
-              <td>{formatNumber(item.shares_count)}</td>
+              <td>{compact(item.interactions)}</td>
+              <td>{compact(item.likes_count)}</td>
+              <td>{compact(item.comments_count)}</td>
+              <td>{compact(item.shares_count)}</td>
               <td>{engagement === null ? "—" : <span className="facebook-engagement-score">{engagement.toFixed(1)}%</span>}</td>
             </tr>
           );

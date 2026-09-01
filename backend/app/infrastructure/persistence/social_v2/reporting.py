@@ -204,9 +204,9 @@ class SocialReportingStore:
                         else str(row["media_url"])
                     ),
                     published_at=row["created_time"],
-                    likes_count=int(row["likes_count"]),
-                    comments_count=int(row["comments_count"]),
-                    shares_count=int(row["shares_count"]),
+                    likes_count=_optional_int(row["likes_count"]),
+                    comments_count=_optional_int(row["comments_count"]),
+                    shares_count=_optional_int(row["shares_count"]),
                     views_count=_optional_float(row["views_count"]),
                     reach_count=_optional_float(row["reach_count"]),
                     cover_url=(
@@ -489,6 +489,10 @@ def _validate_range(start_on: date, end_on: date) -> None:
 
 def _optional_float(value: object) -> float | None:
     return float(cast(Any, value)) if value is not None else None
+
+
+def _optional_int(value: object) -> int | None:
+    return int(cast(Any, value)) if value is not None else None
 
 
 def _string_tuple(value: object) -> tuple[str, ...]:

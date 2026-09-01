@@ -482,6 +482,19 @@ _ENGAGEMENT_TIME_ZONE = ZoneInfo("Europe/Istanbul")
 _WEEKDAY_LABELS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
 
+def _optional_float(value: int | float | None) -> float | None:
+    return float(value) if value is not None else None
+
+
+def _content_interactions(row: ReportingContent) -> float | None:
+    if row.interactions_count is not None:
+        return float(row.interactions_count)
+    counters = (row.likes_count, row.comments_count, row.shares_count)
+    if any(value is None for value in counters):
+        return None
+    return float(sum(value for value in counters if value is not None))
+
+
 def best_time_to_engage_breakdown(
     platform: PlatformId,
     rows: tuple[ReportingContent, ...],
@@ -505,11 +518,9 @@ def best_time_to_engage_breakdown(
         if published_at.tzinfo is None:
             published_at = published_at.replace(tzinfo=UTC)
         local = published_at.astimezone(_ENGAGEMENT_TIME_ZONE)
-        engagement = (
-            row.interactions_count
-            if row.interactions_count is not None
-            else float(row.likes_count + row.comments_count + row.shares_count)
-        )
+        engagement = _content_interactions(row)
+        if engagement is None:
+            continue
         buckets[(local.weekday(), (local.hour // 2) * 2)].append(float(engagement))
     if not buckets:
         return None
@@ -548,10 +559,10 @@ def content_cards(rows: tuple[ReportingContent, ...]) -> tuple[DashboardContent,
             likes_count=row.likes_count,
             comments_count=row.comments_count,
             shares_count=row.shares_count,
-            interactions=int(
-                row.interactions_count
-                if row.interactions_count is not None
-                else row.likes_count + row.comments_count + row.shares_count
+            interactions=(
+                int(interactions)
+                if (interactions := _content_interactions(row)) is not None
+                else None
             ),
             views=row.views_count,
             reach=row.reach_count,
@@ -593,10 +604,10 @@ def _comparison(value: float | None, previous: float | None) -> DashboardCompari
 class _ContentTotals:
     views: float | None
     reach: float | None
-    likes: float
-    comments: float
-    shares: float
-    interactions: float
+    likes: float | None
+    comments: float | None
+    shares: float | None
+    interactions: float | None
     engagement_rate: float | None
 
 
@@ -613,17 +624,10 @@ def content_metric_comparisons(
     def totals(source: tuple[ReportingContent, ...]) -> _ContentTotals:
         views = optional_sum(tuple(row.views_count for row in source))
         reach = optional_sum(tuple(row.reach_count for row in source))
-        likes = float(sum(row.likes_count for row in source))
-        comments = float(sum(row.comments_count for row in source))
-        shares = float(sum(row.shares_count for row in source))
-        interactions = sum(
-            float(
-                row.interactions_count
-                if row.interactions_count is not None
-                else row.likes_count + row.comments_count + row.shares_count
-            )
-            for row in source
-        )
+        likes = optional_sum(tuple(_optional_float(row.likes_count) for row in source))
+        comments = optional_sum(tuple(_optional_float(row.comments_count) for row in source))
+        shares = optional_sum(tuple(_optional_float(row.shares_count) for row in source))
+        interactions = optional_sum(tuple(_content_interactions(row) for row in source))
         return _ContentTotals(
             views=views,
             reach=reach,
@@ -632,7 +636,9 @@ def content_metric_comparisons(
             shares=shares,
             interactions=interactions,
             engagement_rate=(
-                interactions / views if views is not None and views > 0 else None
+                interactions / views
+                if interactions is not None and views is not None and views > 0
+                else None
             ),
         )
 
@@ -1009,12 +1015,8 @@ def _optional_sum(values: tuple[float | None, ...]) -> float | None:
     return sum(available) if available else None
 
 
-def _story_interactions(row: ReportingContent) -> float:
-    return float(
-        row.interactions_count
-        if row.interactions_count is not None
-        else row.likes_count + row.comments_count + row.shares_count
-    )
+def _story_interactions(row: ReportingContent) -> float | None:
+    return _content_interactions(row)
 
 
 def _story_completion(rows: tuple[ReportingContent, ...]) -> float | None:
@@ -1027,14 +1029,14 @@ def _story_summary_from_rows(
 ) -> DashboardStorySummary:
     story_views = _optional_sum(tuple(row.views_count for row in rows))
     story_reach = _optional_sum(tuple(row.reach_count for row in rows))
-    story_interactions = sum(_story_interactions(row) for row in rows) if rows else None
-    story_replies = (
-        sum(
-            row.replies_count if row.replies_count is not None else float(row.comments_count)
+    story_interactions = _optional_sum(tuple(_story_interactions(row) for row in rows))
+    story_replies = _optional_sum(
+        tuple(
+            row.replies_count
+            if row.replies_count is not None
+            else _optional_float(row.comments_count)
             for row in rows
         )
-        if rows
-        else None
     )
     story_completion = _story_completion(rows)
     status = (
@@ -1160,11 +1162,15 @@ def stories_contract(
     actions_from_rows = {
         "replies": _optional_sum(
             tuple(
-                row.replies_count if row.replies_count is not None else float(row.comments_count)
+                row.replies_count
+                if row.replies_count is not None
+                else _optional_float(row.comments_count)
                 for row in story_rows
             )
         ),
-        "shares": _optional_sum(tuple(float(row.shares_count) for row in story_rows)),
+        "shares": _optional_sum(
+            tuple(_optional_float(row.shares_count) for row in story_rows)
+        ),
         "profile_visits": _optional_sum(tuple(row.profile_visits for row in story_rows)),
         MetricId.FOLLOWS.value: _optional_sum(tuple(row.follows_count for row in story_rows)),
         "sticker_taps": _optional_sum(tuple(row.sticker_taps for row in story_rows)),
@@ -1306,9 +1312,9 @@ def stories_contract(
                 replies=(
                     row.replies_count
                     if row.replies_count is not None
-                    else float(row.comments_count)
+                    else _optional_float(row.comments_count)
                 ),
-                shares=float(row.shares_count),
+                shares=_optional_float(row.shares_count),
                 profile_visits=row.profile_visits,
                 follows=row.follows_count,
                 sticker_taps=row.sticker_taps,

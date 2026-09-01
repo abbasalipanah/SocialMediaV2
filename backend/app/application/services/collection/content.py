@@ -122,9 +122,9 @@ def _content_record(target: CollectionTarget, item: ProviderRecord) -> ContentRe
         message=_text(fields, "message", required=False),
         media_url=_text(fields, "media_url", required=False),
         published_at=_datetime(fields, "published_at"),
-        likes_count=_count(fields, "likes_count"),
-        comments_count=_count(fields, "comments_count"),
-        shares_count=_count(fields, "shares_count"),
+        likes_count=_optional_count(fields, "likes_count"),
+        comments_count=_optional_count(fields, "comments_count"),
+        shares_count=_optional_count(fields, "shares_count"),
         views_count=_optional_number(fields, "views_count"),
         reach_count=_optional_number(fields, "reach_count"),
         cover_url=_optional_text(fields, "cover_url"),
@@ -162,6 +162,13 @@ def _count(fields: dict[str, Any], key: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError("provider_content_field_invalid")
     return value
+
+
+def _optional_count(fields: dict[str, Any], key: str) -> int | None:
+    value = fields.get(key)
+    if value is None:
+        return None
+    return _count(fields, key)
 
 
 def _optional_text(fields: dict[str, Any], key: str) -> str | None:
