@@ -65,12 +65,11 @@ def test_reporting_adapter_is_scope_safe_and_side_effect_free(
     )[0]
     assert content.external_content_id == "post-1"
     assert content.media_url == "/api/media/facebook/post-1?brand_id=101&account_id=11"
-    assert (
-        reporting_store.list_comments(
-            account_ids=(11,), start_on=date(2026, 7, 1), end_on=date(2026, 7, 2)
-        )[0].external_comment_id
-        == "comment-1"
+    comment = reporting_store.list_comments(
+        account_ids=(11,), start_on=date(2026, 7, 1), end_on=date(2026, 7, 2)
     )
+    assert comment[0].external_comment_id == "comment-1"
+    assert comment[0].author_id == "person-1"
     assert (
         reporting_store.find_media(
             brand_ids=("101",),
@@ -257,7 +256,8 @@ def _schema() -> tuple[str, ...]:
         """CREATE TABLE content_comments (
             id serial PRIMARY KEY, asset_id integer NOT NULL, platform varchar(32) NOT NULL,
             content_id varchar(255) NOT NULL, comment_id varchar(255) NOT NULL,
-            user_name varchar(255), text text NOT NULL, like_count integer NOT NULL,
+            user_id varchar(255), user_name varchar(255), text text NOT NULL,
+            like_count integer NOT NULL,
             reply_count integer NOT NULL, answered boolean NOT NULL, commented_at timestamptz,
             sentiment varchar(16), sentiment_model varchar(128),
             sentiment_classified_at timestamptz
@@ -312,9 +312,9 @@ def _seed(connection) -> None:
             (11, 101, 'post-1', 'image', 'https://example.test/post-1', 'message', '',
              '2026-07-02T08:00:00Z', 4, 1, 2)""",
         """INSERT INTO content_comments
-            (asset_id, platform, content_id, comment_id, user_name, text, like_count,
+            (asset_id, platform, content_id, comment_id, user_id, user_name, text, like_count,
              reply_count, answered, commented_at) VALUES
-            (11, 'facebook', 'post-1', 'comment-1', 'Person', 'Hello', 2, 1, true,
+            (11, 'facebook', 'post-1', 'comment-1', 'person-1', 'Person', 'Hello', 2, 1, true,
              '2026-07-02T09:00:00Z')""",
         """INSERT INTO media_assets
             (brand_id, asset_id, content_id, platform, media_kind, storage_path, mime_type,
