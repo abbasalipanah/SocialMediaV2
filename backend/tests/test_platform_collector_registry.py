@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from app.domain.platforms import PlatformId
+from app.workers.collector import StandaloneCollector
 from app.workers.platform_registry import (
     CollectorRegistration,
     PlatformCollectorRegistry,
@@ -83,3 +86,21 @@ def test_registry_fails_closed_for_an_unregistered_or_disabled_platform() -> Non
         registry.collect(PlatformId.FACEBOOK, "account-row", {})
     with pytest.raises(LookupError, match="platform_collector_not_registered"):
         registry.collect(PlatformId.TIKTOK, "account-row", {})
+
+
+def test_standalone_registry_enables_only_configured_provider_families() -> None:
+    collector = StandaloneCollector.__new__(StandaloneCollector)
+    collector.settings = SimpleNamespace(
+        meta=SimpleNamespace(collection_enabled=False),
+        tiktok=SimpleNamespace(collection_enabled=False),
+        youtube=SimpleNamespace(collection_enabled=True),
+    )
+    collector._collect_meta = lambda row, _timings: row
+    collector._collect_tiktok = lambda row, _timings: row
+    collector._collect_youtube = lambda row, _timings: row
+    registry = PlatformCollectorRegistry(collector._collector_registrations())
+
+    assert registry.enabled_platforms(tuple(PlatformId)) == (PlatformId.YOUTUBE,)
+    assert registry.collect(PlatformId.YOUTUBE, "youtube-row", {}) == "youtube-row"
+    with pytest.raises(RuntimeError, match="platform_collector_disabled"):
+        registry.collect(PlatformId.TIKTOK, "tiktok-row", {})

@@ -44,6 +44,7 @@ from app.application.services.collection.media import (
     FetchedMedia,
     MediaBudgetDeferred,
 )
+from app.application.services.oauth_channel_access import OAuthChannelAccessManager
 from app.core import AppSettings, ConfigurationError, WritePolicy, load_settings
 from app.domain.metrics import (
     FACEBOOK_DAILY_SOURCE_METRICS,
@@ -92,10 +93,15 @@ from app.infrastructure.providers.tiktok.accounts import (
     parse_token,
     parse_token_info,
 )
+from app.infrastructure.providers.youtube import (
+    YouTubeOAuthProvider,
+    YouTubeOAuthTransport,
+)
 from app.workers.platform_registry import (
     CollectorRegistration,
     PlatformCollectorRegistry,
 )
+from app.workers.youtube import collect_youtube_account, create_youtube_readers
 
 logger = logging.getLogger(__name__)
 
@@ -323,21 +329,30 @@ class StandaloneCollector:
             else None
         )
         self.media_fetcher = _MediaFetcher() if self.media_files is not None else None
-        self.collectors = PlatformCollectorRegistry(
-            (
-                CollectorRegistration(
-                    provider="meta",
-                    platforms=(PlatformId.FACEBOOK, PlatformId.INSTAGRAM),
-                    enabled=lambda: self.settings.meta.collection_enabled,
-                    collect=self._collect_meta,
-                ),
-                CollectorRegistration(
-                    provider="tiktok",
-                    platforms=(PlatformId.TIKTOK,),
-                    enabled=lambda: self.settings.tiktok.collection_enabled,
-                    collect=self._collect_tiktok,
-                ),
-            )
+        self.collectors = PlatformCollectorRegistry(self._collector_registrations())
+
+    def _collector_registrations(
+        self,
+    ) -> tuple[CollectorRegistration[CollectionTargetRow, WorkerAccountResult], ...]:
+        return (
+            CollectorRegistration(
+                provider="meta",
+                platforms=(PlatformId.FACEBOOK, PlatformId.INSTAGRAM),
+                enabled=lambda: self.settings.meta.collection_enabled,
+                collect=self._collect_meta,
+            ),
+            CollectorRegistration(
+                provider="tiktok",
+                platforms=(PlatformId.TIKTOK,),
+                enabled=lambda: self.settings.tiktok.collection_enabled,
+                collect=self._collect_tiktok,
+            ),
+            CollectorRegistration(
+                provider="youtube",
+                platforms=(PlatformId.YOUTUBE,),
+                enabled=lambda: self.settings.youtube.collection_enabled,
+                collect=self._collect_youtube,
+            ),
         )
 
     def close(self) -> None:
@@ -989,6 +1004,70 @@ class StandaloneCollector:
             comment_count=comment_count,
             media_count=content.media_count,
             error_code=_partial_error_code(partial_errors),
+        )
+
+    def _collect_youtube(
+        self,
+        row: CollectionTargetRow,
+        timings: dict[str, float],
+    ) -> WorkerAccountResult:
+        oauth_transport = YouTubeOAuthTransport(
+            token_url=self.settings.youtube.token_url,
+            revoke_url=self.settings.youtube.revoke_url,
+            get_urls=(
+                self.settings.youtube.userinfo_url,
+                self.settings.youtube.channels_url,
+            ),
+            timeout_seconds=self.settings.youtube_activation.provider_timeout_seconds,
+        )
+        provider = YouTubeOAuthProvider(
+            config=self.settings.youtube,
+            transport=oauth_transport,
+        )
+        access = OAuthChannelAccessManager(
+            platform=PlatformId.YOUTUBE,
+            required_scopes=self.settings.youtube.required_scopes,
+            allowed_scopes=self.settings.youtube.required_scopes,
+            provider=provider,
+            credential_store=self.credentials,
+        ).resolve(
+            credential_reference=row.credential_reference,
+            external_id=row.external_id,
+        )
+        account = ProviderAccount(
+            platform=PlatformId.YOUTUBE,
+            account_id=row.external_id,
+            credential=ProviderCredential(access_token=access.access_token),
+        )
+        readers = create_youtube_readers(
+            config=self.settings.youtube,
+            account=account,
+            timeout_seconds=self.settings.youtube_activation.provider_timeout_seconds,
+        )
+        with _phase(timings, "youtube"):
+            result = collect_youtube_account(
+                account=account,
+                local_account_id=row.asset_id,
+                brand_id=row.brand_id,
+                readers=readers,
+                metric_store=self.metrics,
+                content_store=self.content,
+                comment_store=self.comments,
+                checkpoint_store=self.checkpoints,
+                persist_media=self._persist_media,
+                backfill_complete=_backfill_complete(row.backfill_status),
+            )
+        return WorkerAccountResult(
+            platform=row.platform.value,
+            brand_id=row.brand_id,
+            asset_id=row.asset_id,
+            status=result.status,
+            metric_count=result.metric_count,
+            content_count=result.content_count,
+            comment_count=result.comment_count,
+            media_count=result.media_count,
+            error_code=result.error_code,
+            backfill_complete=result.backfill_complete,
         )
 
     def _tiktok_readers(
