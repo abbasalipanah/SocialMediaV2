@@ -58,6 +58,13 @@ def optional_count(payload: Mapping[str, Any], key: str) -> int | None:
     return parsed
 
 
+def required_count(payload: Mapping[str, Any], key: str) -> int:
+    value = optional_count(payload, key)
+    if value is None:
+        raise YouTubeResponseError("response_field_invalid")
+    return value
+
+
 def report_rows(
     payload: Mapping[str, Any], *, required_columns: tuple[str, ...]
 ) -> tuple[Mapping[str, object], ...]:
@@ -89,6 +96,7 @@ __all__ = [
     "optional_count",
     "optional_text",
     "report_rows",
+    "required_count",
     "required_mapping",
     "required_text",
     "single_channel",

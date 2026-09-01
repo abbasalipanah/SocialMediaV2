@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from typing import Any
@@ -12,6 +11,7 @@ from app.application.ports.platforms.content import ContentPage
 from app.core.time import utc_now
 from app.domain.platforms import PlatformId
 
+from .identifiers import resource_id
 from .responses import (
     YouTubeResponseError,
     optional_count,
@@ -21,7 +21,6 @@ from .responses import (
     single_channel,
 )
 
-_VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 _THUMBNAIL_ORDER = ("maxres", "standard", "high", "medium", "default")
 
 
@@ -88,8 +87,10 @@ def _playlist_video_ids(payload: Mapping[str, Any]) -> tuple[str, ...]:
         if not isinstance(item, Mapping):
             raise YouTubeResponseError("playlist_response_invalid")
         details = required_mapping(item, "contentDetails")
-        video_id = required_text(details, "videoId")
-        if not _VIDEO_ID.fullmatch(video_id) or video_id in video_ids:
+        video_id = resource_id(
+            details.get("videoId"), error_code="playlist_response_invalid"
+        )
+        if video_id in video_ids:
             raise YouTubeResponseError("playlist_response_invalid")
         video_ids.append(video_id)
     if len(video_ids) > 50:
@@ -105,8 +106,8 @@ def _videos_by_id(payload: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
     for item in items:
         if not isinstance(item, Mapping):
             raise YouTubeResponseError("video_response_invalid")
-        video_id = required_text(item, "id")
-        if not _VIDEO_ID.fullmatch(video_id) or video_id in mapped:
+        video_id = resource_id(item.get("id"), error_code="video_response_invalid")
+        if video_id in mapped:
             raise YouTubeResponseError("video_response_invalid")
         mapped[video_id] = item
     return mapped

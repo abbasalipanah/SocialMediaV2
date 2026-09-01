@@ -9,6 +9,7 @@ from app.domain.metrics import MetricId
 YOUTUBE_CHANNELS_URL = "https://www.googleapis.com/youtube/v3/channels"
 YOUTUBE_PLAYLIST_ITEMS_URL = "https://www.googleapis.com/youtube/v3/playlistItems"
 YOUTUBE_VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos"
+YOUTUBE_COMMENT_THREADS_URL = "https://www.googleapis.com/youtube/v3/commentThreads"
 YOUTUBE_ANALYTICS_REPORTS_URL = "https://youtubeanalytics.googleapis.com/v2/reports"
 
 YOUTUBE_DAILY_METRICS = (
@@ -79,13 +80,32 @@ def videos_query(video_ids: tuple[str, ...]) -> dict[str, str]:
     }
 
 
+def comment_threads_query(
+    video_id: str, *, cursor: str | None = None
+) -> dict[str, str]:
+    if not video_id.strip():
+        raise ValueError("provider_video_id_required")
+    query = {
+        "part": "id,snippet",
+        "videoId": video_id,
+        "maxResults": "100",
+        "order": "time",
+        "textFormat": "plainText",
+    }
+    if cursor:
+        query["pageToken"] = cursor
+    return query
+
+
 __all__ = [
     "YOUTUBE_ANALYTICS_REPORTS_URL",
     "YOUTUBE_CHANNELS_URL",
+    "YOUTUBE_COMMENT_THREADS_URL",
     "YOUTUBE_DAILY_METRICS",
     "YOUTUBE_PLAYLIST_ITEMS_URL",
     "YOUTUBE_VIDEOS_URL",
     "channel_query",
+    "comment_threads_query",
     "daily_metrics_query",
     "playlist_items_query",
     "uploads_playlist_query",
