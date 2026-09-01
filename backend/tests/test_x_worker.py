@@ -77,6 +77,38 @@ class Content:
         )
 
 
+class PagingContent:
+    def __init__(self) -> None:
+        self.cursors: list[str | None] = []
+
+    def list_content(self, account, *, cursor=None):
+        del account
+        self.cursors.append(cursor)
+        suffix = "1" if cursor is None else "2"
+        return ContentPage(
+            items=(
+                ProviderRecord(
+                    external_id=f"190000000000000000{suffix}",
+                    observed_at=NOW,
+                    fields={
+                        "content_type": "post",
+                        "permalink": f"https://x.com/i/web/status/190000000000000000{suffix}",
+                        "message": f"Example post {suffix}",
+                        "media_url": "",
+                        "published_at": NOW,
+                        "likes_count": 3,
+                        "comments_count": 1,
+                        "shares_count": 2,
+                        "views_count": 20,
+                        "interactions_count": 6,
+                    },
+                ),
+            ),
+            next_cursor="page-2" if cursor is None else None,
+            observed_at=NOW,
+        )
+
+
 def test_x_worker_collects_profile_and_content_without_comments_or_audience() -> None:
     metrics = Records()
     content = Records()
@@ -108,3 +140,40 @@ def test_x_worker_collects_profile_and_content_without_comments_or_audience() ->
         MetricId.MEDIA_COUNT,
     ]
     assert content.items[0].external_content_id == "1900000000000000001"
+
+
+def test_x_worker_resumes_bounded_backfill_from_durable_cursor() -> None:
+    metrics = Records()
+    content = Records()
+    checkpoints = Checkpoints()
+    reader = PagingContent()
+    account = ProviderAccount(
+        platform=PlatformId.X,
+        account_id="123456789",
+        credential=ProviderCredential(access_token="access-value"),
+    )
+    kwargs = {
+        "account": account,
+        "local_account_id": 81,
+        "brand_id": 17,
+        "readers": XReaders(profile=Profile(), content=reader),
+        "metric_store": metrics,
+        "content_store": content,
+        "checkpoint_store": checkpoints,
+        "persist_media": lambda _target, _item: 0,
+        "backfill_complete": False,
+    }
+
+    first = collect_x_account(**kwargs)
+    second = collect_x_account(**kwargs)
+
+    assert first.status == "partial"
+    assert first.error_code == "content_partial"
+    assert first.backfill_complete is False
+    assert second.status == "success"
+    assert second.backfill_complete is True
+    assert reader.cursors == [None, "page-2"]
+    assert [item.external_content_id for item in content.items] == [
+        "1900000000000000001",
+        "1900000000000000002",
+    ]
