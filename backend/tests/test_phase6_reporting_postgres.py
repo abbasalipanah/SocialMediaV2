@@ -114,6 +114,14 @@ def test_postgres_parent_rollup_uses_catalog_semantics(
     assert cards[MetricId.REACH] == 30
 
 
+def test_migrated_limited_tiktok_asset_remains_reportable(
+    reporting_store: SocialReportingStore,
+) -> None:
+    accounts = reporting_store.list_accounts(brand_ids=("102",), platform=PlatformId.TIKTOK)
+
+    assert tuple(row.account_id for row in accounts) == (13,)
+
+
 def test_ai_summary_repository_enforces_brand_weekly_limit_and_failure_policy(
     reporting_store: SocialReportingStore,
 ) -> None:
@@ -126,9 +134,7 @@ def test_ai_summary_repository_enforces_brand_weekly_limit_and_failure_policy(
         created_by_user_sub="viewer-operator",
         now=now,
     )
-    pending = repository.limit_status(
-        brand_id="101", now=now, provider_configured=True
-    )
+    pending = repository.limit_status(brand_id="101", now=now, provider_configured=True)
     assert pending.reason == "generation_in_progress"
     completed = repository.complete(
         insight_id=claimed,
@@ -275,6 +281,7 @@ def _seed(connection) -> None:
         """INSERT INTO assets VALUES
             (11, 101, 'facebook', 'fb-a', 'Facebook A', 'active'),
             (12, 102, 'facebook_organic', 'fb-b', 'Facebook B', 'active'),
+            (13, 102, 'tiktok', 'tt-b', 'TikTok B', 'limited'),
             (99, 999, 'facebook', 'fb-other', 'Facebook Other', 'active')""",
         """INSERT INTO platform_connections VALUES
             (1, 101, 'facebook', 'connected', NULL, '2026-07-02T10:00:00Z', 'secret')""",
@@ -282,6 +289,8 @@ def _seed(connection) -> None:
             (1, 101, 'facebook', 11, 1, 'active', 'healthy', 'ready', true,
              '2026-04-07T10:00:00Z'),
             (2, 102, 'facebook', 12, NULL, 'active', 'healthy', 'ready', true,
+             '2026-07-02T09:00:00Z'),
+            (3, 102, 'tiktok', 13, NULL, 'active', 'healthy', 'ready', true,
              '2026-07-02T09:00:00Z')""",
         "INSERT INTO asset_sync_state VALUES (11, '2026-07-02T10:00:00Z', NULL)",
         """INSERT INTO metrics_daily

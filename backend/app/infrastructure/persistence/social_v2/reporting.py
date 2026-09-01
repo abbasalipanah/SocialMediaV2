@@ -29,6 +29,9 @@ def _expanded(statement: str, parameter: str):
     return text(statement).bindparams(bindparam(parameter, expanding=True))
 
 
+_REPORTABLE_ASSET_STATUSES = ("active", "limited")
+
+
 class SocialReportingStore:
     def __init__(self, engine: Engine) -> None:
         self.engine = engine
@@ -60,15 +63,19 @@ class SocialReportingStore:
                 LEFT JOIN platform_connections AS pc ON pc.id=la.connection_id
                 LEFT JOIN asset_sync_state AS ss ON ss.asset_id=a.id
                 WHERE CAST(a.brand_id AS text) IN :brand_ids
-                  AND a.status='active'
+                  AND a.status IN :asset_statuses
                   AND COALESCE(la.status, 'active') IN ('active', 'connected')
                   {platform_clause}
                 ORDER BY a.platform, a.display_name, a.id""",
             "brand_ids",
         )
+        statement = statement.bindparams(bindparam("asset_statuses", expanding=True))
         if platform:
             statement = statement.bindparams(bindparam("platform_values", expanding=True))
-        parameters: dict[str, object] = {"brand_ids": brand_ids}
+        parameters: dict[str, object] = {
+            "brand_ids": brand_ids,
+            "asset_statuses": _REPORTABLE_ASSET_STATUSES,
+        }
         if platform:
             parameters["platform_values"] = _platform_values(platform)
         with self.engine.connect() as connection:
