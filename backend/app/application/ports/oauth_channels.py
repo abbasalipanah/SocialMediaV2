@@ -148,7 +148,12 @@ class OAuthChannelProvider(Protocol):
 
     def authorization_url(self, *, state: str, scopes: tuple[str, ...]) -> str: ...
 
-    def exchange_and_discover(self, *, authorization_code: str) -> OAuthProviderGrant: ...
+    def exchange_and_discover(
+        self,
+        *,
+        authorization_code: str,
+        authorization_state: str,
+    ) -> OAuthProviderGrant: ...
 
     def refresh(self, *, refresh_token: str) -> OAuthTokenRefresh: ...
 

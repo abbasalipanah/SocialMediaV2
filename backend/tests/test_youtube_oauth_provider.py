@@ -110,7 +110,10 @@ def test_youtube_exchange_binds_google_subject_and_owned_channels() -> None:
         ]
     )
 
-    grant = provider.exchange_and_discover(authorization_code="authorization-code")
+    grant = provider.exchange_and_discover(
+        authorization_code="authorization-code",
+        authorization_state="signed-state",
+    )
 
     assert grant.provider_subject_id == "google-user-1"
     assert grant.access_token == "access-value"
@@ -179,7 +182,10 @@ def test_youtube_oauth_rejects_missing_refresh_and_unallowlisted_urls() -> None:
     )
 
     with pytest.raises(YouTubeOAuthError, match="^youtube_token_response_invalid$"):
-        provider.exchange_and_discover(authorization_code="authorization-code")
+        provider.exchange_and_discover(
+            authorization_code="authorization-code",
+            authorization_state="signed-state",
+        )
 
     transport = YouTubeOAuthTransport(
         token_url="https://oauth2.googleapis.com/token",

@@ -165,7 +165,8 @@ class OAuthChannelActivationCoordinator:
         written: list[CredentialRef] = []
         try:
             grant = self._provider.exchange_and_discover(
-                authorization_code=authorization_code
+                authorization_code=authorization_code,
+                authorization_state=state,
             )
             provider_token = grant.access_token
             self._validate_grant(grant.granted_scopes, grant.accounts)

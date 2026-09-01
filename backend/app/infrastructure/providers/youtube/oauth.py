@@ -60,8 +60,13 @@ class YouTubeOAuthProvider:
         )
         return f"{self._config.authorization_url}?{query}"
 
-    def exchange_and_discover(self, *, authorization_code: str) -> OAuthProviderGrant:
-        if not authorization_code:
+    def exchange_and_discover(
+        self,
+        *,
+        authorization_code: str,
+        authorization_state: str,
+    ) -> OAuthProviderGrant:
+        if not authorization_code or not authorization_state:
             raise YouTubeOAuthError("youtube_authorization_code_invalid")
         payload = self._transport.exchange(
             {

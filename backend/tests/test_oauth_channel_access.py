@@ -65,7 +65,7 @@ class FakeProvider:
     def authorization_url(self, *, state, scopes):
         raise AssertionError("unexpected_authorization")
 
-    def exchange_and_discover(self, *, authorization_code):
+    def exchange_and_discover(self, *, authorization_code, authorization_state):
         raise AssertionError("unexpected_exchange")
 
     def revoke(self, *, access_token):

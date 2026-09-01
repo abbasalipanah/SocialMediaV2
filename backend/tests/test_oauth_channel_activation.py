@@ -103,6 +103,7 @@ class FakeProvider:
 
     def __init__(self) -> None:
         self.revoked: list[str] = []
+        self.exchanged_state = ""
         self.grant = OAuthProviderGrant(
             provider_subject_id="google-user-1",
             access_token="access-value",
@@ -122,8 +123,14 @@ class FakeProvider:
         query = urlencode({"state": state, "scope": " ".join(scopes)})
         return f"https://accounts.example.test/auth?{query}"
 
-    def exchange_and_discover(self, *, authorization_code: str) -> OAuthProviderGrant:
+    def exchange_and_discover(
+        self,
+        *,
+        authorization_code: str,
+        authorization_state: str,
+    ) -> OAuthProviderGrant:
         assert authorization_code == "auth-code"
+        self.exchanged_state = authorization_state
         return self.grant
 
     def revoke(self, *, access_token: str) -> None:
@@ -211,7 +218,7 @@ def test_activation_intent_allows_http_only_for_loopback_redirects() -> None:
 
 
 def test_oauth_channel_activation_discovers_accounts_and_stores_redacted_tokens() -> None:
-    coordinator, _, credentials, connections = _coordinator()
+    coordinator, provider, credentials, connections = _coordinator()
     start = coordinator.start(_context())
     query = parse_qs(urlparse(start.authorization_url).query)
     state = query["state"][0]
@@ -227,6 +234,7 @@ def test_oauth_channel_activation_discovers_accounts_and_stores_redacted_tokens(
     assert len(credentials.values) == 2
     assert {reference.token_kind for reference in credentials.values} == {"access", "refresh"}
     assert connections.bindings[0].external_id == "UC-channel"
+    assert provider.exchanged_state == state
     assert "access-value" not in repr(result)
     assert coordinator.callback_brand_id(query={"code": "x", "state": state}) == 17
 
