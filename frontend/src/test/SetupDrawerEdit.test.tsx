@@ -10,6 +10,7 @@ vi.mock("../app/BrandScopeProvider", () => ({
     rollup: true,
     capabilities: {
       permissions: {
+        settings_visible: true,
         meta_connection_manage: true,
         tiktok_connection_manage: false,
       },
@@ -127,5 +128,9 @@ describe("Brand Setup account editing", () => {
     const tiktokRow = within(setup).getByText("TikTok").closest("article");
     if (!tiktokRow) throw new Error("TikTok setup row was not rendered");
     expect(within(tiktokRow).getByRole("button", { name: "Connect" })).toBeDisabled();
+
+    const youtubeRow = within(setup).getByText("YouTube").closest("article");
+    if (!youtubeRow) throw new Error("YouTube setup row was not rendered");
+    expect(within(youtubeRow).getByRole("button", { name: "Connect" })).toBeEnabled();
   });
 });
