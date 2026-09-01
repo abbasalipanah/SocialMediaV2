@@ -1,4 +1,4 @@
-"""X OAuth 2.0 confidential-client adapter with deterministic PKCE."""
+"""X OAuth 2.0 confidential application adapter with deterministic PKCE."""
 
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ class XOAuthProvider:
         verifier = self._code_verifier(state)
         query = urlencode(
             {
-                "client_id": self._config.oauth_client_id,
+                "client_id": self._config.oauth_app_id,
                 "code_challenge": _base64url(hashlib.sha256(verifier.encode()).digest()),
                 "code_challenge_method": "S256",
                 "redirect_uri": self._config.redirect_uri,

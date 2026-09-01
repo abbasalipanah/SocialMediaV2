@@ -127,7 +127,26 @@ def bootstrap_registry(settings: AppSettings | None = None) -> PlatformCapabilit
             ),
         )
     )
-    for platform in (PlatformId.X, PlatformId.LINKEDIN):
+    x_collection = settings is not None and settings.x.collection_enabled
+    for capability in CapabilityId:
+        if not x_collection:
+            status = CapabilityStatus.NOT_CONFIGURED
+            reason = "provider_not_configured"
+        elif capability in {CapabilityId.PROFILE, CapabilityId.CONTENT}:
+            status = CapabilityStatus.AVAILABLE
+            reason = "standalone_collector_available"
+        else:
+            status = CapabilityStatus.UNSUPPORTED
+            reason = f"x_{capability.value}_not_implemented"
+        records.append(
+            CapabilityRecord(
+                platform=PlatformId.X,
+                capability=capability,
+                status=status,
+                reason=reason,
+            )
+        )
+    for platform in (PlatformId.LINKEDIN,):
         records.extend(
             CapabilityRecord(
                 platform=platform,

@@ -50,6 +50,10 @@ def test_all_routes_have_explicit_boundary_semantics() -> None:
         ("/api/integrations/tiktok/oauth/start", ("POST",)),
         ("/api/integrations/tiktok/accounts/unlink", ("DELETE",)),
         ("/api/integrations/tiktok/self-service/readiness", ("GET",)),
+        ("/api/integrations/x/accounts/link", ("POST",)),
+        ("/api/integrations/x/accounts/unlink", ("DELETE",)),
+        ("/api/integrations/x/oauth/start", ("POST",)),
+        ("/api/integrations/x/self-service/readiness", ("GET",)),
         ("/api/integrations/youtube/accounts/link", ("POST",)),
         ("/api/integrations/youtube/accounts/unlink", ("DELETE",)),
         ("/api/integrations/youtube/oauth/start", ("POST",)),
@@ -79,6 +83,7 @@ def test_all_routes_have_explicit_boundary_semantics() -> None:
         ("/api/settings/tiktok/oauth/account/start", ("POST",)),
         ("/api/social/tiktok/oauth/callback", ("GET",)),
         ("/api/social/meta/oauth/callback", ("GET",)),
+        ("/api/social/x/oauth/callback", ("GET",)),
         ("/api/social/youtube/oauth/callback", ("GET",)),
         ("/api/workspace/brands", ("GET",)),
         ("/api/workspace/capabilities", ("GET",)),
@@ -92,6 +97,7 @@ def test_all_routes_have_explicit_boundary_semantics() -> None:
             "/sso/consume",
             "/api/social/meta/oauth/callback",
             "/api/social/tiktok/oauth/callback",
+            "/api/social/x/oauth/callback",
             "/api/social/youtube/oauth/callback",
         }:
             # The launch accepts a body as well as a URL; the provider callbacks

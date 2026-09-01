@@ -23,4 +23,28 @@ def required_text(payload: Mapping[str, object], key: str) -> str:
     return value.strip()
 
 
-__all__ = ["XResponseError", "required_mapping", "required_text"]
+def optional_text(payload: Mapping[str, object], key: str) -> str | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise XResponseError("x_response_invalid")
+    return value.strip() or None
+
+
+def optional_count(payload: Mapping[str, object], key: str) -> int | None:
+    value = payload.get(key)
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise XResponseError("x_response_invalid")
+    return value
+
+
+__all__ = [
+    "XResponseError",
+    "optional_count",
+    "optional_text",
+    "required_mapping",
+    "required_text",
+]

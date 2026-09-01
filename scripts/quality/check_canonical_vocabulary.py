@@ -63,6 +63,10 @@ YOUTUBE_OAUTH_WIRE_FILE = (
     ROOT / "backend" / "app" / "infrastructure" / "providers" / "youtube" / "oauth.py"
 )
 YOUTUBE_OAUTH_WIRE_ALIASES = ("client_id", "client_secret")
+X_OAUTH_WIRE_FILE = (
+    ROOT / "backend" / "app" / "infrastructure" / "providers" / "x" / "oauth.py"
+)
+X_OAUTH_WIRE_ALIASES = ("client_id",)
 LEGACY_PLATFORM_ALIAS_FILE = (
     ROOT
     / "backend"
@@ -86,6 +90,8 @@ def apply_narrow_source_allowlist(path: Path, text: str) -> str:
         aliases = TIKTOK_WIRE_ALIASES
     elif path == YOUTUBE_OAUTH_WIRE_FILE:
         aliases = YOUTUBE_OAUTH_WIRE_ALIASES
+    elif path == X_OAUTH_WIRE_FILE:
+        aliases = X_OAUTH_WIRE_ALIASES
     elif path == LEGACY_PLATFORM_ALIAS_FILE:
         aliases = LEGACY_PLATFORM_ALIASES
     for alias in aliases:

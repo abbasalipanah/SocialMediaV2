@@ -48,8 +48,8 @@ def create_x_activation_runtime(
     provider = XOAuthProvider(
         config=settings.x,
         transport=XOAuthTransport(
-            client_id=settings.x.oauth_client_id,
-            client_secret=settings.x.oauth_client_secret,
+            app_id=settings.x.oauth_app_id,
+            app_secret=settings.x.oauth_app_secret,
             token_url=settings.x.token_url,
             revoke_url=settings.x.revoke_url,
             get_urls=(settings.x.users_me_url,),
@@ -90,7 +90,7 @@ def create_x_activation_runtime(
 def _config_version(settings: AppSettings) -> str:
     payload = {
         "authorization_url": settings.x.authorization_url,
-        "oauth_client_id": settings.x.oauth_client_id,
+        "oauth_app_id": settings.x.oauth_app_id,
         "provider_profile": settings.x.provider_profile,
         "redirect_uri": settings.x.redirect_uri,
         "required_scopes": settings.x.required_scopes,

@@ -282,8 +282,8 @@ class YouTubeConfig:
 @dataclass(frozen=True)
 class XConfig:
     provider_profile: str
-    oauth_client_id: str
-    oauth_client_secret: str
+    oauth_app_id: str
+    oauth_app_secret: str
     account_enabled: bool
     oauth_mode: str
     collection_enabled: bool
@@ -675,8 +675,8 @@ def _validate_x(
         raise ConfigurationError("X activation requires manual_intent_only mode")
     if not writes or not db.url:
         raise ConfigurationError("X activation requires a writable database URL")
-    if not config.oauth_client_id or not config.oauth_client_secret:
-        raise ConfigurationError("X activation requires OAuth client credentials")
+    if not config.oauth_app_id or not config.oauth_app_secret:
+        raise ConfigurationError("X activation requires OAuth application credentials")
     if not vault_enabled:
         raise ConfigurationError("X activation requires the credential vault")
     if not activation.gate_enabled:
@@ -862,8 +862,8 @@ def load_settings() -> AppSettings:
     )
     x = XConfig(
         provider_profile=_env("SOCIAL_X_PROVIDER_PROFILE", X_PROVIDER_PROFILE),
-        oauth_client_id=_env("SOCIAL_X_OAUTH_CLIENT_ID"),
-        oauth_client_secret=_env("SOCIAL_X_OAUTH_CLIENT_SECRET"),
+        oauth_app_id=_env("SOCIAL_X_OAUTH_APP_ID"),
+        oauth_app_secret=_env("SOCIAL_X_OAUTH_APP_SECRET"),
         account_enabled=_bool("SOCIAL_X_ACCOUNT_ENABLED"),
         oauth_mode=_env("SOCIAL_X_ACCOUNT_OAUTH_MODE", "disabled"),
         collection_enabled=_bool("SOCIAL_X_COLLECTION_ENABLED"),

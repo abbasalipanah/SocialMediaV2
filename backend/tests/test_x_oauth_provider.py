@@ -41,15 +41,15 @@ def _provider(
 ) -> tuple[XOAuthProvider, Sender]:
     config = replace(
         load_settings().x,
-        oauth_client_id="x-client-id",
-        oauth_client_secret="x-client-secret",
+        oauth_app_id="x-client-id",
+        oauth_app_secret="x-client-secret",
         account_enabled=True,
         oauth_mode="manual_intent_only",
     )
     sender = Sender(responses)
     transport = XOAuthTransport(
-        client_id=config.oauth_client_id,
-        client_secret=config.oauth_client_secret,
+        app_id=config.oauth_app_id,
+        app_secret=config.oauth_app_secret,
         token_url=config.token_url,
         revoke_url=config.revoke_url,
         get_urls=(config.users_me_url,),
@@ -162,12 +162,12 @@ def test_x_oauth_rejects_missing_refresh_and_unallowlisted_urls() -> None:
 
     config = replace(
         load_settings().x,
-        oauth_client_id="x-client-id",
-        oauth_client_secret="x-client-secret",
+        oauth_app_id="x-client-id",
+        oauth_app_secret="x-client-secret",
     )
     transport = XOAuthTransport(
-        client_id=config.oauth_client_id,
-        client_secret=config.oauth_client_secret,
+        app_id=config.oauth_app_id,
+        app_secret=config.oauth_app_secret,
         token_url=config.token_url,
         revoke_url=config.revoke_url,
         get_urls=(config.users_me_url,),

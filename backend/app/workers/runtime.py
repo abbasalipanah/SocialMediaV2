@@ -57,6 +57,7 @@ def settings_worker_config(settings: AppSettings) -> WorkerRuntimeConfig:
     provider_enabled = (
         settings.meta.collection_enabled
         or settings.tiktok.collection_enabled
+        or settings.x.collection_enabled
         or settings.youtube.collection_enabled
     )
     return WorkerRuntimeConfig(

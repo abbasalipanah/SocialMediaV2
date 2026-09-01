@@ -93,10 +93,12 @@ def test_standalone_registry_enables_only_configured_provider_families() -> None
     collector.settings = SimpleNamespace(
         meta=SimpleNamespace(collection_enabled=False),
         tiktok=SimpleNamespace(collection_enabled=False),
+        x=SimpleNamespace(collection_enabled=False),
         youtube=SimpleNamespace(collection_enabled=True),
     )
     collector._collect_meta = lambda row, _timings: row
     collector._collect_tiktok = lambda row, _timings: row
+    collector._collect_x = lambda row, _timings: row
     collector._collect_youtube = lambda row, _timings: row
     registry = PlatformCollectorRegistry(collector._collector_registrations())
 

@@ -78,8 +78,8 @@ CONFIG_KEYS = (
     "SOCIAL_YOUTUBE_ACTIVATION_EXPIRES_AT",
     "SOCIAL_YOUTUBE_PROVIDER_TIMEOUT_SECONDS",
     "SOCIAL_X_PROVIDER_PROFILE",
-    "SOCIAL_X_OAUTH_CLIENT_ID",
-    "SOCIAL_X_OAUTH_CLIENT_SECRET",
+    "SOCIAL_X_OAUTH_APP_ID",
+    "SOCIAL_X_OAUTH_APP_SECRET",
     "SOCIAL_X_ACCOUNT_ENABLED",
     "SOCIAL_X_ACCOUNT_OAUTH_MODE",
     "SOCIAL_X_COLLECTION_ENABLED",
@@ -435,8 +435,8 @@ def test_complete_local_x_configuration_is_fail_closed_then_accepted(
         "SOCIAL_VAULT_ENABLED": "true",
         "SOCIAL_X_ACCOUNT_ENABLED": "true",
         "SOCIAL_X_ACCOUNT_OAUTH_MODE": "manual_intent_only",
-        "SOCIAL_X_OAUTH_CLIENT_ID": "local-x-client-id",
-        "SOCIAL_X_OAUTH_CLIENT_SECRET": "local-x-client-secret",
+        "SOCIAL_X_OAUTH_APP_ID": "local-x-client-id",
+        "SOCIAL_X_OAUTH_APP_SECRET": "local-x-client-secret",
         "SOCIAL_X_ACTIVATION_GATE_ENABLED": "true",
         "SOCIAL_X_ACTIVATION_ENABLED_AT": "2026-08-31T10:00:00Z",
         "SOCIAL_X_ACTIVATION_EXPIRES_AT": "2026-09-30T10:00:00Z",
@@ -455,6 +455,23 @@ def test_complete_local_x_configuration_is_fail_closed_then_accepted(
     assert settings.x.account_enabled is True
     assert settings.x.collection_enabled is False
     assert settings.x_activation.gate_enabled is True
+
+    monkeypatch.setenv("SOCIAL_X_COLLECTION_ENABLED", "true")
+    settings = load_settings()
+    registry = bootstrap_registry(settings)
+    assert settings_worker_config(settings).provider_egress_enabled is True
+    assert registry.get(
+        PlatformId.X,
+        CapabilityId.PROFILE,
+    ).status is CapabilityStatus.AVAILABLE
+    assert registry.get(
+        PlatformId.X,
+        CapabilityId.CONTENT,
+    ).status is CapabilityStatus.AVAILABLE
+    assert registry.get(
+        PlatformId.X,
+        CapabilityId.COMMENTS,
+    ).status is CapabilityStatus.UNSUPPORTED
     engine = create_engine(settings.db.url)
     try:
         coordinator = create_x_activation_runtime(

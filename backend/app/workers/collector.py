@@ -93,6 +93,7 @@ from app.infrastructure.providers.tiktok.accounts import (
     parse_token,
     parse_token_info,
 )
+from app.infrastructure.providers.x import XOAuthProvider, XOAuthTransport
 from app.infrastructure.providers.youtube import (
     YouTubeOAuthProvider,
     YouTubeOAuthTransport,
@@ -101,6 +102,7 @@ from app.workers.platform_registry import (
     CollectorRegistration,
     PlatformCollectorRegistry,
 )
+from app.workers.x import collect_x_account, create_x_readers
 from app.workers.youtube import collect_youtube_account, create_youtube_readers
 
 logger = logging.getLogger(__name__)
@@ -346,6 +348,12 @@ class StandaloneCollector:
                 platforms=(PlatformId.TIKTOK,),
                 enabled=lambda: self.settings.tiktok.collection_enabled,
                 collect=self._collect_tiktok,
+            ),
+            CollectorRegistration(
+                provider="x",
+                platforms=(PlatformId.X,),
+                enabled=lambda: self.settings.x.collection_enabled,
+                collect=self._collect_x,
             ),
             CollectorRegistration(
                 provider="youtube",
@@ -1065,6 +1073,68 @@ class StandaloneCollector:
             metric_count=result.metric_count,
             content_count=result.content_count,
             comment_count=result.comment_count,
+            media_count=result.media_count,
+            error_code=result.error_code,
+            backfill_complete=result.backfill_complete,
+        )
+
+    def _collect_x(
+        self,
+        row: CollectionTargetRow,
+        timings: dict[str, float],
+    ) -> WorkerAccountResult:
+        provider = XOAuthProvider(
+            config=self.settings.x,
+            transport=XOAuthTransport(
+                app_id=self.settings.x.oauth_app_id,
+                app_secret=self.settings.x.oauth_app_secret,
+                token_url=self.settings.x.token_url,
+                revoke_url=self.settings.x.revoke_url,
+                get_urls=(self.settings.x.users_me_url,),
+                timeout_seconds=self.settings.x_activation.provider_timeout_seconds,
+            ),
+            pkce_secret=self.settings.x_activation.oauth_state_secret.encode(),
+        )
+        access = OAuthChannelAccessManager(
+            platform=PlatformId.X,
+            required_scopes=self.settings.x.required_scopes,
+            allowed_scopes=self.settings.x.required_scopes,
+            provider=provider,
+            credential_store=self.credentials,
+        ).resolve(
+            credential_reference=row.credential_reference,
+            external_id=row.external_id,
+        )
+        account = ProviderAccount(
+            platform=PlatformId.X,
+            account_id=row.external_id,
+            credential=ProviderCredential(access_token=access.access_token),
+        )
+        readers = create_x_readers(
+            config=self.settings.x,
+            account=account,
+            timeout_seconds=self.settings.x_activation.provider_timeout_seconds,
+        )
+        with _phase(timings, "x"):
+            result = collect_x_account(
+                account=account,
+                local_account_id=row.asset_id,
+                brand_id=row.brand_id,
+                readers=readers,
+                metric_store=self.metrics,
+                content_store=self.content,
+                checkpoint_store=self.checkpoints,
+                persist_media=self._persist_media,
+                backfill_complete=_backfill_complete(row.backfill_status),
+            )
+        return WorkerAccountResult(
+            platform=row.platform.value,
+            brand_id=row.brand_id,
+            asset_id=row.asset_id,
+            status=result.status,
+            metric_count=result.metric_count,
+            content_count=result.content_count,
+            comment_count=0,
             media_count=result.media_count,
             error_code=result.error_code,
             backfill_complete=result.backfill_complete,

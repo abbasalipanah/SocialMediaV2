@@ -18,8 +18,8 @@ class XOAuthTransport:
     def __init__(
         self,
         *,
-        client_id: str,
-        client_secret: str,
+        app_id: str,
+        app_secret: str,
         token_url: str,
         revoke_url: str,
         get_urls: tuple[str, ...],
@@ -28,8 +28,8 @@ class XOAuthTransport:
         request_budget: int = 20,
     ) -> None:
         if (
-            not client_id
-            or not client_secret
+            not app_id
+            or not app_secret
             or not token_url
             or not revoke_url
             or not get_urls
@@ -38,7 +38,7 @@ class XOAuthTransport:
             or request_budget > 100
         ):
             raise XOAuthTransportError("x_oauth_transport_config_invalid")
-        self._client_auth = (client_id, client_secret)
+        self._app_auth = (app_id, app_secret)
         self._token_url = token_url
         self._revoke_url = revoke_url
         self._get_urls = frozenset(get_urls)
@@ -48,12 +48,12 @@ class XOAuthTransport:
 
     def exchange(self, data: Mapping[str, str]) -> Mapping[str, object]:
         return self._json_request(
-            "POST", self._token_url, auth=self._client_auth, data=_form(data)
+            "POST", self._token_url, auth=self._app_auth, data=_form(data)
         )
 
     def refresh(self, data: Mapping[str, str]) -> Mapping[str, object]:
         return self._json_request(
-            "POST", self._token_url, auth=self._client_auth, data=_form(data)
+            "POST", self._token_url, auth=self._app_auth, data=_form(data)
         )
 
     def revoke(self, *, token: str) -> None:
@@ -62,7 +62,7 @@ class XOAuthTransport:
         response = self._request(
             "POST",
             self._revoke_url,
-            auth=self._client_auth,
+            auth=self._app_auth,
             data={"token": token},
         )
         self._accept(response)
