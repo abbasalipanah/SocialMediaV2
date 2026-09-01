@@ -1,7 +1,14 @@
-export const PLATFORM_IDS = ["facebook", "instagram", "tiktok"] as const;
+export const PLATFORM_IDS = [
+  "facebook",
+  "instagram",
+  "tiktok",
+  "x",
+  "linkedin",
+  "youtube",
+] as const;
 
 export type PlatformId = (typeof PLATFORM_IDS)[number];
-export type ConnectionProviderId = "meta" | "tiktok";
+export type ConnectionProviderId = "meta" | "tiktok" | "x" | "linkedin" | "youtube";
 
 export type PlatformDefinition = {
   id: PlatformId;
@@ -32,6 +39,27 @@ export const PLATFORM_CATALOG = [
     route: "tiktok",
     description: "Organic account, video and audience performance in one view.",
     connectionProvider: "tiktok",
+  },
+  {
+    id: "x",
+    label: "X",
+    route: "x",
+    description: "Organic profile, post and audience performance in one view.",
+    connectionProvider: "x",
+  },
+  {
+    id: "linkedin",
+    label: "LinkedIn",
+    route: "linkedin",
+    description: "Organization, content and follower performance in one view.",
+    connectionProvider: "linkedin",
+  },
+  {
+    id: "youtube",
+    label: "YouTube",
+    route: "youtube",
+    description: "Channel, video and audience performance in one view.",
+    connectionProvider: "youtube",
   },
 ] as const satisfies ReadonlyArray<PlatformDefinition>;
 

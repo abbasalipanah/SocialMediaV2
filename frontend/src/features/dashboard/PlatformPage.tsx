@@ -7,6 +7,7 @@ import { useBrandScope } from "../../app/BrandScopeProvider";
 import { FacebookPulseDashboard } from "../facebook/FacebookPulseDashboard";
 import { InstagramPulseDashboard } from "../instagram/InstagramPulseDashboard";
 import { TikTokPulseDashboard } from "../tiktok/TikTokPulseDashboard";
+import { StandardPlatformDashboard } from "./StandardPlatformDashboard";
 import {
   DashboardError,
   DashboardLoading,
@@ -39,6 +40,9 @@ function TabContent({ platform, tab, data }: {
         tab={tab as "account" | "cover" | "content" | "audience"}
       />
     ),
+    x: () => <StandardPlatformDashboard data={data} platform={platform} tab={tab} />,
+    linkedin: () => <StandardPlatformDashboard data={data} platform={platform} tab={tab} />,
+    youtube: () => <StandardPlatformDashboard data={data} platform={platform} tab={tab} />,
   };
   return renderers[platform]();
 }

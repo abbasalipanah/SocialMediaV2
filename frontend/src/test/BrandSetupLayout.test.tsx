@@ -62,7 +62,10 @@ describe("Brand Setup layout", () => {
     // button. Meta permission must not depend on TikTok permission either.
     expect(SOURCE).toContain("meta_connection_manage");
     expect(SOURCE).toContain("tiktok_connection_manage");
-    expect(SOURCE).toContain('platform === "tiktok" ? canManageTikTok : canManageMeta');
+    expect(SOURCE).toContain('platform === "tiktok"');
+    expect(SOURCE).toContain('platform === "facebook" || platform === "instagram"');
+    expect(SOURCE).toContain("? canManageMeta");
+    expect(SOURCE).toContain(": false;");
     expect(SOURCE).not.toMatch(/!rollup\s*&&/);
     expect(SOURCE).not.toMatch(/meta_connection_manage[\s\S]{0,120}&&[\s\S]{0,120}tiktok_connection_manage/);
   });

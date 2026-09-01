@@ -3,10 +3,12 @@ import {
   Lock,
   Home,
   Instagram,
+  Linkedin,
   PieChart,
   PlugZap,
   Settings,
   X,
+  Youtube,
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { NavLink } from "../routing";
@@ -31,6 +33,9 @@ const platformIcons = {
   facebook: Facebook,
   instagram: Instagram,
   tiktok: TiktokMark,
+  x: X,
+  linkedin: Linkedin,
+  youtube: Youtube,
 } satisfies Record<Platform, ComponentType<{ size?: number }>>;
 
 const platformNavigation = PLATFORM_CATALOG.map((platform) => ({

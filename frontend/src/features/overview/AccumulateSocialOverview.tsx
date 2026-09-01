@@ -41,7 +41,7 @@ import {
   V1_OVERVIEW_PLATFORM_COLORS,
 } from "../dashboard/visualPalette";
 
-type OverviewPlatformId = Platform | "linkedin" | "x" | "youtube";
+type OverviewPlatformId = Platform;
 
 const PLATFORM_DISPLAY_ORDER: OverviewPlatformId[] = [
   "instagram",

@@ -60,6 +60,9 @@ export const PRIMARY_METRICS: Record<Platform | "overview", MetricId[]> = {
     "video_shares_total",
     "video_engagement_rate",
   ],
+  x: ["followers", "new_followers", "views", "interactions", "engagement_rate", "media_count"],
+  linkedin: ["followers", "new_followers", "views", "interactions", "engagement_rate", "media_count"],
+  youtube: ["followers", "new_followers", "views", "interactions", "engagement_rate", "media_count"],
 };
 
 export const TREND_METRICS: MetricId[] = [
@@ -96,6 +99,24 @@ export function platformTabs(platform: Platform, audienceAvailable: boolean): Da
       { id: "cover", label: "Cover" },
       { id: "account", label: "Account" },
       { id: "content", label: "Content" },
+      { id: "audience", label: "Audience" },
+    ],
+    x: [
+      { id: "cover", label: "Cover" },
+      { id: "profile", label: "Profile" },
+      { id: "content", label: "Content" },
+      { id: "audience", label: "Audience" },
+    ],
+    linkedin: [
+      { id: "cover", label: "Cover" },
+      { id: "page", label: "Page" },
+      { id: "content", label: "Content" },
+      { id: "audience", label: "Audience" },
+    ],
+    youtube: [
+      { id: "cover", label: "Cover" },
+      { id: "account", label: "Channel" },
+      { id: "content", label: "Videos" },
       { id: "audience", label: "Audience" },
     ],
   };

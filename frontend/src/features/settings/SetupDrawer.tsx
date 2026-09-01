@@ -1,5 +1,15 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Circle, Facebook, Instagram, Radio, Settings2, Store } from "lucide-react";
+import {
+  Check,
+  Circle,
+  Facebook,
+  Instagram,
+  Linkedin,
+  Radio,
+  Settings2,
+  Store,
+  Youtube,
+} from "lucide-react";
 import { useState } from "react";
 
 import type {
@@ -18,7 +28,7 @@ import {
   syncJobsSchema,
 } from "../../api";
 import { useBrandScope } from "../../app/BrandScopeProvider";
-import { PLATFORM_IDS } from "../../platforms/catalog";
+import { PLATFORM_IDS, platformDefinition } from "../../platforms/catalog";
 import { Dialog } from "../../ui";
 import { MetaConnectionModal } from "../integrations/MetaConnectionModal";
 import { TikTokConnectionModal } from "../integrations/TikTokConnectionModal";
@@ -28,6 +38,9 @@ import { formatDate, humanize } from "../dashboard/format";
 function PlatformSymbol({ platform }: { platform: Platform }) {
   if (platform === "facebook") return <Facebook size={19} />;
   if (platform === "instagram") return <Instagram size={19} />;
+  if (platform === "linkedin") return <Linkedin size={19} />;
+  if (platform === "youtube") return <Youtube size={19} />;
+  if (platform === "x") return <span className="drawer-tiktok">𝕏</span>;
   return <span className="drawer-tiktok">♪</span>;
 }
 
@@ -100,6 +113,9 @@ function SocialAccounts({
           connections.find((item) => item.platform === platform)?.state ??
           "not connected";
         const platformCanBeManaged = canManage(platform);
+        const connectionAvailable = ["meta", "tiktok"].includes(
+          platformDefinition(platform).connectionProvider,
+        );
         return (
           <article key={platform}>
             <div className={`setup-platform-icon setup-${platform}`}>
@@ -122,10 +138,12 @@ function SocialAccounts({
             </span>
             <button
               className="settings-row-action"
-              disabled={!platformCanBeManaged}
+              disabled={!connectionAvailable || !platformCanBeManaged}
               onClick={() => onConnect(platform)}
               title={
-                platformCanBeManaged
+                !connectionAvailable
+                  ? `${PLATFORM_LABELS[platform]} connection is not configured yet`
+                  : platformCanBeManaged
                   ? undefined
                   : `Needs permission to manage ${PLATFORM_LABELS[platform]} connections`
               }
@@ -289,7 +307,11 @@ export function SetupDrawer({
   const canManageMeta = capabilities?.permissions.meta_connection_manage === true;
   const canManageTikTok = capabilities?.permissions.tiktok_connection_manage === true;
   const canManagePlatform = (platform: Platform) =>
-    platform === "tiktok" ? canManageTikTok : canManageMeta;
+    platform === "tiktok"
+      ? canManageTikTok
+      : platform === "facebook" || platform === "instagram"
+        ? canManageMeta
+        : false;
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["settings"] });
@@ -333,7 +355,7 @@ export function SetupDrawer({
           <Section
             index={2}
             title="Social Accounts"
-            hint="Connect Facebook, Instagram or TikTok for this Brand, or edit what is already linked."
+            hint="Connect a configured social platform for this Brand, or edit what is already linked."
           >
             <SocialAccounts
               accounts={brandAccounts}

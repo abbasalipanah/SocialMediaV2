@@ -20,10 +20,16 @@ import { SsoConsumePage } from "./SsoConsumePage";
 const FacebookPage = lazy(() => import("../features/facebook"));
 const InstagramPage = lazy(() => import("../features/instagram"));
 const TikTokPage = lazy(() => import("../features/tiktok"));
+const XPage = lazy(() => import("../features/x"));
+const LinkedInPage = lazy(() => import("../features/linkedin"));
+const YouTubePage = lazy(() => import("../features/youtube"));
 const platformPages = {
   facebook: FacebookPage,
   instagram: InstagramPage,
   tiktok: TikTokPage,
+  x: XPage,
+  linkedin: LinkedInPage,
+  youtube: YouTubePage,
 } satisfies Record<Platform, LazyExoticComponent<ComponentType>>;
 const OverviewPage = lazy(() => import("../features/overview"));
 const SettingsPage = lazy(() => import("../features/settings"));
