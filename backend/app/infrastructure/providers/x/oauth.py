@@ -20,6 +20,8 @@ from app.domain.platforms import PlatformId
 from .oauth_transport import XOAuthTransport
 from .responses import XResponseError, required_mapping, required_text
 
+X_OAUTH_STATE_MAX_LENGTH = 500
+
 
 class XOAuthError(OAuthChannelError):
     """Stable X OAuth failure without provider payloads or credentials."""
@@ -50,7 +52,11 @@ class XOAuthProvider:
         return self._config.redirect_uri
 
     def authorization_url(self, *, state: str, scopes: tuple[str, ...]) -> str:
-        if not state or scopes != self._config.required_scopes:
+        if (
+            not state
+            or len(state) > X_OAUTH_STATE_MAX_LENGTH
+            or scopes != self._config.required_scopes
+        ):
             raise XOAuthError("x_authorization_request_invalid")
         verifier = self._code_verifier(state)
         query = urlencode(

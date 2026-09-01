@@ -78,6 +78,7 @@ def create_x_activation_runtime(
                 redirect_uri=settings.x.redirect_uri,
                 secret=runtime.oauth_state_secret.encode(),
                 replay_store=checkpoint_store,
+                compact=True,
             )
         ),
         provider=provider,

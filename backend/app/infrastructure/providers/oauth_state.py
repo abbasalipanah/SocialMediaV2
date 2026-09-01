@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-import base64
 import hashlib
 import hmac
-import json
 import re
 import secrets
-from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
-from typing import Any
+from collections.abc import Callable
+from datetime import datetime
 from urllib.parse import urlparse
 
 from app.application.ports import ActivationContext, ActivationStateClaims
@@ -20,25 +16,9 @@ from app.core.time import utc_now
 from app.domain.platforms import CapabilityId, PlatformId
 
 from . import _oauth_platform
+from .oauth_state_token import OAuthStateBinding, OAuthStateError, OAuthStateTokenCodec
 
 _LOCAL_REDIRECT_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
-
-
-class OAuthStateError(ValueError):
-    pass
-
-
-@dataclass(frozen=True)
-class OAuthStateBinding:
-    nonce: str
-    intent_hash: str = field(repr=False)
-    user_id: str
-    brand_id: int
-    session_binding: str = field(repr=False)
-    expires_at: datetime
-    platform: PlatformId
-    provider_profile: str
-    redirect_uri: str
 
 
 class OAuthStateCodec:
@@ -51,6 +31,7 @@ class OAuthStateCodec:
         secret: bytes,
         replay_store: CheckpointStore,
         clock: Callable[[], datetime] = utc_now,
+        compact: bool = False,
     ) -> None:
         _oauth_platform(platform)
         parsed = urlparse(redirect_uri)
@@ -71,25 +52,22 @@ class OAuthStateCodec:
         self._secret = secret
         self._replay_store = replay_store
         self._clock = clock
+        self._token_codec = OAuthStateTokenCodec(
+            platform=platform,
+            provider_profile=provider_profile,
+            redirect_uri=redirect_uri,
+            secret=secret,
+            compact=compact,
+        )
 
     def issue(self, binding: OAuthStateBinding) -> str:
         self._validate_binding(binding)
         if binding.expires_at <= self._clock():
             raise OAuthStateError("oauth_state_expiry_invalid")
-        body = _json_bytes(_payload(binding))
-        signature = hmac.new(self._secret, body, hashlib.sha256).digest()
-        return f"{_encode(body)}.{_encode(signature)}"
+        return self._token_codec.issue(binding)
 
     def inspect(self, token: str) -> OAuthStateBinding:
-        body, signature = _split(token)
-        expected = hmac.new(self._secret, body, hashlib.sha256).digest()
-        if not hmac.compare_digest(signature, expected):
-            raise OAuthStateError("oauth_state_signature_invalid")
-        try:
-            payload = json.loads(body)
-        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-            raise OAuthStateError("oauth_state_payload_invalid") from exc
-        binding = _binding(payload)
+        binding = self._token_codec.inspect(token)
         self._validate_binding(binding)
         if binding.expires_at <= self._clock():
             raise OAuthStateError("oauth_state_expired")
@@ -105,7 +83,7 @@ class OAuthStateCodec:
     ) -> OAuthStateBinding:
         binding = self.inspect(token)
         if (
-            binding.user_id != expected_user_id
+            not self._token_codec.user_matches(binding.user_id, expected_user_id)
             or binding.brand_id != expected_brand_id
             or not hmac.compare_digest(binding.session_binding, expected_session_binding)
         ):
@@ -160,9 +138,7 @@ class OAuthActivationStateAdapter:
             )
         )
 
-    def consume(
-        self, token: str, *, expected_context: ActivationContext
-    ) -> ActivationStateClaims:
+    def consume(self, token: str, *, expected_context: ActivationContext) -> ActivationStateClaims:
         binding = self._codec.consume(
             token,
             expected_user_id=expected_context.user_id,
@@ -177,72 +153,3 @@ class OAuthActivationStateAdapter:
 
     def verified_brand_id(self, token: str) -> int:
         return self._codec.inspect(token).brand_id
-
-
-def _payload(binding: OAuthStateBinding) -> dict[str, Any]:
-    return {
-        "brand_id": binding.brand_id,
-        "expires_at": binding.expires_at.astimezone(UTC).isoformat(),
-        "format_version": 1,
-        "intent_hash": binding.intent_hash,
-        "nonce": binding.nonce,
-        "platform": binding.platform.value,
-        "provider_profile": binding.provider_profile,
-        "redirect_uri": binding.redirect_uri,
-        "session_binding": binding.session_binding,
-        "user_id": binding.user_id,
-    }
-
-
-def _binding(payload: object) -> OAuthStateBinding:
-    expected = {
-        "brand_id", "expires_at", "format_version", "intent_hash", "nonce",
-        "platform", "provider_profile", "redirect_uri", "session_binding", "user_id",
-    }
-    if not isinstance(payload, Mapping) or set(payload) != expected:
-        raise OAuthStateError("oauth_state_payload_invalid")
-    try:
-        if payload["format_version"] != 1:
-            raise ValueError
-        return OAuthStateBinding(
-            nonce=str(payload["nonce"]),
-            intent_hash=str(payload["intent_hash"]),
-            user_id=str(payload["user_id"]),
-            brand_id=int(payload["brand_id"]),
-            session_binding=str(payload["session_binding"]),
-            expires_at=datetime.fromisoformat(str(payload["expires_at"])),
-            platform=PlatformId(str(payload["platform"])),
-            provider_profile=str(payload["provider_profile"]),
-            redirect_uri=str(payload["redirect_uri"]),
-        )
-    except (KeyError, TypeError, ValueError) as exc:
-        raise OAuthStateError("oauth_state_payload_invalid") from exc
-
-
-def _split(token: str) -> tuple[bytes, bytes]:
-    try:
-        body_part, signature_part = token.split(".", 1)
-        body = _decode(body_part)
-    except (ValueError, UnicodeError) as exc:
-        raise OAuthStateError("oauth_state_format_invalid") from exc
-    try:
-        return body, _decode(signature_part)
-    except (ValueError, UnicodeError) as exc:
-        raise OAuthStateError("oauth_state_signature_invalid") from exc
-
-
-def _encode(value: bytes) -> str:
-    return base64.urlsafe_b64encode(value).rstrip(b"=").decode()
-
-
-def _decode(value: str) -> bytes:
-    if not value or not re.fullmatch(r"[A-Za-z0-9_-]+", value):
-        raise ValueError("base64url_invalid")
-    decoded = base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
-    if not hmac.compare_digest(_encode(decoded), value):
-        raise ValueError("base64url_noncanonical")
-    return decoded
-
-
-def _json_bytes(payload: Mapping[str, Any]) -> bytes:
-    return json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()

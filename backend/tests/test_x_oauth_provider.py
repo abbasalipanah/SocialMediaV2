@@ -91,9 +91,11 @@ def test_x_authorization_and_exchange_use_the_same_s256_pkce_binding() -> None:
     )
 
     verifier = sender.calls[0][2]["data"]["code_verifier"]
-    expected_challenge = base64.urlsafe_b64encode(
-        hashlib.sha256(verifier.encode()).digest()
-    ).decode("ascii").rstrip("=")
+    expected_challenge = (
+        base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
+        .decode("ascii")
+        .rstrip("=")
+    )
     assert query == {
         "client_id": ["x-client-id"],
         "code_challenge": [expected_challenge],
@@ -109,6 +111,13 @@ def test_x_authorization_and_exchange_use_the_same_s256_pkce_binding() -> None:
     assert [(account.external_id, account.display_name) for account in grant.accounts] == [
         ("123456789", "Example (@example)")
     ]
+
+
+def test_x_authorization_rejects_state_above_provider_limit() -> None:
+    provider, _ = _provider([])
+
+    with pytest.raises(XOAuthError, match="^x_authorization_request_invalid$"):
+        provider.authorization_url(state="s" * 501, scopes=SCOPES)
 
 
 def test_x_refresh_supports_rotating_refresh_tokens_and_revoke() -> None:

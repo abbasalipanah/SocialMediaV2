@@ -23,9 +23,7 @@ class ReplayStore:
     def get(self, key: CheckpointKey) -> ProviderCheckpoint | None:
         return None
 
-    def put(
-        self, checkpoint: ProviderCheckpoint, *, expected_version: int | None
-    ) -> bool:
+    def put(self, checkpoint: ProviderCheckpoint, *, expected_version: int | None) -> bool:
         return True
 
     def claim_once(self, key: CheckpointKey, operation_id: str, expires_at: datetime) -> bool:
@@ -47,7 +45,10 @@ def _context(brand_id: int = 17) -> ActivationContext:
 
 
 def _adapter(
-    platform: PlatformId, store: ReplayStore | None = None
+    platform: PlatformId,
+    store: ReplayStore | None = None,
+    *,
+    compact: bool = False,
 ) -> OAuthActivationStateAdapter:
     return OAuthActivationStateAdapter(
         OAuthStateCodec(
@@ -57,6 +58,7 @@ def _adapter(
             secret=b"state-secret-that-is-at-least-32-bytes",
             replay_store=store or ReplayStore(),
             clock=lambda: NOW,
+            compact=compact,
         )
     )
 
@@ -152,6 +154,31 @@ def test_oauth_channel_state_rejects_tampering_and_expiry() -> None:
     )
     with pytest.raises(OAuthStateError, match="^oauth_state_expired$"):
         expired.verified_brand_id(token)
+
+
+def test_compact_oauth_state_stays_within_x_limit_and_preserves_bindings() -> None:
+    adapter = _adapter(PlatformId.X, compact=True)
+    context = ActivationContext(
+        user_id="u" * 128,
+        brand_id=17,
+        session_binding="a" * 64,
+        sso_jti_hash="b" * 64,
+        sso_consumed_at=NOW,
+    )
+    token = adapter.issue(
+        intent_hash="c" * 64,
+        context=context,
+        expires_at=NOW + timedelta(minutes=15),
+    )
+
+    assert len(token) <= 500
+    assert adapter.verified_brand_id(token) == 17
+    assert adapter.consume(token, expected_context=context).context == context
+    with pytest.raises(OAuthStateError, match="^oauth_state_binding_mismatch$"):
+        _adapter(PlatformId.X, compact=True).consume(
+            token,
+            expected_context=_context(),
+        )
 
 
 @pytest.mark.parametrize("platform", (PlatformId.FACEBOOK, PlatformId.TIKTOK))
