@@ -62,14 +62,14 @@ not overlap:
 
 | Client | Server file | Exact redirect URI | Used now |
 | --- | --- | --- | --- |
-| Development | `/home/api/.secrets/socialmedia/youtube-dev-client.json` | `http://localhost:8126/api/social/youtube/oauth/callback` | Yes, local canary only |
-| Production | `/home/api/.secrets/socialmedia/youtube-production.json` | `https://social.theaccumulate.com/api/social/youtube/oauth/callback` | No, reserved for the later live cutover |
+| Development | `.secrets/socialmedia/youtube-dev-client.json` | `http://localhost:8126/api/social/youtube/oauth/callback` | Yes, local canary only |
+| Production | `.secrets/socialmedia/youtube-production.json` | `https://social.theaccumulate.com/api/social/youtube/oauth/callback` | No, reserved for the later live cutover |
 
-Both files must be owned by the service user with mode `0600`. They deliberately
-remain outside the Git worktree so a broad `git add`, source archive, Docker build
-context, or copied worktree cannot include an OAuth client secret. The application
-receives the values in its process environment; the frontend and Git never receive
-them.
+Both files live inside the isolated worktree as requested, but `.secrets/` is ignored
+at the repository root and each JSON remains mode `0600`. Never override the ignore
+rule with `git add -f`. The launcher reads only the development JSON into the backend
+process environment; the frontend and Git never receive either secret. The production
+JSON remains dormant until the later, explicit live cutover.
 
 The development canary's only redirect URI is:
 
@@ -77,28 +77,25 @@ The development canary's only redirect URI is:
 http://localhost:8126/api/social/youtube/oauth/callback
 ```
 
-Place its downloaded JSON at `/home/api/.secrets/socialmedia/youtube-dev-client.json`
-with mode `0600`, then start the isolated runtime:
+Place its downloaded JSON at `.secrets/socialmedia/youtube-dev-client.json` with mode
+`0600`, then start the isolated runtime from the frontend directory using the normal
+development command:
 
 ```bash
-./scripts/dev/start_youtube_canary.sh
+cd frontend
+npm run dev
 ```
 
-The launcher reads the client values without copying them into the repository, creates
-ignored local OAuth-state and credential-vault keys, enables writes only against the
-platform-expansion PostgreSQL database on `127.0.0.1:56432`, and keeps scheduled
-collection disabled. The frontend and callback listen only on loopback ports `3126`
-and `8126`; access from a workstation requires an SSH tunnel. The production callback
-and production client remain a separate cutover concern.
+The launcher reads the development client, creates ignored local OAuth-state and
+credential-vault keys, enables writes only against the platform-expansion PostgreSQL
+database on `127.0.0.1:56432`, and keeps scheduled collection disabled. The frontend
+listens on `localhost:8126`; its Vite proxy sends API and OAuth callback traffic to the
+loopback-only backend on `127.0.0.1:8127`. This keeps the browser and Google callback
+on one origin. The production callback and production client remain a separate cutover
+concern.
 
-From the workstation, forward local port `8126` to the server's frontend port
-`3126` and open the application through `localhost`:
-
-```bash
-ssh -N -L 8126:127.0.0.1:3126 api@SERVER
-```
-
-Then visit `http://localhost:8126/integrations`. Authorize YouTube there, open
+Visit `http://localhost:8126/integrations` using the same local-server access method
+used for the project's existing `npm run dev` workflow. Authorize YouTube there, open
 Settings, select the discovered channel for Brand 18, and link it. Google account
 selection and consent are the only steps that must be completed interactively by
 the account owner.

@@ -19,14 +19,27 @@ Gerçek provider veya production DB kullanmayan ürün demosu:
 ./scripts/dev/start_local.sh
 ```
 
-Frontend dizininden aynı yığını başlatmak için:
+Frontend dizininden güvenli varsayılan ürün demosunu başlatmak için:
+
+```bash
+cd frontend
+npm run dev:local
+```
+
+Tarayıcı: `http://127.0.0.1:3010/`
+
+YouTube geliştirme canary'sini izole veritabanı ve proje içindeki Git-ignore
+credential dosyalarıyla başlatmak için:
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-Tarayıcı: `http://127.0.0.1:3010/`
+Bu komut frontend'i `http://localhost:8126/`, API'yi yalnızca dahili kullanım için
+`127.0.0.1:8127` üzerinde çalıştırır. Google OAuth callback'i frontend ile aynı
+origin'den Vite proxy üzerinden API'ye ulaşır. Meta, TikTok ve otomatik collection
+schedule kapalı kalır.
 
 Üç yeni platform geliştirmesi için ayrılmış worktree yığını:
 
