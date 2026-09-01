@@ -17,6 +17,7 @@ from app.core import (
 from app.domain.platforms import CapabilityId, PlatformId
 from app.infrastructure.providers.meta.runtime import create_meta_activation_runtime
 from app.infrastructure.providers.tiktok.runtime import create_tiktok_activation_runtime
+from app.infrastructure.providers.x.runtime import create_x_activation_runtime
 from app.infrastructure.providers.youtube.runtime import create_youtube_activation_runtime
 from app.workers.runtime import settings_worker_config
 from tests.test_phase6_dashboard_api import MemoryAuthority
@@ -76,6 +77,24 @@ CONFIG_KEYS = (
     "SOCIAL_YOUTUBE_ACTIVATION_ENABLED_AT",
     "SOCIAL_YOUTUBE_ACTIVATION_EXPIRES_AT",
     "SOCIAL_YOUTUBE_PROVIDER_TIMEOUT_SECONDS",
+    "SOCIAL_X_PROVIDER_PROFILE",
+    "SOCIAL_X_OAUTH_CLIENT_ID",
+    "SOCIAL_X_OAUTH_CLIENT_SECRET",
+    "SOCIAL_X_ACCOUNT_ENABLED",
+    "SOCIAL_X_ACCOUNT_OAUTH_MODE",
+    "SOCIAL_X_COLLECTION_ENABLED",
+    "SOCIAL_X_AUTHORIZATION_URL",
+    "SOCIAL_X_TOKEN_URL",
+    "SOCIAL_X_REVOKE_URL",
+    "SOCIAL_X_USERS_ME_URL",
+    "SOCIAL_X_API_BASE_URL",
+    "SOCIAL_X_ACCOUNT_REQUIRED_SCOPES",
+    "SOCIAL_X_REDIRECT_URI",
+    "SOCIAL_X_OAUTH_STATE_SECRET",
+    "SOCIAL_X_ACTIVATION_GATE_ENABLED",
+    "SOCIAL_X_ACTIVATION_ENABLED_AT",
+    "SOCIAL_X_ACTIVATION_EXPIRES_AT",
+    "SOCIAL_X_PROVIDER_TIMEOUT_SECONDS",
     "SOCIAL_VAULT_ENABLED",
     "SOCIAL_WORKER_SCHEDULE_ENABLED",
     "SOCIAL_AI_SUMMARY_ENABLED",
@@ -148,6 +167,7 @@ def test_production_standalone_ready_is_fail_closed(
     assert settings.meta.account_enabled is False
     assert settings.tiktok.account_enabled is False
     assert settings.youtube.account_enabled is False
+    assert settings.x.account_enabled is False
     assert settings.worker_schedule_enabled is False
 
     monkeypatch.setenv("SOCIAL_WRITES_ENABLED", "true")
@@ -399,5 +419,63 @@ def test_youtube_endpoint_and_collection_gates_fail_closed(
 
     monkeypatch.delenv("SOCIAL_YOUTUBE_AUTHORIZATION_URL")
     monkeypatch.setenv("SOCIAL_YOUTUBE_COLLECTION_ENABLED", "true")
+    with pytest.raises(ConfigurationError, match="requires the account integration"):
+        load_settings()
+
+
+def test_complete_local_x_configuration_is_fail_closed_then_accepted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    keyring = {"local-key": base64.b64encode(b"x" * 32).decode("ascii")}
+    values = {
+        "SOCIAL_WRITES_ENABLED": "true",
+        "SOCIAL_DB_URL": (
+            "postgresql+psycopg://local:local@127.0.0.1/social_media_v2_local"
+        ),
+        "SOCIAL_VAULT_ENABLED": "true",
+        "SOCIAL_X_ACCOUNT_ENABLED": "true",
+        "SOCIAL_X_ACCOUNT_OAUTH_MODE": "manual_intent_only",
+        "SOCIAL_X_OAUTH_CLIENT_ID": "local-x-client-id",
+        "SOCIAL_X_OAUTH_CLIENT_SECRET": "local-x-client-secret",
+        "SOCIAL_X_ACTIVATION_GATE_ENABLED": "true",
+        "SOCIAL_X_ACTIVATION_ENABLED_AT": "2026-08-31T10:00:00Z",
+        "SOCIAL_X_ACTIVATION_EXPIRES_AT": "2026-09-30T10:00:00Z",
+        "SOCIAL_CREDENTIAL_ACTIVE_KEY_ID": "local-key",
+        "SOCIAL_CREDENTIAL_KEYRING_JSON": json.dumps(keyring),
+    }
+    for key, value in values.items():
+        monkeypatch.setenv(key, value)
+
+    with pytest.raises(ConfigurationError, match="state secret"):
+        load_settings()
+
+    monkeypatch.setenv("SOCIAL_X_OAUTH_STATE_SECRET", "x" * 32)
+    settings = load_settings()
+
+    assert settings.x.account_enabled is True
+    assert settings.x.collection_enabled is False
+    assert settings.x_activation.gate_enabled is True
+    engine = create_engine(settings.db.url)
+    try:
+        coordinator = create_x_activation_runtime(
+            settings=settings,
+            policy=WritePolicy.from_settings(settings),
+            engine=engine,
+            authority_store=MemoryAuthority(),
+        )
+    finally:
+        engine.dispose()
+    assert coordinator is not None
+
+
+def test_x_endpoint_and_collection_gates_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SOCIAL_X_AUTHORIZATION_URL", "https://example.test/oauth")
+    with pytest.raises(ConfigurationError, match="endpoint set"):
+        load_settings()
+
+    monkeypatch.delenv("SOCIAL_X_AUTHORIZATION_URL")
+    monkeypatch.setenv("SOCIAL_X_COLLECTION_ENABLED", "true")
     with pytest.raises(ConfigurationError, match="requires the account integration"):
         load_settings()

@@ -29,6 +29,7 @@ from app.infrastructure.persistence.social_v2 import (
 from app.infrastructure.providers.ai import OpenRouterAiSummaryProvider
 from app.infrastructure.providers.meta.runtime import create_meta_activation_runtime
 from app.infrastructure.providers.tiktok.runtime import create_tiktok_activation_runtime
+from app.infrastructure.providers.x.runtime import create_x_activation_runtime
 from app.infrastructure.providers.youtube.runtime import create_youtube_activation_runtime
 
 
@@ -38,6 +39,7 @@ def create_app(
     media_root: Path | None = None,
     tiktok_activation: TikTokActivationCoordinator | None = None,
     meta_activation: MetaActivationCoordinator | None = None,
+    x_activation: OAuthChannelActivationCoordinator | None = None,
     youtube_activation: OAuthChannelActivationCoordinator | None = None,
     ai_summary: AiSummaryService | None = None,
 ) -> FastAPI:
@@ -76,6 +78,8 @@ def create_app(
             or request.url.path.startswith("/api/integrations/tiktok/")
             or request.url.path == "/api/social/meta/oauth/callback"
             or request.url.path.startswith("/api/integrations/meta/")
+            or request.url.path.startswith("/api/integrations/x/")
+            or request.url.path == "/api/social/x/oauth/callback"
             or request.url.path.startswith("/api/integrations/youtube/")
             or request.url.path == "/api/social/youtube/oauth/callback"
             or request.url.path.startswith("/api/insights")
@@ -91,6 +95,7 @@ def create_app(
         or reporting_store is None
         or (tiktok_activation is None and settings.tiktok.account_enabled)
         or (meta_activation is None and settings.meta.account_enabled)
+        or (x_activation is None and settings.x.account_enabled)
         or (youtube_activation is None and settings.youtube.account_enabled)
     ):
         engine = create_engine(settings.db.url, pool_pre_ping=True, pool_size=5, max_overflow=2)
@@ -125,6 +130,15 @@ def create_app(
             engine=engine,
             authority_store=store,
         )
+    if x_activation is None and settings.x.account_enabled:
+        if engine is None or store is None:
+            raise RuntimeError("x_activation_runtime_unavailable")
+        x_activation = create_x_activation_runtime(
+            settings=settings,
+            policy=policy,
+            engine=engine,
+            authority_store=store,
+        )
     if ai_summary is None and engine is not None and reporting_store is not None:
         ai_summary = AiSummaryCoordinator(
             repository=SocialAiSummaryRepository(engine),
@@ -139,6 +153,7 @@ def create_app(
     application.state.tiktok_activation_configured = tiktok_activation is not None
     application.state.meta_activation_configured = meta_activation is not None
     application.state.youtube_activation_configured = youtube_activation is not None
+    application.state.x_activation_configured = x_activation is not None
     application.state.ai_summary_provider_configured = (
         ai_summary.provider_configured if ai_summary is not None else False
     )
@@ -155,9 +170,14 @@ def create_app(
             tiktok_activation=tiktok_activation,
             meta_activation=meta_activation,
             oauth_activations=(
-                {PlatformId.YOUTUBE: youtube_activation}
-                if youtube_activation is not None
-                else {}
+                {
+                    platform: activation
+                    for platform, activation in (
+                        (PlatformId.X, x_activation),
+                        (PlatformId.YOUTUBE, youtube_activation),
+                    )
+                    if activation is not None
+                }
             ),
             ai_summary=ai_summary,
             report_jobs=report_jobs,

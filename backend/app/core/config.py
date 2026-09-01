@@ -99,6 +99,19 @@ YOUTUBE_REQUIRED_SCOPES = (
     "https://www.googleapis.com/auth/yt-analytics.readonly",
 )
 
+X_PROVIDER_PROFILE = "x_api_v2_oauth2_pkce_v1"
+X_AUTHORIZATION_URL = "https://x.com/i/oauth2/authorize"
+X_TOKEN_URL = "https://api.x.com/2/oauth2/token"
+X_REVOKE_URL = "https://api.x.com/2/oauth2/revoke"
+X_USERS_ME_URL = "https://api.x.com/2/users/me"
+X_API_BASE_URL = "https://api.x.com/2"
+X_REDIRECT_URI = "https://social.theaccumulate.com/api/social/x/oauth/callback"
+X_REQUIRED_SCOPES = (
+    "tweet.read",
+    "users.read",
+    "offline.access",
+)
+
 LOCAL_DB_HOSTS = {"127.0.0.1", "localhost", "::1", "postgres", "db"}
 BLOCKED_SOURCE_DB_NAMES = {"socialmedia_adv"}
 V2_DATABASE_PREFIX = "social_media_v2"
@@ -267,6 +280,23 @@ class YouTubeConfig:
 
 
 @dataclass(frozen=True)
+class XConfig:
+    provider_profile: str
+    oauth_client_id: str
+    oauth_client_secret: str
+    account_enabled: bool
+    oauth_mode: str
+    collection_enabled: bool
+    required_scopes: tuple[str, ...]
+    authorization_url: str
+    token_url: str
+    revoke_url: str
+    users_me_url: str
+    api_base_url: str
+    redirect_uri: str
+
+
+@dataclass(frozen=True)
 class OAuthChannelActivationRuntimeConfig:
     gate_enabled: bool
     gate_enabled_at: datetime | None
@@ -310,6 +340,8 @@ class AppSettings:
     meta_activation: MetaActivationRuntimeConfig
     youtube: YouTubeConfig
     youtube_activation: OAuthChannelActivationRuntimeConfig
+    x: XConfig
+    x_activation: OAuthChannelActivationRuntimeConfig
     ai_summary: AiSummaryConfig
 
 
@@ -603,6 +635,64 @@ def _validate_youtube(
         raise ConfigurationError("YouTube credential keyring is not configured")
 
 
+def _validate_x(
+    config: XConfig,
+    activation: OAuthChannelActivationRuntimeConfig,
+    *,
+    writes: bool,
+    db: DatabaseConfig,
+    vault_enabled: bool,
+    production_like: bool,
+) -> None:
+    if config.provider_profile != X_PROVIDER_PROFILE:
+        raise ConfigurationError("X provider profile differs from the approved contract")
+    if config.oauth_mode not in {"disabled", "manual_intent_only"}:
+        raise ConfigurationError("Unsupported X OAuth mode")
+    canonical_endpoints = (
+        (config.authorization_url, X_AUTHORIZATION_URL),
+        (config.token_url, X_TOKEN_URL),
+        (config.revoke_url, X_REVOKE_URL),
+        (config.users_me_url, X_USERS_ME_URL),
+        (config.api_base_url, X_API_BASE_URL),
+    )
+    if any(actual != expected for actual, expected in canonical_endpoints):
+        raise ConfigurationError("X endpoint set differs from the approved contract")
+    _validate_public_endpoint(
+        config.redirect_uri,
+        expected_path="/api/social/x/oauth/callback",
+        label="X OAuth redirect URI",
+        production_like=production_like,
+    )
+    if config.required_scopes != X_REQUIRED_SCOPES:
+        raise ConfigurationError("X OAuth scope set differs from the approved contract")
+    if not config.account_enabled:
+        if config.oauth_mode != "disabled" or activation.gate_enabled:
+            raise ConfigurationError("X OAuth gates must remain disabled together")
+        if config.collection_enabled:
+            raise ConfigurationError("X collection requires the account integration")
+        return
+    if config.oauth_mode != "manual_intent_only":
+        raise ConfigurationError("X activation requires manual_intent_only mode")
+    if not writes or not db.url:
+        raise ConfigurationError("X activation requires a writable database URL")
+    if not config.oauth_client_id or not config.oauth_client_secret:
+        raise ConfigurationError("X activation requires OAuth client credentials")
+    if not vault_enabled:
+        raise ConfigurationError("X activation requires the credential vault")
+    if not activation.gate_enabled:
+        raise ConfigurationError("X activation requires the time-boxed gate")
+    if (
+        activation.gate_enabled_at is None
+        or activation.gate_expires_at is None
+        or activation.gate_enabled_at >= activation.gate_expires_at
+    ):
+        raise ConfigurationError("X activation gate window is invalid")
+    if len(activation.oauth_state_secret.encode("utf-8")) < 32:
+        raise ConfigurationError("X OAuth state secret must contain at least 32 bytes")
+    if not activation.credential_active_key_id or not activation.credential_keyring_json:
+        raise ConfigurationError("X credential keyring is not configured")
+
+
 def _origin(value: str) -> tuple[str, str, int | None]:
     parsed = urlparse(value)
     return parsed.scheme.lower(), (parsed.hostname or "").lower(), parsed.port
@@ -770,6 +860,33 @@ def load_settings() -> AppSettings:
             "30",
         ),
     )
+    x = XConfig(
+        provider_profile=_env("SOCIAL_X_PROVIDER_PROFILE", X_PROVIDER_PROFILE),
+        oauth_client_id=_env("SOCIAL_X_OAUTH_CLIENT_ID"),
+        oauth_client_secret=_env("SOCIAL_X_OAUTH_CLIENT_SECRET"),
+        account_enabled=_bool("SOCIAL_X_ACCOUNT_ENABLED"),
+        oauth_mode=_env("SOCIAL_X_ACCOUNT_OAUTH_MODE", "disabled"),
+        collection_enabled=_bool("SOCIAL_X_COLLECTION_ENABLED"),
+        required_scopes=_csv("SOCIAL_X_ACCOUNT_REQUIRED_SCOPES", X_REQUIRED_SCOPES),
+        authorization_url=_env("SOCIAL_X_AUTHORIZATION_URL", X_AUTHORIZATION_URL),
+        token_url=_env("SOCIAL_X_TOKEN_URL", X_TOKEN_URL),
+        revoke_url=_env("SOCIAL_X_REVOKE_URL", X_REVOKE_URL),
+        users_me_url=_env("SOCIAL_X_USERS_ME_URL", X_USERS_ME_URL),
+        api_base_url=_env("SOCIAL_X_API_BASE_URL", X_API_BASE_URL).rstrip("/"),
+        redirect_uri=_env("SOCIAL_X_REDIRECT_URI", X_REDIRECT_URI),
+    )
+    x_activation = OAuthChannelActivationRuntimeConfig(
+        gate_enabled=_bool("SOCIAL_X_ACTIVATION_GATE_ENABLED"),
+        gate_enabled_at=_optional_datetime("SOCIAL_X_ACTIVATION_ENABLED_AT"),
+        gate_expires_at=_optional_datetime("SOCIAL_X_ACTIVATION_EXPIRES_AT"),
+        oauth_state_secret=_env("SOCIAL_X_OAUTH_STATE_SECRET"),
+        credential_active_key_id=_env("SOCIAL_CREDENTIAL_ACTIVE_KEY_ID"),
+        credential_keyring_json=_env("SOCIAL_CREDENTIAL_KEYRING_JSON"),
+        provider_timeout_seconds=_positive_float(
+            "SOCIAL_X_PROVIDER_TIMEOUT_SECONDS",
+            "30",
+        ),
+    )
     ai_summary = AiSummaryConfig(
         enabled=_bool("SOCIAL_AI_SUMMARY_ENABLED"),
         api_key=_env("SOCIAL_AI_OPENROUTER_API_KEY"),
@@ -814,6 +931,14 @@ def load_settings() -> AppSettings:
         vault_enabled=vault_enabled,
         production_like=app_env in PRODUCTION_LIKE_ENVS,
     )
+    _validate_x(
+        x,
+        x_activation,
+        writes=writes,
+        db=db,
+        vault_enabled=vault_enabled,
+        production_like=app_env in PRODUCTION_LIKE_ENVS,
+    )
     _validate_ai_summary(
         ai_summary,
         app_env=app_env,
@@ -830,6 +955,7 @@ def load_settings() -> AppSettings:
             meta.collection_enabled
             or tiktok.collection_enabled
             or youtube.collection_enabled
+            or x.collection_enabled
         )
     ):
         raise ConfigurationError(
@@ -858,5 +984,7 @@ def load_settings() -> AppSettings:
         meta_activation=meta_activation,
         youtube=youtube,
         youtube_activation=youtube_activation,
+        x=x,
+        x_activation=x_activation,
         ai_summary=ai_summary,
     )

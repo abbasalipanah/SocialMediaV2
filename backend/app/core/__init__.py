@@ -10,6 +10,7 @@ from .config import (
     ConfigurationError,
     OAuthChannelActivationRuntimeConfig,
     RuntimeMode,
+    XConfig,
     YouTubeConfig,
     load_settings,
 )
@@ -25,6 +26,7 @@ __all__ = [
     "ConfigurationError",
     "RUNTIME_MODE_SEQUENCE",
     "RuntimeMode",
+    "XConfig",
     "YouTubeConfig",
     "WritePolicy",
     "load_settings",
