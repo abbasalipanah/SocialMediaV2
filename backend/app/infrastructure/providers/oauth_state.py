@@ -219,9 +219,13 @@ def _binding(payload: object) -> OAuthStateBinding:
 def _split(token: str) -> tuple[bytes, bytes]:
     try:
         body_part, signature_part = token.split(".", 1)
-        return _decode(body_part), _decode(signature_part)
+        body = _decode(body_part)
     except (ValueError, UnicodeError) as exc:
         raise OAuthStateError("oauth_state_format_invalid") from exc
+    try:
+        return body, _decode(signature_part)
+    except (ValueError, UnicodeError) as exc:
+        raise OAuthStateError("oauth_state_signature_invalid") from exc
 
 
 def _encode(value: bytes) -> str:
@@ -229,16 +233,16 @@ def _encode(value: bytes) -> str:
 
 
 def _decode(value: str) -> bytes:
-    return base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+    if not value or not re.fullmatch(r"[A-Za-z0-9_-]+", value):
+        raise ValueError("base64url_invalid")
+    decoded = base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))
+    if not hmac.compare_digest(_encode(decoded), value):
+        raise ValueError("base64url_noncanonical")
+    return decoded
 
 
 def _json_bytes(payload: Mapping[str, Any]) -> bytes:
     return json.dumps(payload, separators=(",", ":"), sort_keys=True).encode()
 
 
-__all__ = [
-    "OAuthActivationStateAdapter",
-    "OAuthStateBinding",
-    "OAuthStateCodec",
-    "OAuthStateError",
-]
+__all__ = ["OAuthActivationStateAdapter", "OAuthStateBinding", "OAuthStateCodec", "OAuthStateError"]

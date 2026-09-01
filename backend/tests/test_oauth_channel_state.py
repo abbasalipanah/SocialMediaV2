@@ -99,8 +99,17 @@ def test_oauth_channel_state_rejects_tampering_and_expiry() -> None:
         expires_at=NOW + timedelta(minutes=15),
     )
 
+    body, signature = token.split(".", 1)
+    changed_first = "A" if signature[0] != "A" else "B"
     with pytest.raises(OAuthStateError, match="^oauth_state_signature_invalid$"):
-        adapter.verified_brand_id(f"{token[:-1]}A")
+        adapter.verified_brand_id(f"{body}.{changed_first}{signature[1:]}")
+
+    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+    final_index = alphabet.index(signature[-1])
+    assert final_index % 4 == 0
+    equivalent_noncanonical = alphabet[final_index + 1]
+    with pytest.raises(OAuthStateError, match="^oauth_state_signature_invalid$"):
+        adapter.verified_brand_id(f"{body}.{signature[:-1]}{equivalent_noncanonical}")
 
     expired = OAuthActivationStateAdapter(
         OAuthStateCodec(
