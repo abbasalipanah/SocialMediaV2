@@ -77,6 +77,7 @@ prepare_youtube_canary_env() {
   export SOCIAL_LOCAL_API_PORT="8127"
   export SOCIAL_LOCAL_FRONTEND_PORT="8126"
   export SOCIAL_LOCAL_ACTIVATION_PROFILE="youtube_canary"
+  export VITE_LOCAL_PREVIEW_PLATFORMS="youtube"
   export SOCIAL_VAULT_ENABLED=true
   export SOCIAL_WORKER_SCHEDULE_ENABLED=false
   export SOCIAL_CREDENTIAL_ACTIVE_KEY_ID="youtube-dev-key"

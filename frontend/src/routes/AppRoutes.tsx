@@ -13,6 +13,7 @@ import { BrandScopeProvider, useBrandScope } from "../app/BrandScopeProvider";
 import { useAuth } from "../auth";
 import { AppShell } from "../layout";
 import { PLATFORM_CATALOG } from "../platforms/catalog";
+import { platformNavigationAvailable } from "../platforms/navigation";
 import { ScreenState } from "../ui";
 import { LoginPage } from "./LoginPage";
 import { SsoConsumePage } from "./SsoConsumePage";
@@ -82,9 +83,7 @@ function PlatformGuard({ platform, children }: { platform: Platform; children: R
   // route has to agree: without this the page still opened from a bookmark, a
   // back button, or a Brand switch that left the URL where it was, and it
   // rendered an empty dashboard headed "No Accounts".
-  const available = capabilities?.platforms.find(
-    (item) => item.platform === platform,
-  )?.navigation_available;
+  const available = platformNavigationAvailable(platform, capabilities);
   return available ? children : <Navigate replace to="/overview" />;
 }
 

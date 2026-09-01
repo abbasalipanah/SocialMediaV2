@@ -17,6 +17,7 @@ import type { Platform } from "../api";
 import { accumulateUrl } from "../app/accumulateLink";
 import { useBrandScope } from "../app/BrandScopeProvider";
 import { PLATFORM_CATALOG } from "../platforms/catalog";
+import { platformNavigationAvailable } from "../platforms/navigation";
 
 type SidebarProps = {
   open: boolean;
@@ -53,13 +54,6 @@ export const SOCIAL_NAVIGATION_LABELS = [
   "Settings",
   "Integrations",
 ] as const;
-
-function platformAvailable(platform: Platform, capabilities: ReturnType<typeof useBrandScope>["capabilities"]) {
-  return (
-    capabilities?.platforms.find((item) => item.platform === platform)?.navigation_available ??
-    false
-  );
-}
 
 function NavigationLink({
   path,
@@ -142,7 +136,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 <NavigationLink
                   icon={Icon}
                   label={label}
-                  locked={!platformAvailable(platform, capabilities)}
+                  locked={!platformNavigationAvailable(platform, capabilities)}
                   onClick={onClose}
                   path={path}
                 />
