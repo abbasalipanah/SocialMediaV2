@@ -66,6 +66,25 @@ class _Checkpoints:
         return True
 
 
+class _ConflictOnceCheckpoints(_Checkpoints):
+    def __init__(self) -> None:
+        super().__init__()
+        self.conflicted = False
+
+    def put(self, checkpoint, expected_version=None):
+        if not self.conflicted:
+            self.conflicted = True
+            self.existing = ProviderCheckpoint(
+                key=checkpoint.key,
+                version=checkpoint.version,
+                cursor=checkpoint.cursor,
+                watermark=checkpoint.watermark,
+                observed_through=checkpoint.observed_through,
+            )
+            return False
+        return super().put(checkpoint, expected_version=expected_version)
+
+
 def _key(target) -> CheckpointKey:
     return CheckpointKey(
         platform=PlatformId.INSTAGRAM,
@@ -108,6 +127,26 @@ def test_a_refresh_does_not_record_how_far_it_reached(collection_target) -> None
     _collect(collection_target, checkpoints=checkpoints, refresh_only=True)
 
     assert [written.cursor for written in checkpoints.written] == [None, None]
+
+
+def test_a_concurrent_checkpoint_is_adopted_without_failing_the_account(
+    collection_target,
+) -> None:
+    outcome = collect_content(
+        target=collection_target,
+        reader=_Reader(),
+        content_store=_Store(),
+        checkpoint_store=_ConflictOnceCheckpoints(),
+        max_pages=1,
+        refresh_only=True,
+    )
+
+    # The concurrent write is adopted cleanly. The refresh is still partial
+    # because this fixture advertises another page while the caller allows
+    # only one; that page-limit result must not be confused with a checkpoint
+    # conflict failure.
+    assert outcome.status.value == "partial"
+    assert outcome.error_code == "page_limit_reached"
 
 
 def test_a_backfill_still_resumes_where_it_stopped(collection_target) -> None:
@@ -165,3 +204,16 @@ def test_feed_insights_do_not_fall_back_for_a_story_only_metric() -> None:
     # a time and turned a complete account refresh into a 100-second operation.
     assert "replies" not in MEDIA_INSIGHT_METRICS
     assert "replies" in STORY_INSIGHT_METRICS
+    # These legacy/per-media metrics are rejected for current Stories. One
+    # rejected name invalidates the whole comma-separated request and used to
+    # trigger sixteen individual retries for every Story.
+    assert set(STORY_INSIGHT_METRICS) == {
+        "views",
+        "reach",
+        "total_interactions",
+        "shares",
+        "replies",
+        "navigation",
+        "profile_visits",
+        "follows",
+    }

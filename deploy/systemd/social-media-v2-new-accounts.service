@@ -8,9 +8,9 @@ User=social-media-v2
 Group=social-media-v2
 WorkingDirectory=/opt/social-media-v2/backend
 EnvironmentFile=/etc/social-media-v2/production.env
-# Only accounts that have never been collected, under their own advisory lock,
-# so an admin sees data as soon as setup finishes instead of waiting for the
-# next full pass. A full pass is unaffected and vice versa.
+# Newly linked accounts stay on this fast lane until incremental backfill is
+# complete, so the archive does not stall after its first successful page. Its
+# advisory lock is independent from the full pass.
 ExecStart=/opt/social-media-v2/backend/.venv/bin/python -m app.workers collect --platform all --scheduled --only-new
 TimeoutStartSec=600
 

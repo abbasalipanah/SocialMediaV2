@@ -20,6 +20,7 @@ from urllib.parse import urlparse
 import httpx
 from sqlalchemy import Engine, create_engine, text
 
+from app.application.ports.checkpoints import CheckpointKey, ProviderCheckpoint
 from app.application.ports.credentials import CredentialRef, SecretToken, TokenKind
 from app.application.ports.platforms import (
     ProviderAccount,
@@ -38,10 +39,19 @@ from app.application.services.collection import (
     collect_daily_metrics,
     collect_profile,
 )
-from app.application.services.collection.media import ContentMediaWriter, FetchedMedia
+from app.application.services.collection.media import (
+    ContentMediaWriter,
+    FetchedMedia,
+    MediaBudgetDeferred,
+)
 from app.core import AppSettings, ConfigurationError, WritePolicy, load_settings
-from app.domain.metrics import MetricId, bootstrap_metric_catalog
-from app.domain.platforms import PlatformId
+from app.domain.metrics import (
+    FACEBOOK_DAILY_SOURCE_METRICS,
+    INSTAGRAM_DAILY_SOURCE_METRICS,
+    MetricId,
+    bootstrap_metric_catalog,
+)
+from app.domain.platforms import CapabilityId, PlatformId
 from app.infrastructure.checkpoints import ProjectionCheckpointStore
 from app.infrastructure.credentials import AesGcmTokenVault, ProjectionCredentialStore
 from app.infrastructure.persistence.media_files import AtomicMediaFiles
@@ -99,6 +109,7 @@ class WorkerAccountResult:
     comment_count: int = 0
     media_count: int = 0
     error_code: str | None = None
+    backfill_complete: bool = True
 
 
 @dataclass(frozen=True)
@@ -151,6 +162,72 @@ FULL_CONTENT_PAGES = 100
 # five is more recent posts than any dashboard shows at once.
 REFRESH_PAGE_SIZE = 25
 FULL_PAGE_SIZE = 100
+# A newly linked Meta account must not attempt its whole archive in one turn.
+# Each successful page advances a durable cursor; later timer turns continue
+# until the provider reaches the end, then nightly collection is enabled.
+META_BACKFILL_CONTENT_PAGES_PER_RUN = 1
+META_BACKFILL_PAGE_SIZE = 25
+# Media is valuable but must never consume the account's complete 300-second
+# budget after metrics have already succeeded. If this slice is exhausted the
+# page is replayed next turn and already-held files are reused.
+MEDIA_PHASE_BUDGET_SECONDS = 30
+MEDIA_FETCH_TIMEOUT_SECONDS = 10
+# Preset dashboards end yesterday.  A first collection therefore needs the
+# thirty completed reporting days plus today's live profile snapshot.  The old
+# `today - 29` window omitted the oldest day of "Last 30 Days".
+DAILY_METRIC_BACKFILL_DAYS = 30
+DAILY_METRIC_CHECKPOINT_SUFFIX = "daily-metrics"
+# Version TikTok's daily checkpoint when the persisted daily schema expands.
+# Existing accounts then prove the complete reporting window once, instead of
+# advancing an old watermark while the newly supported components stay empty.
+TIKTOK_DAILY_METRIC_CHECKPOINT_SUFFIX = "daily-metrics-v2"
+
+
+def _meta_daily_metric_ids(platform: PlatformId) -> tuple[MetricId, ...]:
+    source_metrics = (
+        FACEBOOK_DAILY_SOURCE_METRICS
+        if platform is PlatformId.FACEBOOK
+        else INSTAGRAM_DAILY_SOURCE_METRICS
+    )
+    return tuple(
+        dict.fromkeys(
+            (
+                *(metric_id for _source_field, metric_id in source_metrics),
+                MetricId.FOLLOWS,
+                MetricId.UNFOLLOWS,
+            )
+        )
+    )
+
+
+def _daily_metric_window_start(
+    *,
+    today: date,
+    checkpoint: ProviderCheckpoint | None,
+    inferred_observed_on: date | None = None,
+) -> date:
+    """Return a bounded, overlap-safe start for a Meta daily metric read.
+
+    Imported accounts and newly connected TikTok accounts can be marked
+    backfill-complete before every late provider day has settled. With no V2
+    daily watermark, treating them as routine refreshes reads only yesterday
+    and permanently skips an interior gap. Absence of this namespaced
+    checkpoint now means "prove the reporting window once", for old and newly
+    linked accounts alike.
+
+    Once a watermark exists, overlap its observed day.  That lets a metric
+    Meta had not finalized on the previous pass settle without turning every
+    routine refresh back into a thirty-day request.
+    """
+    lower_bound = today - timedelta(days=DAILY_METRIC_BACKFILL_DAYS)
+    observed_on = (
+        checkpoint.observed_through.astimezone(UTC).date()
+        if checkpoint is not None and checkpoint.observed_through is not None
+        else inferred_observed_on
+    )
+    if observed_on is None:
+        return lower_bound
+    return max(lower_bound, min(today - timedelta(days=1), observed_on))
 
 
 @contextmanager
@@ -165,6 +242,30 @@ def _phase(timings: dict[str, float], name: str) -> Iterator[None]:
         yield
     finally:
         timings[name] = timings.get(name, 0.0) + time.monotonic() - started
+
+
+def _lazy_phase_budget(
+    seconds: float,
+    *,
+    clock=time.monotonic,
+):
+    """Start a soft phase budget when the phase first does actual work.
+
+    Content and Story readers resolve provider insights before returning the
+    first item to the media sink. Starting the media deadline before that read
+    meant the deadline had already expired by the first thumbnail, so no media
+    fetch was even attempted on slower accounts.
+    """
+    started_at: float | None = None
+
+    def available() -> bool:
+        nonlocal started_at
+        now = clock()
+        if started_at is None:
+            started_at = now
+        return now - started_at < seconds
+
+    return available
 
 
 class AccountBudgetExceeded(BaseException):
@@ -257,10 +358,7 @@ class StandaloneCollector:
                 platform in {PlatformId.FACEBOOK, PlatformId.INSTAGRAM}
                 and self.settings.meta.collection_enabled
             )
-            or (
-                platform is PlatformId.TIKTOK
-                and self.settings.tiktok.collection_enabled
-            )
+            or (platform is PlatformId.TIKTOK and self.settings.tiktok.collection_enabled)
         )
         if not selected:
             raise ConfigurationError("No requested V2 collector is enabled")
@@ -271,11 +369,7 @@ class StandaloneCollector:
             only_new=only_new,
         )
         results: list[WorkerAccountResult] = []
-        deadline = (
-            time.monotonic() + self._run_budget_seconds
-            if self._run_budget_seconds
-            else None
-        )
+        deadline = time.monotonic() + self._run_budget_seconds if self._run_budget_seconds else None
         logger.info("collection_started accounts=%s", len(rows))
         for index, row in enumerate(rows, start=1):
             if deadline is not None and time.monotonic() >= deadline:
@@ -293,7 +387,11 @@ class StandaloneCollector:
             try:
                 with self._account_budget():
                     result = self._collect(row, timings)
-                self.targets.mark_success(row, datetime.now(UTC))
+                self.targets.mark_success(
+                    row,
+                    datetime.now(UTC),
+                    backfill_complete=result.backfill_complete,
+                )
             except AccountBudgetExceeded as exc:
                 error_code = _error_code(exc)
                 # Record where the account was blocked. The interrupt lands on
@@ -311,14 +409,29 @@ class StandaloneCollector:
                         if "/app/" in frame.filename
                     )[-300:],
                 )
-                self.targets.mark_failure(row, error_code)
-                result = WorkerAccountResult(
-                    platform=row.platform.value,
-                    brand_id=row.brand_id,
-                    asset_id=row.asset_id,
-                    status="failed",
-                    error_code=error_code,
-                )
+                if "core_complete" in timings:
+                    # Profile and daily metrics are durable. Preserve that
+                    # progress and retry the unfinished backfill next turn
+                    # rather than disabling an otherwise accessible account.
+                    self.targets.mark_success(row, datetime.now(UTC), backfill_complete=False)
+                    result = WorkerAccountResult(
+                        platform=row.platform.value,
+                        brand_id=row.brand_id,
+                        asset_id=row.asset_id,
+                        status="partial",
+                        error_code=error_code,
+                        backfill_complete=False,
+                    )
+                else:
+                    self.targets.mark_failure(row, error_code)
+                    result = WorkerAccountResult(
+                        platform=row.platform.value,
+                        brand_id=row.brand_id,
+                        asset_id=row.asset_id,
+                        status="failed",
+                        error_code=error_code,
+                        backfill_complete=False,
+                    )
             except Exception as exc:
                 error_code = _error_code(exc)
                 self.targets.mark_failure(row, error_code)
@@ -341,9 +454,7 @@ class StandaloneCollector:
                 time.monotonic() - started,
                 ",".join(
                     f"{name}={seconds:.0f}"
-                    for name, seconds in sorted(
-                        timings.items(), key=lambda item: -item[1]
-                    )
+                    for name, seconds in sorted(timings.items(), key=lambda item: -item[1])
                     if seconds >= 1 and name != "provider_pressure_pct"
                 )
                 or "-",
@@ -355,17 +466,13 @@ class StandaloneCollector:
         pending = self.targets.pending_tiktok(connection_id)
         if pending is None:
             raise ValueError("pending_tiktok_connection_not_found")
-        context = self._tiktok_access_context(
-            pending.credential_reference, pending.external_id
-        )
+        context = self._tiktok_access_context(pending.credential_reference, pending.external_id)
         provider_account = ProviderAccount(
             platform=PlatformId.TIKTOK,
             account_id=pending.external_id,
             credential=ProviderCredential(access_token=context.access_token),
         )
-        profile_reader, _, _, _, _ = self._tiktok_readers(
-            provider_account, scopes=context.scopes
-        )
+        profile_reader, _, _, _, _ = self._tiktok_readers(provider_account, scopes=context.scopes)
         snapshot = profile_reader.fetch_profile(provider_account)
         asset_id = self.targets.create_tiktok_asset(pending, snapshot.display_name)
         row = CollectionTargetRow(
@@ -448,7 +555,7 @@ class StandaloneCollector:
             content_reader: ContentReader
             comments_reader: CommentsReader
             refreshing = _backfill_complete(row.backfill_status)
-            content_page_size = REFRESH_PAGE_SIZE if refreshing else FULL_PAGE_SIZE
+            content_page_size = REFRESH_PAGE_SIZE if refreshing else META_BACKFILL_PAGE_SIZE
             if row.platform is PlatformId.FACEBOOK:
                 profile_reader = FacebookProfileReader(transport)
                 daily_reader = FacebookDailyMetricsReader(transport)
@@ -471,19 +578,75 @@ class StandaloneCollector:
                     metric_store=self.metrics,
                 )
             today = date.today()
-            since = (
-                today - timedelta(days=1)
-                if _backfill_complete(row.backfill_status)
-                else today - timedelta(days=29)
+            daily_checkpoint_key = CheckpointKey(
+                platform=row.platform,
+                capability=CapabilityId.PROFILE,
+                account_id=(f"{account.account_id}.{DAILY_METRIC_CHECKPOINT_SUFFIX}"),
             )
-            with _phase(timings, "daily"):
-                daily = collect_daily_metrics(
-                    target=target,
-                    reader=daily_reader,
-                    metric_store=self.metrics,
-                    since=since,
-                    until=today,
+            daily_checkpoint = self.checkpoints.get(daily_checkpoint_key)
+            inferred_daily_observed_on = (
+                self.metrics.earliest_daily_gap(
+                    platform=row.platform,
+                    account_id=row.asset_id,
+                    metric_ids=_meta_daily_metric_ids(row.platform),
+                    start_on=today - timedelta(days=DAILY_METRIC_BACKFILL_DAYS),
+                    end_on=today - timedelta(days=1),
                 )
+                if daily_checkpoint is None
+                else None
+            )
+            since = _daily_metric_window_start(
+                today=today,
+                checkpoint=daily_checkpoint,
+                inferred_observed_on=inferred_daily_observed_on,
+            )
+            daily = None
+            try:
+                with _phase(timings, "daily"):
+                    daily = collect_daily_metrics(
+                        target=target,
+                        reader=daily_reader,
+                        metric_store=self.metrics,
+                        since=since,
+                        until=today,
+                    )
+                if daily.status is not CollectionStatus.SUCCESS:
+                    partial_errors.add("daily_partial")
+                next_daily_checkpoint = ProviderCheckpoint(
+                    key=daily_checkpoint_key,
+                    version=1 if daily_checkpoint is None else daily_checkpoint.version + 1,
+                    cursor=None,
+                    watermark=today.isoformat(),
+                    observed_through=datetime.combine(
+                        today,
+                        datetime.min.time(),
+                        tzinfo=UTC,
+                    ),
+                )
+                # A concurrent fast-lane/general timer pass may win this optimistic
+                # update. Daily writes are idempotent and the winner observed at
+                # least the same range, so losing the checkpoint race is harmless.
+                self.checkpoints.put(
+                    next_daily_checkpoint,
+                    expected_version=(
+                        daily_checkpoint.version if daily_checkpoint is not None else None
+                    ),
+                )
+            except Exception as exc:
+                # One malformed insight must not abandon audience, content and
+                # stories. Do not advance the checkpoint: the daily phase will
+                # be retried on the next run while the other capabilities make
+                # independent progress now.
+                logger.warning(
+                    "daily_metrics_read_failed platform=%s asset_id=%s reason=%s",
+                    row.platform.value,
+                    row.asset_id,
+                    _error_code(exc),
+                )
+                partial_errors.add("daily_unavailable")
+            # This marker is written only after the phase returned normally;
+            # `_phase` timings alone are also recorded for interrupted phases.
+            timings["core_complete"] = 0.0
             try:
                 with _phase(timings, "audience"):
                     audience = collect_audience(
@@ -498,6 +661,7 @@ class StandaloneCollector:
                 partial_errors.add("audience_unavailable")
             comment_count = 0
             commented_items = 0
+            content_media_available = _lazy_phase_budget(MEDIA_PHASE_BUDGET_SECONDS)
 
             def persist_related(item: ProviderRecord) -> int:
                 nonlocal comment_count, commented_items
@@ -523,7 +687,10 @@ class StandaloneCollector:
                     except Exception:
                         partial_errors.add("comments_unavailable")
                 try:
-                    return self._persist_media(target, item)
+                    return self._persist_media(target, item, can_fetch=content_media_available)
+                except MediaBudgetDeferred:
+                    partial_errors.add("media_deferred")
+                    raise
                 except Exception:
                     partial_errors.add("media_unavailable")
                     return 0
@@ -534,6 +701,7 @@ class StandaloneCollector:
             # as a total failure.
             content_count = 0
             content_media_count = 0
+            content_backfill_complete = refreshing
             try:
                 with _phase(timings, "content"):
                     content = collect_content(
@@ -543,12 +711,15 @@ class StandaloneCollector:
                         checkpoint_store=self.checkpoints,
                         record_sink=persist_related,
                         max_pages=(
-                            CONTENT_PAGES_PER_RUN if refreshing else FULL_CONTENT_PAGES
+                            CONTENT_PAGES_PER_RUN
+                            if refreshing
+                            else META_BACKFILL_CONTENT_PAGES_PER_RUN
                         ),
                         refresh_only=refreshing,
                     )
                 content_count = content.content_count
                 content_media_count = content.media_count
+                content_backfill_complete = refreshing or content.status is CollectionStatus.SUCCESS
                 if content.status is not CollectionStatus.SUCCESS:
                     partial_errors.add("content_partial")
             except Exception as exc:
@@ -568,10 +739,14 @@ class StandaloneCollector:
                     insights=True,
                     page_size=REFRESH_PAGE_SIZE,
                 )
+                story_media_available = _lazy_phase_budget(MEDIA_PHASE_BUDGET_SECONDS)
 
                 def persist_story_media(item: ProviderRecord) -> int:
                     try:
-                        return self._persist_media(target, item)
+                        return self._persist_media(target, item, can_fetch=story_media_available)
+                    except MediaBudgetDeferred:
+                        partial_errors.add("story_media_deferred")
+                        raise
                     except Exception:
                         partial_errors.add("story_media_unavailable")
                         return 0
@@ -605,13 +780,14 @@ class StandaloneCollector:
                 status="partial" if partial_errors else "success",
                 metric_count=(
                     profile.metric_count
-                    + daily.metric_count
+                    + (daily.metric_count if daily is not None else 0)
                     + (audience.metric_count if audience is not None else 0)
                 ),
                 content_count=content_count + story_content_count,
                 comment_count=comment_count,
                 media_count=content_media_count + story_media_count,
                 error_code=_partial_error_code(partial_errors),
+                backfill_complete=content_backfill_complete,
             )
         finally:
             # What the provider says is left of our quota, which is otherwise
@@ -639,15 +815,11 @@ class StandaloneCollector:
         granted_scopes: frozenset[str] | None = None,
     ) -> WorkerAccountResult:
         if provider_account is None:
-            context = self._tiktok_access_context(
-                row.credential_reference, row.external_id
-            )
+            context = self._tiktok_access_context(row.credential_reference, row.external_id)
             provider_account = ProviderAccount(
                 platform=PlatformId.TIKTOK,
                 account_id=row.external_id,
-                credential=ProviderCredential(
-                    access_token=context.access_token
-                ),
+                credential=ProviderCredential(access_token=context.access_token),
             )
             granted_scopes = context.scopes
         if granted_scopes is None:
@@ -665,11 +837,23 @@ class StandaloneCollector:
             reader=profile_reader,
             metric_store=self.metrics,
         )
-        until = date.today() - timedelta(days=1)
-        since = (
-            until
-            if _backfill_complete(row.backfill_status)
-            else until - timedelta(days=29)
+        today = date.today()
+        until = today - timedelta(days=1)
+        daily_checkpoint_key = CheckpointKey(
+            platform=PlatformId.TIKTOK,
+            capability=CapabilityId.PROFILE,
+            account_id=(f"{provider_account.account_id}.{TIKTOK_DAILY_METRIC_CHECKPOINT_SUFFIX}"),
+        )
+        daily_checkpoint = self.checkpoints.get(daily_checkpoint_key)
+        # A missing versioned checkpoint means either a newly linked account or
+        # a newly supported daily component. Prove all thirty completed days;
+        # looking only for gaps among metrics that already exist cannot detect
+        # a component that has never been persisted at all.
+        inferred_daily_observed_on = None
+        since = _daily_metric_window_start(
+            today=today,
+            checkpoint=daily_checkpoint,
+            inferred_observed_on=inferred_daily_observed_on,
         )
         daily = collect_daily_metrics(
             target=target,
@@ -677,6 +861,21 @@ class StandaloneCollector:
             metric_store=self.metrics,
             since=since,
             until=until,
+        )
+        next_daily_checkpoint = ProviderCheckpoint(
+            key=daily_checkpoint_key,
+            version=1 if daily_checkpoint is None else daily_checkpoint.version + 1,
+            cursor=None,
+            watermark=until.isoformat(),
+            observed_through=datetime.combine(
+                until,
+                datetime.min.time(),
+                tzinfo=UTC,
+            ),
+        )
+        self.checkpoints.put(
+            next_daily_checkpoint,
+            expected_version=(daily_checkpoint.version if daily_checkpoint is not None else None),
         )
         partial_errors: set[str] = set()
         try:
@@ -868,9 +1067,7 @@ class StandaloneCollector:
             raise PermissionError("provider_access_token_unavailable")
         return token.value
 
-    def _tiktok_access_context(
-        self, reference: str, business_id: str
-    ) -> TikTokAccessContext:
+    def _tiktok_access_context(self, reference: str, business_id: str) -> TikTokAccessContext:
         access_reference = CredentialRef(
             platform=PlatformId.TIKTOK,
             connection_id=reference,
@@ -950,7 +1147,13 @@ class StandaloneCollector:
             scopes=frozenset(info.scopes),
         )
 
-    def _persist_media(self, target: CollectionTarget, item: ProviderRecord) -> int:
+    def _persist_media(
+        self,
+        target: CollectionTarget,
+        item: ProviderRecord,
+        *,
+        can_fetch=lambda: True,
+    ) -> int:
         if self.media_files is None or self.media_fetcher is None:
             return 0
         return ContentMediaWriter(
@@ -958,6 +1161,7 @@ class StandaloneCollector:
             files=self.media_files,
             media_store=self.media_store,
             fetch=self.media_fetcher.fetch,
+            can_fetch=can_fetch,
         ).persist(item)
 
 
@@ -967,7 +1171,7 @@ class _MediaFetcher:
         with httpx.stream(
             "GET",
             url,
-            timeout=httpx.Timeout(30.0),
+            timeout=httpx.Timeout(MEDIA_FETCH_TIMEOUT_SECONDS),
             follow_redirects=True,
             headers={"User-Agent": "social-media-v2-media/1"},
         ) as response:

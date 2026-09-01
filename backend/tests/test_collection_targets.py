@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterator, Mapping
 from typing import Any, cast
 
@@ -84,6 +85,7 @@ def test_list_connected_accepts_legacy_active_and_canonical_connected_statuses()
 
     assert "la.status IN ('active', 'connected')" in engine.connection.statement
     assert "pc.status='connected'" in engine.connection.statement
+    assert "pc.brand_id=la.brand_id" in engine.connection.statement
     assert engine.connection.parameters == {"platforms": ["facebook"], "brand_id": 69}
     assert targets == (
         CollectionTargetRow(
@@ -98,3 +100,69 @@ def test_list_connected_accepts_legacy_active_and_canonical_connected_statuses()
             backfill_status="complete",
         ),
     )
+
+
+def test_new_account_fast_lane_keeps_incomplete_backfills_selected() -> None:
+    engine = _Engine([])
+    store = SocialCollectionTargetStore(
+        cast(Engine, engine),
+        WritePolicy(runtime_mode=RuntimeMode.STAGING, writes_enabled=False),
+    )
+
+    store.list_connected(
+        platforms=(PlatformId.INSTAGRAM,),
+        only_new=True,
+    )
+
+    assert "la.last_synced_at IS NULL" in engine.connection.statement
+    assert "lower(la.backfill_status) NOT IN ('complete', 'completed')" in (
+        engine.connection.statement
+    )
+
+
+def test_list_connected_skips_only_invalid_meta_target(caplog: Any) -> None:
+    engine = _Engine(
+        [
+            {
+                "link_id": 57,
+                "connection_id": 47,
+                "asset_id": 2819,
+                "brand_id": 286189,
+                "platform": "instagram",
+                "external_id": "17841471029369177",
+                "display_name": "CTG Elektrik",
+                "backfill_status": "error",
+                "payload_json": {"accounts": []},
+            },
+            {
+                "link_id": 13,
+                "connection_id": 12,
+                "asset_id": 2636,
+                "brand_id": 73,
+                "platform": "instagram",
+                "external_id": "17841401178603358",
+                "display_name": "Turk Eximbank",
+                "backfill_status": "complete",
+                "payload_json": {
+                    "accounts": [
+                        {
+                            "platform": "instagram",
+                            "external_id": "17841401178603358",
+                            "credential_reference": "vault:meta:12",
+                        }
+                    ]
+                },
+            },
+        ]
+    )
+    store = SocialCollectionTargetStore(
+        cast(Engine, engine),
+        WritePolicy(runtime_mode=RuntimeMode.STAGING, writes_enabled=False),
+    )
+
+    with caplog.at_level(logging.WARNING):
+        targets = store.list_connected(platforms=(PlatformId.INSTAGRAM,))
+
+    assert [target.link_id for target in targets] == [13]
+    assert "social_collection_target_skipped link_id=57" in caplog.text
+    assert "meta_connection_payload_invalid" in caplog.text

@@ -13,7 +13,6 @@ from sqlalchemy import Engine, text
 from app.core.write_policy import WritePolicy
 from app.domain.platforms import PlatformId
 
-
 LOGGER = logging.getLogger(__name__)
 
 
@@ -72,10 +71,15 @@ class SocialCollectionTargetStore:
             clauses.append("la.asset_id=:asset_id")
             parameters["asset_id"] = asset_id
         if only_new:
-            # An account linked moments ago has never been collected. Kept to a
-            # query of its own so the fast lane after a connection stays small
-            # and predictable, whatever the main queue is doing.
-            clauses.append("la.last_synced_at IS NULL")
+            # Keep a newly linked account in the fast lane until its incremental
+            # archive backfill is actually complete. The first successful page
+            # sets last_synced_at while deliberately leaving backfill_status at
+            # in_progress; filtering on the timestamp alone dropped the account
+            # after that first page and made completion depend on the full queue.
+            clauses.append(
+                "(la.last_synced_at IS NULL "
+                "OR lower(la.backfill_status) NOT IN ('complete', 'completed'))"
+            )
         with self.engine.connect() as connection:
             rows = connection.execute(
                 text(
@@ -232,7 +236,13 @@ class SocialCollectionTargetStore:
             )
             self._upsert_sync_state(connection, asset_id, synced_at=synced_at, error=None)
 
-    def mark_success(self, target: CollectionTargetRow, synced_at: datetime) -> None:
+    def mark_success(
+        self,
+        target: CollectionTargetRow,
+        synced_at: datetime,
+        *,
+        backfill_complete: bool = True,
+    ) -> None:
         self._write_policy.assert_allows_mutation("collection_mark_success")
         with self.engine.begin() as connection:
             self._upsert_sync_state(
@@ -241,7 +251,19 @@ class SocialCollectionTargetStore:
             connection.execute(
                 text(
                     """UPDATE linked_social_accounts
-                       SET health_status='healthy', backfill_status='complete',
+                       SET health_status='healthy',
+                           backfill_status=CASE
+                               WHEN :backfill_complete THEN 'complete'
+                               WHEN lower(backfill_status) IN ('complete', 'completed')
+                                   THEN backfill_status
+                               ELSE 'in_progress'
+                           END,
+                           nightly_enabled=CASE
+                               WHEN :backfill_complete
+                                 OR lower(backfill_status) IN ('complete', 'completed')
+                                   THEN true
+                               ELSE false
+                           END,
                            last_synced_at=:synced_at, updated_at=now()
                        WHERE id=:link_id AND asset_id=:asset_id"""
                 ),
@@ -249,6 +271,7 @@ class SocialCollectionTargetStore:
                     "link_id": target.link_id,
                     "asset_id": target.asset_id,
                     "synced_at": synced_at,
+                    "backfill_complete": backfill_complete,
                 },
             )
 

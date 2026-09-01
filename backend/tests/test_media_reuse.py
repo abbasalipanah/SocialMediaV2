@@ -12,10 +12,16 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from app.application.ports.persistence import MediaRecord
 from app.application.ports.platforms import ProviderAccount, ProviderCredential, ProviderRecord
 from app.application.services.collection.contracts import CollectionTarget
-from app.application.services.collection.media import ContentMediaWriter, FetchedMedia
+from app.application.services.collection.media import (
+    ContentMediaWriter,
+    FetchedMedia,
+    MediaBudgetDeferred,
+)
 from app.domain.platforms import PlatformId
 from app.infrastructure.persistence.media_files import AtomicMediaFiles
 
@@ -127,6 +133,22 @@ def test_an_unseen_item_is_fetched(tmp_path: Path) -> None:
     _writer(tmp_path, _Store(None), fetches).persist(_item())
 
     assert fetches == ["https://scontent.cdninstagram.com/a.jpg"]
+
+
+def test_media_budget_defers_the_page_without_starting_a_fetch(tmp_path: Path) -> None:
+    fetches: list[str] = []
+    writer = ContentMediaWriter(
+        target=_target(),
+        files=AtomicMediaFiles(tmp_path),
+        media_store=_Store(None),
+        fetch=lambda url: fetches.append(url),
+        can_fetch=lambda: False,
+    )
+
+    with pytest.raises(MediaBudgetDeferred, match="media_phase_budget_exhausted"):
+        writer.persist(_item())
+
+    assert fetches == []
 
 
 def test_an_imported_story_cover_counts_as_held(tmp_path: Path) -> None:

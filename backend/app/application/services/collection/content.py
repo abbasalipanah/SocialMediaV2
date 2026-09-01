@@ -69,11 +69,30 @@ def collect_content(
             observed_through=page.observed_at,
         )
         expected_version = checkpoint.version if checkpoint is not None else None
-        if not checkpoint_store.put(next_checkpoint, expected_version=expected_version):
-            raise RuntimeError("checkpoint_concurrent_update")
-        checkpoint = next_checkpoint
+        if checkpoint_store.put(next_checkpoint, expected_version=expected_version):
+            checkpoint = next_checkpoint
+        else:
+            # Another collector advanced this stream while this page was being
+            # processed. Content writes are idempotent, so adopt the durable
+            # winner instead of failing the account. A backfill continues from
+            # the winner's cursor; a newest-page refresh is already complete.
+            concurrent = checkpoint_store.get(key)
+            if concurrent is None:
+                return CollectionOutcome(
+                    status=CollectionStatus.PARTIAL,
+                    content_count=content_count,
+                    media_count=media_count,
+                    page_count=page_count + 1,
+                    next_cursor=page.next_cursor,
+                    error_code="checkpoint_retry_required",
+                )
+            checkpoint = concurrent
         page_count += 1
-        cursor = page.next_cursor
+        # A refresh keeps its *durable* checkpoint at the top of the feed, but
+        # it still has to follow this response's cursor within the current run.
+        # Setting the local cursor to None stopped every refresh after page one
+        # and silently dropped live Stories past the first page.
+        cursor = page.next_cursor if refresh_only else checkpoint.cursor
         if cursor is None:
             return CollectionOutcome(
                 status=CollectionStatus.SUCCESS,

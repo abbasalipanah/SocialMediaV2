@@ -26,6 +26,10 @@ class FetchedMedia:
             raise ValueError("fetched_media_invalid")
 
 
+class MediaBudgetDeferred(Exception):
+    """The media phase yielded so core collection can finish this account."""
+
+
 # V2 writes every cover under one kind; the V1 import distinguished a Story's
 # cover from a post's. Looking under only V2's name meant an imported Story
 # image was never recognised as held, so those were re-downloaded on every run
@@ -41,12 +45,14 @@ class ContentMediaWriter:
         files: AtomicMediaFiles,
         media_store: MediaStore,
         fetch: Callable[[str], FetchedMedia],
+        can_fetch: Callable[[], bool] = lambda: True,
         clock: Callable[[], datetime] = utc_now,
     ) -> None:
         self._target = target
         self._files = files
         self._media_store = media_store
         self._fetch = fetch
+        self._can_fetch = can_fetch
         self._clock = clock
 
     def _already_held(self, item: ProviderRecord) -> bool:
@@ -68,6 +74,11 @@ class ContentMediaWriter:
             return 0
         selected: tuple[str, FetchedMedia] | None = None
         for source_url in _media_candidates(item):
+            if not self._can_fetch():
+                # Do not advance the enclosing content checkpoint. The next
+                # timer pass replays this idempotent page, reuses files already
+                # stored, and continues with the media still missing.
+                raise MediaBudgetDeferred("media_phase_budget_exhausted")
             try:
                 selected = (source_url, self._fetch(source_url))
             except Exception:
@@ -129,4 +140,4 @@ def _suffix(mime_type: str) -> str:
     }.get(mime_type.lower(), "bin")
 
 
-__all__ = ["ContentMediaWriter", "FetchedMedia"]
+__all__ = ["ContentMediaWriter", "FetchedMedia", "MediaBudgetDeferred"]
