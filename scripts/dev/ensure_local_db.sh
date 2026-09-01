@@ -91,6 +91,10 @@ SOCIAL_YOUTUBE_ACCOUNT_ENABLED=false \
 SOCIAL_YOUTUBE_ACCOUNT_OAUTH_MODE=disabled \
 SOCIAL_YOUTUBE_COLLECTION_ENABLED=false \
 SOCIAL_YOUTUBE_ACTIVATION_GATE_ENABLED=false \
+SOCIAL_X_ACCOUNT_ENABLED=false \
+SOCIAL_X_ACCOUNT_OAUTH_MODE=disabled \
+SOCIAL_X_COLLECTION_ENABLED=false \
+SOCIAL_X_ACTIVATION_GATE_ENABLED=false \
 "$ROOT/backend/.venv/bin/python" "$ROOT/backend/scripts/apply_migrations.py"
 
 echo "Social Media V2 local database is ready on 127.0.0.1:${HOST_PORT}."

@@ -84,5 +84,18 @@ def test_canonical_scaffold_and_frontend_entrypoints_exist() -> None:
         assert path.exists(), f"Missing required bootstrap path: {path}"
 
 
+def test_local_migrations_disable_x_activation_during_schema_setup() -> None:
+    script = (ROOT / "scripts" / "dev" / "ensure_local_db.sh").read_text(
+        encoding="utf-8"
+    )
+    required_overrides = {
+        "SOCIAL_X_ACCOUNT_ENABLED=false",
+        "SOCIAL_X_ACCOUNT_OAUTH_MODE=disabled",
+        "SOCIAL_X_COLLECTION_ENABLED=false",
+        "SOCIAL_X_ACTIVATION_GATE_ENABLED=false",
+    }
+    assert required_overrides.issubset(set(script.split()))
+
+
 def test_generic_migration_guide_is_not_a_repository_artifact() -> None:
     assert not (ROOT / "docs" / "accumulate-alt-uygulama-teknik-entegrasyon-rehberi.md").exists()
