@@ -49,7 +49,7 @@ class YouTubeOAuthProvider:
         query = urlencode(
             {
                 "access_type": "offline",
-                "client_id": self._config.client_id,
+                "client_id": self._config.oauth_app_id,
                 "include_granted_scopes": "false",
                 "prompt": "consent",
                 "redirect_uri": self._config.redirect_uri,
@@ -65,8 +65,8 @@ class YouTubeOAuthProvider:
             raise YouTubeOAuthError("youtube_authorization_code_invalid")
         payload = self._transport.exchange(
             {
-                "client_id": self._config.client_id,
-                "client_secret": self._config.client_secret,
+                "client_id": self._config.oauth_app_id,
+                "client_secret": self._config.oauth_app_secret,
                 "code": authorization_code,
                 "grant_type": "authorization_code",
                 "redirect_uri": self._config.redirect_uri,
@@ -104,8 +104,8 @@ class YouTubeOAuthProvider:
             raise YouTubeOAuthError("youtube_refresh_token_invalid")
         payload = self._transport.refresh(
             {
-                "client_id": self._config.client_id,
-                "client_secret": self._config.client_secret,
+                "client_id": self._config.oauth_app_id,
+                "client_secret": self._config.oauth_app_secret,
                 "grant_type": "refresh_token",
                 "refresh_token": refresh_token,
             }

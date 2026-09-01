@@ -43,8 +43,8 @@ def _provider(
 ) -> tuple[YouTubeOAuthProvider, Sender]:
     config = replace(
         load_settings().youtube,
-        client_id="client.apps.googleusercontent.com",
-        client_secret="client-secret",
+        oauth_app_id="oauth-app.apps.googleusercontent.com",
+        oauth_app_secret="oauth-app-secret",
         account_enabled=True,
         oauth_mode="manual_intent_only",
     )
@@ -68,7 +68,7 @@ def test_youtube_authorization_requests_exact_offline_read_scopes() -> None:
 
     assert query == {
         "access_type": ["offline"],
-        "client_id": ["client.apps.googleusercontent.com"],
+        "client_id": ["oauth-app.apps.googleusercontent.com"],
         "include_granted_scopes": ["false"],
         "prompt": ["consent"],
         "redirect_uri": [provider.redirect_uri],
@@ -155,8 +155,8 @@ def test_youtube_refresh_and_revoke_keep_tokens_out_of_results() -> None:
     assert refreshed.refresh_token is None
     assert "new-access" not in repr(refreshed)
     assert sender.calls[0][2]["data"] == {
-        "client_id": "client.apps.googleusercontent.com",
-        "client_secret": "client-secret",
+        "client_id": "oauth-app.apps.googleusercontent.com",
+        "client_secret": "oauth-app-secret",
         "grant_type": "refresh_token",
         "refresh_token": "refresh-value",
     }

@@ -100,7 +100,7 @@ def create_youtube_activation_runtime(
 def _config_version(settings: AppSettings) -> str:
     payload = {
         "authorization_url": settings.youtube.authorization_url,
-        "client_id": settings.youtube.client_id,
+        "oauth_app_id": settings.youtube.oauth_app_id,
         "provider_profile": settings.youtube.provider_profile,
         "redirect_uri": settings.youtube.redirect_uri,
         "required_scopes": settings.youtube.required_scopes,

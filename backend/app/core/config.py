@@ -248,8 +248,8 @@ class MetaActivationRuntimeConfig:
 @dataclass(frozen=True)
 class YouTubeConfig:
     provider_profile: str
-    client_id: str
-    client_secret: str
+    oauth_app_id: str
+    oauth_app_secret: str
     account_enabled: bool
     oauth_mode: str
     collection_enabled: bool
@@ -585,7 +585,7 @@ def _validate_youtube(
         raise ConfigurationError("YouTube activation requires manual_intent_only mode")
     if not writes or not db.url:
         raise ConfigurationError("YouTube activation requires a writable database URL")
-    if not config.client_id or not config.client_secret:
+    if not config.oauth_app_id or not config.oauth_app_secret:
         raise ConfigurationError("YouTube activation requires Google OAuth credentials")
     if not vault_enabled:
         raise ConfigurationError("YouTube activation requires the credential vault")
@@ -726,8 +726,8 @@ def load_settings() -> AppSettings:
     )
     youtube = YouTubeConfig(
         provider_profile=_env("SOCIAL_YOUTUBE_PROVIDER_PROFILE", YOUTUBE_PROVIDER_PROFILE),
-        client_id=_env("SOCIAL_YOUTUBE_CLIENT_ID"),
-        client_secret=_env("SOCIAL_YOUTUBE_CLIENT_SECRET"),
+        oauth_app_id=_env("SOCIAL_YOUTUBE_OAUTH_APP_ID"),
+        oauth_app_secret=_env("SOCIAL_YOUTUBE_OAUTH_APP_SECRET"),
         account_enabled=_bool("SOCIAL_YOUTUBE_ACCOUNT_ENABLED"),
         oauth_mode=_env("SOCIAL_YOUTUBE_ACCOUNT_OAUTH_MODE", "disabled"),
         collection_enabled=_bool("SOCIAL_YOUTUBE_COLLECTION_ENABLED"),
