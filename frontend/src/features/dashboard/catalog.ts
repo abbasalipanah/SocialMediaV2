@@ -104,8 +104,8 @@ export function platformTabs(platform: Platform, audienceAvailable: boolean): Da
     x: [
       { id: "cover", label: "Cover" },
       { id: "profile", label: "Profile" },
-      { id: "content", label: "Content" },
-      { id: "audience", label: "Audience" },
+      { id: "content", label: "Posts" },
+      { id: "audience", label: "Audience Signals" },
     ],
     linkedin: [
       { id: "cover", label: "Cover" },

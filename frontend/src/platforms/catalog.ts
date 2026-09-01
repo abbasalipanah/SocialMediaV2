@@ -44,7 +44,7 @@ export const PLATFORM_CATALOG = [
     id: "x",
     label: "X",
     route: "x",
-    description: "Organic profile, post and audience performance in one view.",
+    description: "Organic profile and owned-post performance in one view.",
     connectionProvider: "x",
   },
   {
