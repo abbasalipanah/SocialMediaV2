@@ -641,6 +641,7 @@ describe("Phase 7 application shell", () => {
     expect(within(primary).getByRole("link", { name: "Integrations" })).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Reauthorize Meta" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Authorize TikTok" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Authorize YouTube" })).toBeEnabled();
     expect(screen.queryByText("Connected accounts", { exact: false })).not.toBeInTheDocument();
     expect(screen.queryByText("Facebook Main")).not.toBeInTheDocument();
     expect(screen.queryByText("page-17")).not.toBeInTheDocument();

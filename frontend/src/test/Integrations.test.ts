@@ -34,7 +34,7 @@ describe("buildAuthorizationProviders", () => {
   it("derives provider-level OAuth status without requiring account rows", () => {
     const providers = buildAuthorizationProviders(connections);
 
-    expect(providers).toHaveLength(2);
+    expect(providers).toHaveLength(3);
     expect(providers.find((item) => item.provider === "meta")).toMatchObject({
       status: "authorized",
       connection: { connection_id: 2 },
@@ -42,6 +42,10 @@ describe("buildAuthorizationProviders", () => {
     expect(providers.find((item) => item.provider === "tiktok")).toMatchObject({
       status: "pending",
       connection: { connection_id: 3 },
+    });
+    expect(providers.find((item) => item.provider === "youtube")).toMatchObject({
+      status: "not_authorized",
+      connection: null,
     });
   });
 });
