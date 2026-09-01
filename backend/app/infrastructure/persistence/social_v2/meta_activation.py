@@ -13,6 +13,7 @@ from app.application.ports import (
     ActivationContext,
     ActivationIntent,
     MetaActivationError,
+    MetaCatalogAccount,
     MetaConnectionResult,
     MetaCredentialBinding,
     MetaDiscovery,
@@ -22,6 +23,37 @@ from app.application.ports import (
 )
 from app.core.write_policy import WritePolicy
 from app.domain.platforms import PlatformId
+
+_CATALOG_CREDENTIALS_SQL = """
+    WITH target_brand AS (
+        SELECT tenant_id FROM brands WHERE id=:brand_id
+    )
+    SELECT DISTINCT ON (ma.platform, ma.external_id)
+           ma.id AS meta_account_id, ma.platform, ma.external_id,
+           COALESCE(NULLIF(ma.display_name, ''), ma.external_id) AS display_name,
+           account_row->>'credential_reference' AS credential_reference
+    FROM target_brand AS target
+    JOIN platform_connections AS pc ON pc.tenant_id=target.tenant_id
+    JOIN social_projection_state AS ps
+      ON ps.projection_key='v2:meta:connection:' || pc.id::text
+    CROSS JOIN LATERAL jsonb_array_elements(
+        CASE
+            WHEN jsonb_typeof(ps.payload_json->'accounts')='array'
+                THEN ps.payload_json->'accounts'
+            ELSE '[]'::jsonb
+        END
+    ) AS account_row
+    JOIN meta_accounts AS ma
+      ON ma.platform=account_row->>'platform'
+     AND ma.external_id=account_row->>'external_id'
+    WHERE pc.platform='facebook'
+      AND pc.status IN ('pending_verification', 'connected', 'disconnected')
+      AND ma.platform IN ('facebook', 'instagram')
+      AND ma.status='active'
+      AND length(account_row->>'credential_reference') > 0
+    ORDER BY ma.platform, ma.external_id,
+             pc.projected_at DESC NULLS LAST, pc.id DESC
+"""
 
 
 class ProjectionMetaConnectionStore:
@@ -250,6 +282,140 @@ class ProjectionMetaConnectionStore:
                 )
                 for row in rows
             )
+
+    def list_catalog_accounts(self, *, brand_id: int) -> tuple[MetaCatalogAccount, ...]:
+        """List tenant-local Meta App accounts that still have a usable credential."""
+
+        if brand_id < 1:
+            raise MetaActivationError("meta_activation_brand_invalid")
+        with self.engine.connect() as connection:
+            rows = connection.execute(
+                text(_CATALOG_CREDENTIALS_SQL),
+                {"brand_id": brand_id},
+            ).mappings()
+            return tuple(
+                MetaCatalogAccount(
+                    platform=PlatformId(str(row["platform"])),
+                    external_id=str(row["external_id"]),
+                    display_name=str(row["display_name"]),
+                )
+                for row in rows
+            )
+
+    def create_catalog_connection(
+        self,
+        *,
+        brand_id: int,
+        selections: tuple[MetaLinkSelection, ...],
+    ) -> MetaConnectionResult:
+        """Materialize an admin-only Brand connection from Meta App credentials."""
+
+        self._write_policy.assert_allows_mutation("meta_catalog_connection_create")
+        if brand_id < 1 or len(
+            {(item.platform, item.external_id) for item in selections}
+        ) != len(selections):
+            raise MetaActivationError("meta_catalog_selection_invalid")
+        with self.engine.begin() as connection:
+            brand = connection.execute(
+                text("SELECT tenant_id FROM brands WHERE id=:brand_id FOR UPDATE"),
+                {"brand_id": brand_id},
+            ).mappings().one_or_none()
+            if brand is None:
+                raise MetaActivationError("meta_activation_brand_unavailable")
+            catalog_rows = tuple(
+                connection.execute(
+                    text(_CATALOG_CREDENTIALS_SQL),
+                    {"brand_id": brand_id},
+                ).mappings()
+            )
+            catalog = {
+                (PlatformId(str(row["platform"])), str(row["external_id"])): row
+                for row in catalog_rows
+            }
+            selected_rows = []
+            for selection in selections:
+                row = catalog.get((selection.platform, selection.external_id))
+                if row is None:
+                    raise MetaActivationError("meta_catalog_selection_invalid")
+                selected_rows.append(row)
+            connection_id = int(
+                connection.execute(
+                    text(
+                        """INSERT INTO platform_connections
+                           (tenant_id, brand_id, platform, status, expires_at,
+                            projected_at, projection_source)
+                           VALUES (:tenant_id, :brand_id, 'facebook',
+                                   'pending_verification', NULL, now(),
+                                   'meta_app_catalog')
+                           RETURNING id"""
+                    ),
+                    {"tenant_id": int(brand["tenant_id"]), "brand_id": brand_id},
+                ).scalar_one()
+            )
+            credential_rows: list[dict[str, str]] = []
+            for row in selected_rows:
+                connection.execute(
+                    text(
+                        """INSERT INTO brand_social_account_discoveries
+                           (brand_id, connection_id, meta_account_id, platform,
+                            external_id, display_name, status, last_discovered_at,
+                            created_at, updated_at)
+                           VALUES (:brand_id, :connection_id, :meta_account_id, :platform,
+                                   :external_id, :display_name, 'available', now(), now(), now())
+                           ON CONFLICT (brand_id, platform, external_id) DO UPDATE
+                           SET connection_id=EXCLUDED.connection_id,
+                               meta_account_id=EXCLUDED.meta_account_id,
+                               display_name=EXCLUDED.display_name,
+                               status='available', last_discovered_at=now(), updated_at=now()"""
+                    ),
+                    {
+                        "brand_id": brand_id,
+                        "connection_id": connection_id,
+                        "meta_account_id": int(row["meta_account_id"]),
+                        "platform": str(row["platform"]),
+                        "external_id": str(row["external_id"]),
+                        "display_name": str(row["display_name"]),
+                    },
+                )
+                credential_rows.append(
+                    {
+                        "platform": str(row["platform"]),
+                        "external_id": str(row["external_id"]),
+                        "credential_reference": str(row["credential_reference"]),
+                    }
+                )
+            connection.execute(
+                text(
+                    """INSERT INTO social_projection_state
+                       (projection_key, brand_id, status, projection_source,
+                        projected_at, payload_json, updated_at)
+                       VALUES (:key, :brand_id, 'pending', 'meta_app_catalog',
+                               now(), CAST(:payload AS jsonb), now())"""
+                ),
+                {
+                    "key": self._connection_key(connection_id),
+                    "brand_id": brand_id,
+                    "payload": _json(
+                        {
+                            "format_version": 1,
+                            "brand_id": brand_id,
+                            "accounts": credential_rows,
+                            "state": "pending_verification",
+                        }
+                    ),
+                },
+            )
+        return MetaConnectionResult(
+            connection_id=connection_id,
+            brand_id=brand_id,
+            state="pending_verification",
+            facebook_count=sum(
+                item.platform is PlatformId.FACEBOOK for item in selections
+            ),
+            instagram_count=sum(
+                item.platform is PlatformId.INSTAGRAM for item in selections
+            ),
+        )
 
     def latest_refresh_connection(self, *, brand_id: int) -> MetaRefreshConnection | None:
         if brand_id < 1:

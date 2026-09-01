@@ -63,6 +63,13 @@ class MetaDiscovery:
 
 
 @dataclass(frozen=True)
+class MetaCatalogAccount:
+    platform: PlatformId
+    external_id: str
+    display_name: str
+
+
+@dataclass(frozen=True)
 class MetaCredentialBinding:
     platform: PlatformId
     external_id: str
@@ -145,6 +152,15 @@ class MetaConnectionStore(Protocol):
 
     def list_discoveries(self, *, brand_id: int) -> tuple[MetaDiscovery, ...]: ...
 
+    def list_catalog_accounts(self, *, brand_id: int) -> tuple[MetaCatalogAccount, ...]: ...
+
+    def create_catalog_connection(
+        self,
+        *,
+        brand_id: int,
+        selections: tuple[MetaLinkSelection, ...],
+    ) -> MetaConnectionResult: ...
+
     def latest_refresh_connection(self, *, brand_id: int) -> MetaRefreshConnection | None: ...
 
     def refresh_discoveries(
@@ -167,6 +183,7 @@ class MetaConnectionStore(Protocol):
 __all__ = [
     "MetaActivationError",
     "MetaActivationProvider",
+    "MetaCatalogAccount",
     "MetaConnectionResult",
     "MetaConnectionStore",
     "MetaCredentialBinding",

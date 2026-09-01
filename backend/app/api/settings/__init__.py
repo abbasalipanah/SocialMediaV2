@@ -16,6 +16,7 @@ from app.api.contracts import (
     BrandLinkItem,
     BrandLinksResponse,
     ConnectionsResponse,
+    MetaCatalogAccountItem,
     MetaDiscoveryItem,
     MetaLinkedAccountItem,
     MetaLinkResponse,
@@ -76,6 +77,10 @@ class MetaAccountSelectionPayload(BaseModel):
 
 class MetaLinkPayload(BaseModel):
     connection_id: int = Field(gt=0)
+    accounts: list[MetaAccountSelectionPayload] = Field(max_length=200)
+
+
+class MetaCatalogLinkPayload(BaseModel):
     accounts: list[MetaAccountSelectionPayload] = Field(max_length=200)
 
 
@@ -494,22 +499,31 @@ def create_settings_router(
             requested_brand_id=brand_id,
         )
         assert reporting_store is not None
-        accounts = tuple(
+        settings_access = session_can_access_settings(scope.session)
+        all_accounts = tuple(
             account
             for account in reporting_store.list_accounts(brand_ids=(brand_id,))
             if account.platform in {PlatformId.FACEBOOK, PlatformId.INSTAGRAM}
         )
+        accounts = all_accounts if settings_access else ()
         connections = tuple(
             row
             for row in reporting_store.list_connections(brand_ids=(brand_id,))
             if row.platform is PlatformId.FACEBOOK
         )
         discoveries = (
-            meta_activation.list_discoveries(context) if meta_activation is not None else ()
+            meta_activation.list_discoveries(context)
+            if settings_access and meta_activation is not None
+            else ()
+        )
+        catalog_accounts = (
+            meta_activation.list_catalog_accounts(context)
+            if settings_access and meta_activation is not None
+            else ()
         )
         selected = connections[-1] if connections else None
         connection_state = (
-            selected.state if selected else ("connected" if accounts else "disconnected")
+            selected.state if selected else ("connected" if all_accounts else "disconnected")
         )
         if any(item.status == "discovered" for item in discoveries):
             connection_state = "pending_verification"
@@ -547,6 +561,14 @@ def create_settings_router(
                     status=item.status,
                 )
                 for item in discoveries
+            ),
+            catalog_accounts=tuple(
+                MetaCatalogAccountItem(
+                    platform=item.platform,
+                    external_id=item.external_id,
+                    display_name=item.display_name,
+                )
+                for item in catalog_accounts
             ),
             oauth_start_available=start_available,
             reason=reason,
@@ -594,10 +616,12 @@ def create_settings_router(
         _same_origin(request)
         if meta_activation is None:
             raise HTTPException(503, "meta_self_service_unavailable")
-        _, context = _meta_context(
+        scope, context = _meta_context(
             raw_session=session,
             requested_brand_id=brand_id,
         )
+        if not session_can_access_settings(scope.session):
+            raise HTTPException(403, "settings_capability_required")
         try:
             result = meta_activation.refresh_accounts(context)
         except MetaActivationError as exc:
@@ -623,14 +647,55 @@ def create_settings_router(
         _same_origin(request)
         if meta_activation is None:
             raise HTTPException(503, "meta_self_service_unavailable")
-        _, context = _meta_context(
+        scope, context = _meta_context(
             raw_session=session,
             requested_brand_id=brand_id,
         )
+        if not session_can_access_settings(scope.session):
+            raise HTTPException(403, "settings_capability_required")
         try:
             result = meta_activation.link_accounts(
                 context=context,
                 connection_id=payload.connection_id,
+                selections=tuple(
+                    MetaLinkSelection(
+                        platform=item.platform,
+                        external_id=item.external_id,
+                    )
+                    for item in payload.accounts
+                ),
+            )
+        except MetaActivationError as exc:
+            _raise_meta_activation_error(exc)
+        return MetaLinkResponse(
+            connection_id=result.connection_id,
+            linked_count=result.linked_count,
+            connection_state=result.state,
+        )
+
+    @router.post(
+        "/api/settings/meta/accounts/link",
+        response_model=MetaLinkResponse,
+    )
+    @mark_boundary(Boundary.COMMAND)
+    async def meta_link_catalog_accounts(
+        payload: MetaCatalogLinkPayload,
+        request: Request,
+        brand_id: str = Query(min_length=1),
+        session: str | None = Cookie(default=None, alias=COOKIE_NAME),
+    ) -> MetaLinkResponse:
+        _same_origin(request)
+        if meta_activation is None:
+            raise HTTPException(503, "meta_self_service_unavailable")
+        scope, context = _meta_context(
+            raw_session=session,
+            requested_brand_id=brand_id,
+        )
+        if not session_can_access_settings(scope.session):
+            raise HTTPException(403, "settings_capability_required")
+        try:
+            result = meta_activation.link_catalog_accounts(
+                context=context,
                 selections=tuple(
                     MetaLinkSelection(
                         platform=item.platform,
@@ -701,8 +766,12 @@ def create_settings_router(
         return _meta_callback_page(
             brand_id=scope.workspace.scope.requested_brand_id,
             connection_id=result.connection_id,
-            facebook_count=result.facebook_count,
-            instagram_count=result.instagram_count,
+            facebook_count=(
+                result.facebook_count if session_can_access_settings(scope.session) else 0
+            ),
+            instagram_count=(
+                result.instagram_count if session_can_access_settings(scope.session) else 0
+            ),
         )
 
     @router.get("/api/settings/tiktok/connection", response_model=TikTokConnectionResponse)
@@ -1038,7 +1107,11 @@ def _raise_meta_activation_error(exc: MetaActivationError) -> None:
         raise HTTPException(503, reason) from exc
     if reason == "meta_self_service_authority_denied":
         raise HTTPException(403, reason) from exc
-    if reason in {"meta_callback_rejected", "meta_link_selection_invalid"}:
+    if reason in {
+        "meta_callback_rejected",
+        "meta_link_selection_invalid",
+        "meta_catalog_selection_invalid",
+    }:
         raise HTTPException(400, reason) from exc
     if reason in {
         "meta_scope_denied",
@@ -1069,7 +1142,11 @@ def _meta_error_code(exc: MetaActivationError) -> str:
         return reason
     if reason == "meta_refresh_failed":
         return "meta_refresh_failed"
-    if reason in {"meta_link_selection_invalid", "meta_discovery_selection_invalid"}:
+    if reason in {
+        "meta_link_selection_invalid",
+        "meta_discovery_selection_invalid",
+        "meta_catalog_selection_invalid",
+    }:
         return "meta_link_selection_invalid"
     return "meta_connection_failed"
 
@@ -1101,12 +1178,11 @@ def _meta_callback_page(
         f"&error={error_code}" if error_code else ""
     )
     fallback_json = json.dumps(fallback_path)
-    title = "Meta accounts discovered" if not error_code else "Meta connection failed"
+    title = "Meta authorization complete" if not error_code else "Meta connection failed"
     badge_background = "#ecfdf5" if not error_code else "#fff1f2"
     badge_color = "#047857" if not error_code else "#be123c"
     message = (
-        "Facebook Pages and Instagram Business accounts were discovered. "
-        "Return to Integrations to choose the accounts for this Brand."
+        "Meta authorization completed. Return to the application to continue."
         if not error_code
         else "The Meta authorization could not be completed. Return to Integrations and try again."
     )

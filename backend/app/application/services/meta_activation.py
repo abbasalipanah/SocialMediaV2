@@ -16,6 +16,7 @@ from app.application.ports import (
     ActivationStatePort,
     MetaActivationError,
     MetaActivationProvider,
+    MetaCatalogAccount,
     MetaConnectionResult,
     MetaConnectionStore,
     MetaCredentialBinding,
@@ -215,6 +216,12 @@ class MetaActivationCoordinator:
         self._assert_authorized(context)
         return self._connection_store.list_discoveries(brand_id=context.brand_id)
 
+    def list_catalog_accounts(
+        self, context: ActivationContext
+    ) -> tuple[MetaCatalogAccount, ...]:
+        self._assert_authorized(context)
+        return self._connection_store.list_catalog_accounts(brand_id=context.brand_id)
+
     def refresh_accounts(self, context: ActivationContext) -> MetaConnectionResult:
         """Refresh the saved Meta user's Pages without starting OAuth again."""
 
@@ -291,6 +298,40 @@ class MetaActivationCoordinator:
             result = self._connection_store.link_accounts(
                 brand_id=context.brand_id,
                 connection_id=connection_id,
+                selections=selections,
+            )
+        except MetaActivationError:
+            raise
+        except Exception as exc:
+            raise MetaActivationError("meta_link_failed") from exc
+        if result.brand_id != context.brand_id or result.state not in {
+            "connected",
+            "disconnected",
+        }:
+            raise MetaActivationError("meta_link_result_invalid")
+        return result
+
+    def link_catalog_accounts(
+        self,
+        *,
+        context: ActivationContext,
+        selections: tuple[MetaLinkSelection, ...],
+    ) -> MetaLinkResult:
+        try:
+            self._write_policy.assert_allows_mutation("meta_catalog_link")
+        except PermissionError as exc:
+            raise MetaActivationError("meta_activation_disabled") from exc
+        self._assert_authorized(context)
+        if len({(item.platform, item.external_id) for item in selections}) != len(selections):
+            raise MetaActivationError("meta_catalog_selection_invalid")
+        try:
+            prepared = self._connection_store.create_catalog_connection(
+                brand_id=context.brand_id,
+                selections=selections,
+            )
+            result = self._connection_store.link_accounts(
+                brand_id=context.brand_id,
+                connection_id=prepared.connection_id,
                 selections=selections,
             )
         except MetaActivationError:

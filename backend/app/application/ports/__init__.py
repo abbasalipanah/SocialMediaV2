@@ -20,6 +20,7 @@ from .comment_sentiment import (
 from .meta_activation import (
     MetaActivationError,
     MetaActivationProvider,
+    MetaCatalogAccount,
     MetaConnectionResult,
     MetaConnectionStore,
     MetaCredentialBinding,
@@ -79,6 +80,7 @@ __all__ = [
     "ActivationStatePort",
     "MetaActivationError",
     "MetaActivationProvider",
+    "MetaCatalogAccount",
     "MetaConnectionResult",
     "MetaConnectionStore",
     "MetaCredentialBinding",

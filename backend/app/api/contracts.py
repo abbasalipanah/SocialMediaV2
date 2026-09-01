@@ -185,6 +185,13 @@ class MetaLinkedAccountItem:
 
 
 @dataclass(frozen=True)
+class MetaCatalogAccountItem:
+    platform: PlatformId
+    external_id: str
+    display_name: str
+
+
+@dataclass(frozen=True)
 class MetaSelfServiceReadinessResponse:
     brand_id: str
     can_manage: bool
@@ -193,6 +200,7 @@ class MetaSelfServiceReadinessResponse:
     instagram_linked_count: int
     linked_accounts: tuple[MetaLinkedAccountItem, ...]
     discoveries: tuple[MetaDiscoveryItem, ...]
+    catalog_accounts: tuple[MetaCatalogAccountItem, ...]
     oauth_start_available: bool
     reason: str
     runtime_mode: RuntimeMode
@@ -318,6 +326,7 @@ __all__ = [
     "ConnectionsResponse",
     "InsightsResponse",
     "MetaDiscoveryItem",
+    "MetaCatalogAccountItem",
     "MetaLinkedAccountItem",
     "MetaLinkResponse",
     "MetaRefreshResponse",

@@ -8,6 +8,7 @@ from httpx import ASGITransport, AsyncClient
 from app.api.auth import COOKIE_NAME
 from app.application.ports import (
     ActivationStart,
+    MetaCatalogAccount,
     MetaConnectionResult,
     MetaDiscovery,
     MetaLinkResult,
@@ -22,6 +23,7 @@ class FakeMetaActivation:
     def __init__(self) -> None:
         self.calls: list[str] = []
         self.link_selections: list[tuple[PlatformId, str]] = []
+        self.catalog_link_selections: list[tuple[PlatformId, str]] = []
 
     def ready_for_start(self, context) -> bool:
         assert context.brand_id == 101
@@ -62,6 +64,14 @@ class FakeMetaActivation:
             ),
         )
 
+    def list_catalog_accounts(self, context) -> tuple[MetaCatalogAccount, ...]:
+        assert context.brand_id == 101
+        self.calls.append("catalog")
+        return (
+            MetaCatalogAccount(PlatformId.FACEBOOK, "10001", "Coastal Page"),
+            MetaCatalogAccount(PlatformId.INSTAGRAM, "20002", "coastal.hotel"),
+        )
+
     def refresh_accounts(self, context) -> MetaConnectionResult:
         assert context.brand_id == 101
         self.calls.append("refresh")
@@ -82,6 +92,19 @@ class FakeMetaActivation:
         self.calls.append("link")
         return MetaLinkResult(
             connection_id=91,
+            brand_id=101,
+            linked_count=len(selections),
+            state="connected" if selections else "disconnected",
+        )
+
+    def link_catalog_accounts(self, *, context, selections) -> MetaLinkResult:
+        assert context.brand_id == 101
+        self.catalog_link_selections = [
+            (item.platform, item.external_id) for item in selections
+        ]
+        self.calls.append("catalog_link")
+        return MetaLinkResult(
+            connection_id=92,
             brand_id=101,
             linked_count=len(selections),
             state="connected" if selections else "disconnected",
@@ -112,6 +135,19 @@ def _session(authority: MemoryAuthority) -> dict[str, object]:
     return session
 
 
+def _settings_session(authority: MemoryAuthority) -> dict[str, object]:
+    session = _session(authority)
+    session["role"] = "agency_admin"
+    session["app_role"] = None
+    session["access_mode"] = "write"
+    session["settings_visible"] = True
+    for brand in session["brand_scope"]["brands"]:
+        if brand["brand_id"] == session["brand_id"]:
+            brand["role"] = "agency_admin"
+            brand["access_mode"] = "write"
+    return session
+
+
 def _reporting(tmp_path) -> MemoryReporting:
     media_path = tmp_path / "media.jpg"
     media_path.write_bytes(b"meta-self-service-test")
@@ -119,7 +155,7 @@ def _reporting(tmp_path) -> MemoryReporting:
 
 
 @pytest.mark.asyncio
-async def test_meta_readiness_is_exact_brand_and_not_settings_bound(tmp_path) -> None:
+async def test_meta_readiness_is_exact_brand_and_hides_accounts_from_viewer(tmp_path) -> None:
     authority = MemoryAuthority()
     _session(authority)
     activation = FakeMetaActivation()
@@ -150,29 +186,19 @@ async def test_meta_readiness_is_exact_brand_and_not_settings_bound(tmp_path) ->
     payload = readiness.json()
     assert payload["can_manage"] is True
     assert payload["oauth_start_available"] is True
-    assert payload["connection_state"] == "pending_verification"
-    assert payload["facebook_linked_count"] == 1
-    assert payload["instagram_linked_count"] == 1
-    assert payload["linked_accounts"] == [
-        {
-            "platform": "facebook",
-            "external_id": "fb-a",
-            "display_name": "Facebook A",
-        },
-        {
-            "platform": "instagram",
-            "external_id": "ig-a",
-            "display_name": "Instagram A",
-        },
-    ]
-    assert len(payload["discoveries"]) == 2
+    assert payload["connection_state"] == "connected"
+    assert payload["facebook_linked_count"] == 0
+    assert payload["instagram_linked_count"] == 0
+    assert payload["linked_accounts"] == []
+    assert payload["discoveries"] == []
+    assert payload["catalog_accounts"] == []
     assert capabilities.json()["permissions"]["settings_visible"] is False
     assert capabilities.json()["permissions"]["meta_connection_manage"] is True
     assert wrong_brand.status_code == 403
 
 
 @pytest.mark.asyncio
-async def test_meta_start_callback_and_explicit_account_link(tmp_path) -> None:
+async def test_meta_viewer_can_authorize_but_account_management_requires_settings(tmp_path) -> None:
     authority = MemoryAuthority()
     _session(authority)
     activation = FakeMetaActivation()
@@ -196,6 +222,35 @@ async def test_meta_start_callback_and_explicit_account_link(tmp_path) -> None:
             "/api/social/meta/oauth/callback",
             params={"code": "authorization-value", "state": "bound"},
         )
+        viewer_refreshed = await browser.post(
+            "/api/integrations/meta/accounts/refresh",
+            params={"brand_id": "101"},
+            headers={"Origin": "http://test"},
+        )
+        viewer_linked = await browser.post(
+            "/api/integrations/meta/accounts/link",
+            params={"brand_id": "101"},
+            headers={"Origin": "http://test"},
+            json={
+                "connection_id": 91,
+                "accounts": [
+                    {"platform": "facebook", "external_id": "10001"},
+                    {"platform": "instagram", "external_id": "20002"},
+                ],
+            },
+        )
+        viewer_catalog_linked = await browser.post(
+            "/api/settings/meta/accounts/link",
+            params={"brand_id": "101"},
+            headers={"Origin": "http://test"},
+            json={"accounts": [{"platform": "facebook", "external_id": "10001"}]},
+        )
+
+        _settings_session(authority)
+        settings_readiness = await browser.get(
+            "/api/integrations/meta/self-service/readiness",
+            params={"brand_id": "101"},
+        )
         refreshed = await browser.post(
             "/api/integrations/meta/accounts/refresh",
             params={"brand_id": "101"},
@@ -213,12 +268,30 @@ async def test_meta_start_callback_and_explicit_account_link(tmp_path) -> None:
                 ],
             },
         )
+        catalog_linked = await browser.post(
+            "/api/settings/meta/accounts/link",
+            params={"brand_id": "101"},
+            headers={"Origin": "http://test"},
+            json={"accounts": [{"platform": "facebook", "external_id": "10001"}]},
+        )
 
     assert started.status_code == 200
     assert started.json()["authorization_url"].startswith("https://www.facebook.com/")
     assert callback.status_code == 200
     assert '"type":"social-media:meta-oauth"' in callback.text
-    assert '"facebookCount":1' in callback.text
+    assert '"facebookCount":0' in callback.text
+    assert '"instagramCount":0' in callback.text
+    assert viewer_refreshed.status_code == 403
+    assert viewer_refreshed.json() == {"detail": "settings_capability_required"}
+    assert viewer_linked.status_code == 403
+    assert viewer_linked.json() == {"detail": "settings_capability_required"}
+    assert viewer_catalog_linked.status_code == 403
+    assert viewer_catalog_linked.json() == {"detail": "settings_capability_required"}
+    assert settings_readiness.status_code == 200
+    assert settings_readiness.json()["catalog_accounts"] == [
+        {"platform": "facebook", "external_id": "10001", "display_name": "Coastal Page"},
+        {"platform": "instagram", "external_id": "20002", "display_name": "coastal.hotel"},
+    ]
     assert refreshed.status_code == 200
     assert refreshed.json() == {
         "connection_id": 91,
@@ -231,17 +304,26 @@ async def test_meta_start_callback_and_explicit_account_link(tmp_path) -> None:
         "linked_count": 2,
         "connection_state": "connected",
     }
+    assert catalog_linked.json() == {
+        "connection_id": 92,
+        "linked_count": 1,
+        "connection_state": "connected",
+    }
     assert activation.link_selections == [
         (PlatformId.FACEBOOK, "10001"),
         (PlatformId.INSTAGRAM, "20002"),
     ]
-    assert activation.calls == ["start", "complete", "refresh", "link"]
+    assert activation.catalog_link_selections == [(PlatformId.FACEBOOK, "10001")]
+    assert activation.calls == [
+        "start", "complete", "discoveries", "catalog", "ready", "refresh", "link",
+        "catalog_link",
+    ]
 
 
 @pytest.mark.asyncio
 async def test_meta_link_accepts_an_empty_selection_to_unlink_all(tmp_path) -> None:
     authority = MemoryAuthority()
-    _session(authority)
+    _settings_session(authority)
     activation = FakeMetaActivation()
     app = create_app(
         authority,
