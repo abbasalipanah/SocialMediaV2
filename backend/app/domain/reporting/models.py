@@ -127,6 +127,24 @@ class DashboardContentSummary:
 
 
 @dataclass(frozen=True)
+class DashboardComparison:
+    value: float | None
+    previous_value: float | None
+    delta_pct: float | None
+
+
+@dataclass(frozen=True)
+class DashboardContentMetrics:
+    views: DashboardComparison
+    reach: DashboardComparison
+    likes: DashboardComparison
+    comments: DashboardComparison
+    shares: DashboardComparison
+    interactions: DashboardComparison
+    engagement_rate: DashboardComparison
+
+
+@dataclass(frozen=True)
 class DashboardSourceValues:
     organic: float | None
     paid: float | None
@@ -286,6 +304,7 @@ class PlatformDashboard:
     community: CommunitySummary
     top_hashtags: tuple[DashboardHashtag, ...]
     content_summary: DashboardContentSummary
+    content_metrics: DashboardContentMetrics
     source_breakdown: DashboardSourceBreakdown | None
     metric_methodology: DashboardMetricMethodology
     audience_capabilities: DashboardAudienceCapabilities
@@ -307,7 +326,9 @@ __all__ = [
     "DashboardAudienceCapabilities",
     "DashboardBreakdown",
     "DashboardBreakdownItem",
+    "DashboardComparison",
     "DashboardContent",
+    "DashboardContentMetrics",
     "DashboardContentSummary",
     "DashboardHashtag",
     "DashboardMeta",

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -28,7 +29,9 @@ from app.domain.reporting import (
     DashboardAudienceCapabilities,
     DashboardBreakdown,
     DashboardBreakdownItem,
+    DashboardComparison,
     DashboardContent,
+    DashboardContentMetrics,
     DashboardContentSummary,
     DashboardHashtag,
     DashboardMetric,
@@ -515,6 +518,79 @@ def content_cards(rows: tuple[ReportingContent, ...]) -> tuple[DashboardContent,
     )
 
 
+def _comparison(value: float | None, previous: float | None) -> DashboardComparison:
+    delta = None
+    if value is not None and previous is not None and previous != 0:
+        delta = (value - previous) / abs(previous) * 100
+    return DashboardComparison(
+        value=value,
+        previous_value=previous,
+        delta_pct=delta,
+    )
+
+
+@dataclass(frozen=True)
+class _ContentTotals:
+    views: float | None
+    reach: float | None
+    likes: float
+    comments: float
+    shares: float
+    interactions: float
+    engagement_rate: float | None
+
+
+def content_metric_comparisons(
+    rows: tuple[ReportingContent, ...],
+    previous_rows: tuple[ReportingContent, ...],
+) -> DashboardContentMetrics:
+    """Compare content published in adjacent, equally sized date windows."""
+
+    def optional_sum(values: tuple[float | None, ...]) -> float | None:
+        available = tuple(value for value in values if value is not None)
+        return sum(available) if available else None
+
+    def totals(source: tuple[ReportingContent, ...]) -> _ContentTotals:
+        views = optional_sum(tuple(row.views_count for row in source))
+        reach = optional_sum(tuple(row.reach_count for row in source))
+        likes = float(sum(row.likes_count for row in source))
+        comments = float(sum(row.comments_count for row in source))
+        shares = float(sum(row.shares_count for row in source))
+        interactions = sum(
+            float(
+                row.interactions_count
+                if row.interactions_count is not None
+                else row.likes_count + row.comments_count + row.shares_count
+            )
+            for row in source
+        )
+        return _ContentTotals(
+            views=views,
+            reach=reach,
+            likes=likes,
+            comments=comments,
+            shares=shares,
+            interactions=interactions,
+            engagement_rate=(
+                interactions / views if views is not None and views > 0 else None
+            ),
+        )
+
+    current = totals(rows)
+    previous = totals(previous_rows)
+    return DashboardContentMetrics(
+        views=_comparison(current.views, previous.views),
+        reach=_comparison(current.reach, previous.reach),
+        likes=_comparison(current.likes, previous.likes),
+        comments=_comparison(current.comments, previous.comments),
+        shares=_comparison(current.shares, previous.shares),
+        interactions=_comparison(current.interactions, previous.interactions),
+        engagement_rate=_comparison(
+            current.engagement_rate, previous.engagement_rate
+        ),
+    )
+
+
 def community_summary(
     rows: tuple[ReportingComment, ...], *, accounts_available: bool
 ) -> CommunitySummary:
@@ -696,11 +772,61 @@ def _source_values(
     )
 
 
+def _source_series_values(
+    samples: tuple[ReportingMetric, ...],
+    *,
+    organic_metric_id: MetricId,
+    paid_metric_id: MetricId,
+) -> tuple[DashboardSourceValues | None, bool]:
+    """Aggregate the V1 organic/paid series over the selected reporting range.
+
+    The immutable legacy import stores source delivery as four canonical series
+    (views/reach x organic/paid), while current Meta responses also expose a
+    breakdown on the parent metric.  Ignoring the series made an old Brand's
+    source cards empty even though every selected day was present in storage.
+    Keep this read-only compatibility path so imported Brands work immediately;
+    native breakdowns remain the fallback for newly collected accounts.
+    """
+    organic_rows = tuple(
+        sample
+        for sample in samples
+        if sample.metric_id is organic_metric_id and sample.breakdown_key is None
+    )
+    paid_rows = tuple(
+        sample
+        for sample in samples
+        if sample.metric_id is paid_metric_id and sample.breakdown_key is None
+    )
+    if not organic_rows and not paid_rows:
+        return None, False
+    return (
+        DashboardSourceValues(
+            organic=sum(sample.value for sample in organic_rows) if organic_rows else None,
+            paid=sum(sample.value for sample in paid_rows) if paid_rows else None,
+            data_status=(DataStatus.AVAILABLE if organic_rows else DataStatus.PARTIAL),
+        ),
+        bool(paid_rows),
+    )
+
+
 def source_breakdown(
     breakdowns: tuple[DashboardBreakdown, ...],
+    samples: tuple[ReportingMetric, ...] = (),
 ) -> DashboardSourceBreakdown | None:
-    views, views_paid = _source_values(breakdowns, MetricId.VIEWS)
-    reach, reach_paid = _source_values(breakdowns, MetricId.REACH)
+    views, views_paid = _source_series_values(
+        samples,
+        organic_metric_id=MetricId.VIEWS_ORGANIC,
+        paid_metric_id=MetricId.VIEWS_PAID,
+    )
+    if views is None:
+        views, views_paid = _source_values(breakdowns, MetricId.VIEWS)
+    reach, reach_paid = _source_series_values(
+        samples,
+        organic_metric_id=MetricId.REACH_ORGANIC,
+        paid_metric_id=MetricId.REACH_PAID,
+    )
+    if reach is None:
+        reach, reach_paid = _source_values(breakdowns, MetricId.REACH)
     if views is None and reach is None:
         return None
     statuses = {item.data_status for item in (views, reach) if item is not None}
@@ -1156,6 +1282,7 @@ __all__ = [
     "audience_capabilities",
     "best_time_to_engage_breakdown",
     "community_summary",
+    "content_metric_comparisons",
     "content_summary",
     "content_cards",
     "freshness",

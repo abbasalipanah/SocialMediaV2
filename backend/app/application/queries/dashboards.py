@@ -14,6 +14,7 @@ from app.application.queries.dashboard_aggregation import (
     comment_sentiment_breakdown,
     community_summary,
     content_cards,
+    content_metric_comparisons,
     content_summary,
     freshness,
     metric_breakdowns,
@@ -266,6 +267,17 @@ def _build_platform_dashboard(
         breakdowns = tuple(
             item for item in breakdowns if item.dimension != engagement_time.dimension
         ) + (engagement_time,)
+    content_kpi_rows = content_rows
+    previous_content_kpi_rows = previous_content_rows
+    if platform is PlatformId.INSTAGRAM and query.content_type != "story":
+        content_kpi_rows = tuple(
+            row for row in content_kpi_rows if "story" not in row.content_type.lower()
+        )
+        previous_content_kpi_rows = tuple(
+            row
+            for row in previous_content_kpi_rows
+            if "story" not in row.content_type.lower()
+        )
     return PlatformDashboard(
         meta=DashboardMeta(
             dashboard_id=platform.value,
@@ -299,7 +311,11 @@ def _build_platform_dashboard(
             breakdowns,
             accounts_available=bool(accounts),
         ),
-        source_breakdown=source_breakdown(breakdowns),
+        content_metrics=content_metric_comparisons(
+            content_kpi_rows,
+            previous_content_kpi_rows,
+        ),
+        source_breakdown=source_breakdown(breakdowns, samples),
         metric_methodology=metric_methodology(platform, catalog),
         audience_capabilities=audience_capabilities(
             platform,

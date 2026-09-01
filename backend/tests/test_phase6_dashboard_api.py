@@ -32,6 +32,7 @@ from app.application.queries import (
 from app.application.queries.dashboard_aggregation import (
     best_time_to_engage_breakdown,
     comment_sentiment_breakdown,
+    source_breakdown,
     top_hashtags,
 )
 from app.core.security import sha256_text
@@ -664,6 +665,70 @@ def test_overview_exposes_every_metric_consumed_by_its_frontend(phase6_fixture) 
     assert cards[MetricId.REACTIONS].value == 9
 
 
+def test_content_metrics_compare_the_adjacent_equal_length_period(phase6_fixture) -> None:
+    _, reporting, _ = phase6_fixture
+    current = ReportingContent(
+        11,
+        "101",
+        PlatformId.FACEBOOK,
+        "fb-current-comparison",
+        "image",
+        "https://example.test/fb-current-comparison",
+        "Current comparison post",
+        "",
+        datetime(2026, 7, 1, 8, tzinfo=UTC),
+        15,
+        4,
+        3,
+        views_count=200,
+        reach_count=150,
+    )
+    previous = replace(
+        current,
+        external_content_id="fb-previous-comparison",
+        permalink="https://example.test/fb-previous-comparison",
+        published_at=datetime(2026, 6, 30, 8, tzinfo=UTC),
+        likes_count=10,
+        comments_count=3,
+        shares_count=2,
+        views_count=100,
+        reach_count=80,
+    )
+    reporting.content += (current, previous)
+
+    dashboard = build_platform_dashboard(
+        store=reporting,
+        catalog=bootstrap_metric_catalog(),
+        platform=PlatformId.FACEBOOK,
+        query=DashboardQuery(
+            requested_brand_id="101",
+            resolved_brand_ids=("101",),
+            rollup=False,
+            date_range=ReportingRange(date(2026, 7, 1), date(2026, 7, 2), "custom"),
+        ),
+        now=NOW,
+    )
+
+    # Current totals include the fixture's July 2 post. The previous comparison
+    # is exactly June 29-30 and therefore includes only the previous row above.
+    comparisons = dashboard.content_metrics
+    assert (comparisons.views.value, comparisons.views.previous_value) == (200, 100)
+    assert comparisons.views.delta_pct == 100
+    assert (comparisons.reach.value, comparisons.reach.previous_value) == (150, 80)
+    assert comparisons.reach.delta_pct == pytest.approx(87.5)
+    assert (comparisons.likes.value, comparisons.likes.previous_value) == (20, 10)
+    assert comparisons.likes.delta_pct == 100
+    assert (comparisons.comments.value, comparisons.comments.previous_value) == (6, 3)
+    assert comparisons.comments.delta_pct == 100
+    assert (comparisons.shares.value, comparisons.shares.previous_value) == (4, 2)
+    assert comparisons.shares.delta_pct == 100
+    assert (comparisons.interactions.value, comparisons.interactions.previous_value) == (30, 15)
+    assert comparisons.interactions.delta_pct == 100
+    assert comparisons.engagement_rate.value == pytest.approx(0.15)
+    assert comparisons.engagement_rate.previous_value == pytest.approx(0.15)
+    assert comparisons.engagement_rate.delta_pct == pytest.approx(0)
+
+
 def test_instagram_structured_stories_preserve_content_level_metrics(
     phase6_fixture,
 ) -> None:
@@ -912,22 +977,16 @@ async def test_instagram_content_tab_excludes_stories_from_every_content_project
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test", cookies=cookies
     ) as client:
-        cover = await client.get(
-            "/api/dashboards/instagram", params={**params, "tab": "cover"}
-        )
-        content = await client.get(
-            "/api/dashboards/instagram", params={**params, "tab": "content"}
-        )
-        stories = await client.get(
-            "/api/dashboards/instagram", params={**params, "tab": "stories"}
-        )
+        cover = await client.get("/api/dashboards/instagram", params={**params, "tab": "cover"})
+        content = await client.get("/api/dashboards/instagram", params={**params, "tab": "content"})
+        stories = await client.get("/api/dashboards/instagram", params={**params, "tab": "stories"})
 
     assert cover.status_code == content.status_code == stories.status_code == 200
     assert {item["content_type"] for item in cover.json()["content"]} == {"image", "story"}
+    assert cover.json()["content_metrics"]["likes"]["value"] == 7
     assert [item["content_type"] for item in content.json()["content"]] == ["image"]
-    assert [item["name"] for item in content.json()["content_summary"]["by_type"]] == [
-        "Image"
-    ]
+    assert content.json()["content_metrics"]["likes"]["value"] == 7
+    assert [item["name"] for item in content.json()["content_summary"]["by_type"]] == ["Image"]
     assert [item["content_type"] for item in stories.json()["content"]] == ["story"]
 
 
@@ -972,6 +1031,7 @@ def test_phase6_openapi_publishes_typed_response_contracts() -> None:
     assert {
         "top_hashtags",
         "content_summary",
+        "content_metrics",
         "source_breakdown",
         "metric_methodology",
         "audience_capabilities",
