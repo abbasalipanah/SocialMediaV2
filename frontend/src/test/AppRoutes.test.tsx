@@ -166,6 +166,10 @@ const dashboard = {
   },
   top_hashtags: [],
   content_summary: { total: 0, by_type: [], reach_by_type: [], views_by_type: [], data_status: "unavailable" },
+  content_metrics: Object.fromEntries(
+    ["views", "reach", "likes", "comments", "shares", "interactions", "engagement_rate"]
+      .map((key) => [key, { value: null, previous_value: null, delta_pct: null }]),
+  ),
   source_breakdown: null,
   metric_methodology: { follower_flow: "unavailable", engagement_rate: "unavailable", reach: "unavailable" },
   audience_capabilities: { source: null, geo: "unavailable", age_gender: "unavailable", activity: "unavailable" },
@@ -626,11 +630,22 @@ describe("Phase 7 application shell", () => {
   });
 
   it("allows Integrations without exposing Settings when only the integration capability exists", async () => {
-    renderApp("/integrations", mockApi({ settingsVisible: false, integrationsVisible: true }));
+    const request = mockApi({ settingsVisible: false, integrationsVisible: true });
+    renderApp("/integrations", request);
     expect(await screen.findByRole("heading", { name: "Integrations" })).toBeInTheDocument();
     const primary = screen.getByRole("complementary", { name: "Primary navigation" });
     expect(within(primary).queryByRole("link", { name: "Settings" })).not.toBeInTheDocument();
     expect(within(primary).getByRole("link", { name: "Integrations" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Reauthorize Meta" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Authorize TikTok" })).toBeEnabled();
+    expect(screen.queryByText("Connected accounts", { exact: false })).not.toBeInTheDocument();
+    expect(screen.queryByText("Facebook Main")).not.toBeInTheDocument();
+    expect(screen.queryByText("page-17")).not.toBeInTheDocument();
+    const requestedUrls = request.mock.calls.map(([input]) => String(input));
+    expect(requestedUrls.some((url) => url.includes("/api/integrations/status/connections"))).toBe(true);
+    expect(requestedUrls.some((url) => url.includes("/api/integrations/status/social-accounts"))).toBe(false);
+    expect(requestedUrls.some((url) => url.includes("/api/integrations/status/sync-jobs"))).toBe(false);
+    expect(requestedUrls.some((url) => url.includes("/api/operations/readiness"))).toBe(false);
   });
 
   it("accepts both canonical SSO consume aliases", async () => {
