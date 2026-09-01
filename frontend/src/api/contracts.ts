@@ -697,6 +697,51 @@ export const metaRefreshResponseSchema = z.object({
   discovered_count: z.number().int().nonnegative(),
 });
 
+export const oauthChannelAccountSchema = z.object({
+  connection_id: z.number().int().positive().nullable(),
+  external_id: z.string().min(1),
+  display_name: z.string().min(1),
+  state: z.string().min(1),
+});
+export type OAuthChannelAccount = z.infer<typeof oauthChannelAccountSchema>;
+
+export const oauthChannelReadinessSchema = z.object({
+  brand_id: z.string().min(1),
+  platform: z.enum(["x", "linkedin", "youtube"]),
+  can_manage: z.boolean(),
+  connection_state: z.string().min(1),
+  linked_account_count: z.number().int().nonnegative(),
+  linked_accounts: z.array(oauthChannelAccountSchema),
+  available_accounts: z.array(oauthChannelAccountSchema),
+  oauth_start_available: z.boolean(),
+  reason: z.string().min(1),
+  runtime_mode: z.string().min(1),
+  writes_enabled: z.boolean(),
+  checked_at: z.string(),
+});
+export type OAuthChannelReadiness = z.infer<typeof oauthChannelReadinessSchema>;
+
+export const oauthChannelStartSchema = z.object({
+  authorization_url: z.string().url(),
+  expires_at: z.string(),
+});
+export type OAuthChannelStart = z.infer<typeof oauthChannelStartSchema>;
+
+export const oauthChannelLinkResponseSchema = z.object({
+  connection_id: z.number().int().positive(),
+  linked_count: z.number().int().nonnegative(),
+  connection_state: z.string().min(1),
+});
+export type OAuthChannelLinkResponse = z.infer<typeof oauthChannelLinkResponseSchema>;
+
+export const oauthChannelUnlinkResponseSchema = z.object({
+  brand_id: z.string().min(1),
+  platform: z.enum(["x", "linkedin", "youtube"]),
+  external_id: z.string().min(1),
+  connection_state: z.string().min(1),
+});
+export type OAuthChannelUnlinkResponse = z.infer<typeof oauthChannelUnlinkResponseSchema>;
+
 export const reportJobSchema = z.object({
   job_id: z.string().min(1),
   state: z.enum(["queued", "running", "ready", "failed"]),
