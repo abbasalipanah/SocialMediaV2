@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Check, Link2, RefreshCw, ShieldCheck, X, Youtube } from "lucide-react";
+import { AlertTriangle, Check, Link2, RefreshCw, ShieldCheck, X as CloseIcon, Youtube } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -14,10 +14,10 @@ import {
   queryString,
 } from "../../api";
 
-type ManagedOAuthChannel = "youtube";
+export type ManagedOAuthChannel = "x" | "youtube";
 
 type OAuthChannelMessage = {
-  type: "social-media:youtube-oauth";
+  type: `social-media:${ManagedOAuthChannel}-oauth`;
   status: "success" | "error";
   brandId: string;
   platform: ManagedOAuthChannel;
@@ -26,11 +26,31 @@ type OAuthChannelMessage = {
   errorCode: string;
 };
 
-const READINESS_COPY: Record<string, string> = {
-  provider_activation_not_configured: "YouTube authorization is not configured in this runtime yet.",
-  provider_activation_unavailable: "YouTube authorization is temporarily unavailable.",
-  writes_disabled: "Connection changes are disabled in this runtime.",
+const PROVIDER_COPY: Record<ManagedOAuthChannel, {
+  label: string;
+  entity: string;
+  entities: string;
+  access: string;
+}> = {
+  x: {
+    label: "X",
+    entity: "account",
+    entities: "accounts",
+    access: "Read-only profile and post access",
+  },
+  youtube: {
+    label: "YouTube",
+    entity: "channel",
+    entities: "channels",
+    access: "Read-only channel and analytics access",
+  },
 };
+
+function ProviderIcon({ provider, size }: { provider: ManagedOAuthChannel; size: number }) {
+  return provider === "youtube"
+    ? <Youtube aria-hidden="true" size={size} />
+    : <span aria-hidden="true" className="social-x-mark">𝕏</span>;
+}
 
 export function OAuthChannelConnectionModal({
   brandId,
@@ -46,6 +66,7 @@ export function OAuthChannelConnectionModal({
   provider: ManagedOAuthChannel;
 }) {
   const queryClient = useQueryClient();
+  const copy = PROVIDER_COPY[provider];
   const popupRef = useRef<Window | null>(null);
   const selectionKeyRef = useRef("");
   const onChangedRef = useRef(onChanged);
@@ -121,7 +142,7 @@ export function OAuthChannelConnectionModal({
           tone: "error",
           message: payload.errorCode
             ? payload.errorCode.replaceAll("_", " ")
-            : "YouTube authorization could not be completed.",
+            : `${copy.label} authorization could not be completed.`,
         });
         return;
       }
@@ -129,13 +150,13 @@ export function OAuthChannelConnectionModal({
       selectionKeyRef.current = "";
       setStatus({
         tone: "success",
-        message: `${payload.discoveredCount} YouTube channel${payload.discoveredCount === 1 ? "" : "s"} found. Select what belongs to ${brandName}.`,
+        message: `${payload.discoveredCount} ${copy.label} ${payload.discoveredCount === 1 ? copy.entity : copy.entities} found. Select what belongs to ${brandName}.`,
       });
       void queryClient.invalidateQueries({ queryKey });
     };
     window.addEventListener("message", receiveOAuthResult);
     return () => window.removeEventListener("message", receiveOAuthResult);
-  }, [brandId, brandName, provider, queryClient, queryKey]);
+  }, [brandId, brandName, copy, provider, queryClient, queryKey]);
 
   useEffect(() => {
     if (!isAuthorizing) return;
@@ -145,11 +166,11 @@ export function OAuthChannelConnectionModal({
       setIsAuthorizing(false);
       setStatus((current) => current ?? {
         tone: "error",
-        message: "The YouTube login window closed before authorization completed.",
+        message: `The ${copy.label} login window closed before authorization completed.`,
       });
     }, 400);
     return () => window.clearInterval(timer);
-  }, [isAuthorizing]);
+  }, [copy.label, isAuthorizing]);
 
   const dismiss = () => {
     if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
@@ -165,7 +186,7 @@ export function OAuthChannelConnectionModal({
       "popup=yes,width=620,height=760,resizable=yes,scrollbars=yes",
     );
     if (!popup) {
-      setStatus({ tone: "error", message: "The YouTube login window was blocked. Allow popups and try again." });
+      setStatus({ tone: "error", message: `The ${copy.label} login window was blocked. Allow popups and try again.` });
       return;
     }
     popupRef.current = popup;
@@ -183,7 +204,7 @@ export function OAuthChannelConnectionModal({
       setIsAuthorizing(false);
       setStatus({
         tone: "error",
-        message: error instanceof Error ? error.message.replaceAll("_", " ") : "YouTube authorization could not be started.",
+        message: error instanceof Error ? error.message.replaceAll("_", " ") : `${copy.label} authorization could not be started.`,
       });
     }
   };
@@ -205,7 +226,7 @@ export function OAuthChannelConnectionModal({
       selectionKeyRef.current = "";
       setStatus({
         tone: "success",
-        message: `${linked.linked_count} YouTube channel${linked.linked_count === 1 ? "" : "s"} linked to ${brandName}.`,
+        message: `${linked.linked_count} ${copy.label} ${linked.linked_count === 1 ? copy.entity : copy.entities} linked to ${brandName}.`,
       });
       await queryClient.invalidateQueries({ queryKey });
       onChangedRef.current();
@@ -230,42 +251,49 @@ export function OAuthChannelConnectionModal({
       );
       setConfirmUnlinkId(null);
       selectionKeyRef.current = "";
-      setStatus({ tone: "success", message: `YouTube channel unlinked from ${brandName}.` });
+      setStatus({ tone: "success", message: `${copy.label} ${copy.entity} unlinked from ${brandName}.` });
       await queryClient.invalidateQueries({ queryKey });
       onChangedRef.current();
     } catch (error) {
       setStatus({
         tone: "error",
-        message: error instanceof Error ? error.message.replaceAll("_", " ") : "The YouTube channel could not be unlinked.",
+        message: error instanceof Error ? error.message.replaceAll("_", " ") : `The ${copy.label} ${copy.entity} could not be unlinked.`,
       });
     } finally {
       setUnlinkingId(null);
     }
   };
 
+  const readinessCopy: Record<string, string> = {
+    provider_activation_not_configured: `${copy.label} authorization is not configured in this runtime yet.`,
+    provider_activation_unavailable: `${copy.label} authorization is temporarily unavailable.`,
+    writes_disabled: "Connection changes are disabled in this runtime.",
+  };
   const unavailableReason = readiness.data && !readiness.data.oauth_start_available
-    ? READINESS_COPY[readiness.data.reason] ?? "YouTube authorization is unavailable in this runtime."
+    ? readinessCopy[readiness.data.reason] ?? `${copy.label} authorization is unavailable in this runtime.`
     : null;
+  const titleId = `${provider}-channel-title`;
+  const managerLabel = `Close ${copy.label} ${copy.entity} manager`;
 
   return createPortal(
     <div className="tiktok-connect-layer">
-      <button aria-label="Close YouTube channel manager" className="tiktok-connect-backdrop" onClick={dismiss} type="button" />
-      <section aria-labelledby="youtube-channel-title" aria-modal="true" className="tiktok-connect-modal meta-connect-modal" role="dialog">
+      <button aria-label={managerLabel} className="tiktok-connect-backdrop" onClick={dismiss} type="button" />
+      <section aria-labelledby={titleId} aria-modal="true" className="tiktok-connect-modal meta-connect-modal" role="dialog">
         <header>
-          <div className="integration-platform-icon platform-youtube"><Youtube aria-hidden="true" size={22} /></div>
-          <div><h2 id="youtube-channel-title">Manage YouTube channels</h2><p>{brandName} · Read-only channel and analytics access</p></div>
-          <button aria-label="Close YouTube channel manager" onClick={dismiss} type="button"><X size={18} /></button>
+          <div className={`integration-platform-icon platform-${provider}`}><ProviderIcon provider={provider} size={22} /></div>
+          <div><h2 id={titleId}>Manage {copy.label} {copy.entities}</h2><p>{brandName} · {copy.access}</p></div>
+          <button aria-label={managerLabel} onClick={dismiss} type="button"><CloseIcon size={18} /></button>
         </header>
 
         {status && <div className={`tiktok-connect-status ${status.tone}`} role="status">{status.tone === "success" ? <Check size={17} /> : <AlertTriangle size={17} />}<span>{status.message}</span></div>}
 
         <div className="tiktok-connect-body">
           {readiness.isPending ? (
-            <div className="tiktok-connect-readiness"><RefreshCw className="spin" size={16} />Checking YouTube access…</div>
+            <div className="tiktok-connect-readiness"><RefreshCw className="spin" size={16} />Checking {copy.label} access…</div>
           ) : readiness.isError || !readiness.data ? (
-            <div className="tiktok-connect-readiness error"><AlertTriangle size={16} />YouTube access could not be checked.</div>
+            <div className="tiktok-connect-readiness error"><AlertTriangle size={16} />{copy.label} access could not be checked.</div>
           ) : !readiness.data.can_manage ? (
-            <div className="tiktok-connect-readiness blocked"><AlertTriangle size={16} />Settings permission is required to manage YouTube channels.</div>
+            <div className="tiktok-connect-readiness blocked"><AlertTriangle size={16} />Settings permission is required to manage {copy.label} {copy.entities}.</div>
           ) : (
             <>
               <div className={`tiktok-connect-readiness ${readiness.data.oauth_start_available ? "ready" : "blocked"}`}>
@@ -273,13 +301,13 @@ export function OAuthChannelConnectionModal({
                 <span>
                   <strong>{readiness.data.oauth_start_available ? "Ready for read-only authorization" : "Authorization not active"}</strong>
                   {unavailableReason && <small>{unavailableReason}</small>}
-                  <small>{readiness.data.linked_account_count} channel{readiness.data.linked_account_count === 1 ? "" : "s"} currently linked.</small>
+                  <small>{readiness.data.linked_account_count} {readiness.data.linked_account_count === 1 ? copy.entity : copy.entities} currently linked.</small>
                 </span>
               </div>
 
               {selectableAccounts.length > 0 && (
                 <fieldset className="meta-discovery-list">
-                  <legend>Channels from the latest authorization</legend>
+                  <legend>{copy.entities[0]?.toUpperCase()}{copy.entities.slice(1)} from the latest authorization</legend>
                   {selectableAccounts.map((item) => {
                     const checked = selected.has(item.external_id);
                     return (
@@ -294,8 +322,8 @@ export function OAuthChannelConnectionModal({
                           })}
                           type="checkbox"
                         />
-                        <span className="integration-platform-icon platform-youtube"><Youtube aria-hidden="true" size={17} /></span>
-                        <span><strong>{item.display_name}</strong><small>YouTube channel · {item.external_id}</small></span>
+                        <span className={`integration-platform-icon platform-${provider}`}><ProviderIcon provider={provider} size={17} /></span>
+                        <span><strong>{item.display_name}</strong><small>{copy.label} {copy.entity} · {item.external_id}</small></span>
                         <em className={linkedIds.has(item.external_id) ? "linked" : checked ? "selected" : "available"}>{linkedIds.has(item.external_id) ? "Linked" : checked ? "Selected" : "Available"}</em>
                       </label>
                     );
@@ -304,12 +332,12 @@ export function OAuthChannelConnectionModal({
               )}
 
               {readiness.data.linked_accounts.length > 0 && (
-                <section aria-label="Linked YouTube channels" className="social-manager-tiktok-panel">
-                  <div className="meta-platform-heading"><h3>Linked channels</h3><p>Unlinking stops future collection for that channel.</p></div>
+                <section aria-label={`Linked ${copy.label} ${copy.entities}`} className="social-manager-tiktok-panel">
+                  <div className="meta-platform-heading"><h3>Linked {copy.entities}</h3><p>Unlinking stops future collection for that {copy.entity}.</p></div>
                   {readiness.data.linked_accounts.map((item) => (
                     <article key={item.external_id}>
-                      <span className="integration-platform-icon platform-youtube"><Youtube aria-hidden="true" size={17} /></span>
-                      <span><strong>{item.display_name}</strong><small>YouTube · {item.external_id}</small></span>
+                      <span className={`integration-platform-icon platform-${provider}`}><ProviderIcon provider={provider} size={17} /></span>
+                      <span><strong>{item.display_name}</strong><small>{copy.label} · {item.external_id}</small></span>
                       <div className="social-manager-tiktok-actions">
                         {confirmUnlinkId === item.external_id ? (
                           <>
@@ -324,19 +352,19 @@ export function OAuthChannelConnectionModal({
               )}
 
               {discoveries.length === 0 && (
-                <p className="meta-account-empty">Authorize YouTube to discover channels owned by the signed-in account.</p>
+                <p className="meta-account-empty">Authorize {copy.label} to discover {copy.entities} owned by the signed-in identity.</p>
               )}
             </>
           )}
         </div>
 
         <footer>
-          <p>Only channels explicitly selected here are linked to this Brand.</p>
+          <p>Only {copy.entities} explicitly selected here are linked to this Brand.</p>
           <button className="secondary-button" onClick={dismiss} type="button">Cancel</button>
           {selectableAccounts.length > 0 ? (
             <button className="primary-button compact-button" disabled={!readiness.data?.can_manage || selected.size === 0 || isSaving} onClick={() => void saveSelection()} type="button">{isSaving ? <RefreshCw className="spin" size={15} /> : <Check size={15} />}{isSaving ? "Saving…" : `Save selection (${selected.size})`}</button>
           ) : (
-            <button className="primary-button compact-button" disabled={!readiness.data?.oauth_start_available || isAuthorizing} onClick={() => void authorize()} type="button">{isAuthorizing ? <RefreshCw className="spin" size={15} /> : <Link2 size={15} />}{isAuthorizing ? "Connecting…" : "Connect YouTube"}</button>
+            <button className="primary-button compact-button" disabled={!readiness.data?.oauth_start_available || isAuthorizing} onClick={() => void authorize()} type="button">{isAuthorizing ? <RefreshCw className="spin" size={15} /> : <Link2 size={15} />}{isAuthorizing ? "Connecting…" : `Connect ${copy.label}`}</button>
           )}
         </footer>
       </section>

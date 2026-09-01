@@ -102,4 +102,54 @@ describe("OAuthChannelConnectionModal", () => {
     ))).toBe(true));
     expect(onChanged).toHaveBeenCalledTimes(2);
   });
+
+  it("manages an X account through the shared channel boundary", async () => {
+    const requests: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      requests.push(url);
+      if (url.includes("/self-service/readiness")) return json({
+        ...readiness,
+        platform: "x",
+        linked_account_count: 0,
+        linked_accounts: [],
+        available_accounts: [{
+          connection_id: 21,
+          external_id: "123456789",
+          display_name: "Example (@example)",
+          state: "available",
+        }],
+      });
+      if (url.includes("/accounts/link")) return json({
+        connection_id: 21,
+        linked_count: 1,
+        connection_state: "connected",
+      });
+      throw new Error(`Unexpected request: ${url}`);
+    }));
+    const queryCache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={queryCache}>
+        <OAuthChannelConnectionModal
+          brandId="42"
+          brandName="X Brand"
+          onChanged={vi.fn()}
+          onClose={vi.fn()}
+          provider="x"
+        />
+      </QueryClientProvider>,
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "Manage X accounts" });
+    await userEvent.click(
+      await within(dialog).findByRole("checkbox", { name: /Example/ }),
+    );
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Save selection (1)" }),
+    );
+    await waitFor(() => expect(requests).toContain(
+      "/api/integrations/x/accounts/link?brand_id=42",
+    ));
+  });
 });

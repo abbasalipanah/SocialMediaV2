@@ -31,7 +31,10 @@ import { useBrandScope } from "../../app/BrandScopeProvider";
 import { PLATFORM_IDS, platformDefinition } from "../../platforms/catalog";
 import { Dialog } from "../../ui";
 import { MetaConnectionModal } from "../integrations/MetaConnectionModal";
-import { OAuthChannelConnectionModal } from "../integrations/OAuthChannelConnectionModal";
+import {
+  OAuthChannelConnectionModal,
+  type ManagedOAuthChannel,
+} from "../integrations/OAuthChannelConnectionModal";
 import { TikTokConnectionModal } from "../integrations/TikTokConnectionModal";
 import { PLATFORM_LABELS } from "../dashboard/catalog";
 import { formatDate, humanize } from "../dashboard/format";
@@ -114,7 +117,7 @@ function SocialAccounts({
           connections.find((item) => item.platform === platform)?.state ??
           "not connected";
         const platformCanBeManaged = canManage(platform);
-        const connectionAvailable = ["meta", "tiktok", "youtube"].includes(
+        const connectionAvailable = ["meta", "tiktok", "x", "youtube"].includes(
           platformDefinition(platform).connectionProvider,
         );
         return (
@@ -264,7 +267,7 @@ export function SetupDrawer({
   const { capabilities } = useBrandScope();
   const [connecting, setConnecting] = useState<Platform | null>(null);
   const [tiktokConnectionOpen, setTikTokConnectionOpen] = useState(false);
-  const [youtubeConnectionOpen, setYouTubeConnectionOpen] = useState(false);
+  const [oauthChannelConnection, setOAuthChannelConnection] = useState<ManagedOAuthChannel | null>(null);
 
   // Fetched for the Brand whose row was clicked, not filtered out of the page's
   // lists: those are scoped to the Brand the workspace is currently on, so any
@@ -308,12 +311,12 @@ export function SetupDrawer({
   // lacking one must not disable the other platform.
   const canManageMeta = capabilities?.permissions.meta_connection_manage === true;
   const canManageTikTok = capabilities?.permissions.tiktok_connection_manage === true;
-  const canManageYouTube = capabilities?.permissions.settings_visible === true;
+  const canManageOAuthChannel = capabilities?.permissions.settings_visible === true;
   const canManagePlatform = (platform: Platform) =>
     platform === "tiktok"
       ? canManageTikTok
-      : platform === "youtube"
-        ? canManageYouTube
+      : platform === "x" || platform === "youtube"
+        ? canManageOAuthChannel
       : platform === "facebook" || platform === "instagram"
         ? canManageMeta
         : false;
@@ -326,8 +329,8 @@ export function SetupDrawer({
     setTikTokConnectionOpen(false);
   };
   const managePlatform = (platform: Platform) => {
-    if (platform === "youtube") {
-      setYouTubeConnectionOpen(true);
+    if (platform === "x" || platform === "youtube") {
+      setOAuthChannelConnection(platform);
       return;
     }
     setConnecting(platform);
@@ -376,7 +379,7 @@ export function SetupDrawer({
               loading={loadingAccounts}
               onConnect={managePlatform}
             />
-            {!canManageMeta && !canManageTikTok && (
+            {!canManageMeta && !canManageTikTok && !canManageOAuthChannel && (
               <p className="setup-note">
                 Linking accounts needs permission to manage social connections for {brandName}.
               </p>
@@ -427,13 +430,13 @@ export function SetupDrawer({
           onConnected={refreshAndCloseConnection}
         />
       )}
-      {youtubeConnectionOpen && (
+      {oauthChannelConnection && (
         <OAuthChannelConnectionModal
           brandId={brand.brand_id}
           brandName={brandName}
           onChanged={refresh}
-          onClose={() => setYouTubeConnectionOpen(false)}
-          provider="youtube"
+          onClose={() => setOAuthChannelConnection(null)}
+          provider={oauthChannelConnection}
         />
       )}
     </>

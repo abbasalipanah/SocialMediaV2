@@ -331,9 +331,9 @@ describe("Phase 8 product surfaces", () => {
     expect(document.querySelector(".overview-performance-line")).toHaveAttribute("stroke-width", "1.25");
     expect(document.querySelector(".overview-performance-line")).toHaveAttribute("data-curve", "monotone");
     expect(document.querySelectorAll(".overview-performance-area")).toHaveLength(1);
-    const comingSoon = screen.getByLabelText("LinkedIn, X, YouTube Coming soon");
+    const comingSoon = screen.getByLabelText("LinkedIn, YouTube Coming soon");
     expect(within(comingSoon).getByLabelText("LinkedIn logo")).toBeInTheDocument();
-    expect(within(comingSoon).getByLabelText("X logo")).toBeInTheDocument();
+    expect(within(comingSoon).queryByLabelText("X logo")).not.toBeInTheDocument();
     expect(within(comingSoon).getByLabelText("YouTube logo")).toBeInTheDocument();
     expect(within(comingSoon).getByText("Coming soon")).toBeInTheDocument();
     expect(screen.getByText("Scale short-form content")).toBeInTheDocument();
@@ -398,9 +398,9 @@ describe("Phase 8 product surfaces", () => {
 
       expect(within(carousel).queryByText("Instagram")).not.toBeInTheDocument();
       expect(within(carousel).getByText("LinkedIn")).toBeInTheDocument();
-      const comingSoon = screen.getByLabelText("X, YouTube Coming soon");
+      const comingSoon = screen.getByLabelText("YouTube Coming soon");
       expect(within(comingSoon).queryByLabelText("LinkedIn logo")).not.toBeInTheDocument();
-      expect(within(comingSoon).getByLabelText("X logo")).toBeInTheDocument();
+      expect(within(comingSoon).queryByLabelText("X logo")).not.toBeInTheDocument();
       expect(within(comingSoon).getByLabelText("YouTube logo")).toBeInTheDocument();
     } finally {
       vi.useRealTimers();

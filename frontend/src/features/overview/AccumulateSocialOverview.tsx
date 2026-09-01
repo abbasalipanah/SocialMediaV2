@@ -70,7 +70,7 @@ const PLATFORM_COLORS: Record<OverviewPlatformId, string> = {
   youtube: "#FF0033",
 };
 
-const COMING_SOON_PLATFORMS = ["linkedin", "x", "youtube"] as const satisfies ReadonlyArray<OverviewPlatformId>;
+const COMING_SOON_PLATFORMS = ["linkedin", "youtube"] as const satisfies ReadonlyArray<OverviewPlatformId>;
 
 const CHANNEL_WINDOW_SIZE = 3;
 const CHANNEL_ROTATION_MS = 4_500;

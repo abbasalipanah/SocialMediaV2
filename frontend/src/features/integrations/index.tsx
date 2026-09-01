@@ -33,6 +33,10 @@ const PROVIDER_COPY: Record<OAuthProvider, { label: string; description: string 
     label: "TikTok",
     description: "Authorize TikTok Business access through OAuth. Account details and maintenance stay in Settings.",
   },
+  x: {
+    label: "X",
+    description: "Authorize read-only X profile and post access. Account selection and mapping stay in Settings.",
+  },
   youtube: {
     label: "YouTube",
     description: "Authorize read-only YouTube channel and analytics access. Channel selection and mapping stay in Settings.",
@@ -70,10 +74,14 @@ export function buildAuthorizationProviders(connections: ReportingConnection[]):
   const youtubeConnection = latestConnection(
     connections.filter((item) => item.platform === "youtube"),
   );
+  const xConnection = latestConnection(
+    connections.filter((item) => item.platform === "x"),
+  );
 
   return ([
     ["meta", metaConnection],
     ["tiktok", tiktokConnection],
+    ["x", xConnection],
     ["youtube", youtubeConnection],
   ] as const).map(([provider, connection]) => ({
     provider,
@@ -95,7 +103,7 @@ export default function IntegrationsPage() {
   const refreshing = data.connections.isFetching;
   const canAuthorizeMeta = capabilities?.permissions.meta_connection_manage === true && !rollup;
   const canAuthorizeTikTok = capabilities?.permissions.tiktok_connection_manage === true && !rollup;
-  const canAuthorizeYouTube = capabilities?.permissions.integrations_visible === true && !rollup;
+  const canAuthorizeOAuthChannel = capabilities?.permissions.integrations_visible === true && !rollup;
   const brandName = selectedBrand?.name ?? "Selected Brand";
   const authorizedCount = providers.filter((item) => item.status === "authorized" || item.status === "pending").length;
   const attentionCount = providers.filter((item) => item.status === "action_required").length;
@@ -132,7 +140,7 @@ export default function IntegrationsPage() {
       )}
 
       <section aria-label="Authorization summary" className="integrations-summary-grid">
-        <SummaryCard icon={<PlugZap size={21} />} label="OAuth providers" tone="indigo" value={3} />
+        <SummaryCard icon={<PlugZap size={21} />} label="OAuth providers" tone="indigo" value={4} />
         <SummaryCard icon={<Check size={21} />} label="Authorized" tone="emerald" value={authorizedCount} />
         <SummaryCard icon={<AlertTriangle size={21} />} label="Reconnect required" tone="amber" value={attentionCount} />
       </section>
@@ -146,7 +154,7 @@ export default function IntegrationsPage() {
               ? canAuthorizeMeta
               : provider.provider === "tiktok"
                 ? canAuthorizeTikTok
-                : canAuthorizeYouTube}
+                : canAuthorizeOAuthChannel}
             key={provider.provider}
             onAuthorize={() => setActiveProvider(provider.provider)}
             provider={provider}
@@ -159,7 +167,7 @@ export default function IntegrationsPage() {
         <ShieldCheck size={19} />
         <div>
           <strong>OAuth-only workspace</strong>
-          <span>This page never lists Meta Pages, Instagram profiles, TikTok accounts, external account IDs, sync jobs or account health. Those account-level controls remain in Settings for agency admins and super admins.</span>
+          <span>This page never lists provider accounts, external account IDs, sync jobs or account health. Those account-level controls remain in Settings for agency admins and super admins.</span>
         </div>
       </aside>
 
@@ -183,7 +191,8 @@ function SummaryCard({ icon, value, label, tone }: { icon: ReactNode; value: num
 function ProviderIcon({ provider }: { provider: OAuthProvider }) {
   if (provider === "meta") return <span aria-hidden="true" className="oauth-meta-mark">∞</span>;
   if (provider === "tiktok") return <span aria-hidden="true" className="integration-tiktok-mark">♪</span>;
-  return <Youtube aria-hidden="true" size={22} />;
+  if (provider === "youtube") return <Youtube aria-hidden="true" size={22} />;
+  return <span aria-hidden="true" className="social-x-mark">𝕏</span>;
 }
 
 function AuthorizationCard({ provider, canAuthorize, rollup, onAuthorize }: {

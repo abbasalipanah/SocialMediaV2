@@ -395,6 +395,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/integrations/x/accounts/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link */
+        post: operations["link_api_integrations_x_accounts_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/x/accounts/unlink": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unlink */
+        delete: operations["unlink_api_integrations_x_accounts_unlink_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/x/oauth/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start */
+        post: operations["start_api_integrations_x_oauth_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/x/self-service/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Readiness */
+        get: operations["readiness_api_integrations_x_self_service_readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/youtube/accounts/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link */
+        post: operations["link_api_integrations_youtube_accounts_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/youtube/accounts/unlink": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unlink */
+        delete: operations["unlink_api_integrations_youtube_accounts_unlink_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/youtube/oauth/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start */
+        post: operations["start_api_integrations_youtube_oauth_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/youtube/self-service/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Readiness */
+        get: operations["readiness_api_integrations_youtube_self_service_readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/media/{platform}/{content_id}": {
         parameters: {
             query?: never;
@@ -813,6 +949,40 @@ export interface paths {
         };
         /** Tiktok Activation Callback */
         get: operations["tiktok_activation_callback_api_social_tiktok_oauth_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/social/x/oauth/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Callback */
+        get: operations["callback_api_social_x_oauth_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/social/youtube/oauth/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Callback */
+        get: operations["callback_api_social_youtube_oauth_callback_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1496,6 +1666,81 @@ export interface components {
          * @enum {string}
          */
         MetricId: "followers" | "following" | "new_followers" | "follows" | "unfollows" | "followers_net" | "reach" | "reach_paid" | "reach_organic" | "views" | "views_paid" | "views_organic" | "interactions" | "engagement_rate" | "page_views" | "profile_views" | "website_clicks" | "total_actions" | "reactions" | "media_count" | "video_views_total" | "video_views_change" | "video_likes_daily" | "video_comments_daily" | "video_shares_daily" | "video_likes_total" | "video_comments_total" | "video_shares_total" | "video_engagements_total" | "video_engagement_rate";
+        /** OAuthChannelAccountItem */
+        OAuthChannelAccountItem: {
+            /** Connection Id */
+            connection_id: number | null;
+            /** Display Name */
+            display_name: string;
+            /** External Id */
+            external_id: string;
+            /** State */
+            state: string;
+        };
+        /** OAuthChannelLinkPayload */
+        OAuthChannelLinkPayload: {
+            /** Connection Id */
+            connection_id: number;
+            /** External Ids */
+            external_ids: string[];
+        };
+        /** OAuthChannelLinkResponse */
+        OAuthChannelLinkResponse: {
+            /** Connection Id */
+            connection_id: number;
+            /** Connection State */
+            connection_state: string;
+            /** Linked Count */
+            linked_count: number;
+        };
+        /** OAuthChannelReadinessResponse */
+        OAuthChannelReadinessResponse: {
+            /** Available Accounts */
+            available_accounts: components["schemas"]["OAuthChannelAccountItem"][];
+            /** Brand Id */
+            brand_id: string;
+            /** Can Manage */
+            can_manage: boolean;
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            /** Connection State */
+            connection_state: string;
+            /** Linked Account Count */
+            linked_account_count: number;
+            /** Linked Accounts */
+            linked_accounts: components["schemas"]["OAuthChannelAccountItem"][];
+            /** Oauth Start Available */
+            oauth_start_available: boolean;
+            platform: components["schemas"]["PlatformId"];
+            /** Reason */
+            reason: string;
+            runtime_mode: components["schemas"]["RuntimeMode"];
+            /** Writes Enabled */
+            writes_enabled: boolean;
+        };
+        /** OAuthChannelStartResponse */
+        OAuthChannelStartResponse: {
+            /** Authorization Url */
+            authorization_url: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /** OAuthChannelUnlinkResponse */
+        OAuthChannelUnlinkResponse: {
+            /** Brand Id */
+            brand_id: string;
+            /** Connection State */
+            connection_state: string;
+            /** External Id */
+            external_id: string;
+            platform: components["schemas"]["PlatformId"];
+        };
         /** OperationsReadinessResponse */
         OperationsReadinessResponse: {
             /** Database Configured */
@@ -2747,6 +2992,280 @@ export interface operations {
             };
         };
     };
+    link_api_integrations_x_accounts_link_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OAuthChannelLinkPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelLinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlink_api_integrations_x_accounts_unlink_delete: {
+        parameters: {
+            query: {
+                brand_id: string;
+                external_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelUnlinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_api_integrations_x_oauth_start_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readiness_api_integrations_x_self_service_readiness_get: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelReadinessResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_api_integrations_youtube_accounts_link_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OAuthChannelLinkPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelLinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlink_api_integrations_youtube_accounts_unlink_delete: {
+        parameters: {
+            query: {
+                brand_id: string;
+                external_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelUnlinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_api_integrations_youtube_oauth_start_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readiness_api_integrations_youtube_self_service_readiness_get: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelReadinessResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     social_media_api_media__platform___content_id__get: {
         parameters: {
             query?: {
@@ -3615,6 +4134,68 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    callback_api_social_x_oauth_callback_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    callback_api_social_youtube_oauth_callback_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

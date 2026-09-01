@@ -1899,6 +1899,7 @@ body { background: var(--sm-bg); }
 .integration-platform-icon.platform-instagram { color: #c026d3; background: linear-gradient(145deg, #fff7ed, #fdf2f8, #faf5ff); }
 .integration-platform-icon.platform-meta { color: #2563eb; background: linear-gradient(145deg, #eff6ff, #f5f3ff); }
 .integration-platform-icon.platform-tiktok { color: #0f172a; background: linear-gradient(145deg, #ecfeff, #fff1f2); }
+.integration-platform-icon.platform-x { color: white; background: #172033; }
 .integration-platform-icon.platform-youtube { color: #ff0033; background: #fff1f2; }
 .oauth-meta-mark { font-size: 1.65rem; font-weight: 850; line-height: 1; letter-spacing: -.12em; }
 .integration-tiktok-mark { font-size: 1.45rem; font-weight: 900; line-height: 1; text-shadow: -1px 0 #25f4ee, 1px 0 #fe2c55; }

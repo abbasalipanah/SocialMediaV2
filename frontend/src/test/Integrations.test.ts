@@ -28,13 +28,21 @@ const connections: ReportingConnection[] = [
     expires_at: null,
     projected_at: "2026-08-21T10:00:00Z",
   },
+  {
+    connection_id: 4,
+    brand_id: "brand-1",
+    platform: "x",
+    state: "connected",
+    expires_at: null,
+    projected_at: "2026-08-22T10:00:00Z",
+  },
 ];
 
 describe("buildAuthorizationProviders", () => {
   it("derives provider-level OAuth status without requiring account rows", () => {
     const providers = buildAuthorizationProviders(connections);
 
-    expect(providers).toHaveLength(3);
+    expect(providers).toHaveLength(4);
     expect(providers.find((item) => item.provider === "meta")).toMatchObject({
       status: "authorized",
       connection: { connection_id: 2 },
@@ -46,6 +54,10 @@ describe("buildAuthorizationProviders", () => {
     expect(providers.find((item) => item.provider === "youtube")).toMatchObject({
       status: "not_authorized",
       connection: null,
+    });
+    expect(providers.find((item) => item.provider === "x")).toMatchObject({
+      status: "authorized",
+      connection: { connection_id: 4 },
     });
   });
 });

@@ -2237,6 +2237,207 @@
         "title": "MetricId",
         "type": "string"
       },
+      "OAuthChannelAccountItem": {
+        "properties": {
+          "connection_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connection Id"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "connection_id",
+          "external_id",
+          "display_name",
+          "state"
+        ],
+        "title": "OAuthChannelAccountItem",
+        "type": "object"
+      },
+      "OAuthChannelLinkPayload": {
+        "properties": {
+          "connection_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Connection Id",
+            "type": "integer"
+          },
+          "external_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "External Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "connection_id",
+          "external_ids"
+        ],
+        "title": "OAuthChannelLinkPayload",
+        "type": "object"
+      },
+      "OAuthChannelLinkResponse": {
+        "properties": {
+          "connection_id": {
+            "title": "Connection Id",
+            "type": "integer"
+          },
+          "connection_state": {
+            "title": "Connection State",
+            "type": "string"
+          },
+          "linked_count": {
+            "title": "Linked Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "connection_id",
+          "linked_count",
+          "connection_state"
+        ],
+        "title": "OAuthChannelLinkResponse",
+        "type": "object"
+      },
+      "OAuthChannelReadinessResponse": {
+        "properties": {
+          "available_accounts": {
+            "items": {
+              "$ref": "#/components/schemas/OAuthChannelAccountItem"
+            },
+            "title": "Available Accounts",
+            "type": "array"
+          },
+          "brand_id": {
+            "title": "Brand Id",
+            "type": "string"
+          },
+          "can_manage": {
+            "title": "Can Manage",
+            "type": "boolean"
+          },
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "connection_state": {
+            "title": "Connection State",
+            "type": "string"
+          },
+          "linked_account_count": {
+            "title": "Linked Account Count",
+            "type": "integer"
+          },
+          "linked_accounts": {
+            "items": {
+              "$ref": "#/components/schemas/OAuthChannelAccountItem"
+            },
+            "title": "Linked Accounts",
+            "type": "array"
+          },
+          "oauth_start_available": {
+            "title": "Oauth Start Available",
+            "type": "boolean"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/PlatformId"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "runtime_mode": {
+            "$ref": "#/components/schemas/RuntimeMode"
+          },
+          "writes_enabled": {
+            "title": "Writes Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "brand_id",
+          "platform",
+          "can_manage",
+          "connection_state",
+          "linked_account_count",
+          "linked_accounts",
+          "available_accounts",
+          "oauth_start_available",
+          "reason",
+          "runtime_mode",
+          "writes_enabled",
+          "checked_at"
+        ],
+        "title": "OAuthChannelReadinessResponse",
+        "type": "object"
+      },
+      "OAuthChannelStartResponse": {
+        "properties": {
+          "authorization_url": {
+            "title": "Authorization Url",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authorization_url",
+          "expires_at"
+        ],
+        "title": "OAuthChannelStartResponse",
+        "type": "object"
+      },
+      "OAuthChannelUnlinkResponse": {
+        "properties": {
+          "brand_id": {
+            "title": "Brand Id",
+            "type": "string"
+          },
+          "connection_state": {
+            "title": "Connection State",
+            "type": "string"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/PlatformId"
+          }
+        },
+        "required": [
+          "brand_id",
+          "platform",
+          "external_id",
+          "connection_state"
+        ],
+        "title": "OAuthChannelUnlinkResponse",
+        "type": "object"
+      },
       "OperationsReadinessResponse": {
         "properties": {
           "database_configured": {
@@ -5780,6 +5981,496 @@
         "summary": "Tiktok Self Service Readiness"
       }
     },
+    "/api/integrations/x/accounts/link": {
+      "post": {
+        "operationId": "link_api_integrations_x_accounts_link_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Brand Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthChannelLinkPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthChannelLinkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Link"
+      }
+    },
+    "/api/integrations/x/accounts/unlink": {
+      "delete": {
+        "operationId": "unlink_api_integrations_x_accounts_unlink_delete",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Brand Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "external_id",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "title": "External Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthChannelUnlinkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unlink"
+      }
+    },
+    "/api/integrations/x/oauth/start": {
+      "post": {
+        "operationId": "start_api_integrations_x_oauth_start_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Brand Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthChannelStartResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start"
+      }
+    },
+    "/api/integrations/x/self-service/readiness": {
+      "get": {
+        "operationId": "readiness_api_integrations_x_self_service_readiness_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Brand Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthChannelReadinessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Readiness"
+      }
+    },
+    "/api/integrations/youtube/accounts/link": {
+      "post": {
+        "operationId": "link_api_integrations_youtube_accounts_link_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Brand Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OAuthChannelLinkPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthChannelLinkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Link"
+      }
+    },
+    "/api/integrations/youtube/accounts/unlink": {
+      "delete": {
+        "operationId": "unlink_api_integrations_youtube_accounts_unlink_delete",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Brand Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "external_id",
+            "required": true,
+            "schema": {
+              "maxLength": 255,
+              "minLength": 1,
+              "title": "External Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthChannelUnlinkResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unlink"
+      }
+    },
+    "/api/integrations/youtube/oauth/start": {
+      "post": {
+        "operationId": "start_api_integrations_youtube_oauth_start_post",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Brand Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthChannelStartResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start"
+      }
+    },
+    "/api/integrations/youtube/self-service/readiness": {
+      "get": {
+        "operationId": "readiness_api_integrations_youtube_self_service_readiness_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "brand_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "Brand Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OAuthChannelReadinessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Readiness"
+      }
+    },
     "/api/media/{platform}/{content_id}": {
       "get": {
         "operationId": "social_media_api_media__platform___content_id__get",
@@ -7644,6 +8335,94 @@
           }
         },
         "summary": "Tiktok Activation Callback"
+      }
+    },
+    "/api/social/x/oauth/callback": {
+      "get": {
+        "operationId": "callback_api_social_x_oauth_callback_get",
+        "parameters": [
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Callback"
+      }
+    },
+    "/api/social/youtube/oauth/callback": {
+      "get": {
+        "operationId": "callback_api_social_youtube_oauth_callback_get",
+        "parameters": [
+          {
+            "in": "cookie",
+            "name": "social_media_session",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Social Media Session"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Callback"
       }
     },
     "/api/workspace/brands": {

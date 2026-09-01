@@ -129,6 +129,10 @@ describe("Brand Setup account editing", () => {
     if (!tiktokRow) throw new Error("TikTok setup row was not rendered");
     expect(within(tiktokRow).getByRole("button", { name: "Connect" })).toBeDisabled();
 
+    const xRow = within(setup).getByText("X").closest("article");
+    if (!xRow) throw new Error("X setup row was not rendered");
+    expect(within(xRow).getByRole("button", { name: "Connect" })).toBeEnabled();
+
     const youtubeRow = within(setup).getByText("YouTube").closest("article");
     if (!youtubeRow) throw new Error("YouTube setup row was not rendered");
     expect(within(youtubeRow).getByRole("button", { name: "Connect" })).toBeEnabled();
