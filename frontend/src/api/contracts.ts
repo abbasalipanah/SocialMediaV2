@@ -150,6 +150,9 @@ export const metricIdSchema = z.enum([
   "media_count",
   "video_views_total",
   "video_views_change",
+  "video_likes_daily",
+  "video_comments_daily",
+  "video_shares_daily",
   "video_likes_total",
   "video_comments_total",
   "video_shares_total",
@@ -282,6 +285,23 @@ export const dashboardContentSummarySchema = z.object({
   data_status: dataStatusSchema,
 });
 
+const dashboardComparisonSchema = z.object({
+  value: z.number().nullable(),
+  previous_value: z.number().nullable(),
+  delta_pct: z.number().nullable(),
+});
+
+export const dashboardContentMetricsSchema = z.object({
+  views: dashboardComparisonSchema,
+  reach: dashboardComparisonSchema,
+  likes: dashboardComparisonSchema,
+  comments: dashboardComparisonSchema,
+  shares: dashboardComparisonSchema,
+  interactions: dashboardComparisonSchema,
+  engagement_rate: dashboardComparisonSchema,
+});
+export type DashboardContentMetrics = z.infer<typeof dashboardContentMetricsSchema>;
+
 const dashboardSourceValuesSchema = z.object({
   organic: z.number().nullable(),
   paid: z.number().nullable(),
@@ -392,6 +412,7 @@ export const platformDashboardSchema = z.object({
     count: z.number().int().nonnegative(),
   })),
   content_summary: dashboardContentSummarySchema,
+  content_metrics: dashboardContentMetricsSchema,
   source_breakdown: dashboardSourceBreakdownSchema,
   metric_methodology: dashboardMetricMethodologySchema,
   audience_capabilities: dashboardAudienceCapabilitiesSchema,
@@ -592,6 +613,11 @@ export const tiktokSelfServiceReadinessSchema = z.object({
     display_name: z.string(),
     state: z.string(),
   })),
+  available_accounts: z.array(z.object({
+    external_id: z.string(),
+    display_name: z.string(),
+    state: z.literal("available"),
+  })),
   oauth_start_available: z.boolean(),
   reason: z.string(),
   runtime_mode: z.string(),
@@ -628,6 +654,13 @@ export const metaLinkedAccountSchema = z.object({
   display_name: z.string(),
 });
 
+export const metaCatalogAccountSchema = z.object({
+  platform: z.enum(["facebook", "instagram"]),
+  external_id: z.string(),
+  display_name: z.string(),
+});
+export type MetaCatalogAccount = z.infer<typeof metaCatalogAccountSchema>;
+
 export const metaSelfServiceReadinessSchema = z.object({
   brand_id: z.string(),
   can_manage: z.boolean(),
@@ -636,6 +669,7 @@ export const metaSelfServiceReadinessSchema = z.object({
   instagram_linked_count: z.number().int().nonnegative(),
   linked_accounts: z.array(metaLinkedAccountSchema),
   discoveries: z.array(metaDiscoverySchema),
+  catalog_accounts: z.array(metaCatalogAccountSchema).default([]),
   oauth_start_available: z.boolean(),
   reason: z.string(),
   runtime_mode: z.string(),

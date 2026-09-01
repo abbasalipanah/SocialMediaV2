@@ -582,6 +582,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/settings/meta/accounts/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Meta Link Catalog Accounts */
+        post: operations["meta_link_catalog_accounts_api_settings_meta_accounts_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/settings/social-accounts": {
         parameters: {
             query?: never;
@@ -931,6 +948,15 @@ export interface components {
             /** Value */
             value: number;
         };
+        /** DashboardComparison */
+        DashboardComparison: {
+            /** Delta Pct */
+            delta_pct: number | null;
+            /** Previous Value */
+            previous_value: number | null;
+            /** Value */
+            value: number | null;
+        };
         /** DashboardContent */
         DashboardContent: {
             /** Account Id */
@@ -976,6 +1002,16 @@ export interface components {
             total_time_watched: number | null;
             /** Views */
             views: number | null;
+        };
+        /** DashboardContentMetrics */
+        DashboardContentMetrics: {
+            comments: components["schemas"]["DashboardComparison"];
+            engagement_rate: components["schemas"]["DashboardComparison"];
+            interactions: components["schemas"]["DashboardComparison"];
+            likes: components["schemas"]["DashboardComparison"];
+            reach: components["schemas"]["DashboardComparison"];
+            shares: components["schemas"]["DashboardComparison"];
+            views: components["schemas"]["DashboardComparison"];
         };
         /** DashboardContentSummary */
         DashboardContentSummary: {
@@ -1252,6 +1288,19 @@ export interface components {
             external_id: string;
             platform: components["schemas"]["PlatformId"];
         };
+        /** MetaCatalogAccountItem */
+        MetaCatalogAccountItem: {
+            /** Display Name */
+            display_name: string;
+            /** External Id */
+            external_id: string;
+            platform: components["schemas"]["PlatformId"];
+        };
+        /** MetaCatalogLinkPayload */
+        MetaCatalogLinkPayload: {
+            /** Accounts */
+            accounts: components["schemas"]["MetaAccountSelectionPayload"][];
+        };
         /** MetaDiscoveryItem */
         MetaDiscoveryItem: {
             /** Connection Id */
@@ -1305,6 +1354,8 @@ export interface components {
             brand_id: string;
             /** Can Manage */
             can_manage: boolean;
+            /** Catalog Accounts */
+            catalog_accounts: components["schemas"]["MetaCatalogAccountItem"][];
             /**
              * Checked At
              * Format: date-time
@@ -1342,7 +1393,7 @@ export interface components {
          * MetricId
          * @enum {string}
          */
-        MetricId: "followers" | "following" | "new_followers" | "follows" | "unfollows" | "followers_net" | "reach" | "reach_paid" | "reach_organic" | "views" | "views_paid" | "views_organic" | "interactions" | "engagement_rate" | "page_views" | "profile_views" | "website_clicks" | "total_actions" | "reactions" | "media_count" | "video_views_total" | "video_views_change" | "video_likes_total" | "video_comments_total" | "video_shares_total" | "video_engagements_total" | "video_engagement_rate";
+        MetricId: "followers" | "following" | "new_followers" | "follows" | "unfollows" | "followers_net" | "reach" | "reach_paid" | "reach_organic" | "views" | "views_paid" | "views_organic" | "interactions" | "engagement_rate" | "page_views" | "profile_views" | "website_clicks" | "total_actions" | "reactions" | "media_count" | "video_views_total" | "video_views_change" | "video_likes_daily" | "video_comments_daily" | "video_shares_daily" | "video_likes_total" | "video_comments_total" | "video_shares_total" | "video_engagements_total" | "video_engagement_rate";
         /** OperationsReadinessResponse */
         OperationsReadinessResponse: {
             /** Database Configured */
@@ -1385,6 +1436,7 @@ export interface components {
             community: components["schemas"]["CommunitySummary"];
             /** Content */
             content: components["schemas"]["DashboardContent"][];
+            content_metrics: components["schemas"]["DashboardContentMetrics"];
             content_summary: components["schemas"]["DashboardContentSummary"];
             meta: components["schemas"]["DashboardMeta"];
             metric_methodology: components["schemas"]["DashboardMetricMethodology"];
@@ -1639,6 +1691,15 @@ export interface components {
             /** Writes Enabled */
             writes_enabled: boolean;
         };
+        /** TikTokAvailableAccountItem */
+        TikTokAvailableAccountItem: {
+            /** Display Name */
+            display_name: string;
+            /** External Id */
+            external_id: string;
+            /** State */
+            state: string;
+        };
         /** TikTokConnectionResponse */
         TikTokConnectionResponse: {
             /** Capabilities */
@@ -1664,6 +1725,8 @@ export interface components {
         };
         /** TikTokSelfServiceReadinessResponse */
         TikTokSelfServiceReadinessResponse: {
+            /** Available Accounts */
+            available_accounts: components["schemas"]["TikTokAvailableAccountItem"][];
             /** Brand Id */
             brand_id: string;
             /** Can Manage */
@@ -2935,6 +2998,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConnectionsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    meta_link_catalog_accounts_api_settings_meta_accounts_link_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MetaCatalogLinkPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MetaLinkResponse"];
                 };
             };
             /** @description Validation Error */

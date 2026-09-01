@@ -11,6 +11,7 @@ from app.application.queries.dashboard_aggregation import audience_capabilities
 from app.application.queries.dashboards import OVERVIEW_METRIC_IDS
 from app.domain.metrics import (
     FACEBOOK_DAILY_SOURCE_METRICS,
+    INSTAGRAM_DAILY_BREAKDOWNS,
     INSTAGRAM_DAILY_SOURCE_METRICS,
     MetricId,
     bootstrap_metric_catalog,
@@ -18,6 +19,8 @@ from app.domain.metrics import (
 from app.domain.platforms import PlatformId
 from app.domain.reporting import (
     AvailabilityStatus,
+    DashboardBreakdown,
+    DashboardBreakdownItem,
     DashboardContent,
     DashboardStoryItem,
     PlatformDashboard,
@@ -123,7 +126,9 @@ def test_metric_collection_statuses_are_evidence_backed() -> None:
         row = metrics[platform_name]
         assert set(row["provider_native"]).issubset(native[platform_name])
         assert set(row["provider_limited_snapshot"]).issubset(legacy_importable)
-        assert set(row["provider_limited_snapshot"]) == set(limited[platform_name])
+        assert set(row["provider_limited_snapshot"]) == (
+            set(limited[platform_name]) & set(row["consumed_metric_ids"])
+        )
 
 
 def test_every_frontend_dimension_has_a_declared_producer_or_unavailable_state() -> None:
@@ -131,9 +136,12 @@ def test_every_frontend_dimension_has_a_declared_producer_or_unavailable_state()
     provider_limited = _capabilities()["provider_limited_dimensions"]
     catalog = bootstrap_metric_catalog()
     facebook_allowed = set(catalog.get(PlatformId.FACEBOOK, MetricId.FOLLOWERS).allowed_breakdowns)
-    instagram_allowed = set(
-        catalog.get(PlatformId.INSTAGRAM, MetricId.FOLLOWERS).allowed_breakdowns
-    )
+    instagram_allowed = {
+        breakdown
+        for definition in catalog.definitions()
+        if definition.platform is PlatformId.INSTAGRAM
+        for breakdown in definition.allowed_breakdowns
+    }
     tiktok_allowed = set(catalog.get(PlatformId.TIKTOK, MetricId.FOLLOWERS).allowed_breakdowns)
     imported_dimensions = {dimension for _, dimension in AUDIENCE_METRIC_MAP.values()}
 
@@ -158,7 +166,8 @@ def test_every_frontend_dimension_has_a_declared_producer_or_unavailable_state()
                     assert set(row["backend_keys"]).issubset(FACEBOOK_AUDIENCE_BREAKDOWN_KEYS)
                 elif platform_name == "instagram":
                     assert all(
-                        any(key.startswith(metric) for metric in INSTAGRAM_AUDIENCE_METRICS)
+                        key in INSTAGRAM_DAILY_BREAKDOWNS
+                        or any(key.startswith(metric) for metric in INSTAGRAM_AUDIENCE_METRICS)
                         for key in row["backend_keys"]
                     )
                 else:
@@ -181,6 +190,29 @@ def test_every_frontend_dimension_has_a_declared_producer_or_unavailable_state()
     )
     assert facebook.age_gender is AvailabilityStatus.PROVIDER_UNAVAILABLE
     assert facebook.activity is AvailabilityStatus.PROVIDER_UNAVAILABLE
+    tiktok = audience_capabilities(
+        PlatformId.TIKTOK,
+        (
+            DashboardBreakdown(
+                metric_id=MetricId.FOLLOWERS,
+                dimension="audience_countries",
+                items=(DashboardBreakdownItem(key="TR", value=1, percentage=100),),
+            ),
+            DashboardBreakdown(
+                metric_id=MetricId.FOLLOWERS,
+                dimension="audience_ages",
+                items=(DashboardBreakdownItem(key="25-34", value=1, percentage=100),),
+            ),
+            DashboardBreakdown(
+                metric_id=MetricId.FOLLOWERS,
+                dimension="audience_genders",
+                items=(DashboardBreakdownItem(key="Female", value=1, percentage=100),),
+            ),
+        ),
+        accounts_available=True,
+    )
+    assert tiktok.geo is AvailabilityStatus.PARTIAL
+    assert tiktok.age_gender is AvailabilityStatus.AVAILABLE
     assert map_content_insights({}, story=True)["sticker_taps"] is None
     assert provider_limited["instagram_story"]["Sticker Taps"] == "provider_unavailable"
 

@@ -39,6 +39,9 @@
           "views",
           "reach",
           "profile_views",
+          "video_likes_daily",
+          "video_comments_daily",
+          "video_shares_daily",
           "interactions"
         ],
         "evidence": [

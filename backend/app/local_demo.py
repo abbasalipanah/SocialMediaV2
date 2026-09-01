@@ -239,6 +239,9 @@ class LocalDemoReporting:
                 _metric(21, "101", PlatformId.INSTAGRAM, observed_on, metric_id, value)
                 for metric_id, value in instagram_values.items()
             )
+            tiktok_likes_daily = 60 + (index // 4) + (weekday * 2)
+            tiktok_comments_daily = 5 + (weekday % 2)
+            tiktok_shares_daily = 7 + weekday - (weekday % 2)
             tiktok_values = {
                 MetricId.FOLLOWERS: 3165 + (index * 4) + (index // 7),
                 MetricId.FOLLOWING: 286 + (index // 30),
@@ -248,7 +251,12 @@ class LocalDemoReporting:
                 MetricId.VIEWS: 900 + (index * 5) + (weekday * 18),
                 MetricId.REACH: 510 + (index * 3) + (weekday * 11),
                 MetricId.PROFILE_VIEWS: 45 + (index // 5) + weekday,
-                MetricId.INTERACTIONS: 72 + (index // 4) + (weekday * 3),
+                MetricId.VIDEO_LIKES_DAILY: tiktok_likes_daily,
+                MetricId.VIDEO_COMMENTS_DAILY: tiktok_comments_daily,
+                MetricId.VIDEO_SHARES_DAILY: tiktok_shares_daily,
+                MetricId.INTERACTIONS: (
+                    tiktok_likes_daily + tiktok_comments_daily + tiktok_shares_daily
+                ),
                 MetricId.VIDEO_VIEWS_TOTAL: 72000 + (index * 310) + ((index % 7) * 80),
                 MetricId.VIDEO_LIKES_TOTAL: 5100 + (index * 25) + ((index % 5) * 4),
                 MetricId.VIDEO_COMMENTS_TOTAL: 310 + (index * 2) + (index % 3),
