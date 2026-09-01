@@ -112,6 +112,15 @@ def test_oauth_connection_links_selection_and_disconnects_locally(
         )
     ] == ["linked", "linked"]
 
+    partial_disconnect = store.disconnect(
+        brand_id=17,
+        platform=PlatformId.YOUTUBE,
+        external_id="UC-other",
+    )
+    assert partial_disconnect is not None
+    assert partial_disconnect.state == "connected"
+    assert partial_disconnect.linked_count == 1
+
     replaced = store.link_accounts(
         brand_id=17,
         platform=PlatformId.YOUTUBE,

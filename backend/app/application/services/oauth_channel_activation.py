@@ -308,7 +308,7 @@ class OAuthChannelActivationCoordinator:
         )
         try:
             access_token = self._credential_store.get(access_reference)
-            if access_token is not None:
+            if access_token is not None and result.linked_count == 0:
                 self._provider.revoke(access_token=access_token.value)
         except Exception:
             pass

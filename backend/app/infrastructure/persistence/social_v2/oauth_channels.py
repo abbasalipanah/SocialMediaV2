@@ -388,7 +388,7 @@ class ProjectionOAuthConnectionStore:
             brand_id=brand_id,
             platform=platform,
             linked_count=remaining,
-            state="disconnected",
+            state=connection_state,
         )
 
     def _require_platform(self, platform: PlatformId) -> None:

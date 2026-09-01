@@ -133,6 +133,7 @@ class MemoryConnections:
     def __init__(self) -> None:
         self.bindings = ()
         self.fail_create = False
+        self.remaining_after_disconnect = 0
 
     def create_pending(
         self, *, brand_id, platform, provider_subject_id, credentials, expires_at
@@ -154,7 +155,13 @@ class MemoryConnections:
         return OAuthLinkResult(connection_id, brand_id, platform, len(selections), "connected")
 
     def disconnect(self, *, brand_id, platform, external_id):
-        return OAuthLinkResult(41, brand_id, platform, 0, "disconnected")
+        return OAuthLinkResult(
+            41,
+            brand_id,
+            platform,
+            self.remaining_after_disconnect,
+            "connected" if self.remaining_after_disconnect else "disconnected",
+        )
 
 
 def _coordinator():
@@ -229,6 +236,33 @@ def test_oauth_channel_unlink_disables_locally_before_best_effort_revoke() -> No
     assert result.state == "disconnected"
     assert credentials.values == {}
     assert provider.revoked == ["access-value"]
+
+
+def test_oauth_channel_unlink_preserves_provider_grant_for_remaining_account() -> None:
+    coordinator, provider, credentials, connections = _coordinator()
+    provider.grant = OAuthProviderGrant(
+        provider_subject_id="google-user-1",
+        access_token="shared-access",
+        refresh_token="shared-refresh",
+        access_expires_in=3600,
+        granted_scopes=SCOPES,
+        accounts=(
+            OAuthAccountGrant(PlatformId.YOUTUBE, "UC-first", "First Channel"),
+            OAuthAccountGrant(PlatformId.YOUTUBE, "UC-second", "Second Channel"),
+        ),
+    )
+    state = parse_qs(urlparse(coordinator.start(_context()).authorization_url).query)[
+        "state"
+    ][0]
+    coordinator.complete(query={"code": "auth-code", "state": state}, context=_context())
+    connections.remaining_after_disconnect = 1
+
+    result = coordinator.unlink(context=_context(), external_id="UC-first")
+
+    assert result.state == "connected"
+    assert result.linked_count == 1
+    assert provider.revoked == []
+    assert len(credentials.values) == 2
 
 
 def test_oauth_channel_activation_revokes_credentials_on_persistence_failure() -> None:
