@@ -75,6 +75,25 @@ class TikTokStateCodec:
         expected_brand_id: int,
         expected_session_binding: str,
     ) -> TikTokStateBinding:
+        binding = self.inspect(token)
+        if (
+            binding.user_id != expected_user_id
+            or binding.brand_id != expected_brand_id
+            or not hmac.compare_digest(binding.session_binding, expected_session_binding)
+        ):
+            raise TikTokStateError("state_binding_mismatch")
+        key = CheckpointKey(
+            platform=PlatformId.TIKTOK,
+            capability=CapabilityId.PROFILE,
+            account_id=binding.nonce,
+        )
+        operation_id = hashlib.sha256(token.encode()).hexdigest()
+        if not self._replay_store.claim_once(key, operation_id, binding.expires_at):
+            raise TikTokStateError("state_replayed")
+        return binding
+
+    def inspect(self, token: str) -> TikTokStateBinding:
+        """Verify signed callback state without consuming its one-time claim."""
         body, signature = _split(token)
         expected_signature = hmac.new(self._secret, body, hashlib.sha256).digest()
         if not hmac.compare_digest(signature, expected_signature):
@@ -91,20 +110,6 @@ class TikTokStateCodec:
             or binding.redirect_uri != TIKTOK_REDIRECT_URI
         ):
             raise TikTokStateError("state_provider_mismatch")
-        if (
-            binding.user_id != expected_user_id
-            or binding.brand_id != expected_brand_id
-            or not hmac.compare_digest(binding.session_binding, expected_session_binding)
-        ):
-            raise TikTokStateError("state_binding_mismatch")
-        key = CheckpointKey(
-            platform=PlatformId.TIKTOK,
-            capability=CapabilityId.PROFILE,
-            account_id=binding.nonce,
-        )
-        operation_id = hashlib.sha256(token.encode()).hexdigest()
-        if not self._replay_store.claim_once(key, operation_id, binding.expires_at):
-            raise TikTokStateError("state_replayed")
         return binding
 
 

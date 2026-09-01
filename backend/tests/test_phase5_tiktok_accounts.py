@@ -322,6 +322,8 @@ def test_state_is_bound_single_use_and_provider_family_checked() -> None:
         expires_at=NOW + timedelta(minutes=5),
     )
     token = codec.issue(binding)
+    assert codec.inspect(token) == binding
+    assert store.claimed == set()
     consumed = codec.consume(
         token,
         expected_user_id="user-1",

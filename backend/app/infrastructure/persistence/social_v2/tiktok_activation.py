@@ -109,6 +109,34 @@ class ProjectionTikTokActivationStore:
             ).scalar_one_or_none()
             if tenant_id is None:
                 raise TikTokActivationError("activation_brand_unavailable")
+            # TikTok's consent flow may silently reuse the provider session that
+            # is already open in the browser. Serialize by provider identity and
+            # refuse that identity when another Brand already owns an effective
+            # link. The advisory lock closes the race where two Brands complete
+            # OAuth for the same account at the same time.
+            connection.execute(
+                text(
+                    """SELECT pg_advisory_xact_lock(
+                               hashtextextended(:lock_key, 0)
+                           )"""
+                ),
+                {"lock_key": f"tiktok-account:{business_id}"},
+            )
+            conflicting_brand_id = connection.execute(
+                text(
+                    """SELECT brand_id
+                       FROM linked_social_accounts
+                       WHERE platform='tiktok' AND external_id=:business_id
+                         AND brand_id<>:brand_id
+                         AND status IN ('active', 'connected', 'pending_verification')
+                       ORDER BY id
+                       LIMIT 1
+                       FOR UPDATE"""
+                ),
+                {"brand_id": brand_id, "business_id": business_id},
+            ).scalar_one_or_none()
+            if conflicting_brand_id is not None:
+                raise TikTokActivationError("activation_link_already_connected_elsewhere")
             existing = connection.execute(
                 text(
                     """SELECT id, connection_id, status

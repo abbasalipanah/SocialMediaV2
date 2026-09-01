@@ -199,6 +199,27 @@ def test_viewer_operator_gets_integrations_without_settings() -> None:
     )
 
 
+@pytest.mark.parametrize("role", ["agency_admin", "super_admin"])
+def test_admin_roles_keep_integrations_and_settings(role: str) -> None:
+    store = MemorySessionStore()
+    raw_session, _ = consume_sso(
+        token(
+            contract_overrides={
+                "role": role,
+                "platform_role": role,
+                "effective_role": role,
+            }
+        ),
+        SECRET,
+        store,
+    )
+
+    session = resolve_session(raw_session, store)
+    assert session is not None
+    assert session["settings_visible"] is True
+    assert session["integrations_visible"] is True
+
+
 def test_internal_agency_operator_does_not_receive_settings() -> None:
     verified = verify_sso(
         token(

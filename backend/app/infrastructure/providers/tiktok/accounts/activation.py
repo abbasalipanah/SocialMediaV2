@@ -87,6 +87,9 @@ class TikTokActivationStateAdapter:
             expires_at=binding.expires_at,
         )
 
+    def verified_brand_id(self, token: str) -> int:
+        return self._codec.inspect(token).brand_id
+
 
 class TikTokAccountsActivationProvider:
     def __init__(

@@ -49,6 +49,7 @@ from .tiktok_activation import (
     ProviderTokenGrant,
     TikTokActivationError,
     TikTokActivationProvider,
+    TikTokActivationStatePort,
 )
 
 
@@ -78,6 +79,7 @@ __all__ = [
     "ActivationStart",
     "ActivationStateClaims",
     "ActivationStatePort",
+    "TikTokActivationStatePort",
     "MetaActivationError",
     "MetaActivationProvider",
     "MetaCatalogAccount",

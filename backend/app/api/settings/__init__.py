@@ -419,11 +419,10 @@ def create_settings_router(
         platform: Annotated[PlatformId | None, Query()] = None,
         session: str | None = Cookie(default=None, alias=COOKIE_NAME),
     ) -> SocialAccountsResponse:
-        scope = _integration_scope(
-            raw_session=session,
-            brand_id=brand_id,
-            rollup=rollup,
-        )
+        # Account identities belong to Settings. Integrations is deliberately
+        # OAuth-only for delegated viewer sessions, so the viewer-facing API
+        # surface must not expose account names or external provider IDs.
+        scope = _scope(raw_session=session, brand_id=brand_id, rollup=rollup)
         assert reporting_store is not None
         rows = reporting_store.list_accounts(
             brand_ids=scope.workspace.scope.resolved_brand_ids,
@@ -460,11 +459,8 @@ def create_settings_router(
         rollup: bool = Query(default=False),
         session: str | None = Cookie(default=None, alias=COOKIE_NAME),
     ) -> SyncJobsResponse:
-        scope = _integration_scope(
-            raw_session=session,
-            brand_id=brand_id,
-            rollup=rollup,
-        )
+        # Job/account operations are part of Settings, not the OAuth handoff.
+        scope = _scope(raw_session=session, brand_id=brand_id, rollup=rollup)
         assert reporting_store is not None
         rows = reporting_store.list_sync_jobs(brand_ids=scope.workspace.scope.resolved_brand_ids)
         return SyncJobsResponse(meta=scope.workspace.scope, items=rows)
@@ -863,12 +859,13 @@ def create_settings_router(
             requested_brand_id=brand_id,
         )
         assert reporting_store is not None
+        settings_access = session_can_access_settings(scope.session)
         accounts = tuple(
             account
             for account in reporting_store.list_accounts(brand_ids=(brand_id,))
             if account.platform is PlatformId.TIKTOK
         )
-        if activation is not None:
+        if activation is not None and settings_access:
             try:
                 linked_accounts = tuple(
                     TikTokLinkedAccountItem(
@@ -888,7 +885,7 @@ def create_settings_router(
                 )
             except TikTokActivationError as exc:
                 _raise_self_service_activation_error(exc)
-        else:
+        elif settings_access:
             linked_accounts = tuple(
                 TikTokLinkedAccountItem(
                     external_id=item.external_id,
@@ -897,6 +894,9 @@ def create_settings_router(
                 )
                 for item in accounts
             )
+            available_accounts = ()
+        else:
+            linked_accounts = ()
             available_accounts = ()
         rows = tuple(
             row
@@ -978,6 +978,8 @@ def create_settings_router(
             raw_session=session,
             requested_brand_id=brand_id,
         )
+        if not session_can_access_settings(scope.session):
+            raise HTTPException(403, "settings_capability_required")
         try:
             result = activation.unlink(context=context, business_id=external_id)
         except TikTokActivationError as exc:
@@ -1047,10 +1049,12 @@ def create_settings_router(
             response.headers["Referrer-Policy"] = "no-referrer"
             return response
 
+        callback_brand_id = str(payload.get("brand_id") or "") if payload else ""
         try:
+            callback_brand_id = str(activation.callback_brand_id(query=dict(pairs)))
             scope, context = _self_service_context(
                 raw_session=session,
-                requested_brand_id=None,
+                requested_brand_id=callback_brand_id,
             )
             result = activation.complete(
                 query=dict(pairs),
@@ -1061,9 +1065,19 @@ def create_settings_router(
                 raise TikTokActivationError("activation_completion_failed")
         except TikTokActivationError as exc:
             return _self_service_callback_page(
-                brand_id=str(payload.get("brand_id") or "") if payload else "",
+                brand_id=callback_brand_id,
                 error_code=_self_service_error_code(exc),
                 status_code=400,
+            )
+        except HTTPException as exc:
+            return _self_service_callback_page(
+                brand_id=callback_brand_id,
+                error_code=(
+                    "tiktok_self_service_authority_denied"
+                    if exc.status_code in {401, 403}
+                    else "tiktok_self_service_completion_failed"
+                ),
+                status_code=exc.status_code,
             )
         return _self_service_callback_page(
             brand_id=scope.workspace.scope.requested_brand_id,
@@ -1280,6 +1294,8 @@ def _self_service_error_code(exc: TikTokActivationError) -> str:
         return "tiktok_self_service_account_invalid"
     if reason == "activation_link_not_found":
         return "tiktok_self_service_account_not_found"
+    if reason == "activation_link_already_connected_elsewhere":
+        return "tiktok_self_service_account_already_connected"
     return "tiktok_self_service_completion_failed"
 
 

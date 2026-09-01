@@ -45,6 +45,11 @@ class TikTokAccountsWireMapper:
         ]
         return {
             "client_key": self.config.app_id,
+            # TikTok otherwise skips its authorization screen for a valid
+            # browser session, which can silently reuse the account authorized
+            # for the previous Brand. Always make the provider show the screen
+            # so the operator can verify the current TikTok identity.
+            "disable_auto_auth": "1",
             "redirect_uri": self.config.redirect_uri,
             "response_type": "code",
             "scope": ",".join(ordered_scopes),

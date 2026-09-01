@@ -6,7 +6,12 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.api.auth import COOKIE_NAME
-from app.application.ports import ActivationLink, ActivationResult, ActivationStart
+from app.application.ports import (
+    ActivationLink,
+    ActivationResult,
+    ActivationStart,
+    TikTokActivationError,
+)
 from app.core.security import sha256_text
 from app.main import create_app
 from tests.test_phase6_dashboard_api import MemoryAuthority, MemoryReporting
@@ -16,11 +21,19 @@ class FakeSelfServiceActivation:
     def __init__(self) -> None:
         self.calls: list[tuple[str, bool]] = []
         self.links: tuple[ActivationLink, ...] = ()
+        self.available: tuple[ActivationLink, ...] = ()
+        self.callback_brand = 101
+        self.completion_error: str | None = None
 
     def linked_accounts(self, context) -> tuple[ActivationLink, ...]:
         assert context.brand_id == 101
         self.calls.append(("links", False))
         return self.links
+
+    def available_accounts(self, context) -> tuple[ActivationLink, ...]:
+        assert context.brand_id == 101
+        self.calls.append(("available", False))
+        return self.available
 
     def unlink(self, *, context, business_id: str) -> ActivationLink:
         assert context.brand_id == 101
@@ -66,6 +79,8 @@ class FakeSelfServiceActivation:
         }
         assert context.brand_id == 101
         self.calls.append(("complete", require_gate_context))
+        if self.completion_error is not None:
+            raise TikTokActivationError(self.completion_error)
         return ActivationResult(
             connection_id=77,
             link_id=88,
@@ -73,6 +88,14 @@ class FakeSelfServiceActivation:
             state="pending_verification",
             optional_scopes_available=(),
         )
+
+    def callback_brand_id(self, *, query) -> int:
+        assert query == {
+            "code": "authorization-code",
+            "scopes": "user.info.basic,video.list",
+            "state": "self-service",
+        }
+        return self.callback_brand
 
 
 def _make_self_service_session(authority: MemoryAuthority) -> dict[str, object]:
@@ -96,6 +119,19 @@ def _make_self_service_session(authority: MemoryAuthority) -> dict[str, object]:
     session.pop("sso_issued_at", None)
     session.pop("sso_consumed_at", None)
     session.pop("sso_jti_hash", None)
+    return session
+
+
+def _make_settings_session(authority: MemoryAuthority) -> dict[str, object]:
+    session = _make_self_service_session(authority)
+    session["role"] = "agency_admin"
+    session["app_role"] = None
+    session["access_mode"] = "write"
+    session["settings_visible"] = True
+    for brand in session["brand_scope"]["brands"]:
+        if brand["brand_id"] == session["brand_id"]:
+            brand["role"] = "agency_admin"
+            brand["access_mode"] = "write"
     return session
 
 
@@ -142,6 +178,7 @@ async def test_self_service_readiness_is_brand_scoped_without_owner_sso(
             "connection_state": "disconnected",
             "linked_account_count": 0,
             "linked_accounts": [],
+            "available_accounts": [],
             "oauth_start_available": False,
             "reason": "provider_activation_not_configured",
             "runtime_mode": "development",
@@ -152,7 +189,8 @@ async def test_self_service_readiness_is_brand_scoped_without_owner_sso(
         assert capabilities.json()["permissions"]["settings_visible"] is False
         assert capabilities.json()["permissions"]["integrations_visible"] is True
         assert capabilities.json()["permissions"]["tiktok_connection_manage"] is True
-        assert integration_accounts.status_code == 200
+        assert integration_accounts.status_code == 403
+        assert integration_accounts.json() == {"detail": "settings_capability_required"}
         assert settings_accounts.status_code == 403
 
         session["app_role"] = "viewer"
@@ -225,7 +263,6 @@ async def test_self_service_start_and_callback_use_non_sso_context(tmp_path) -> 
     assert '"brandId":"101"' in callback.text
     assert '"connectionState":"pending_verification"' in callback.text
     assert activation.calls == [
-        ("links", False),
         ("ready", False),
         ("start", False),
         ("complete", False),
@@ -233,7 +270,82 @@ async def test_self_service_start_and_callback_use_non_sso_context(tmp_path) -> 
 
 
 @pytest.mark.asyncio
-async def test_self_service_readiness_lists_pending_account_and_unlinks_it(tmp_path) -> None:
+async def test_settings_callback_uses_signed_child_brand_not_session_parent(tmp_path) -> None:
+    authority = MemoryAuthority()
+    session = _make_settings_session(authority)
+    session["brand_id"] = "100"
+    activation = FakeSelfServiceActivation()
+    app = create_app(
+        authority,
+        _reporting(tmp_path),
+        tiktok_activation=activation,
+    )
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        cookies={COOKIE_NAME: authority.raw_session},
+        follow_redirects=False,
+    ) as client:
+        started = await client.post(
+            "/api/integrations/tiktok/oauth/start",
+            params={"brand_id": "101"},
+            headers={"Origin": "http://test"},
+        )
+        callback = await client.get(
+            "/api/social/tiktok/oauth/callback",
+            params={
+                "code": "authorization-code",
+                "scopes": "user.info.basic,video.list",
+                "state": "self-service",
+            },
+        )
+
+    assert started.status_code == 200
+    assert callback.status_code == 200
+    assert '"brandId":"101"' in callback.text
+    assert '"connectionState":"pending_verification"' in callback.text
+    assert activation.calls == [
+        ("start", False),
+        ("complete", False),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_callback_reports_account_already_connected_to_another_brand(tmp_path) -> None:
+    authority = MemoryAuthority()
+    _make_settings_session(authority)
+    activation = FakeSelfServiceActivation()
+    activation.completion_error = "activation_link_already_connected_elsewhere"
+    app = create_app(
+        authority,
+        _reporting(tmp_path),
+        tiktok_activation=activation,
+    )
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        cookies={COOKIE_NAME: authority.raw_session},
+        follow_redirects=False,
+    ) as client:
+        callback = await client.get(
+            "/api/social/tiktok/oauth/callback",
+            params={
+                "code": "authorization-code",
+                "scopes": "user.info.basic,video.list",
+                "state": "self-service",
+            },
+        )
+
+    assert callback.status_code == 400
+    assert '"brandId":"101"' in callback.text
+    assert '"connectionState":"error"' in callback.text
+    assert '"errorCode":"tiktok_self_service_account_already_connected"' in callback.text
+
+
+@pytest.mark.asyncio
+async def test_viewer_readiness_hides_accounts_and_unlink_requires_settings(tmp_path) -> None:
     authority = MemoryAuthority()
     _make_self_service_session(authority)
     activation = FakeSelfServiceActivation()
@@ -245,6 +357,16 @@ async def test_self_service_readiness_lists_pending_account_and_unlinks_it(tmp_p
             business_id="business-1",
             state="pending_verification",
             display_name="TikTok Business",
+        ),
+    )
+    activation.available = (
+        ActivationLink(
+            connection_id=91,
+            link_id=92,
+            brand_id=202,
+            business_id="business-available",
+            state="connected",
+            display_name="Existing TikTok Business",
         ),
     )
     app = create_app(
@@ -262,6 +384,17 @@ async def test_self_service_readiness_lists_pending_account_and_unlinks_it(tmp_p
             "/api/integrations/tiktok/self-service/readiness",
             params={"brand_id": "101"},
         )
+        viewer_unlinked = await client.delete(
+            "/api/integrations/tiktok/accounts/unlink",
+            params={"brand_id": "101", "external_id": "business-1"},
+            headers={"Origin": "http://test"},
+        )
+
+        _make_settings_session(authority)
+        settings_readiness = await client.get(
+            "/api/integrations/tiktok/self-service/readiness",
+            params={"brand_id": "101"},
+        )
         unlinked = await client.delete(
             "/api/integrations/tiktok/accounts/unlink",
             params={"brand_id": "101", "external_id": "business-1"},
@@ -269,11 +402,22 @@ async def test_self_service_readiness_lists_pending_account_and_unlinks_it(tmp_p
         )
 
     assert readiness.status_code == 200
-    assert readiness.json()["linked_accounts"] == [
+    assert readiness.json()["linked_accounts"] == []
+    assert readiness.json()["available_accounts"] == []
+    assert viewer_unlinked.status_code == 403
+    assert viewer_unlinked.json() == {"detail": "settings_capability_required"}
+    assert settings_readiness.json()["linked_accounts"] == [
         {
             "external_id": "business-1",
             "display_name": "TikTok Business",
             "state": "pending_verification",
+        }
+    ]
+    assert settings_readiness.json()["available_accounts"] == [
+        {
+            "external_id": "business-available",
+            "display_name": "Existing TikTok Business",
+            "state": "available",
         }
     ]
     assert unlinked.status_code == 200

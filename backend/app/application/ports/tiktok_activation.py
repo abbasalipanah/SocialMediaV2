@@ -139,6 +139,10 @@ class ActivationStatePort(Protocol):
     ) -> ActivationStateClaims: ...
 
 
+class TikTokActivationStatePort(ActivationStatePort, Protocol):
+    def verified_brand_id(self, token: str) -> int: ...
+
+
 class TikTokActivationProvider(Protocol):
     @property
     def activation_enabled(self) -> bool: ...
@@ -200,6 +204,7 @@ __all__ = [
     "ActivationStart",
     "ActivationStateClaims",
     "ActivationStatePort",
+    "TikTokActivationStatePort",
     "ProviderAccountGrant",
     "ProviderPayloadTransport",
     "ProviderTokenGrant",

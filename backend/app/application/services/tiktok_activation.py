@@ -17,10 +17,10 @@ from app.application.ports import (
     ActivationLinkStore,
     ActivationResult,
     ActivationStart,
-    ActivationStatePort,
     SessionStore,
     TikTokActivationError,
     TikTokActivationProvider,
+    TikTokActivationStatePort,
 )
 from app.application.ports.credentials import (
     CredentialRef,
@@ -109,7 +109,7 @@ class TikTokActivationCoordinator:
         required_scopes: tuple[str, ...],
         optional_scopes: tuple[str, ...],
         intent_store: ActivationIntentStore,
-        state_port: ActivationStatePort,
+        state_port: TikTokActivationStatePort,
         provider: TikTokActivationProvider,
         credential_store: CredentialStore,
         link_store: ActivationLinkStore,
@@ -282,6 +282,18 @@ class TikTokActivationCoordinator:
             state=link.state,
             optional_scopes_available=optional,
         )
+
+    def callback_brand_id(self, *, query: Mapping[str, str]) -> int:
+        """Resolve the callback Brand from verified state before building context."""
+        if set(query) != CALLBACK_FIELDS:
+            raise TikTokActivationError("activation_callback_rejected")
+        state = query.get("state", "")
+        if not state:
+            raise TikTokActivationError("activation_callback_rejected")
+        try:
+            return self._state_port.verified_brand_id(state)
+        except Exception as exc:
+            raise TikTokActivationError("activation_callback_rejected") from exc
 
     def linked_accounts(self, context: ActivationContext) -> tuple[ActivationLink, ...]:
         self._assert_authorized(context, require_gate_context=False)

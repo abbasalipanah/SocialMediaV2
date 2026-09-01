@@ -90,12 +90,14 @@ def test_tiktok_account_holder_wire_fields_are_exact() -> None:
     )
     assert set(authorization) == {
         "client_key",
+        "disable_auto_auth",
         "redirect_uri",
         "response_type",
         "scope",
         "state",
     }
     assert authorization["client_key"] == TIKTOK_APP_ID
+    assert authorization["disable_auto_auth"] == "1"
     assert authorization["scope"].split(",") == list(requested)
 
     token = mapper.token_fields(auth_code="disposable-auth-value")
