@@ -889,3 +889,129 @@ politikası ayrıca uygulanır.
 - Canli video pagination cevabi `has_more=true` ile integer cursor dondurdu. Opaque non-negative integer cursor decimal string'e normalize edilerek mevcut sonraki-sayfa kontratina uyarlandi; regresyon testi eklendi.
 - Ilk yazimli canary `172` metric, `196` content ve `196` media uretti; yorumlar `comments_unavailable` nedeniyle sonucu `partial` birakti. Izole trace yetki reddi olmadigini, comment `create_time` alaninin numeric-string epoch (`'1785485291'`) oldugunu gosterdi. Comment timestamp ve integer cursor parser'lari content ile ayni canli uyumluluk kurallarina getirildi; test guncellendi.
 - Durum: duzeltme deploy/canary asamasinda; canary basarili olmadan global collection veya V2 timer acilmayacak.
+
+## 2026-08-24 - Timer ve dashboard freshness incident incelemesi
+
+- TikTok ownership transferi/ilk canary tarihi `2026-08-18`; inceleme tarihi `2026-08-24`. Gecen sure 6 gun.
+- `social-media-v2-collection.timer` enabled/active ve 30 dakikada bir tetikleniyor. `SOCIAL_WORKER_SCHEDULE_ENABLED`, Meta collection ve TikTok collection gate'leri production env'de acik. Sorun timer'in tetiklememesi degil.
+- Collection service her tetikte provider cagrisindan once `ValueError: meta_connection_payload_invalid` ile exit `1` oluyor. Ilk kesin hata `2026-08-21T08:30:13Z`; inceleme anindaki son hata `2026-08-24T06:01:08Z`.
+- Transferden inceleme anina kadar journal sonucu: `104` tamamlanmis collection service calismasi, `145` failed calisma. Hata basladiktan sonra yarim saatlik timer fail eden batch'i tekrarliyor.
+- Kok veri anomalisi: ayni isimde iki aktif `Turk Eximbank` brand kaydi var. `brand_id=21` Meta `connection_id=12` sahibi fakat aktif linked account'u yok; `brand_id=73` aktif Facebook/Instagram linked account'larinin sahibi fakat bu account'lar `brand_id=21`e ait connection `12`yi kullaniyor.
+- Etkilenen aktif hedefler: Facebook `linked_social_accounts.id=3`, Instagram `id=13`; ayrica disabled legacy Facebook link `id=22` ayni cross-brand connection'i kullaniyor.
+- Collector cross-brand connection'i guvenlik kontroluyle dogru olarak reddediyor; ancak `list_connected()` generator'u tek bozuk hedefi izole etmek yerine exception ile 91 aktif hesabin tum batch'ini durduruyor.
+- Inceleme aninda 91 aktif hesabinin metric kartlarinin tamami en az 3 gun geride: Facebook `40`, Instagram `36`, TikTok `3` hesap tam 3 gun; Demo Company'nin uc platformu 5 gun.
+- Daha eski ve account-health=`error` kartlar: Vatan Yapi & Miamarin FB/IG `108` gun, Biblos Alacati FB/IG `94` gun, Tarti Medikal FB `63` gun, Zupp.in FB/IG `24` gun, CTG Elektrik IG `20` gun, Istanbul Marin IG `20` gun.
+- Onerilen onarim iki parcali: canonical Turk Eximbank brand karariyla connection/link ownership verisini uzlastirmak; ardindan malformed bir target'in tum scheduled batch'i durdurmamasini saglayan per-target isolation ve regresyon testi eklemek.
+- Inceleme salt-okunur yapildi; brand, connection, gate, timer veya runtime kodunda degisiklik yapilmadi.
+
+### 2026-08-24 - Story freshness kontrolu
+
+- Veritabaninda `2,625` adet `story` ve `76` adet `shared_story` content row'u var; story gecmisi bos degil.
+- Aktif Instagram hesaplarinin `40/42` tanesinde toplam `2,559` story row'u mevcut. En yeni Instagram story zamani `2026-08-21 10:13:15 Europe/Istanbul`, son projection write `2026-08-21 11:20:01 Europe/Istanbul`.
+- Aktif Facebook hesaplarinin `5/45` tanesinde toplam `96` story/shared-story row'u mevcut. En yeni Facebook story zamani `2026-08-13 14:00 Europe/Istanbul`; son projection write `2026-08-21 10:44:06 Europe/Istanbul`.
+- Collection batch'i `2026-08-21`de kirildigi icin 21 Agustos sonrasi yeni story projection'i yok. Dolayisiyla gecmis story'ler tasinmis/toplanmis, fakat son uc gunun story'leri guncel degil.
+
+## 2026-08-24 - Collection freshness recovery execution
+
+- V2 collection timer stopped and disabled before code or ownership changes. V1 was not changed.
+- Exact target-materialization check found 88 joined rows: 87 valid and 1 invalid.
+- The batch-level exception is caused by `linked_social_accounts.id=57` (CTG Elektrik Instagram, `connection_id=47`, `brand_id=286189`): external account `17841471029369177` is absent from the connection projection account list.
+- `connection_id=12` is a separate ownership inconsistency: the connection/projection owner is `brand_id=21`, while its three linked accounts belong to active `brand_id=73`. It will be reconciled transactionally without moving or deleting historical metric/content rows.
+- Collector remediation: enforce `platform_connections.brand_id = linked_social_accounts.brand_id` and isolate malformed targets so one target cannot abort the complete batch. Skips log identifiers and the validation error only; payloads and credentials are never logged.
+- CTG account 57 will remain isolated until its projection is repaired or the account is reauthorized. No credential reference will be guessed or copied from another account.
+
+### Recovery execution result
+
+- Focused regression test: `backend/tests/test_collection_targets.py` passed (`2 passed`).
+- Backend-only immutable release deployed: `/opt/social-media-v2/releases/20260824T062548Z-collection-target-isolation/backend`.
+- V2 API restarted successfully. Frontend remained on `/opt/social-media-v2/releases/20260821T085149Z-tiktok-account-management/frontend`.
+- `connection_id=12` ownership was changed in one guarded transaction from `brand_id=21` to active `brand_id=73`; `v2:meta:connection:12` projection ownership was changed in the same transaction. Its three linked accounts were already owned by brand 73. Historical metric/content rows under brand 21 were not moved or deleted.
+- Two timer-disabled scheduled recovery runs completed with service exit code 0. Run 1 processed 43/87 targets before the internal collection budget; run 2 processed 47/87. Per-account provider failures did not terminate either batch.
+- The systemd start timeout was temporarily inspected during recovery. A runtime-only `/run` override was used, then removed. The collection service is restored to its original `TimeoutStartSec=25min` configuration.
+- The remaining five healthy 3-day-stale accounts were processed with scoped `--complete` runs for brands 70, 60, 62, and 30. The transient unit completed successfully with exit code 0 and processed six account targets (the scopes included one already-fresh sibling account).
+- Metric freshness after recovery: 91 eligible active/connected accounts; 79 at 0-1 day lag, 0 at 2 days, 0 at 3 days, and 12 older exceptions. The incident population of 79 accounts at exactly 3 days lag is fully cleared.
+- Recovery write evidence since 2026-08-24 06:27:44 UTC: 78 accounts / 1,836 content rows touched; 10 accounts / 19 story rows touched; 45 accounts / 74 media rows touched.
+- The 12 older exceptions are not timer-regression accounts: eight provider authorization/access failures (Vatan Yapi & Miamarin 2, Biblos Alacati 2, Tarti Medikal 1, Zupp.in 2, Istanbul Marin 1), CTG Elektrik Instagram link 57 with the projection mismatch, and three Demo Company accounts intentionally left without a collection projection.
+- Timer re-enabled after the batch-level recovery gate passed. `social-media-v2-collection.timer` is enabled and active; enabling it triggered a scheduled collection at 2026-08-24 07:20:28 UTC.
+- V1 was not changed during this recovery.
+
+## 2026-08-24 - Salamis Bay Conti provider account discovery entrypoints
+
+- Production diagnosis: active Salamis Bay Conti is `brand_id=286200`, tenant 1. It has no Meta connection/discovery rows and no TikTok linked account yet. No account was linked or moved during this work.
+- The Brand Setup `Connect` action opened the account manager, but the provider authorization actions existed only in the modal footer. In the reported viewport the footer was outside the visible area, leaving an empty account panel with no usable way to load provider accounts.
+- Empty Meta panels now show a visible `Load Meta accounts` action inside the account panel. Meta authorization only discovers accounts; linking still requires the user to select accounts and save.
+- Empty TikTok panels now show a visible `Load TikTok account` action inside the account panel and hand off to the separate TikTok authorization flow.
+- Added a frontend regression test for a Brand with zero saved Meta/TikTok accounts.
+- Backend ownership boundaries, production account ownership, credentials, and V1 were not changed.
+- Immutable frontend deployment target: `/opt/social-media-v2/releases/20260824-salamis-account-discovery/frontend`.
+
+### Correction: existing in-application Meta catalog, not OAuth
+
+- The initial interpretation was incorrect: the requested source was the application's existing Meta account inventory, not a new provider authorization.
+- The temporary inline `Load Meta accounts` / `Load TikTok account` empty-state actions were removed from the frontend.
+- The application catalog contains four Salamis matches: Facebook `242253949139245`, Instagram `17841400914154651`, and the Lemon Spa Facebook/Instagram accounts `487207687995064` / `17841449554579048`.
+- A guarded tenant-local catalog reuse transaction created Salamis Meta selection `connection_id=79` with 98 credential-backed discovery rows in `available` state.
+- The transaction created no `linked_social_accounts` rows. Account selection and linking remain entirely with the user.
+- The source and target are both tenant 1. No cross-tenant catalog or credential access was introduced.
+- Corrected immutable frontend deployment target: `/opt/social-media-v2/releases/20260824-salamis-existing-meta-catalog/frontend`.
+
+## 2026-08-24 - Existing account catalog plus provider authorization
+
+- Confirmed desired UX: existing in-application accounts and provider OAuth must coexist.
+- Meta keeps the existing 98-account application catalog for Salamis and now always exposes `Authorize another Meta account` beside catalog save actions.
+- TikTok readiness now returns a separate `available_accounts` collection containing credential-backed accounts from other Brands in the same tenant. Cross-tenant accounts and entries without a live connection projection are excluded.
+- TikTok existing accounts are displayed as `Available in app`; `Authorize another TikTok account` remains available in the same panel.
+- Existing TikTok entries are intentionally read-only in this change. TikTok credentials are account/Brand scoped; silently cloning a token or transferring ownership would risk disabling collection for the source Brand. No TikTok account was moved, copied, linked, or unlinked.
+- Added backend and frontend regression coverage for the new readiness contract and catalog rendering.
+- Immutable backend/frontend deployment target: `/opt/social-media-v2/releases/20260824-account-catalog-and-auth`.
+- V1 is unchanged.
+
+## 2026-08-24 - Newly linked account self-healing collection remediation
+
+- Salamis Bay Conti Facebook link `108` and Instagram link `109` were provider-accessible and
+  current raw metrics/content were written, but their initial backfills did not finalize cleanly.
+- Facebook exhausted the 300-second account budget inside media persistence after profile/daily
+  writes. Instagram encountered an optimistic checkpoint race and returned partial. These were
+  collector lifecycle defects, not Meta authorization failures.
+- Meta initial content backfill is now one 25-item page per timer turn. The durable cursor keeps
+  the account in `in_progress`; subsequent timer turns resume automatically and only mark
+  `complete` when the provider feed reaches its end.
+- The first 30-day metric window is collected before content. Once durable core data exists, an
+  account-budget interruption records partial progress instead of changing an accessible account
+  to `health_status=error`.
+- Feed and Story media each receive a bounded 30-second slice and individual fetches are bounded
+  to 10 seconds. When the slice is exhausted, the content checkpoint is deliberately not advanced;
+  the next timer pass replays the idempotent page, reuses media already on disk, and fills the
+  remaining files.
+- A checkpoint compare-and-swap loss now adopts the durable concurrent winner. Refreshes complete
+  without an account failure and backfills continue from the winner's cursor.
+- `nightly_enabled` becomes true automatically when backfill reaches `complete`; partial initial
+  progress remains false and cannot be mistaken for a finalized account.
+- Regression coverage was added for incremental Meta backfill bounds, media deferral, and
+  checkpoint-race recovery. V1 was not changed.
+
+### Salamis dashboard snapshot visibility follow-up
+
+- Production inventory proved the apparently empty follower and audience cards were not missing
+  provider data. Facebook held `52,562` followers plus 45 country and 45 city rows; Instagram held
+  `46,848` followers plus follower/engaged/reached country-city and follower age-gender rows.
+- Preset reporting ranges end on the previous completed day, while a newly linked account's first
+  profile/audience snapshots are written on the current day. The dashboard query therefore removed
+  the only current snapshot even though freshness and collection were healthy.
+- Preset dashboards now supplement KPI and audience breakdown surfaces with the latest post-range
+  snapshot. Current-day flow totals remain excluded, custom historical ranges remain exact, and
+  trend history is never fabricated.
+- Instagram demographics previously matched the substring `age` inside `engage`, allowing the
+  best-time heatmap (`Mon|18`, etc.) to render as age data. Dimension matching is now token-based.
+- Follower geography is preferred over engaged/reached geography for primary country/city widgets.
+- Organic/paid reach remains explicitly unavailable where Meta did not return that family; no zero,
+  estimate, or synthetic split is written. V1 remains unchanged.
+
+### 2026-08-24 - Salamis eksik follower akislari ve provider capability ayrimi
+
+- Salamis Facebook ve Instagram hesaplarinda current follower/audience snapshot supplement duzeltmesi sonrasinda follower toplamlari ve audience kirilimlari gorunur hale geldi.
+- Kalan follower trend bosluklarinin veri kaybi degil, V2 daily collector'in Meta tarafinda desteklenen follower flow metriklerini hic istememesi oldugu provider uzerinde dogrulandi.
+- Facebook `page_daily_follows` ve `page_daily_unfollows`; Instagram `follows_and_unfollows` + `follow_type` contract'i kullanilarak `follows`, `new_followers`, `unfollows` ve signed `followers_net` uretilmesi eklendi.
+- Dashboard, en yeni gercek follower snapshot'ini anchor alip gunluk gercek follow/unfollow akislariyla geriye dogru follower toplamlarini yeniden kuracak. Bir gunde follows veya unfollows eksikse tahmin yapmadan reconstruction duracak.
+- Salamis provider capability probe sonucu Facebook reach insight'lari ile Instagram organic/paid views/reach breakdown'lari Meta tarafindan `400:100` ile reddediliyor. Bu alanlara sentetik veri yazilmayacak; bunlar hesap/uygulama capability siniri olarak ele alinacak.
+- Reader fixture ve follower reconstruction regression testleri eklendi. Testler operasyon talebi olmadan calistirilmadi.
