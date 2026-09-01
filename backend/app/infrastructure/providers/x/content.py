@@ -12,6 +12,7 @@ from app.core.time import utc_now
 from app.domain.platforms import PlatformId
 
 from .responses import XResponseError, optional_count, optional_text, required_mapping
+from .wire import X_POSTS_PAGE_SIZE
 
 
 class XContentReader:
@@ -35,7 +36,7 @@ class XContentReader:
         observed_at = self._clock()
         payload = self._fetch(account, cursor)
         items = payload.get("data", [])
-        if not isinstance(items, list) or len(items) > 100:
+        if not isinstance(items, list) or len(items) > X_POSTS_PAGE_SIZE:
             raise XResponseError("x_timeline_response_invalid")
         media = _media_by_key(payload)
         records = tuple(_record(item, media, observed_at) for item in items)

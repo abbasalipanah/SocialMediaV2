@@ -35,7 +35,7 @@ def test_x_queries_are_bounded_and_request_only_owned_posts() -> None:
         "https://api.x.com/2/users/123456789/tweets"
     )
     assert user_posts_query(cursor="next-token") == {
-        "max_results": "100",
+        "max_results": "25",
         "exclude": "retweets,replies",
         "tweet.fields": "attachments,created_at,non_public_metrics,public_metrics",
         "expansions": "attachments.media_keys",

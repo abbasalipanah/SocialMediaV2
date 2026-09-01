@@ -6,7 +6,7 @@ from .oauth_transport import XOAuthTransport, XOAuthTransportError
 from .profile import XProfileReader
 from .runtime import create_x_activation_runtime
 from .transport import XHttpTransport, XTransportError
-from .wire import authenticated_user_query, user_posts_query, user_posts_url
+from .wire import X_POSTS_PAGE_SIZE, authenticated_user_query, user_posts_query, user_posts_url
 
 __all__ = [
     "XOAuthError",
@@ -16,6 +16,7 @@ __all__ = [
     "XContentReader",
     "XHttpTransport",
     "XProfileReader",
+    "X_POSTS_PAGE_SIZE",
     "XTransportError",
     "authenticated_user_query",
     "create_x_activation_runtime",

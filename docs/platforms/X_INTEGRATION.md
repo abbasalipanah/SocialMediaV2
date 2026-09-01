@@ -8,7 +8,7 @@
 - Profile snapshots: followers and post count.
 - Owned-post timeline: text, published time, media, impressions, likes, replies,
   reposts plus quotes, bookmarks, engagements and profile clicks when X returns them.
-- One page of at most 100 owned posts per collection run. Replies and reposts are
+- One page of at most 25 owned posts per collection run. Replies and reposts are
   excluded from the owned-post feed.
 
 Comments and audience demographics are deliberately unsupported. Scheduled collection

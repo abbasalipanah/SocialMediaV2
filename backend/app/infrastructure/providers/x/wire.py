@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+X_POSTS_PAGE_SIZE = 25
+
 
 def authenticated_user_query() -> dict[str, str]:
     return {
@@ -11,7 +13,7 @@ def authenticated_user_query() -> dict[str, str]:
 
 def user_posts_query(*, cursor: str | None = None) -> dict[str, str]:
     query = {
-        "max_results": "100",
+        "max_results": str(X_POSTS_PAGE_SIZE),
         "exclude": "retweets,replies",
         "tweet.fields": (
             "attachments,created_at,non_public_metrics,public_metrics"
@@ -30,4 +32,9 @@ def user_posts_url(api_base_url: str, user_id: str) -> str:
     return f"{api_base_url.rstrip('/')}/users/{user_id}/tweets"
 
 
-__all__ = ["authenticated_user_query", "user_posts_query", "user_posts_url"]
+__all__ = [
+    "X_POSTS_PAGE_SIZE",
+    "authenticated_user_query",
+    "user_posts_query",
+    "user_posts_url",
+]
