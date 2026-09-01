@@ -59,9 +59,10 @@ export function TikTokConnectionModal({
     const expectedOrigin = new URL(apiUrl("/"), window.location.origin).origin;
     const receiveOAuthResult = (event: MessageEvent<TikTokOAuthMessage>) => {
       if (event.origin !== expectedOrigin) return;
-      if (popupRef.current && event.source && event.source !== popupRef.current) return;
+      const activePopup = popupRef.current;
+      if (!activePopup || event.source !== activePopup) return;
       const payload = event.data;
-      if (!payload || payload.type !== "social-media:tiktok-oauth" || payload.brandId !== brandId) return;
+      if (!payload || payload.type !== "social-media:tiktok-oauth") return;
       popupRef.current = null;
       setIsConnecting(false);
       if (payload.status === "error") {
@@ -69,7 +70,16 @@ export function TikTokConnectionModal({
           tone: "error",
           message: payload.errorCode === "tiktok_self_service_callback_rejected"
             ? "TikTok authorization expired or was already used. Please try again."
+            : payload.errorCode === "tiktok_self_service_account_already_connected"
+              ? "This TikTok account is already connected to another Brand. Sign out of TikTok, then authorize the account that belongs to this Brand."
             : "TikTok authorization could not be completed. Please try again.",
+        });
+        return;
+      }
+      if (payload.brandId !== brandId) {
+        setStatus({
+          tone: "error",
+          message: "TikTok authorization returned for a different Brand. Please try again from this Brand.",
         });
         return;
       }
@@ -91,11 +101,27 @@ export function TikTokConnectionModal({
     };
   }, [brandId, queryClient]);
 
+  useEffect(() => {
+    if (!isConnecting) return;
+    const timer = window.setInterval(() => {
+      const popup = popupRef.current;
+      if (!popup?.closed) return;
+      popupRef.current = null;
+      setIsConnecting(false);
+      setStatus((current) => current ?? {
+        tone: "error",
+        message: "The TikTok login window closed before authorization completed. Please try again.",
+      });
+    }, 400);
+    return () => window.clearInterval(timer);
+  }, [isConnecting]);
+
   // Dismissing the dialog is a deliberate abandon, so the authorization window
   // goes with it. A re-render is not, which is why the effect no longer does.
   const dismiss = () => {
     if (popupRef.current && !popupRef.current.closed) popupRef.current.close();
     popupRef.current = null;
+    setIsConnecting(false);
     onClose();
   };
 
@@ -154,7 +180,7 @@ export function TikTokConnectionModal({
         <div className="tiktok-connect-body">
           <article>
             <span className="tiktok-connect-step">1</span>
-            <div><h3>Authorize TikTok Business</h3><p>Sign in with the TikTok account you want to add to this Brand. The OAuth token stays on the backend and is never returned to the browser.</p></div>
+            <div><h3>Authorize TikTok Business</h3><p>TikTok will always show its authorization screen, even when another TikTok session is already open. Confirm that the account shown belongs to this Brand before approving. The OAuth token stays on the backend and is never returned to the browser.</p></div>
           </article>
           <article>
             <span className="tiktok-connect-step">2</span>
@@ -165,7 +191,7 @@ export function TikTokConnectionModal({
         </div>
 
         <footer>
-          <p>Opening this dialog does not contact TikTok. Authorization starts only after the button below.</p>
+          <p>If TikTok shows the wrong account, sign out there or continue in a private browser window.</p>
           <button className="secondary-button" onClick={dismiss} type="button">Cancel</button>
           <button className="primary-button compact-button" disabled={!readiness.data?.oauth_start_available || isConnecting} onClick={() => void connect()} type="button">{isConnecting ? <RefreshCw className="spin" size={15} /> : <Link2 size={15} />}{isConnecting ? "Connecting…" : "Connect TikTok"}</button>
         </footer>
