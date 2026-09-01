@@ -52,7 +52,10 @@ class OAuthProviderGrant:
             or self.access_expires_in < 1
             or not self.granted_scopes
             or len(self.granted_scopes) != len(set(self.granted_scopes))
+            or any(not scope.strip() for scope in self.granted_scopes)
             or len(account_keys) != len(self.accounts)
+            or (self.refresh_token is not None and not self.refresh_token)
+            or (self.refresh_expires_in is not None and self.refresh_token is None)
             or (self.refresh_expires_in is not None and self.refresh_expires_in < 1)
         ):
             raise OAuthChannelError("oauth_provider_grant_invalid")
@@ -64,6 +67,15 @@ class OAuthCredentialBinding:
     external_id: str
     display_name: str
     credential_reference: str = field(repr=False)
+
+    def __post_init__(self) -> None:
+        if (
+            self.platform not in OAUTH_CHANNEL_PLATFORMS
+            or not _OPAQUE_ID.fullmatch(self.external_id)
+            or not self.display_name.strip()
+            or not re.fullmatch(r"[A-Za-z0-9._-]{1,128}", self.credential_reference)
+        ):
+            raise OAuthChannelError("oauth_credential_binding_invalid")
 
 
 @dataclass(frozen=True)
