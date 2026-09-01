@@ -27,6 +27,11 @@ import {
   type Platform,
   type ReportingAccount,
 } from "../../api";
+import { PLATFORM_CATALOG } from "../../platforms/catalog";
+
+const ACCOUNT_MANAGER_PLATFORMS = PLATFORM_CATALOG.filter((platform) =>
+  ["meta", "tiktok"].includes(platform.connectionProvider),
+);
 
 type MetaOAuthMessage = {
   type: "social-media:meta-oauth";
@@ -446,7 +451,7 @@ export function MetaConnectionModal({
           <section className="meta-account-catalog" aria-label={`Social accounts for ${brandName}`}>
             <header>
               <nav aria-label="Social account platform">
-                {(["facebook", "instagram", "tiktok"] as const).map((platform) => {
+                {ACCOUNT_MANAGER_PLATFORMS.map(({ id: platform, label }) => {
                   const availableCount = platform === "tiktok"
                     ? visibleTikTokAccounts.length + availableTikTokAccounts.length
                     : availableDiscoveries.filter((item) => item.platform === platform).length;
@@ -457,7 +462,7 @@ export function MetaConnectionModal({
                   return (
                     <button aria-expanded={active} className={active ? "active" : ""} key={platform} onClick={() => showCatalogPlatform(platform)} type="button">
                       <span className={`integration-platform-icon platform-${platform}`}>{platform === "facebook" ? <Facebook size={16} /> : platform === "instagram" ? <Instagram size={16} /> : <span className="meta-tiktok-mark">♪</span>}</span>
-                      <span><strong>{platform === "facebook" ? "Facebook" : platform === "instagram" ? "Instagram" : "TikTok"}</strong><small>{availableCount} account{availableCount === 1 ? "" : "s"} · {linkedCount} linked</small></span>
+                      <span><strong>{label}</strong><small>{availableCount} account{availableCount === 1 ? "" : "s"} · {linkedCount} linked</small></span>
                     </button>
                   );
                 })}

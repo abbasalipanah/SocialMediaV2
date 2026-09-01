@@ -1,5 +1,5 @@
 import { CalendarDays } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "../../routing";
 
 import type { Platform } from "../../api";
@@ -20,13 +20,27 @@ function TabContent({ platform, tab, data }: {
   tab: DashboardTab["id"];
   data: NonNullable<ReturnType<typeof useChannelDashboard>["data"]>;
 }) {
-  if (platform === "facebook") {
-    return <FacebookPulseDashboard data={data} tab={tab as "cover" | "page" | "content" | "audience"} />;
-  }
-  if (platform === "instagram") {
-    return <InstagramPulseDashboard data={data} tab={tab as "cover" | "page" | "content" | "stories" | "audience"} />;
-  }
-  return <TikTokPulseDashboard data={data} tab={tab as "account" | "cover" | "content" | "audience"} />;
+  const renderers: Record<Platform, () => ReactNode> = {
+    facebook: () => (
+      <FacebookPulseDashboard
+        data={data}
+        tab={tab as "cover" | "page" | "content" | "audience"}
+      />
+    ),
+    instagram: () => (
+      <InstagramPulseDashboard
+        data={data}
+        tab={tab as "cover" | "page" | "content" | "stories" | "audience"}
+      />
+    ),
+    tiktok: () => (
+      <TikTokPulseDashboard
+        data={data}
+        tab={tab as "account" | "cover" | "content" | "audience"}
+      />
+    ),
+  };
+  return renderers[platform]();
 }
 
 function tabFromSearch(search: string, tabs: DashboardTab[]): DashboardTab["id"] {

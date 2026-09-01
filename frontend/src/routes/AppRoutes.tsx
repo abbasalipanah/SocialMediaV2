@@ -1,4 +1,10 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import {
+  lazy,
+  Suspense,
+  type ComponentType,
+  type LazyExoticComponent,
+  type ReactNode,
+} from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "../routing";
 
 import type { Platform } from "../api";
@@ -6,6 +12,7 @@ import type { Platform } from "../api";
 import { BrandScopeProvider, useBrandScope } from "../app/BrandScopeProvider";
 import { useAuth } from "../auth";
 import { AppShell } from "../layout";
+import { PLATFORM_CATALOG } from "../platforms/catalog";
 import { ScreenState } from "../ui";
 import { LoginPage } from "./LoginPage";
 import { SsoConsumePage } from "./SsoConsumePage";
@@ -13,6 +20,11 @@ import { SsoConsumePage } from "./SsoConsumePage";
 const FacebookPage = lazy(() => import("../features/facebook"));
 const InstagramPage = lazy(() => import("../features/instagram"));
 const TikTokPage = lazy(() => import("../features/tiktok"));
+const platformPages = {
+  facebook: FacebookPage,
+  instagram: InstagramPage,
+  tiktok: TikTokPage,
+} satisfies Record<Platform, LazyExoticComponent<ComponentType>>;
 const OverviewPage = lazy(() => import("../features/overview"));
 const SettingsPage = lazy(() => import("../features/settings"));
 const IntegrationsPage = lazy(() => import("../features/integrations"));
@@ -97,30 +109,20 @@ export function AppRoutes() {
         <Route element={<AuthenticatedWorkspace />}>
           <Route element={<AppShell />}>
             <Route path="overview" element={<OverviewPage />} />
-            <Route
-              path="facebook"
-              element={
-                <PlatformGuard platform="facebook">
-                  <FacebookPage />
-                </PlatformGuard>
-              }
-            />
-            <Route
-              path="instagram"
-              element={
-                <PlatformGuard platform="instagram">
-                  <InstagramPage />
-                </PlatformGuard>
-              }
-            />
-            <Route
-              path="tiktok"
-              element={
-                <PlatformGuard platform="tiktok">
-                  <TikTokPage />
-                </PlatformGuard>
-              }
-            />
+            {PLATFORM_CATALOG.map((platform) => {
+              const PlatformPage = platformPages[platform.id];
+              return (
+                <Route
+                  key={platform.id}
+                  path={platform.route}
+                  element={
+                    <PlatformGuard platform={platform.id}>
+                      <PlatformPage />
+                    </PlatformGuard>
+                  }
+                />
+              );
+            })}
             <Route path="integrations" element={<IntegrationsGuard><IntegrationsPage /></IntegrationsGuard>} />
             <Route path="settings" element={<SettingsGuard><SettingsPage /></SettingsGuard>}>
               <Route

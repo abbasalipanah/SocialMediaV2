@@ -1,4 +1,5 @@
 import type { MetricId, Platform } from "../../api";
+export { PLATFORM_DESCRIPTIONS, PLATFORM_LABELS } from "../../platforms/catalog";
 
 export type DashboardTab = {
   id: "account" | "audience" | "content" | "cover" | "overview" | "page" | "profile" | "stories" | "videos";
@@ -13,18 +14,6 @@ export const RANGE_OPTIONS = [
 ] as const;
 
 export type RangeKey = (typeof RANGE_OPTIONS)[number]["id"];
-
-export const PLATFORM_LABELS: Record<Platform, string> = {
-  facebook: "Facebook",
-  instagram: "Instagram",
-  tiktok: "TikTok",
-};
-
-export const PLATFORM_DESCRIPTIONS: Record<Platform, string> = {
-  facebook: "Unified Facebook performance monitor.",
-  instagram: "Unified Instagram performance monitor.",
-  tiktok: "Organic account, video and audience performance in one view.",
-};
 
 export const METRIC_LABELS: Record<MetricId, string> = {
   followers: "Followers",

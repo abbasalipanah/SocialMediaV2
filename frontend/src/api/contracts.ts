@@ -1,8 +1,9 @@
 import { z } from "zod";
 
 import type { components } from "./openapi.generated";
+import { PLATFORM_IDS } from "../platforms/catalog";
 
-export const platformSchema = z.enum(["facebook", "instagram", "tiktok"]);
+export const platformSchema = z.enum(PLATFORM_IDS);
 export type Platform = z.infer<typeof platformSchema>;
 
 export const authUserSchema = z.object({

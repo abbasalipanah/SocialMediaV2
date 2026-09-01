@@ -18,13 +18,12 @@ import {
   syncJobsSchema,
 } from "../../api";
 import { useBrandScope } from "../../app/BrandScopeProvider";
+import { PLATFORM_IDS } from "../../platforms/catalog";
 import { Dialog } from "../../ui";
 import { MetaConnectionModal } from "../integrations/MetaConnectionModal";
 import { TikTokConnectionModal } from "../integrations/TikTokConnectionModal";
 import { PLATFORM_LABELS } from "../dashboard/catalog";
 import { formatDate, humanize } from "../dashboard/format";
-
-const PLATFORMS: Platform[] = ["facebook", "instagram", "tiktok"];
 
 function PlatformSymbol({ platform }: { platform: Platform }) {
   if (platform === "facebook") return <Facebook size={19} />;
@@ -90,7 +89,7 @@ function SocialAccounts({
 }) {
   return (
     <div className="setup-platform-list">
-      {PLATFORMS.map((platform) => {
+      {PLATFORM_IDS.map((platform) => {
         const linked = accounts.filter((item) => item.platform === platform);
         // The account's own connection state, not the connection list's. A Meta
         // connection is stored once under `facebook` and serves Instagram too,
