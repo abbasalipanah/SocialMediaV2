@@ -507,16 +507,117 @@ def test_platform_dashboard_rollup_respects_metric_semantics(phase6_fixture) -> 
     assert dashboard.community.total_comments == 1
 
 
+def test_preset_dashboard_uses_live_profile_and_audience_snapshots(
+    phase6_fixture,
+) -> None:
+    _, reporting, _ = phase6_fixture
+    reporting.metrics += (
+        _metric(
+            11,
+            "101",
+            PlatformId.FACEBOOK,
+            date(2026, 7, 14),
+            MetricId.FOLLOWERS,
+            150,
+        ),
+        ReportingMetric(
+            account_id=11,
+            brand_id="101",
+            platform=PlatformId.FACEBOOK,
+            observed_on=date(2026, 7, 14),
+            metric_id=MetricId.FOLLOWERS,
+            value=90,
+            breakdown_key="page_fans_country",
+            breakdown_value="TR",
+        ),
+        ReportingMetric(
+            account_id=11,
+            brand_id="101",
+            platform=PlatformId.FACEBOOK,
+            observed_on=date(2026, 7, 13),
+            metric_id=MetricId.VIEWS,
+            value=25,
+            breakdown_key="is_from_ads",
+            breakdown_value="Organic",
+        ),
+        ReportingMetric(
+            account_id=11,
+            brand_id="101",
+            platform=PlatformId.FACEBOOK,
+            observed_on=date(2026, 7, 14),
+            metric_id=MetricId.VIEWS,
+            value=0,
+            breakdown_key="is_from_ads",
+            breakdown_value="Organic",
+        ),
+    )
+    dashboard = build_platform_dashboard(
+        store=reporting,
+        catalog=bootstrap_metric_catalog(),
+        platform=PlatformId.FACEBOOK,
+        query=DashboardQuery(
+            requested_brand_id="101",
+            resolved_brand_ids=("101",),
+            rollup=False,
+            date_range=ReportingRange(date(2026, 6, 15), date(2026, 7, 13), "last_30_days"),
+        ),
+        now=NOW,
+    )
+
+    cards = {card.metric_id: card for card in dashboard.metrics}
+    assert cards[MetricId.FOLLOWERS].value == 150
+    assert any(
+        row.dimension == "page_fans_country"
+        and row.items[0].key == "TR"
+        and row.items[0].value == 90
+        for row in dashboard.breakdowns
+    )
+    assert dashboard.source_breakdown is not None
+    assert dashboard.source_breakdown.views is not None
+    assert dashboard.source_breakdown.views.organic == 25
+    follower_series = next(row for row in dashboard.series if row.metric_id is MetricId.FOLLOWERS)
+    assert all(point.observed_on <= date(2026, 7, 13) for point in follower_series.points)
+
+
+def test_legacy_source_series_populate_selected_range_distribution() -> None:
+    rows = tuple(
+        ReportingMetric(
+            account_id=11,
+            brand_id="101",
+            platform=PlatformId.FACEBOOK,
+            observed_on=observed_on,
+            metric_id=metric_id,
+            value=value,
+        )
+        for observed_on, metric_id, value in (
+            (date(2026, 7, 12), MetricId.VIEWS_ORGANIC, 20),
+            (date(2026, 7, 13), MetricId.VIEWS_ORGANIC, 25),
+            (date(2026, 7, 12), MetricId.VIEWS_PAID, 5),
+            (date(2026, 7, 13), MetricId.VIEWS_PAID, 10),
+            (date(2026, 7, 12), MetricId.REACH_ORGANIC, 18),
+            (date(2026, 7, 13), MetricId.REACH_ORGANIC, 22),
+        )
+    )
+
+    result = source_breakdown((), rows)
+
+    assert result is not None
+    assert result.paid_available is True
+    assert result.views is not None
+    assert result.views.organic == 45
+    assert result.views.paid == 15
+    assert result.reach is not None
+    assert result.reach.organic == 40
+    assert result.reach.paid is None
+
+
 def test_comment_projection_hides_authors_and_masks_mentions(phase6_fixture) -> None:
     _, reporting, _ = phase6_fixture
     reporting.comments = (
         replace(
             reporting.comments[0],
             author_name="visible-user",
-            text=(
-                "Hi @_kathistaggl_ @httpx.dilara and @okoeker2254. "
-                "Mail me@example.com"
-            ),
+            text=("Hi @_kathistaggl_ @httpx.dilara and @okoeker2254. Mail me@example.com"),
         ),
     )
 
@@ -536,9 +637,7 @@ def test_comment_projection_hides_authors_and_masks_mentions(phase6_fixture) -> 
     assert dashboard.community.top_commenters[0].name == "Anonymous"
     liked = dashboard.community.top_liked_comments[0]
     assert liked.name == "Anonymous"
-    assert liked.comment == (
-        "Hi @_***_ @h***a and @o***4. Mail me@example.com"
-    )
+    assert liked.comment == ("Hi @_***_ @h***a and @o***4. Mail me@example.com")
     assert "visible-user" not in repr(dashboard.community)
 
 
@@ -741,14 +840,14 @@ def test_instagram_structured_stories_preserve_content_level_metrics(
         "story",
         "https://example.test/ig-story-current",
         "Current story",
-        "/api/media/instagram/ig-story-current",
+        "https://cdn.example.test/ig-story-current.mp4",
         datetime(2026, 7, 2, 11, tzinfo=UTC),
         3,
         2,
         4,
         views_count=120,
         reach_count=90,
-        cover_url="/api/media/instagram/ig-story-current",
+        cover_url="https://cdn.example.test/ig-story-current-thumbnail.jpg",
         interactions_count=25,
         replies_count=2,
         profile_visits=7,
@@ -791,6 +890,7 @@ def test_instagram_structured_stories_preserve_content_level_metrics(
     assert dashboard.stories.navigation.taps_forward == 11
     assert dashboard.stories.actions.profile_visits == 7
     assert dashboard.stories.items[0].views == 120
+    assert dashboard.stories.items[0].cover_url.endswith("-thumbnail.jpg")
     assert dashboard.stories.items[0].data_status is DataStatus.AVAILABLE
 
 
@@ -843,6 +943,65 @@ def test_instagram_story_trend_keeps_known_days_when_one_story_is_unavailable(
     assert dashboard.stories.trend.data_status is DataStatus.PARTIAL
 
 
+def test_instagram_story_preset_includes_today_live_story_without_extending_trend(
+    phase6_fixture,
+) -> None:
+    _, reporting, _ = phase6_fixture
+    older = ReportingContent(
+        21,
+        "101",
+        PlatformId.INSTAGRAM,
+        "ig-story-yesterday",
+        "story",
+        "https://example.test/ig-story-yesterday",
+        "Yesterday's story",
+        "https://cdn.example.test/ig-story-yesterday.jpg",
+        datetime(2026, 7, 13, 11, tzinfo=UTC),
+        0,
+        0,
+        0,
+        views_count=20,
+        reach_count=15,
+    )
+    live = replace(
+        older,
+        external_content_id="ig-story-live-today",
+        permalink="https://example.test/ig-story-live-today",
+        message="Today's live story",
+        media_url="https://cdn.example.test/ig-story-live-today.jpg",
+        published_at=datetime(2026, 7, 14, 10, tzinfo=UTC),
+        views_count=7,
+        reach_count=5,
+    )
+    # Deliberately oldest first: the aggregation contract, rather than a store
+    # implementation detail, guarantees which item is the Latest Story.
+    reporting.content += (older, live)
+
+    dashboard = build_platform_dashboard(
+        store=reporting,
+        catalog=bootstrap_metric_catalog(),
+        platform=PlatformId.INSTAGRAM,
+        query=DashboardQuery(
+            requested_brand_id="101",
+            resolved_brand_ids=("101",),
+            rollup=False,
+            date_range=ReportingRange(
+                date(2026, 6, 14), date(2026, 7, 13), "last_30_days"
+            ),
+            content_type="story",
+        ),
+        now=NOW,
+    )
+
+    assert dashboard.stories is not None
+    assert [item.content_id for item in dashboard.stories.items] == [
+        "ig-story-live-today",
+        "ig-story-yesterday",
+    ]
+    assert dashboard.stories.trend.labels[-1] == date(2026, 7, 13)
+    assert dashboard.stories.trend.views[-1] == 20
+
+
 def test_best_time_to_engage_uses_average_content_engagement_in_istanbul_time() -> None:
     first = ReportingContent(
         11,
@@ -882,6 +1041,29 @@ def test_best_time_to_engage_uses_average_content_engagement_in_istanbul_time() 
     assert result is not None
     assert result.dimension == "best_time_to_engage"
     assert [(item.key, item.value) for item in result.items] == [("Mon|10", 20.0)]
+
+
+def test_best_time_to_engage_supports_tiktok_video_content() -> None:
+    video = ReportingContent(
+        31,
+        "102",
+        PlatformId.TIKTOK,
+        "video-1",
+        "video",
+        "https://example.test/video-1",
+        "Video",
+        "",
+        # Saturday 18:00 in Europe/Istanbul.
+        datetime(2026, 7, 4, 15, 20, tzinfo=UTC),
+        12,
+        3,
+        1,
+    )
+
+    result = best_time_to_engage_breakdown(PlatformId.TIKTOK, (video,))
+
+    assert result is not None
+    assert [(item.key, item.value) for item in result.items] == [("Sat|18", 16.0)]
 
 
 def test_top_hashtags_normalizes_meta_punctuation_and_counts_posts() -> None:
@@ -1019,9 +1201,9 @@ def test_phase6_openapi_publishes_typed_response_contracts() -> None:
             "application/json"
         ]["schema"]
         assert response_schema == {"$ref": f"#/components/schemas/{model}"}
-    generation_schema = schema["paths"]["/api/insights/generate"]["post"]["responses"][
-        "200"
-    ]["content"]["application/json"]["schema"]
+    generation_schema = schema["paths"]["/api/insights/generate"]["post"]["responses"]["200"][
+        "content"
+    ]["application/json"]["schema"]
     assert generation_schema == {"$ref": "#/components/schemas/ReportingInsight"}
     components = schema["components"]["schemas"]
     assert {"semantic_type", "data_status"}.issubset(components["DashboardMetric"]["required"])
@@ -1178,9 +1360,7 @@ async def test_ai_summary_generation_requires_app_role_and_scoped_brand_authorit
                 "access_mode": "read",
             }
         )
-        session["brand_scope"]["brands"][1].update(
-            {"role": "viewer", "access_mode": "read"}
-        )
+        session["brand_scope"]["brands"][1].update({"role": "viewer", "access_mode": "read"})
         authority.projections["v2:brand-access:user-1:101"].update(
             {"role": "viewer", "access_mode": "read"}
         )
@@ -1204,9 +1384,7 @@ async def test_ai_summary_generation_requires_app_role_and_scoped_brand_authorit
         assert generated.json()["summary"] == "Generated summary"
         assert runtime.generated == [("101", "user-1", "last_30_days")]
 
-        scoped_brand = await client.get(
-            "/api/insights/limit", params={"brand_id": "102"}
-        )
+        scoped_brand = await client.get("/api/insights/limit", params={"brand_id": "102"})
         assert scoped_brand.status_code == 200
         assert scoped_brand.json()["can_generate"] is True
         session["app_role"] = "admin"
@@ -1292,9 +1470,7 @@ async def test_signed_accumulate_viewer_operator_sso_reaches_ai_summary_limit(
             headers={"Origin": "http://test"},
         )
         assert generated.status_code == 200
-        assert runtime.generated == [
-            ("101", "signed-viewer-operator", "last_30_days")
-        ]
+        assert runtime.generated == [("101", "signed-viewer-operator", "last_30_days")]
 
 
 @pytest.mark.asyncio

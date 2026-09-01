@@ -59,7 +59,18 @@ def methodology_for_definition(
     definition: MetricDefinition,
     *,
     direct_provider_value: bool = False,
+    derived_fallback_value: bool = False,
 ) -> str:
+    if direct_provider_value and derived_fallback_value:
+        assert definition.derivation_operator is not None
+        return ":".join(
+            (
+                "provider_flow_with_derived_fallback",
+                definition.derivation_operator.value,
+                f"v{definition.derivation_version}",
+                definition.derivation_window or "unspecified_window",
+            )
+        )
     if direct_provider_value and definition.semantic_type.value == "flow":
         return "provider_flow"
     if definition.derivation_operator is not None:
@@ -98,6 +109,64 @@ def _snapshot_delta_value(
     if operator is DerivationOperator.SIGNED_SNAPSHOT_DELTA:
         return delta
     raise ValueError("snapshot_delta_operator_invalid")
+
+
+def _with_snapshot_delta_fallback(
+    definition: MetricDefinition,
+    *,
+    samples: tuple[ReportingMetric, ...],
+    derivation_samples: tuple[ReportingMetric, ...] | None,
+) -> tuple[tuple[ReportingMetric, ...], bool]:
+    """Merge provider flow rows with exact consecutive-snapshot fallbacks.
+
+    Meta can expose follows/unfollows for only part of a selected range. A
+    single provider row previously disabled the snapshot-delta derivation for
+    the whole range, so follower-flow charts stopped on the last provider day.
+    Provider rows remain authoritative per account/day; only missing cells are
+    derived, and never across a missing snapshot day.
+    """
+    if definition.derivation_operator not in _SNAPSHOT_DELTA_OPERATORS:
+        return samples, False
+
+    direct = tuple(
+        sample
+        for sample in samples
+        if sample.metric_id is definition.metric_id and sample.breakdown_key is None
+    )
+    direct_keys = {(sample.account_id, sample.observed_on) for sample in direct}
+    included_dates = {sample.observed_on for sample in samples}
+    source_id = definition.derived_from_metric_ids[0]
+    by_account: dict[int, list[ReportingMetric]] = defaultdict(list)
+    for sample in derivation_samples or samples:
+        if sample.metric_id is source_id and sample.breakdown_key is None:
+            by_account[sample.account_id].append(sample)
+
+    derived: list[ReportingMetric] = []
+    for rows in by_account.values():
+        ordered = sorted(rows, key=lambda row: row.observed_on)
+        for previous, current in zip(ordered, ordered[1:], strict=False):
+            key = (current.account_id, current.observed_on)
+            if (
+                current.observed_on not in included_dates
+                or key in direct_keys
+                or current.observed_on - previous.observed_on != timedelta(days=1)
+            ):
+                continue
+            derived.append(
+                ReportingMetric(
+                    account_id=current.account_id,
+                    brand_id=current.brand_id,
+                    platform=current.platform,
+                    observed_on=current.observed_on,
+                    metric_id=definition.metric_id,
+                    value=_snapshot_delta_value(
+                        previous.value,
+                        current.value,
+                        definition.derivation_operator,
+                    ),
+                )
+            )
+    return direct + tuple(derived), bool(derived)
 
 
 def aggregate_value(
@@ -193,18 +262,21 @@ def metric_cards(
             for sample in samples
             if sample.metric_id is definition.metric_id and sample.breakdown_key is None
         )
-        previous_direct_samples = tuple(
-            sample
-            for sample in previous_samples
-            if sample.metric_id is definition.metric_id and sample.breakdown_key is None
+        effective_samples, has_derived_fallback = _with_snapshot_delta_fallback(
+            definition,
+            samples=samples,
+            derivation_samples=derivation_samples,
+        )
+        effective_previous_samples, has_previous_derived_fallback = _with_snapshot_delta_fallback(
+            definition,
+            samples=previous_samples,
+            derivation_samples=previous_derivation_samples,
         )
         value = aggregate_value(
             definition,
             (
-                derivation_samples
-                if not direct_samples
-                and definition.derivation_operator in _SNAPSHOT_DELTA_OPERATORS
-                and derivation_samples is not None
+                effective_samples
+                if definition.derivation_operator in _SNAPSHOT_DELTA_OPERATORS
                 else samples
             ),
             catalog,
@@ -212,22 +284,24 @@ def metric_cards(
         previous = aggregate_value(
             definition,
             (
-                previous_derivation_samples
-                if not previous_direct_samples
-                and definition.derivation_operator in _SNAPSHOT_DELTA_OPERATORS
-                and previous_derivation_samples is not None
+                effective_previous_samples
+                if definition.derivation_operator in _SNAPSHOT_DELTA_OPERATORS
                 else previous_samples
             ),
             catalog,
         )
         source_ids = (
             {definition.metric_id}
-            if direct_samples
+            if direct_samples or definition.derivation_operator in _SNAPSHOT_DELTA_OPERATORS
             else set(definition.derived_from_metric_ids) or {definition.metric_id}
         )
         covered = {
             sample.account_id
-            for sample in samples
+            for sample in (
+                effective_samples
+                if definition.derivation_operator in _SNAPSHOT_DELTA_OPERATORS
+                else samples
+            )
             if sample.metric_id in source_ids and sample.breakdown_key is None
         }
         if value is None:
@@ -253,6 +327,7 @@ def metric_cards(
                 methodology=methodology_for_definition(
                     definition,
                     direct_provider_value=bool(direct_samples),
+                    derived_fallback_value=(has_derived_fallback or has_previous_derived_fallback),
                 ),
                 availability_reason=(
                     f"metric_unavailable:{definition.metric_id.value}"
@@ -278,8 +353,17 @@ def metric_series(
     for definition in catalog.definitions():
         if definition.platform is not platform:
             continue
+        series_samples, has_derived_fallback = _with_snapshot_delta_fallback(
+            definition,
+            samples=samples,
+            derivation_samples=derivation_samples,
+        )
         by_day: dict[date, list[ReportingMetric]] = defaultdict(list)
-        for sample in samples:
+        for sample in (
+            series_samples
+            if definition.derivation_operator in _SNAPSHOT_DELTA_OPERATORS
+            else samples
+        ):
             if sample.metric_id is definition.metric_id and sample.breakdown_key is None:
                 by_day[sample.observed_on].append(sample)
         points: tuple[DashboardPoint, ...] = tuple(
@@ -300,30 +384,6 @@ def metric_series(
                     for previous, current in zip(source.points, source.points[1:], strict=False)
                     if current.value >= previous.value
                 )
-        elif not points and definition.derivation_operator in _SNAPSHOT_DELTA_OPERATORS:
-            source_id = definition.derived_from_metric_ids[0]
-            by_account: dict[int, list[ReportingMetric]] = defaultdict(list)
-            for sample in derivation_samples or samples:
-                if sample.metric_id is source_id and sample.breakdown_key is None:
-                    by_account[sample.account_id].append(sample)
-            included_dates = {sample.observed_on for sample in samples}
-            by_delta_day: dict[date, float] = defaultdict(float)
-            for rows in by_account.values():
-                ordered = sorted(rows, key=lambda row: row.observed_on)
-                for previous, current in zip(ordered, ordered[1:], strict=False):
-                    if (
-                        current.observed_on in included_dates
-                        and current.observed_on - previous.observed_on == timedelta(days=1)
-                    ):
-                        by_delta_day[current.observed_on] += _snapshot_delta_value(
-                            previous.value,
-                            current.value,
-                            definition.derivation_operator,
-                        )
-            points = tuple(
-                DashboardPoint(observed_on=observed_on, value=value)
-                for observed_on, value in sorted(by_delta_day.items())
-            )
         elif not points and definition.derivation_operator is DerivationOperator.SUM_COMPONENTS:
             sources = tuple(
                 registered.get(metric_id) for metric_id in definition.derived_from_metric_ids
@@ -367,10 +427,10 @@ def metric_series(
                 methodology=methodology_for_definition(
                     definition,
                     direct_provider_value=any(
-                        sample.metric_id is definition.metric_id
-                        and sample.breakdown_key is None
+                        sample.metric_id is definition.metric_id and sample.breakdown_key is None
                         for sample in samples
                     ),
+                    derived_fallback_value=has_derived_fallback,
                 ),
             )
             result.append(dashboard_series)
@@ -427,15 +487,20 @@ def best_time_to_engage_breakdown(
 ) -> DashboardBreakdown | None:
     """Average content engagement by local publish weekday and two-hour slot.
 
-    The imported provider heatmap is a complete 7x24 grid whose values are all
-    zero for every Meta account.  It therefore says nothing about the selected
-    Brand.  Published content is an observed, Brand-scoped source: grouping its
-    engagement by publish time produces the actionable chart the label promises.
-    Stories are excluded because their short lifecycle and separate metrics would
-    otherwise overwhelm the post/reel publishing recommendation.
+    Imported provider heatmaps can be complete zero grids, and TikTok can omit
+    audience activity for otherwise healthy small accounts. They say nothing
+    about the selected Brand. Published content is an observed, Brand-scoped
+    source: grouping its engagement by publish time produces the actionable
+    chart the label promises. Stories are excluded because their short lifecycle
+    and separate metrics would otherwise overwhelm the post/reel/video publishing
+    recommendation.
     """
 
-    if platform not in {PlatformId.FACEBOOK, PlatformId.INSTAGRAM}:
+    if platform not in {
+        PlatformId.FACEBOOK,
+        PlatformId.INSTAGRAM,
+        PlatformId.TIKTOK,
+    }:
         return None
     buckets: dict[tuple[int, int], list[float]] = defaultdict(list)
     for row in rows:
@@ -870,13 +935,25 @@ def audience_capabilities(
     *,
     accounts_available: bool,
 ) -> DashboardAudienceCapabilities:
-    dimensions = {item.dimension.lower() for item in breakdowns}
+    singular = {
+        "ages": "age",
+        "genders": "gender",
+        "countries": "country",
+        "cities": "city",
+    }
+    dimensions = {
+        frozenset(
+            singular.get(token, token)
+            for token in item.dimension.lower().replace("-", "_").split("_")
+        )
+        for item in breakdowns
+    }
     country_available = any("country" in item for item in dimensions)
     city_available = any("city" in item for item in dimensions)
     age_available = any("age" in item for item in dimensions)
     gender_available = any("gender" in item for item in dimensions)
     activity_available = any(
-        "activity" in item or "best_time" in item or "hourly" in item for item in dimensions
+        "activity" in item or "hourly" in item or {"best", "time"} <= item for item in dimensions
     )
     if platform is PlatformId.FACEBOOK:
         return DashboardAudienceCapabilities(
@@ -1003,7 +1080,13 @@ def stories_contract(
 ) -> DashboardStories | None:
     if platform is not PlatformId.INSTAGRAM:
         return None
-    story_rows = tuple(row for row in rows if "story" in row.content_type.lower())
+    story_rows = tuple(
+        sorted(
+            (row for row in rows if "story" in row.content_type.lower()),
+            key=lambda row: row.published_at or datetime.min.replace(tzinfo=UTC),
+            reverse=True,
+        )
+    )
     previous_story_rows = tuple(row for row in previous_rows if "story" in row.content_type.lower())
     has_story_breakdown = any("story_" in row.dimension.lower() for row in breakdowns)
     if not story_rows and not has_story_breakdown:
@@ -1072,6 +1155,7 @@ def stories_contract(
             else:
                 result.append(None)
         return tuple(result)
+
     navigation_from_rows = {
         "taps_forward": _optional_sum(tuple(row.taps_forward for row in story_rows)),
         "taps_back": _optional_sum(tuple(row.taps_back for row in story_rows)),
@@ -1215,7 +1299,10 @@ def stories_contract(
             DashboardStoryItem(
                 content_id=row.external_content_id,
                 title=row.message[:120] or "Story",
-                cover_url=row.media_url,
+                # A video Story's media URL is an MP4 and cannot be rendered by
+                # the gallery's <img>. Prefer the provider thumbnail/local
+                # cover; media_url remains the last resort for image Stories.
+                cover_url=row.cover_url or row.thumbnail_url or row.media_url,
                 permalink=row.permalink,
                 created_time=row.published_at,
                 views=row.views_count,

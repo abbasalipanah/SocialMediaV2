@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from dataclasses import dataclass, replace
+from datetime import UTC, date, datetime, timedelta
 
-from app.application.ports.reporting import ReportingAccount, ReportingStore
+from app.application.ports.reporting import ReportingAccount, ReportingMetric, ReportingStore
 from app.application.queries.comment_privacy import redact_dashboard_comments
 from app.application.queries.dashboard_aggregation import (
     audience_capabilities,
@@ -26,7 +26,7 @@ from app.application.queries.dashboard_aggregation import (
     top_hashtags,
 )
 from app.application.queries.reporting_range import previous_reporting_range
-from app.domain.metrics import MetricCatalog, MetricId
+from app.domain.metrics import MetricCatalog, MetricId, SemanticType
 from app.domain.platforms import PlatformId
 from app.domain.reporting import (
     CommunitySummary,
@@ -90,6 +90,123 @@ def _exclude_content_types(rows, excluded: tuple[str, ...]):
         return rows
     normalized = {value.strip().lower() for value in excluded}
     return tuple(row for row in rows if row.content_type.strip().lower() not in normalized)
+
+
+def _latest_live_snapshot_samples(
+    *,
+    samples,
+    range_end,
+    platform: PlatformId,
+    catalog: MetricCatalog,
+):
+    """Return current snapshots without leaking today's partial flow totals.
+
+    Preset reports intentionally end yesterday, but a newly linked account has
+    profile and audience snapshots only for today. KPI and audience surfaces
+    need that current state; trends and period totals must keep their completed
+    day boundary.
+    """
+    latest = {}
+    for sample in samples:
+        if sample.observed_on <= range_end:
+            continue
+        definition = catalog.get(platform, sample.metric_id)
+        # Audience rows are breakdowns, but they are still snapshots. The old
+        # condition checked semantic type only for non-breakdown rows, so a
+        # partial *flow* breakdown from today (usually zero while Meta is still
+        # finalising it) leaked into a report ending yesterday. The trend used
+        # the completed day while the adjacent pie used today's zero, making a
+        # populated chart look empty.
+        if definition.semantic_type is not SemanticType.SNAPSHOT:
+            continue
+        key = (
+            sample.account_id,
+            sample.metric_id,
+            sample.breakdown_key,
+            sample.breakdown_value,
+        )
+        current = latest.get(key)
+        if current is None or sample.observed_on > current.observed_on:
+            latest[key] = sample
+    return tuple(latest.values())
+
+
+def _with_reconstructed_follower_history(
+    samples: Sequence[ReportingMetric],
+) -> tuple[ReportingMetric, ...]:
+    """Rebuild exact follower totals from a current snapshot and provider flows.
+
+    Reconstruction stops at the first day missing either side of the flow. This
+    deliberately prevents interpolation from becoming plausible-looking data.
+    """
+    output = list(samples)
+    grouped: dict[tuple[PlatformId, int], list[ReportingMetric]] = {}
+    for sample in samples:
+        if sample.breakdown_key is None:
+            grouped.setdefault((sample.platform, sample.account_id), []).append(sample)
+
+    for account_samples in grouped.values():
+        follower_samples = {
+            sample.observed_on: sample
+            for sample in account_samples
+            if sample.metric_id is MetricId.FOLLOWERS
+        }
+        if not follower_samples:
+            continue
+        follows = {
+            sample.observed_on: sample.value
+            for sample in account_samples
+            if sample.metric_id is MetricId.FOLLOWS
+        }
+        unfollows = {
+            sample.observed_on: sample.value
+            for sample in account_samples
+            if sample.metric_id is MetricId.UNFOLLOWS
+        }
+        flow_days = set(follows) & set(unfollows)
+        if not flow_days:
+            continue
+
+        # A daily flow is finalized one day after it happened. Instagram can
+        # therefore return a follower snapshot for D while its newest complete
+        # follow/unfollow pair is D-1. The old loop started at D, found no D
+        # flow and stopped before reconstructing a single point. Choose the
+        # newest exact bridge: either a same-day finalized flow, or the first
+        # snapshot immediately after a finalized flow.
+        anchors: list[tuple[date, ReportingMetric, bool]] = []
+        for sample in follower_samples.values():
+            if sample.observed_on in flow_days:
+                anchors.append((sample.observed_on, sample, True))
+            elif sample.observed_on - timedelta(days=1) in flow_days:
+                anchors.append(
+                    (sample.observed_on - timedelta(days=1), sample, False)
+                )
+        if not anchors:
+            continue
+        cursor, anchor, same_day = max(anchors, key=lambda item: item[0])
+
+        total = anchor.value
+        if not same_day and cursor not in follower_samples:
+            # The snapshot taken on D is the closing total for the newest
+            # complete provider-flow day D-1. Preserve the real snapshot on D
+            # and add that exact closing value at D-1 before walking backward.
+            output.append(replace(anchor, observed_on=cursor, value=total))
+        earliest = min(flow_days)
+        while cursor >= earliest:
+            if cursor not in follows or cursor not in unfollows:
+                break
+            previous_day = cursor - timedelta(days=1)
+            reconstructed = total - follows[cursor] + unfollows[cursor]
+            direct = follower_samples.get(previous_day)
+            if direct is not None:
+                total = direct.value
+            else:
+                output.append(
+                    replace(anchor, observed_on=previous_day, value=reconstructed)
+                )
+                total = reconstructed
+            cursor = previous_day
+    return tuple(output)
 
 
 # Warning families that carry one entry per metric. Each card already states its
@@ -172,14 +289,22 @@ def _build_platform_dashboard(
             raise ValueError("dashboard_account_scope_denied")
     account_ids = tuple(account.account_id for account in accounts)
     previous_range = previous_reporting_range(query.date_range)
+    live_snapshot_end = (
+        max(query.date_range.end_on, generated.date())
+        if query.date_range.key != "custom"
+        else query.date_range.end_on
+    )
     current_window_samples = (
         store.list_metrics(
             account_ids=account_ids,
             start_on=query.date_range.start_on - timedelta(days=1),
-            end_on=query.date_range.end_on,
+            end_on=live_snapshot_end,
         )
         if account_ids
         else ()
+    )
+    current_window_samples = _with_reconstructed_follower_history(
+        current_window_samples
     )
     previous_window_samples = (
         store.list_metrics(
@@ -193,18 +318,50 @@ def _build_platform_dashboard(
     samples = tuple(
         sample
         for sample in current_window_samples
-        if sample.observed_on >= query.date_range.start_on
+        if query.date_range.start_on
+        <= sample.observed_on
+        <= query.date_range.end_on
+    )
+    derivation_samples = tuple(
+        sample
+        for sample in current_window_samples
+        if sample.observed_on <= query.date_range.end_on
+    )
+    live_snapshot_samples = _latest_live_snapshot_samples(
+        samples=current_window_samples,
+        range_end=query.date_range.end_on,
+        platform=platform,
+        catalog=catalog,
+    )
+    card_samples = samples + tuple(
+        sample for sample in live_snapshot_samples if sample.breakdown_key is None
+    )
+    breakdown_samples = samples + tuple(
+        sample for sample in live_snapshot_samples if sample.breakdown_key is not None
     )
     previous_samples = tuple(
         sample
         for sample in previous_window_samples
         if sample.observed_on >= previous_range.start_on
     )
+    # Preset metric ranges intentionally stop at the last completed day. A
+    # Story, however, is useful precisely while it is live and disappears from
+    # the provider after roughly 24 hours. Reading Story content only through
+    # yesterday hid a Story that had already been collected today until the
+    # following day. Keep the historical trend boundary unchanged, but include
+    # today's Story records in the Story workspace.
+    content_end_on = (
+        max(query.date_range.end_on, generated.date())
+        if platform is PlatformId.INSTAGRAM
+        and query.content_type == "story"
+        and query.date_range.key != "custom"
+        else query.date_range.end_on
+    )
     content_rows = _exclude_content_types(
         store.list_content(
             account_ids=account_ids,
             start_on=query.date_range.start_on,
-            end_on=query.date_range.end_on,
+            end_on=content_end_on,
             content_type=query.content_type,
         )
         if account_ids
@@ -234,10 +391,10 @@ def _build_platform_dashboard(
     cards, metric_warnings = metric_cards(
         platform=platform,
         account_ids=account_ids,
-        samples=samples,
+        samples=card_samples,
         previous_samples=previous_samples,
         catalog=catalog,
-        derivation_samples=current_window_samples,
+        derivation_samples=derivation_samples,
         previous_derivation_samples=previous_window_samples,
     )
     available = sum(card.data_status is not DataStatus.UNAVAILABLE for card in cards)
@@ -255,7 +412,7 @@ def _build_platform_dashboard(
     )
     observed_days = len({sample.observed_on for sample in samples})
     expected_days = (query.date_range.end_on - query.date_range.start_on).days + 1
-    breakdowns = metric_breakdowns(samples)
+    breakdowns = metric_breakdowns(breakdown_samples)
     # The imported V1 sentiment metric was a stale three-row snapshot. Always
     # remove it and project the current date range from persisted AI labels.
     breakdowns = tuple(
@@ -300,7 +457,7 @@ def _build_platform_dashboard(
             platform=platform,
             samples=samples,
             catalog=catalog,
-            derivation_samples=current_window_samples,
+            derivation_samples=derivation_samples,
         ),
         breakdowns=breakdowns,
         content=content_cards(content_rows),

@@ -7,6 +7,7 @@ from app.application.ports.persistence import MetricPoint
 from app.application.ports.platforms import ProviderAccount, ProviderCredential
 from app.application.ports.reporting import ReportingMetric
 from app.application.queries.dashboard_aggregation import metric_cards, metric_series
+from app.application.queries.dashboards import _with_reconstructed_follower_history
 from app.application.services.collection import CollectionStatus, CollectionTarget
 from app.application.services.collection.daily_metrics import collect_daily_metrics
 from app.core.config import (
@@ -138,11 +139,14 @@ def test_directional_follower_snapshot_delta_is_versioned_for_every_platform() -
             "derived:negative_snapshot_delta:v1:consecutive_utc_day_snapshots"
         )
 
-        series = {item.metric_id: item for item in metric_series(
-            platform=platform,
-            samples=samples,
-            catalog=catalog,
-        )}
+        series = {
+            item.metric_id: item
+            for item in metric_series(
+                platform=platform,
+                samples=samples,
+                catalog=catalog,
+            )
+        }
         assert [point.value for point in series[MetricId.FOLLOWS].points] == [12, 0]
         assert [point.value for point in series[MetricId.UNFOLLOWS].points] == [0, 3]
         assert [point.value for point in series[MetricId.FOLLOWERS_NET].points] == [12, -3]
@@ -186,6 +190,144 @@ def test_direct_provider_follower_flow_takes_precedence_and_is_labeled_provider(
     follows = next(card for card in cards if card.metric_id is MetricId.FOLLOWS)
     assert follows.value == 9
     assert follows.methodology == "provider_flow"
+
+
+def test_provider_flow_and_snapshot_delta_are_merged_per_day() -> None:
+    catalog = bootstrap_metric_catalog()
+    samples = tuple(
+        ReportingMetric(
+            account_id=7,
+            brand_id="4",
+            platform=PlatformId.INSTAGRAM,
+            observed_on=observed_on,
+            metric_id=metric_id,
+            value=value,
+        )
+        for observed_on, metric_id, value in (
+            (date(2026, 8, 1), MetricId.FOLLOWERS, 100),
+            (date(2026, 8, 2), MetricId.FOLLOWERS, 104),
+            (date(2026, 8, 2), MetricId.FOLLOWS, 9),
+            (date(2026, 8, 3), MetricId.FOLLOWERS, 105),
+        )
+    )
+
+    cards, _ = metric_cards(
+        platform=PlatformId.INSTAGRAM,
+        account_ids=(7,),
+        samples=samples,
+        previous_samples=(),
+        catalog=catalog,
+    )
+    follows = next(card for card in cards if card.metric_id is MetricId.FOLLOWS)
+    assert follows.value == 10
+    assert follows.methodology == (
+        "provider_flow_with_derived_fallback:positive_snapshot_delta:"
+        "v1:consecutive_utc_day_snapshots"
+    )
+
+    series = {
+        item.metric_id: item
+        for item in metric_series(
+            platform=PlatformId.INSTAGRAM,
+            samples=samples,
+            catalog=catalog,
+        )
+    }
+    assert [(point.observed_on, point.value) for point in series[MetricId.FOLLOWS].points] == [
+        (date(2026, 8, 2), 9),
+        (date(2026, 8, 3), 1),
+    ]
+    assert series[MetricId.FOLLOWS].methodology == follows.methodology
+
+
+def test_current_follower_snapshot_reconstructs_history_only_across_complete_flows() -> None:
+    rows = (
+        ReportingMetric(
+            account_id=7,
+            brand_id="4",
+            platform=PlatformId.INSTAGRAM,
+            observed_on=date(2026, 8, 3),
+            metric_id=MetricId.FOLLOWERS,
+            value=110,
+        ),
+        *(
+            ReportingMetric(
+                account_id=7,
+                brand_id="4",
+                platform=PlatformId.INSTAGRAM,
+                observed_on=observed_on,
+                metric_id=metric_id,
+                value=value,
+            )
+            for observed_on, metric_id, value in (
+                (date(2026, 8, 3), MetricId.FOLLOWS, 8),
+                (date(2026, 8, 3), MetricId.UNFOLLOWS, 3),
+                (date(2026, 8, 2), MetricId.FOLLOWS, 7),
+                (date(2026, 8, 2), MetricId.UNFOLLOWS, 2),
+                (date(2026, 8, 1), MetricId.FOLLOWS, 5),
+            )
+        ),
+    )
+    reconstructed = _with_reconstructed_follower_history(rows)
+    follower_values = {
+        row.observed_on: row.value for row in reconstructed if row.metric_id is MetricId.FOLLOWERS
+    }
+    assert follower_values == {
+        date(2026, 8, 1): 100,
+        date(2026, 8, 2): 105,
+        date(2026, 8, 3): 110,
+    }
+
+
+def test_next_day_follower_snapshot_bridges_instagram_finalization_lag() -> None:
+    rows = (
+        ReportingMetric(
+            account_id=7,
+            brand_id="4",
+            platform=PlatformId.INSTAGRAM,
+            observed_on=date(2026, 8, 4),
+            metric_id=MetricId.FOLLOWERS,
+            value=110,
+        ),
+        ReportingMetric(
+            account_id=7,
+            brand_id="4",
+            platform=PlatformId.INSTAGRAM,
+            observed_on=date(2026, 8, 5),
+            metric_id=MetricId.FOLLOWERS,
+            value=109,
+        ),
+        *(
+            ReportingMetric(
+                account_id=7,
+                brand_id="4",
+                platform=PlatformId.INSTAGRAM,
+                observed_on=observed_on,
+                metric_id=metric_id,
+                value=value,
+            )
+            for observed_on, metric_id, value in (
+                (date(2026, 8, 3), MetricId.FOLLOWS, 8),
+                (date(2026, 8, 3), MetricId.UNFOLLOWS, 3),
+                (date(2026, 8, 2), MetricId.FOLLOWS, 7),
+                (date(2026, 8, 2), MetricId.UNFOLLOWS, 2),
+                (date(2026, 8, 1), MetricId.FOLLOWS, 5),
+            )
+        ),
+    )
+
+    reconstructed = _with_reconstructed_follower_history(rows)
+    follower_values = {
+        row.observed_on: row.value for row in reconstructed if row.metric_id is MetricId.FOLLOWERS
+    }
+
+    assert follower_values == {
+        date(2026, 8, 1): 100,
+        date(2026, 8, 2): 105,
+        date(2026, 8, 3): 110,
+        date(2026, 8, 4): 110,
+        date(2026, 8, 5): 109,
+    }
 
 
 def test_snapshot_delta_does_not_infer_follower_flow_across_missing_days() -> None:
@@ -259,9 +401,7 @@ def test_tiktok_daily_fixture_crosses_reader_collection_and_dashboard_contract()
     }
     requested: list[tuple[str, date, date]] = []
     reader = TikTokDailyMetricsReader(
-        lambda business_id, since, until: (
-            requested.append((business_id, since, until)) or fixture
-        )
+        lambda business_id, since, until: requested.append((business_id, since, until)) or fixture
     )
     account = ProviderAccount(
         platform=PlatformId.TIKTOK,
@@ -279,11 +419,14 @@ def test_tiktok_daily_fixture_crosses_reader_collection_and_dashboard_contract()
 
     assert requested == [("business-1", date(2026, 8, 1), date(2026, 8, 2))]
     assert outcome.status is CollectionStatus.SUCCESS
-    assert outcome.metric_count == 10
+    assert outcome.metric_count == 16
     values = {(row.observed_on, row.metric_id): row.value for row in store.rows}
     assert values[(date(2026, 8, 2), MetricId.VIEWS)] == 1200
     assert values[(date(2026, 8, 2), MetricId.REACH)] == 900
     assert values[(date(2026, 8, 2), MetricId.PROFILE_VIEWS)] == 40
+    assert values[(date(2026, 8, 2), MetricId.VIDEO_LIKES_DAILY)] == 25
+    assert values[(date(2026, 8, 2), MetricId.VIDEO_COMMENTS_DAILY)] == 5
+    assert values[(date(2026, 8, 2), MetricId.VIDEO_SHARES_DAILY)] == 3
     assert values[(date(2026, 8, 2), MetricId.INTERACTIONS)] == 33
 
     reporting = _reporting(store.rows)
