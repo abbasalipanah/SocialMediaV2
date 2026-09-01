@@ -102,6 +102,44 @@ def test_list_connected_accepts_legacy_active_and_canonical_connected_statuses()
     )
 
 
+def test_list_connected_reads_generic_oauth_projection_for_youtube() -> None:
+    engine = _Engine(
+        [
+            {
+                "link_id": 12,
+                "connection_id": 22,
+                "asset_id": 32,
+                "brand_id": 69,
+                "platform": "youtube",
+                "external_id": "UC-channel",
+                "display_name": "Example Channel",
+                "backfill_status": "pending",
+                "payload_json": {
+                    "format_version": 1,
+                    "platform": "youtube",
+                    "accounts": [
+                        {
+                            "platform": "youtube",
+                            "external_id": "UC-channel",
+                            "display_name": "Example Channel",
+                            "credential_reference": "vault-youtube-22",
+                        }
+                    ],
+                },
+            }
+        ]
+    )
+    store = SocialCollectionTargetStore(
+        cast(Engine, engine),
+        WritePolicy(runtime_mode=RuntimeMode.STAGING, writes_enabled=False),
+    )
+
+    targets = store.list_connected(platforms=(PlatformId.YOUTUBE,), brand_id=69)
+
+    assert targets[0].credential_reference == "vault-youtube-22"
+    assert "'v2:oauth:' || la.platform" in engine.connection.statement
+
+
 def test_new_account_fast_lane_keeps_incomplete_backfills_selected() -> None:
     engine = _Engine([])
     store = SocialCollectionTargetStore(

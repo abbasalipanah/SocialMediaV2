@@ -10,6 +10,9 @@ from sqlalchemy import Engine, create_engine, text
 from app.application.ports import OAuthCredentialBinding, OAuthLinkSelection
 from app.core import RuntimeMode, WritePolicy
 from app.domain.platforms import PlatformId
+from app.infrastructure.persistence.social_v2.collection_targets import (
+    SocialCollectionTargetStore,
+)
 from app.infrastructure.persistence.social_v2.oauth_channels import (
     ProjectionOAuthConnectionStore,
 )
@@ -96,6 +99,11 @@ def test_oauth_connection_links_selection_and_disconnects_locally(
 
     assert linked.state == "connected"
     assert linked_ids == ["UC-channel", "UC-other"]
+    targets = SocialCollectionTargetStore(engine, policy).list_connected(
+        platforms=(PlatformId.YOUTUBE,), brand_id=17
+    )
+    assert [target.external_id for target in targets] == ["UC-channel", "UC-other"]
+    assert targets[0].credential_reference == "d" * 64
     assert [
         item.status
         for item in store.list_discoveries(
