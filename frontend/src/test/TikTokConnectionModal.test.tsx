@@ -51,10 +51,10 @@ describe("TikTokConnectionModal", () => {
       }
       throw new Error(`Unexpected request: ${url}`);
     }));
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const queryCache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     render(
-      <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={queryCache}>
         <TikTokConnectionModal
           brandId="219392"
           brandName="Limak Ambassadore Hotel Ankara"
