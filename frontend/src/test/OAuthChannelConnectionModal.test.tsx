@@ -63,10 +63,10 @@ describe("OAuthChannelConnectionModal", () => {
       throw new Error(`Unexpected request: ${url}`);
     }));
     const onChanged = vi.fn();
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const queryCache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
     render(
-      <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={queryCache}>
         <OAuthChannelConnectionModal
           brandId="42"
           brandName="Channel Brand"
