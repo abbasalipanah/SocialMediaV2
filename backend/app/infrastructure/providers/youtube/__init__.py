@@ -7,6 +7,8 @@ from .daily_metrics import (
     YOUTUBE_DAILY_METRICS,
     YouTubeDailyMetricsReader,
 )
+from .oauth import YouTubeOAuthError, YouTubeOAuthProvider
+from .oauth_transport import YouTubeOAuthTransport, YouTubeOAuthTransportError
 from .profile import YouTubeProfileReader
 from .responses import YouTubeResponseError
 from .transport import YouTubeHttpTransport, YouTubeTransportError
@@ -36,6 +38,10 @@ __all__ = [
     "YouTubeCommentsReader",
     "YouTubeDailyMetricsReader",
     "YouTubeHttpTransport",
+    "YouTubeOAuthError",
+    "YouTubeOAuthProvider",
+    "YouTubeOAuthTransport",
+    "YouTubeOAuthTransportError",
     "YouTubeProfileReader",
     "YouTubeResponseError",
     "YouTubeTransportError",

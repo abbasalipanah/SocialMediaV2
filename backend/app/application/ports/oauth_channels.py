@@ -62,6 +62,28 @@ class OAuthProviderGrant:
 
 
 @dataclass(frozen=True)
+class OAuthTokenRefresh:
+    access_token: str = field(repr=False)
+    access_expires_in: int = 0
+    granted_scopes: tuple[str, ...] = ()
+    refresh_token: str | None = field(default=None, repr=False)
+    refresh_expires_in: int | None = None
+
+    def __post_init__(self) -> None:
+        if (
+            not self.access_token
+            or self.access_expires_in < 1
+            or not self.granted_scopes
+            or len(self.granted_scopes) != len(set(self.granted_scopes))
+            or any(not scope.strip() for scope in self.granted_scopes)
+            or (self.refresh_token is not None and not self.refresh_token)
+            or (self.refresh_expires_in is not None and self.refresh_token is None)
+            or (self.refresh_expires_in is not None and self.refresh_expires_in < 1)
+        ):
+            raise OAuthChannelError("oauth_token_refresh_invalid")
+
+
+@dataclass(frozen=True)
 class OAuthCredentialBinding:
     platform: PlatformId
     external_id: str
@@ -128,6 +150,8 @@ class OAuthChannelProvider(Protocol):
 
     def exchange_and_discover(self, *, authorization_code: str) -> OAuthProviderGrant: ...
 
+    def refresh(self, *, refresh_token: str) -> OAuthTokenRefresh: ...
+
     def revoke(self, *, access_token: str) -> None: ...
 
 
@@ -176,4 +200,5 @@ __all__ = [
     "OAuthLinkResult",
     "OAuthLinkSelection",
     "OAuthProviderGrant",
+    "OAuthTokenRefresh",
 ]

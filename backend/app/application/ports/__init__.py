@@ -43,6 +43,7 @@ from .oauth_channels import (
     OAuthLinkResult,
     OAuthLinkSelection,
     OAuthProviderGrant,
+    OAuthTokenRefresh,
 )
 from .reporting import ReportingStore
 from .session_store import SessionStore
@@ -118,6 +119,7 @@ __all__ = [
     "OAuthLinkResult",
     "OAuthLinkSelection",
     "OAuthProviderGrant",
+    "OAuthTokenRefresh",
     "PendingCommentSentiment",
     "ReportingStore",
     "SessionStore",
