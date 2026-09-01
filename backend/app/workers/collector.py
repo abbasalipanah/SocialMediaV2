@@ -92,6 +92,10 @@ from app.infrastructure.providers.tiktok.accounts import (
     parse_token,
     parse_token_info,
 )
+from app.workers.platform_registry import (
+    CollectorRegistration,
+    PlatformCollectorRegistry,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -319,6 +323,22 @@ class StandaloneCollector:
             else None
         )
         self.media_fetcher = _MediaFetcher() if self.media_files is not None else None
+        self.collectors = PlatformCollectorRegistry(
+            (
+                CollectorRegistration(
+                    provider="meta",
+                    platforms=(PlatformId.FACEBOOK, PlatformId.INSTAGRAM),
+                    enabled=lambda: self.settings.meta.collection_enabled,
+                    collect=self._collect_meta,
+                ),
+                CollectorRegistration(
+                    provider="tiktok",
+                    platforms=(PlatformId.TIKTOK,),
+                    enabled=lambda: self.settings.tiktok.collection_enabled,
+                    collect=self._collect_tiktok,
+                ),
+            )
+        )
 
     def close(self) -> None:
         if self.media_fetcher is not None:
@@ -351,15 +371,7 @@ class StandaloneCollector:
         asset_id: int | None,
         only_new: bool = False,
     ) -> tuple[WorkerAccountResult, ...]:
-        selected = tuple(
-            platform
-            for platform in platforms
-            if (
-                platform in {PlatformId.FACEBOOK, PlatformId.INSTAGRAM}
-                and self.settings.meta.collection_enabled
-            )
-            or (platform is PlatformId.TIKTOK and self.settings.tiktok.collection_enabled)
-        )
+        selected = self.collectors.enabled_platforms(platforms)
         if not selected:
             raise ConfigurationError("No requested V2 collector is enabled")
         rows = self.targets.list_connected(
@@ -503,9 +515,7 @@ class StandaloneCollector:
         self, row: CollectionTargetRow, timings: dict[str, float] | None = None
     ) -> WorkerAccountResult:
         timings = {} if timings is None else timings
-        if row.platform is PlatformId.TIKTOK:
-            return self._collect_tiktok(row, timings)
-        return self._collect_meta(row, timings)
+        return self.collectors.collect(row.platform, row, timings)
 
     def _collect_meta(
         self, row: CollectionTargetRow, timings: dict[str, float]
