@@ -27,6 +27,7 @@ from app.api.contracts import (
     SocialAccountsResponse,
     SyncJobsResponse,
     TikTokActivationReadinessResponse,
+    TikTokAvailableAccountItem,
     TikTokConnectionResponse,
     TikTokLinkedAccountItem,
     TikTokSelfServiceReadinessResponse,
@@ -808,6 +809,14 @@ def create_settings_router(
                     )
                     for item in activation.linked_accounts(context)
                 )
+                available_accounts = tuple(
+                    TikTokAvailableAccountItem(
+                        external_id=item.business_id,
+                        display_name=item.display_name or item.business_id,
+                        state="available",
+                    )
+                    for item in activation.available_accounts(context)
+                )
             except TikTokActivationError as exc:
                 _raise_self_service_activation_error(exc)
         else:
@@ -819,6 +828,7 @@ def create_settings_router(
                 )
                 for item in accounts
             )
+            available_accounts = ()
         rows = tuple(
             row
             for row in reporting_store.list_connections(brand_ids=(brand_id,))
@@ -847,6 +857,7 @@ def create_settings_router(
             connection_state=connection_state,
             linked_account_count=len(linked_accounts),
             linked_accounts=linked_accounts,
+            available_accounts=available_accounts,
             oauth_start_available=start_available,
             reason=reason,
             runtime_mode=policy.runtime_mode,

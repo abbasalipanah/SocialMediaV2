@@ -134,12 +134,20 @@ class TikTokLinkedAccountItem:
 
 
 @dataclass(frozen=True)
+class TikTokAvailableAccountItem:
+    external_id: str
+    display_name: str
+    state: str
+
+
+@dataclass(frozen=True)
 class TikTokSelfServiceReadinessResponse:
     brand_id: str
     can_manage: bool
     connection_state: str
     linked_account_count: int
     linked_accounts: tuple[TikTokLinkedAccountItem, ...]
+    available_accounts: tuple[TikTokAvailableAccountItem, ...]
     oauth_start_available: bool
     reason: str
     runtime_mode: RuntimeMode
@@ -325,6 +333,7 @@ __all__ = [
     "SocialAccountsResponse",
     "SyncJobsResponse",
     "TikTokConnectionResponse",
+    "TikTokAvailableAccountItem",
     "TikTokActivationReadinessResponse",
     "TikTokSelfServiceReadinessResponse",
     "TikTokSelfServiceStartResponse",

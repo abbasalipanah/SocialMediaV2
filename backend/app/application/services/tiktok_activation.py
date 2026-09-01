@@ -287,6 +287,10 @@ class TikTokActivationCoordinator:
         self._assert_authorized(context, require_gate_context=False)
         return self._link_store.list_for_brand(brand_id=context.brand_id)
 
+    def available_accounts(self, context: ActivationContext) -> tuple[ActivationLink, ...]:
+        self._assert_authorized(context, require_gate_context=False)
+        return self._link_store.list_available_for_brand(brand_id=context.brand_id)
+
     def unlink(self, *, context: ActivationContext, business_id: str) -> ActivationLink:
         try:
             self._write_policy.assert_allows_mutation("tiktok_activation_unlink")

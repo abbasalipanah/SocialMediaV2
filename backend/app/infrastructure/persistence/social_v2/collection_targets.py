@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
@@ -11,6 +12,9 @@ from sqlalchemy import Engine, text
 
 from app.core.write_policy import WritePolicy
 from app.domain.platforms import PlatformId
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -54,6 +58,7 @@ class SocialCollectionTargetStore:
         clauses = [
             "la.status IN ('active', 'connected')",
             "pc.status='connected'",
+            "pc.brand_id=la.brand_id",
             "la.asset_id IS NOT NULL",
             "la.platform = ANY(:platforms)",
         ]
@@ -100,7 +105,22 @@ class SocialCollectionTargetStore:
                 ),
                 parameters,
             ).mappings()
-            return tuple(_connected_target(cast(Mapping[str, Any], row)) for row in rows)
+            targets: list[CollectionTargetRow] = []
+            for row in rows:
+                mapped_row = cast(Mapping[str, Any], row)
+                try:
+                    targets.append(_connected_target(mapped_row))
+                except ValueError as exc:
+                    LOGGER.warning(
+                        "social_collection_target_skipped link_id=%s connection_id=%s "
+                        "brand_id=%s platform=%s error=%s",
+                        mapped_row.get("link_id"),
+                        mapped_row.get("connection_id"),
+                        mapped_row.get("brand_id"),
+                        mapped_row.get("platform"),
+                        exc,
+                    )
+            return tuple(targets)
 
     def pending_tiktok(self, connection_id: int) -> PendingTikTokTarget | None:
         if connection_id < 1:

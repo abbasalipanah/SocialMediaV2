@@ -267,6 +267,66 @@ class ProjectionTikTokActivationStore:
                 if row["connection_id"] is not None
             )
 
+    def list_available_for_brand(self, *, brand_id: int) -> tuple[ActivationLink, ...]:
+        if brand_id < 1:
+            raise TikTokActivationError("activation_brand_unavailable")
+        with self.engine.connect() as connection:
+            rows = connection.execute(
+                text(
+                    """SELECT DISTINCT ON (lsa.external_id)
+                              lsa.id AS link_id, lsa.connection_id, lsa.brand_id,
+                              lsa.external_id AS business_id, lsa.status,
+                              COALESCE(NULLIF(a.display_name, ''),
+                                       NULLIF(lsa.display_name, ''),
+                                       lsa.external_id) AS display_name,
+                              ps.payload_json->>'credential_reference'
+                                  AS credential_reference
+                       FROM brands AS target_brand
+                       JOIN brands AS source_brand
+                         ON source_brand.tenant_id=target_brand.tenant_id
+                        AND source_brand.id<>target_brand.id
+                       JOIN linked_social_accounts AS lsa
+                         ON lsa.brand_id=source_brand.id AND lsa.platform='tiktok'
+                       JOIN platform_connections AS pc
+                         ON pc.id=lsa.connection_id AND pc.brand_id=lsa.brand_id
+                        AND pc.tenant_id=target_brand.tenant_id
+                       JOIN social_projection_state AS ps
+                         ON ps.projection_key=(
+                           'v2:tiktok:connection-credential:' || lsa.connection_id::text
+                         )
+                       LEFT JOIN assets AS a ON a.id=lsa.asset_id
+                       WHERE target_brand.id=:brand_id
+                         AND lsa.status IN ('active', 'connected', 'pending_verification')
+                         AND pc.status IN ('connected', 'pending_verification')
+                         AND length(ps.payload_json->>'credential_reference') > 0
+                         AND NOT EXISTS (
+                           SELECT 1 FROM linked_social_accounts AS own
+                           WHERE own.brand_id=target_brand.id AND own.platform='tiktok'
+                             AND own.external_id=lsa.external_id
+                             AND own.status IN ('active', 'connected', 'pending_verification')
+                         )
+                       ORDER BY lsa.external_id, lsa.updated_at DESC, lsa.id DESC"""
+                ),
+                {"brand_id": brand_id},
+            ).mappings()
+            return tuple(
+                sorted(
+                    (
+                        ActivationLink(
+                            connection_id=int(row["connection_id"]),
+                            link_id=int(row["link_id"]),
+                            brand_id=int(row["brand_id"]),
+                            business_id=str(row["business_id"]),
+                            state=str(row["status"]),
+                            display_name=str(row["display_name"]),
+                            credential_reference=str(row["credential_reference"]),
+                        )
+                        for row in rows
+                    ),
+                    key=lambda item: (item.display_name.casefold(), item.business_id),
+                )
+            )
+
     def disconnect(
         self,
         *,

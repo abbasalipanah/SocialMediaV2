@@ -167,6 +167,8 @@ class ActivationLinkStore(Protocol):
 
     def list_for_brand(self, *, brand_id: int) -> tuple[ActivationLink, ...]: ...
 
+    def list_available_for_brand(self, *, brand_id: int) -> tuple[ActivationLink, ...]: ...
+
     def disconnect(
         self,
         *,
