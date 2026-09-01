@@ -28,7 +28,7 @@ npm run dev:local
 
 Tarayıcı: `http://127.0.0.1:3010/`
 
-YouTube geliştirme canary'sini izole veritabanı ve proje içindeki Git-ignore
+YouTube ve X geliştirme canary'lerini izole veritabanı ve proje içindeki Git-ignore
 credential dosyalarıyla başlatmak için:
 
 ```bash
@@ -38,8 +38,16 @@ npm run dev
 
 Bu komut frontend'i `http://localhost:8126/`, API'yi yalnızca dahili kullanım için
 `127.0.0.1:8127` üzerinde çalıştırır. Google OAuth callback'i frontend ile aynı
-origin'den Vite proxy üzerinden API'ye ulaşır. Meta, TikTok ve otomatik collection
-schedule kapalı kalır.
+origin'den Vite proxy üzerinden API'ye ulaşır. X credential dosyası henüz yoksa X
+OAuth kapalı kalır ama frontend preview açılır. Meta, TikTok ve otomatik collection
+schedule kapalı kalır; canlı runtime'a dokunulmaz.
+
+X hesabı bağlandıktan sonra yalnız izole veritabanında manuel collection çalıştırmak için:
+
+```bash
+cd frontend
+npm run collect:x
+```
 
 Üç yeni platform geliştirmesi için ayrılmış worktree yığını:
 

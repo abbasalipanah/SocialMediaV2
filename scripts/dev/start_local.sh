@@ -69,12 +69,12 @@ case "${SOCIAL_LOCAL_ACTIVATION_PROFILE:-disabled}" in
   disabled)
     export SOCIAL_WRITES_ENABLED=false
     ;;
-  youtube_canary)
+  platform_canary)
     if [[ "$RUNTIME_ENV" != "$ROOT/.local/platform-expansion-db.env" ]] \
       || [[ "${SOCIAL_DB_HOST:-}" != "127.0.0.1" ]] \
       || [[ "${SOCIAL_DB_PORT:-}" != "56432" ]] \
       || [[ "${SOCIAL_DB_NAME:-}" != "social_media_v2_platforms_dev" ]]; then
-      echo "YouTube canary writes require the isolated platform-expansion database." >&2
+      echo "Platform canary writes require the isolated platform-expansion database." >&2
       exit 1
     fi
     export SOCIAL_WRITES_ENABLED=true
@@ -120,8 +120,8 @@ echo
 echo "Social Media local demo is ready: http://127.0.0.1:${FRONTEND_PORT}/"
 echo "Dashboard data is read from the isolated Social Media V2 local database."
 echo "Production providers and source-project writers are not used."
-if [[ "${SOCIAL_LOCAL_ACTIVATION_PROFILE:-disabled}" == "youtube_canary" ]]; then
-  echo "YouTube OAuth canary is enabled; scheduled collection remains disabled."
+if [[ "${SOCIAL_LOCAL_ACTIVATION_PROFILE:-disabled}" == "platform_canary" ]]; then
+  echo "Platform OAuth canary is enabled; scheduled collection remains disabled."
 fi
 echo "Press Ctrl+C to stop both processes."
 echo

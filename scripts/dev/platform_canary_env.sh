@@ -1,26 +1,29 @@
 #!/usr/bin/env bash
 
-# Shared, source-only environment preparation for the isolated YouTube canary.
-# OAuth client values remain outside the repository and are exported only to
+# Shared, source-only environment preparation for isolated platform canaries.
+# OAuth application values remain in ignored files and are exported only to
 # the child processes that need them.
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-  echo "Source youtube_canary_env.sh from a canary command." >&2
+  echo "Source platform_canary_env.sh from a canary command." >&2
   exit 2
 fi
 
-prepare_youtube_canary_env() {
+prepare_platform_canary_env() {
   local root="${1:?Repository root is required}"
   local local_state="$root/.local"
   local credential_file="${SOCIAL_YOUTUBE_DEV_CLIENT_FILE:-$root/.secrets/socialmedia/youtube-dev-client.json}"
+  local x_credential_file="${SOCIAL_X_DEV_APP_FILE:-$root/.secrets/socialmedia/x-dev-oauth.json}"
   local oauth_state_file="$local_state/youtube-canary-oauth-state.secret"
   local vault_key_file="$local_state/youtube-canary-vault.key"
+  local x_oauth_state_file="$local_state/x-canary-oauth-state.secret"
   local expected_redirect_uri="http://localhost:8126/api/social/youtube/oauth/callback"
+  local x_expected_redirect_uri="http://localhost:8126/api/social/x/oauth/callback"
   local command_name
 
   for command_name in jq openssl; do
     if ! command -v "$command_name" >/dev/null 2>&1; then
-      echo "$command_name is required for the YouTube canary runtime." >&2
+      echo "$command_name is required for the platform canary runtime." >&2
       return 1
     fi
   done
@@ -54,6 +57,25 @@ prepare_youtube_canary_env() {
   fi
   chmod 600 "$oauth_state_file" "$vault_key_file"
 
+  if [[ -f "$x_credential_file" ]]; then
+    if [[ "$(stat -c '%a' "$x_credential_file")" != "600" ]]; then
+      echo "X development OAuth credential must have mode 0600." >&2
+      return 1
+    fi
+    if ! jq -e --arg redirect_uri "$x_expected_redirect_uri" '
+      (.web.client_id | type == "string" and length > 5)
+      and (.web.client_secret | type == "string" and length > 10)
+      and (.web.redirect_uris == [$redirect_uri])
+    ' "$x_credential_file" >/dev/null; then
+      echo "X development OAuth credential does not match the approved contract." >&2
+      return 1
+    fi
+    if [[ ! -f "$x_oauth_state_file" ]]; then
+      openssl rand -base64 48 >"$x_oauth_state_file"
+    fi
+    chmod 600 "$x_oauth_state_file"
+  fi
+
   local youtube_client_id
   local youtube_client_secret
   local oauth_state_secret
@@ -76,8 +98,8 @@ prepare_youtube_canary_env() {
   export SOCIAL_LOCAL_DB_NAME="social_media_v2_platforms_dev"
   export SOCIAL_LOCAL_API_PORT="8127"
   export SOCIAL_LOCAL_FRONTEND_PORT="8126"
-  export SOCIAL_LOCAL_ACTIVATION_PROFILE="youtube_canary"
-  export VITE_LOCAL_PREVIEW_PLATFORMS="youtube"
+  export SOCIAL_LOCAL_ACTIVATION_PROFILE="platform_canary"
+  export VITE_LOCAL_PREVIEW_PLATFORMS="youtube,x"
   export SOCIAL_VAULT_ENABLED=true
   export SOCIAL_WORKER_SCHEDULE_ENABLED=false
   export SOCIAL_CREDENTIAL_ACTIVE_KEY_ID="youtube-dev-key"
@@ -92,6 +114,27 @@ prepare_youtube_canary_env() {
   export SOCIAL_YOUTUBE_ACTIVATION_GATE_ENABLED=true
   export SOCIAL_YOUTUBE_ACTIVATION_ENABLED_AT="$enabled_at"
   export SOCIAL_YOUTUBE_ACTIVATION_EXPIRES_AT="$expires_at"
+
+  export SOCIAL_X_ACCOUNT_ENABLED=false
+  export SOCIAL_X_ACCOUNT_OAUTH_MODE=disabled
+  export SOCIAL_X_COLLECTION_ENABLED=false
+  export SOCIAL_X_ACTIVATION_GATE_ENABLED=false
+  if [[ -f "$x_credential_file" ]]; then
+    export SOCIAL_X_OAUTH_APP_ID
+    export SOCIAL_X_OAUTH_APP_SECRET
+    export SOCIAL_X_OAUTH_APP_ID="$(jq -er '.web.client_id' "$x_credential_file")"
+    export SOCIAL_X_OAUTH_APP_SECRET="$(jq -er '.web.client_secret' "$x_credential_file")"
+    export SOCIAL_X_ACCOUNT_ENABLED=true
+    export SOCIAL_X_ACCOUNT_OAUTH_MODE="manual_intent_only"
+    export SOCIAL_X_COLLECTION_ENABLED=true
+    export SOCIAL_X_REDIRECT_URI="$x_expected_redirect_uri"
+    export SOCIAL_X_OAUTH_STATE_SECRET="$(tr -d '\r\n' <"$x_oauth_state_file")"
+    export SOCIAL_X_ACTIVATION_GATE_ENABLED=true
+    export SOCIAL_X_ACTIVATION_ENABLED_AT="$enabled_at"
+    export SOCIAL_X_ACTIVATION_EXPIRES_AT="$expires_at"
+  else
+    echo "X OAuth remains disabled until this mode-0600 file exists: $x_credential_file" >&2
+  fi
 
   # The canary must never inherit unrelated live provider or AI switches from
   # the operator's shell.
