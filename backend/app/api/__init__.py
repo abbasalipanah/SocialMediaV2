@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 from fastapi import APIRouter, Cookie, HTTPException, Query
@@ -10,6 +11,7 @@ from app.api.auth import COOKIE_NAME, create_auth_router
 from app.api.contracts import OperationsReadinessResponse, ReadinessPlatform
 from app.api.dashboards import create_dashboard_router
 from app.api.insights import create_insights_router
+from app.api.integrations import create_oauth_channel_router
 from app.api.media import create_media_router
 from app.api.operations import create_operations_router
 from app.api.platforms import create_platform_router
@@ -19,6 +21,9 @@ from app.api.settings import create_settings_router
 from app.api.workspace import create_workspace_router
 from app.application.ports import AiSummaryService, AuthorityStore, ReportingStore
 from app.application.services.meta_activation import MetaActivationCoordinator
+from app.application.services.oauth_channel_activation import (
+    OAuthChannelActivationCoordinator,
+)
 from app.application.services.report_exports import ReportJobManager
 from app.application.services.tiktok_activation import TikTokActivationCoordinator
 from app.capabilities import bootstrap_registry
@@ -36,6 +41,11 @@ def create_api_router(
     media_root: Path | None = None,
     tiktok_activation: TikTokActivationCoordinator | None = None,
     meta_activation: MetaActivationCoordinator | None = None,
+    oauth_activations: Mapping[
+        PlatformId,
+        OAuthChannelActivationCoordinator,
+    ]
+    | None = None,
     ai_summary: AiSummaryService | None = None,
     report_jobs: ReportJobManager | None = None,
 ) -> APIRouter:
@@ -142,6 +152,14 @@ def create_api_router(
         )
     )
     router.include_router(create_insights_router(store, reporting_store, ai_summary))
+    router.include_router(
+        create_oauth_channel_router(
+            authority_store=store,
+            reporting_store=reporting_store,
+            policy=policy,
+            activations=oauth_activations or {},
+        )
+    )
     router.include_router(create_operations_router(store, policy))
     router.include_router(create_media_router(store, reporting_store, media_root))
     return router
