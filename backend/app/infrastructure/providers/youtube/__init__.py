@@ -11,6 +11,7 @@ from .oauth import YouTubeOAuthError, YouTubeOAuthProvider
 from .oauth_transport import YouTubeOAuthTransport, YouTubeOAuthTransportError
 from .profile import YouTubeProfileReader
 from .responses import YouTubeResponseError
+from .runtime import create_youtube_activation_runtime
 from .transport import YouTubeHttpTransport, YouTubeTransportError
 from .wire import (
     YOUTUBE_ANALYTICS_REPORTS_URL,
@@ -51,4 +52,5 @@ __all__ = [
     "playlist_items_query",
     "uploads_playlist_query",
     "videos_query",
+    "create_youtube_activation_runtime",
 ]

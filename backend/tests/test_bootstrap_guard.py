@@ -17,6 +17,7 @@ from app.core import (
 from app.domain.platforms import CapabilityId, PlatformId
 from app.infrastructure.providers.meta.runtime import create_meta_activation_runtime
 from app.infrastructure.providers.tiktok.runtime import create_tiktok_activation_runtime
+from app.infrastructure.providers.youtube.runtime import create_youtube_activation_runtime
 from app.workers.runtime import settings_worker_config
 from tests.test_phase6_dashboard_api import MemoryAuthority
 
@@ -376,6 +377,17 @@ def test_complete_local_youtube_configuration_is_fail_closed_then_accepted(
         PlatformId.YOUTUBE,
         CapabilityId.AUDIENCE,
     ).status is CapabilityStatus.UNSUPPORTED
+    engine = create_engine(settings.db.url)
+    try:
+        coordinator = create_youtube_activation_runtime(
+            settings=settings,
+            policy=WritePolicy.from_settings(settings),
+            engine=engine,
+            authority_store=MemoryAuthority(),
+        )
+    finally:
+        engine.dispose()
+    assert coordinator is not None
 
 
 def test_youtube_endpoint_and_collection_gates_fail_closed(
