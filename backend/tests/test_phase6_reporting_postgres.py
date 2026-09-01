@@ -240,7 +240,12 @@ def _schema() -> tuple[str, ...]:
             sticker_taps double precision, profile_visits double precision,
             follows_count double precision, taps_forward double precision,
             taps_back double precision, swipe_forward double precision, exits double precision,
-            navigation_count double precision, completion_rate double precision
+            navigation_count double precision, completion_rate double precision,
+            reposts_count integer, quotes_count integer, link_clicks integer,
+            profile_clicks integer, video_views_count integer,
+            video_playback_0_count integer, video_playback_25_count integer,
+            video_playback_50_count integer, video_playback_75_count integer,
+            video_playback_100_count integer
         )""",
         """CREATE TABLE media_assets (
             id serial PRIMARY KEY, brand_id integer NOT NULL, asset_id integer NOT NULL,

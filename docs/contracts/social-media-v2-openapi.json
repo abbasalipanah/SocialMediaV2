@@ -651,6 +651,17 @@
             ],
             "title": "Comments Count"
           },
+          "completion_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Rate"
+          },
           "content_type": {
             "title": "Content Type",
             "type": "string"
@@ -713,6 +724,17 @@
             ],
             "title": "Likes Count"
           },
+          "link_clicks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Clicks"
+          },
           "media_url": {
             "title": "Media Url",
             "type": "string"
@@ -731,6 +753,17 @@
           "permalink": {
             "title": "Permalink",
             "type": "string"
+          },
+          "profile_clicks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Clicks"
           },
           "profile_visits": {
             "anyOf": [
@@ -755,6 +788,17 @@
             ],
             "title": "Published At"
           },
+          "quotes_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quotes Count"
+          },
           "reach": {
             "anyOf": [
               {
@@ -765,6 +809,17 @@
               }
             ],
             "title": "Reach"
+          },
+          "reposts_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reposts Count"
           },
           "saves_count": {
             "anyOf": [
@@ -817,6 +872,72 @@
             ],
             "title": "Total Time Watched"
           },
+          "video_playback_0_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Playback 0 Count"
+          },
+          "video_playback_100_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Playback 100 Count"
+          },
+          "video_playback_25_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Playback 25 Count"
+          },
+          "video_playback_50_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Playback 50 Count"
+          },
+          "video_playback_75_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Playback 75 Count"
+          },
+          "video_views_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Views Count"
+          },
           "views": {
             "anyOf": [
               {
@@ -853,6 +974,17 @@
           "average_time_watched",
           "saves_count",
           "profile_visits",
+          "reposts_count",
+          "quotes_count",
+          "link_clicks",
+          "profile_clicks",
+          "video_views_count",
+          "video_playback_0_count",
+          "video_playback_25_count",
+          "video_playback_50_count",
+          "video_playback_75_count",
+          "video_playback_100_count",
+          "completion_rate",
           "data_status"
         ],
         "title": "DashboardContent",
@@ -951,6 +1083,36 @@
           "count"
         ],
         "title": "DashboardHashtag",
+        "type": "object"
+      },
+      "DashboardMentionSummary": {
+        "properties": {
+          "daily": {
+            "items": {
+              "$ref": "#/components/schemas/DashboardPoint"
+            },
+            "title": "Daily",
+            "type": "array"
+          },
+          "data_status": {
+            "$ref": "#/components/schemas/DataStatus"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "unique_authors": {
+            "title": "Unique Authors",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "unique_authors",
+          "daily",
+          "data_status"
+        ],
+        "title": "DashboardMentionSummary",
         "type": "object"
       },
       "DashboardMeta": {
@@ -2599,6 +2761,16 @@
           "content_summary": {
             "$ref": "#/components/schemas/DashboardContentSummary"
           },
+          "mentions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DashboardMentionSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "meta": {
             "$ref": "#/components/schemas/DashboardMeta"
           },
@@ -2660,7 +2832,8 @@
           "source_breakdown",
           "metric_methodology",
           "audience_capabilities",
-          "stories"
+          "stories",
+          "mentions"
         ],
         "title": "PlatformDashboard",
         "type": "object"

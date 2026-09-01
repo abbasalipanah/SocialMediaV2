@@ -35,6 +35,7 @@ from app.domain.reporting import (
     DashboardContentMetrics,
     DashboardContentSummary,
     DashboardHashtag,
+    DashboardMentionSummary,
     DashboardMetric,
     DashboardMetricMethodology,
     DashboardNamedValue,
@@ -581,6 +582,17 @@ def content_cards(rows: tuple[ReportingContent, ...]) -> tuple[DashboardContent,
             average_time_watched=row.average_time_watched,
             saves_count=row.saves_count,
             profile_visits=row.profile_visits,
+            reposts_count=row.reposts_count,
+            quotes_count=row.quotes_count,
+            link_clicks=row.link_clicks,
+            profile_clicks=row.profile_clicks,
+            video_views_count=row.video_views_count,
+            video_playback_0_count=row.video_playback_0_count,
+            video_playback_25_count=row.video_playback_25_count,
+            video_playback_50_count=row.video_playback_50_count,
+            video_playback_75_count=row.video_playback_75_count,
+            video_playback_100_count=row.video_playback_100_count,
+            completion_rate=row.completion_rate,
             data_status=(
                 DataStatus.AVAILABLE
                 if row.views_count is not None and row.reach_count is not None
@@ -692,6 +704,38 @@ def community_summary(
                 key=lambda item: (-item.like_count, item.external_comment_id),
             )[:8]
         ),
+    )
+
+
+def mention_summary(
+    rows: tuple[ReportingComment, ...], *, accounts_available: bool
+) -> DashboardMentionSummary:
+    by_day: dict[date, int] = defaultdict(int)
+    author_keys: set[str] = set()
+    missing_dates = False
+    for row in rows:
+        if row.author_id:
+            author_keys.add(f"id:{row.author_id}")
+        elif row.author_name:
+            author_keys.add(f"name:{row.author_name.strip().casefold()}")
+        if row.commented_at is None:
+            missing_dates = True
+        else:
+            by_day[row.commented_at.astimezone(UTC).date()] += 1
+    if not accounts_available:
+        status = DataStatus.UNAVAILABLE
+    elif not rows or missing_dates:
+        status = DataStatus.PARTIAL
+    else:
+        status = DataStatus.AVAILABLE
+    return DashboardMentionSummary(
+        total=len(rows),
+        unique_authors=len(author_keys),
+        daily=tuple(
+            DashboardPoint(observed_on=observed_on, value=float(value))
+            for observed_on, value in sorted(by_day.items())
+        ),
+        data_status=status,
     )
 
 
@@ -1380,6 +1424,7 @@ __all__ = [
     "metric_cards",
     "metric_methodology",
     "metric_series",
+    "mention_summary",
     "methodology_for_definition",
     "source_breakdown",
     "stories_contract",

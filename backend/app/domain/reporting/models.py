@@ -104,6 +104,17 @@ class DashboardContent:
     average_time_watched: float | None
     saves_count: float | None
     profile_visits: float | None
+    reposts_count: int | None
+    quotes_count: int | None
+    link_clicks: int | None
+    profile_clicks: int | None
+    video_views_count: int | None
+    video_playback_0_count: int | None
+    video_playback_25_count: int | None
+    video_playback_50_count: int | None
+    video_playback_75_count: int | None
+    video_playback_100_count: int | None
+    completion_rate: float | None
     data_status: DataStatus
 
 
@@ -279,6 +290,14 @@ class CommunitySummary:
 
 
 @dataclass(frozen=True)
+class DashboardMentionSummary:
+    total: int
+    unique_authors: int
+    daily: tuple[DashboardPoint, ...]
+    data_status: DataStatus
+
+
+@dataclass(frozen=True)
 class DashboardMeta:
     dashboard_id: str
     platform: PlatformId | None
@@ -311,6 +330,7 @@ class PlatformDashboard:
     metric_methodology: DashboardMetricMethodology
     audience_capabilities: DashboardAudienceCapabilities
     stories: DashboardStories | None
+    mentions: DashboardMentionSummary | None
 
 
 @dataclass(frozen=True)
@@ -336,6 +356,7 @@ __all__ = [
     "DashboardMeta",
     "DashboardMetric",
     "DashboardMetricMethodology",
+    "DashboardMentionSummary",
     "DashboardNamedValue",
     "DashboardPoint",
     "DashboardSeries",
