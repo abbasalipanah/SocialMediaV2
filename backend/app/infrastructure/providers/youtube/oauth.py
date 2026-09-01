@@ -82,13 +82,7 @@ class YouTubeOAuthProvider:
             ),
             "sub",
         )
-        accounts = _channel_accounts(
-            self._transport.get(
-                self._config.channels_url,
-                access_token=access_token,
-                params={"part": "id,snippet", "mine": "true", "maxResults": "50"},
-            )
-        )
+        accounts = self.inspect_accounts(access_token=access_token)
         return OAuthProviderGrant(
             provider_subject_id=subject,
             access_token=access_token,
@@ -117,6 +111,21 @@ class YouTubeOAuthProvider:
             granted_scopes=token[2],
             refresh_token=token[3],
             refresh_expires_in=token[4],
+        )
+
+    def inspect_accounts(
+        self,
+        *,
+        access_token: str,
+    ) -> tuple[OAuthAccountGrant, ...]:
+        if not access_token:
+            raise YouTubeOAuthError("youtube_access_token_invalid")
+        return _channel_accounts(
+            self._transport.get(
+                self._config.channels_url,
+                access_token=access_token,
+                params={"part": "id,snippet", "mine": "true", "maxResults": "50"},
+            )
         )
 
     def revoke(self, *, access_token: str) -> None:

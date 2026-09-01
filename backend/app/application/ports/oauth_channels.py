@@ -152,6 +152,12 @@ class OAuthChannelProvider(Protocol):
 
     def refresh(self, *, refresh_token: str) -> OAuthTokenRefresh: ...
 
+    def inspect_accounts(
+        self,
+        *,
+        access_token: str,
+    ) -> tuple[OAuthAccountGrant, ...]: ...
+
     def revoke(self, *, access_token: str) -> None: ...
 
 
