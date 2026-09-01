@@ -158,10 +158,10 @@ function metricId(platform: Platform, key: string): MetricId | null {
   if (common[key]) return common[key] ?? null;
   if (platform === "tiktok") {
     return ({
-      views: "video_views_total",
-      likes: "video_likes_total",
-      comments: "video_comments_total",
-      shares: "video_shares_total",
+      views: "views",
+      likes: "video_likes_daily",
+      comments: "video_comments_daily",
+      shares: "video_shares_daily",
       engagement_rate: "video_engagement_rate",
     } as Partial<Record<string, MetricId>>)[key] ?? null;
   }
@@ -170,6 +170,16 @@ function metricId(platform: Platform, key: string): MetricId | null {
     likes: "reactions",
     engagement_rate: "engagement_rate",
   } as Partial<Record<string, MetricId>>)[key] ?? null;
+}
+
+function contentComparison(payload: SourcePayload, key: string) {
+  const source = payload.kpis.find((item) => item.key === key);
+  const ratio = key === "engagement_rate";
+  return {
+    value: source ? (ratio ? source.value / 100 : source.value) : null,
+    previous_value: source ? (ratio ? source.previous / 100 : source.previous) : null,
+    delta_pct: source?.delta_pct ?? null,
+  };
 }
 
 function adapt(payload: SourcePayload): PlatformDashboard {
@@ -197,7 +207,7 @@ function adapt(payload: SourcePayload): PlatformDashboard {
     .reduce((sum, item) => sum + item.previous, 0);
   if (interactions > 0) {
     metrics.push({
-      metric_id: payload.platform === "tiktok" ? "video_engagements_total" : "interactions",
+      metric_id: "interactions",
       value: interactions,
       previous_value: previousInteractions,
       delta_pct: previousInteractions > 0 ? ((interactions - previousInteractions) / previousInteractions) * 100 : null,
@@ -288,6 +298,15 @@ function adapt(payload: SourcePayload): PlatformDashboard {
     },
     top_hashtags: payload.top_hashtags,
     content_summary: { ...payload.content_summary, data_status: "available" },
+    content_metrics: {
+      views: contentComparison(payload, "views"),
+      reach: contentComparison(payload, "reach"),
+      likes: contentComparison(payload, "likes"),
+      comments: contentComparison(payload, "comments"),
+      shares: contentComparison(payload, "shares"),
+      interactions: contentComparison(payload, "interactions"),
+      engagement_rate: contentComparison(payload, "engagement_rate"),
+    },
     source_breakdown: payload.source_breakdown ? {
       organic_only: payload.source_breakdown.organic_only,
       paid_available: payload.source_breakdown.paid_available,
@@ -398,6 +417,20 @@ describe("Revision 6 shared canonical fixture", () => {
     }
   });
 
+  it("uses imported content totals when native Instagram surface breakdowns are absent", () => {
+    const data = adapt(materialize("instagram_full_with_stories"));
+    expect(data.breakdowns.some((item) => item.dimension === "media_product_type")).toBe(false);
+
+    render(<InstagramPulseDashboard data={data} tab="page" />);
+
+    for (const title of ["Views by Content Type", "Reach by Content Type"]) {
+      const panel = screen.getByRole("heading", { name: title }).closest("article");
+      if (!panel) throw new Error(`Missing content type panel: ${title}`);
+      expect(within(panel).getByRole("button", { name: "Highlight Video" })).toBeEnabled();
+      expect(within(panel).queryByText("No distribution data in selected range.")).not.toBeInTheDocument();
+    }
+  });
+
   it("keeps exactly six KPI cards in every platform section", () => {
     const surfaces = [
       <FacebookPulseDashboard data={adapt(materialize("facebook_full"))} tab="page" />,
@@ -428,7 +461,7 @@ describe("Revision 6 shared canonical fixture", () => {
 
     expect(headings()).toEqual([
       "Followers Trend", "New Followers Trend", "Performance Trends", "Page View Type",
-      "Views Source Trend", "Reach Distribution", "Reach Source Trend",
+      "Views Source Trend", "Reach Trend",
     ]);
 
     rerender(<FacebookPulseDashboard data={facebook} tab="content" />);
@@ -475,8 +508,8 @@ describe("Revision 6 shared canonical fixture", () => {
     rerender(<InstagramPulseDashboard data={instagram} tab="audience" />);
     expect(headings()).toEqual([
       "Followers Trend", "New Followers Trend", "Age & Gender", "Audience by Country",
-      "Best Time to Engage", "Organic Reach Trend", "Top Countries", "Top Cities",
-      "Reach Source (Organic vs Paid)", "Paid Reach Trend", "Most Comments and Messages", "Most Liked Comments",
+      "Best Time to Engage", "Reach Trend", "Top Countries", "Top Cities",
+      "Reach Audience Split", "Reach by Content Type", "Most Comments and Messages", "Most Liked Comments",
     ]);
 
     rerender(<TikTokPulseDashboard data={tiktok} tab="account" />);

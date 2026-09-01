@@ -29,6 +29,20 @@ const GENDER_SERIES = [
   { key: "other", label: "Other", color: "#f59e0b" },
 ] as const;
 
+function dimensionHas(dimension: string, token: string): boolean {
+  const singular: Record<string, string> = {
+    ages: "age",
+    cities: "city",
+    countries: "country",
+    genders: "gender",
+  };
+  return dimension
+    .toLowerCase()
+    .split(/[^a-z0-9]+/u)
+    .map((part) => singular[part] ?? part)
+    .includes(token);
+}
+
 function ageLabel(rawKey: string): string {
   return rawKey.match(/(?:13-17|18-24|25-34|35-44|45-54|55-64|65\+|65 plus)/i)?.[0]
     .replace(/65 plus/i, "65+") ?? humanize(rawKey);
@@ -50,16 +64,13 @@ function rankAge(left: DemographicRow, right: DemographicRow): number {
 export function AudienceDemographicsCard({ breakdowns }: { breakdowns: DashboardBreakdown[] }) {
   const processed = useMemo(() => {
     const combined = breakdowns.find((item) => {
-      const dimension = item.dimension.toLowerCase();
-      return dimension.includes("age") && dimension.includes("gender");
+      return dimensionHas(item.dimension, "age") && dimensionHas(item.dimension, "gender");
     });
     const ageOnly = breakdowns.find((item) => {
-      const dimension = item.dimension.toLowerCase();
-      return dimension.includes("age") && !dimension.includes("gender");
+      return dimensionHas(item.dimension, "age") && !dimensionHas(item.dimension, "gender");
     });
     const genderOnly = breakdowns.find((item) => {
-      const dimension = item.dimension.toLowerCase();
-      return dimension.includes("gender") && !dimension.includes("age");
+      return dimensionHas(item.dimension, "gender") && !dimensionHas(item.dimension, "age");
     });
     const rowsByAge = new Map<string, DemographicRow>();
     const totals: Record<GenderKey, number> = { women: 0, men: 0, other: 0 };
@@ -119,6 +130,9 @@ export function AudienceDemographicsCard({ breakdowns }: { breakdowns: Dashboard
               </div>
             </div>
             <div className="instagram-demographics-chart">
+              <ul aria-label="Age groups" className="sr-only">
+                {processed.rows.map((row) => <li key={row.age}><span>{row.age}</span>: {formatNumber(row.audience)}</li>)}
+              </ul>
               <ResponsiveContainer height="100%" width="100%">
                 <BarChart data={processed.rows} margin={{ bottom: 0, left: -12, right: 8, top: 10 }}>
                   <CartesianGrid opacity={0.5} stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />

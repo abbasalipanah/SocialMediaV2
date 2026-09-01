@@ -1,7 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { PulseHeatmapCard } from "../features/facebook/FacebookPulseDashboard";
+import {
+  PulseHeatmapCard,
+  breakdownRows,
+  preferredAudienceBreakdown,
+} from "../features/facebook/FacebookPulseDashboard";
 
 import {
   CountryTableLabel,
@@ -20,6 +24,36 @@ describe("country presentation", () => {
     expect(countryCode("United States of America")).toBe("US");
     expect(countryCode("Others")).toBeNull();
     expect(countryLookupKey("TR")).toBe("turkey");
+  });
+
+  it("routes TikTok plural audience dimensions without matching engage as age", () => {
+    const breakdowns = [
+      {
+        dimension: "best_time_to_engage",
+        metric_id: "interactions",
+        items: [{ key: "Mon|18", value: 16, percentage: null }],
+      },
+      {
+        dimension: "audience_ages",
+        metric_id: "followers",
+        items: [{ key: "25-34", value: 33, percentage: 100 }],
+      },
+      {
+        dimension: "audience_country",
+        metric_id: "followers",
+        items: [{ key: "DE", value: 1, percentage: 100 }],
+      },
+      {
+        dimension: "audience_countries",
+        metric_id: "followers",
+        items: [{ key: "TR", value: 33, percentage: 100 }],
+      },
+    ] as never;
+
+    expect(preferredAudienceBreakdown(breakdowns, "country")?.dimension).toBe(
+      "audience_countries",
+    );
+    expect(breakdownRows(breakdowns, "age")).toEqual([[1, "25-34", "33"]]);
   });
 
   it("renders a local circular flag label for country tables", () => {

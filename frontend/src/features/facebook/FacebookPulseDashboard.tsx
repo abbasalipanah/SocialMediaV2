@@ -200,6 +200,12 @@ export function derivedContentTotals(content: DashboardContent[]) {
   );
 }
 
+export function comparisonDelta(value: number | null, previous: number | null): number | null {
+  return value === null || previous === null || previous === 0
+    ? null
+    : ((value - previous) / Math.abs(previous)) * 100;
+}
+
 function kpiFromMetric(
   data: PlatformDashboard,
   id: MetricId,
@@ -237,15 +243,28 @@ function contentKpis(data: PlatformDashboard): PulseKpi[] {
     const values = data.content.flatMap((item) => item[field] === null ? [] : [item[field]]);
     return values.length > 0 ? values.reduce((sum, value) => sum + value, 0) : null;
   };
-  const views = metric(data.metrics, "views")?.value ?? collectedTotal("views");
-  const reach = metric(data.metrics, "reach")?.value ?? collectedTotal("reach");
+  const viewsMetric = metric(data.metrics, "views");
+  const reachMetric = metric(data.metrics, "reach");
+  const viewsFromMetric = viewsMetric?.value !== null && viewsMetric?.value !== undefined;
+  const reachFromMetric = reachMetric?.value !== null && reachMetric?.value !== undefined;
+  const views = viewsMetric?.value ?? data.content_metrics.views.value ?? collectedTotal("views");
+  const reach = reachMetric?.value ?? data.content_metrics.reach.value ?? collectedTotal("reach");
+  const interactions = data.content_metrics.interactions.value ?? totals.interactions;
+  const engagementRate = views && views > 0 ? interactions / views : null;
+  const previousViews = viewsFromMetric
+    ? viewsMetric.previous_value
+    : data.content_metrics.views.previous_value;
+  const previousInteractions = data.content_metrics.interactions.previous_value;
+  const previousEngagementRate = previousViews && previousViews > 0 && previousInteractions !== null
+    ? previousInteractions / previousViews
+    : null;
   return [
-    { id: "post_views", label: "Views", value: views, delta: null, icon: Eye, color: "#ec4899" },
-    { id: "post_reach", label: "Reach", value: reach, delta: null, icon: Target, color: "#38bdf8" },
-    { id: "like_reactions", label: "Likes", value: totals.likes, delta: null, icon: ThumbsUp, color: V1_CHART_COLORS.likes },
-    { id: "comments", label: "Comments", value: totals.comments, delta: null, icon: MessageCircle, color: "#3b82f6" },
-    { id: "shares", label: "Shares", value: totals.shares, delta: null, icon: Share2, color: "#22c55e" },
-    { id: "engagement_rate", label: "Engagement Rate", value: views && views > 0 ? totals.interactions / views : null, delta: null, icon: Activity, color: "#6366f1", unit: "ratio" },
+    { id: "post_views", label: "Views", value: views, delta: viewsFromMetric ? viewsMetric.delta_pct : data.content_metrics.views.delta_pct, icon: Eye, color: "#ec4899" },
+    { id: "post_reach", label: "Reach", value: reach, delta: reachFromMetric ? reachMetric.delta_pct : data.content_metrics.reach.delta_pct, icon: Target, color: "#38bdf8" },
+    { id: "like_reactions", label: "Likes", value: data.content_metrics.likes.value ?? totals.likes, delta: data.content_metrics.likes.delta_pct, icon: ThumbsUp, color: V1_CHART_COLORS.likes },
+    { id: "comments", label: "Comments", value: data.content_metrics.comments.value ?? totals.comments, delta: data.content_metrics.comments.delta_pct, icon: MessageCircle, color: "#3b82f6" },
+    { id: "shares", label: "Shares", value: data.content_metrics.shares.value ?? totals.shares, delta: data.content_metrics.shares.delta_pct, icon: Share2, color: "#22c55e" },
+    { id: "engagement_rate", label: "Engagement Rate", value: engagementRate, delta: comparisonDelta(engagementRate, previousEngagementRate), icon: Activity, color: "#6366f1", unit: "ratio" },
   ];
 }
 
@@ -348,6 +367,7 @@ export function PulseTrendCard({
   wide = false,
   bar = false,
   localZoom = false,
+  connectGaps = false,
 }: {
   data: PlatformDashboard;
   title: string;
@@ -356,6 +376,7 @@ export function PulseTrendCard({
   wide?: boolean;
   bar?: boolean;
   localZoom?: boolean;
+  connectGaps?: boolean;
 }) {
   const gradientSeed = useId().replace(/[^a-zA-Z0-9]/g, "");
   const lines = keys.flatMap((key) => {
@@ -416,7 +437,7 @@ export function PulseTrendCard({
                 <Tooltip labelFormatter={(value) => chartDate(String(value))} />
                 <Legend content={<PulseChartLegend lines={lines} />} verticalAlign="top" />
                 {lines.map((line) => (
-                  <Area activeDot={{ r: 3 }} connectNulls={false} dataKey={line.id} dot={false} fill={`url(#${gradientSeed}-${line.id})`} key={line.id} name={line.label} stroke={line.color} strokeWidth={V1_TREND_STROKE_WIDTH} type="monotone" />
+                  <Area activeDot={{ r: 3 }} connectNulls={localZoom || connectGaps} dataKey={line.id} dot={false} fill={`url(#${gradientSeed}-${line.id})`} key={line.id} name={line.label} stroke={line.color} strokeWidth={V1_TREND_STROKE_WIDTH} type="monotone" />
                 ))}
               </AreaChart>
             )}
@@ -610,17 +631,6 @@ function pageViewRows(data: PlatformDashboard): PieRow[] {
   return rows.filter((item): item is PieRow => item !== null);
 }
 
-function reachTypeRows(data: PlatformDashboard): PieRow[] {
-  const source = data.source_breakdown?.reach;
-  const organic = source?.organic ?? metric(data.metrics, "reach_organic")?.value ?? null;
-  const paid = source?.paid ?? metric(data.metrics, "reach_paid")?.value ?? null;
-  const rows: Array<PieRow | null> = [
-    organic === null ? null : { label: "Organic", value: organic, color: V1_CHART_COLORS.organic },
-    paid === null ? null : { label: "Paid", value: paid, color: V1_CHART_COLORS.paid },
-  ];
-  return rows.filter((item): item is PieRow => item !== null);
-}
-
 export function hashtagRows(data: PlatformDashboard): Array<Array<string | number>> {
   return data.top_hashtags.map((item) => [item.name, item.count]);
 }
@@ -654,13 +664,56 @@ export function SimplePulseTable({ title, subtitle, columns, rows, emptyCopy = "
   );
 }
 
+function dimensionHas(dimension: string, hint: string): boolean {
+  const singular: Record<string, string> = {
+    ages: "age",
+    cities: "city",
+    countries: "country",
+    genders: "gender",
+  };
+  return dimension
+    .toLowerCase()
+    .split(/[^a-z0-9]+/u)
+    .map((part) => singular[part] ?? part)
+    .includes(hint);
+}
+
+export function preferredAudienceBreakdown(
+  breakdowns: DashboardBreakdown[],
+  hint: "age" | "city" | "country" | "gender",
+): DashboardBreakdown | undefined {
+  const plural = {
+    age: "ages",
+    city: "cities",
+    country: "countries",
+    gender: "genders",
+  }[hint];
+  const priorities = [
+    `follower_demographics_${hint}`,
+    `page_fans_${hint}`,
+    `audience_${plural}`,
+    `audience_${hint}`,
+    hint,
+  ];
+  for (const dimension of priorities) {
+    const exact = breakdowns.find((item) => item.dimension.toLowerCase() === dimension);
+    if (exact) return exact;
+  }
+  return breakdowns.find((item) => dimensionHas(item.dimension, hint));
+}
+
 export function breakdownRows(breakdowns: DashboardBreakdown[], hint: string): Array<Array<string | number>> {
-  const breakdown = breakdowns.find((item) => item.dimension.toLowerCase().includes(hint));
+  const breakdown = ["age", "city", "country", "gender"].includes(hint)
+    ? preferredAudienceBreakdown(
+      breakdowns,
+      hint as "age" | "city" | "country" | "gender",
+    )
+    : breakdowns.find((item) => dimensionHas(item.dimension, hint));
   return breakdown?.items.slice(0, 10).map((item, index) => [index + 1, humanize(item.key), formatNumber(item.value)]) ?? [];
 }
 
 export function countryBreakdownRows(breakdowns: DashboardBreakdown[]): Array<Array<ReactNode>> {
-  const breakdown = breakdowns.find((item) => item.dimension.toLowerCase().includes("country"));
+  const breakdown = preferredAudienceBreakdown(breakdowns, "country");
   return breakdown?.items.filter((item) => countryCode(item.key) !== null).slice(0, 10).map((item, index) => [
     index + 1,
     <CountryTableLabel key={item.key} value={item.key} />,
@@ -859,17 +912,14 @@ function PageSection({ data, withTitle }: { data: PlatformDashboard; withTitle: 
       <KpiGrid rows={pageKpis(data)} />
       <div className="facebook-two-grid">
         <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: V1_CHART_COLORS.followers }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
-        <PulseTrendCard data={data} keys={[...V1_FOLLOWER_FLOW_KEYS]} subtitle={followerFlowSubtitle(data)} title="New Followers Trend" />
+        <PulseTrendCard connectGaps data={data} keys={[...V1_FOLLOWER_FLOW_KEYS]} subtitle={followerFlowSubtitle(data)} title="New Followers Trend" />
       </div>
       <PulseTrendCard bar data={data} keys={[{ id: "reach", label: "Page Reach", color: V1_CHART_COLORS.reach }, { id: "views", label: "Page Views", color: V1_CHART_COLORS.views }]} subtitle="Page Reach and Page Views trend" title="Performance Trends" wide />
       <div className="facebook-one-three-grid">
         <PulsePieCard rows={pageViewRows(data)} subtitle="Organic vs paid views" title="Page View Type" />
         <PulseTrendCard data={data} keys={[{ id: "views_organic", label: "Organic Views", color: V1_CHART_COLORS.organicViews }, { id: "views_paid", label: "Paid Views", color: V1_CHART_COLORS.paid }]} subtitle="Organic and paid view delivery" title="Views Source Trend" />
       </div>
-      <div className="facebook-one-three-grid">
-        <PulsePieCard rows={reachTypeRows(data)} subtitle="Organic vs paid Reach" title="Reach Distribution" />
-        <PulseTrendCard data={data} keys={[{ id: "reach_paid", label: "Paid Reach", color: V1_CHART_COLORS.paid }, { id: "reach_organic", label: "Organic Reach", color: V1_CHART_COLORS.organicReach }]} subtitle="Paid Reach and Organic Reach" title="Reach Source Trend" />
-      </div>
+      <PulseTrendCard data={data} keys={[{ id: "reach", label: "Reach", color: V1_CHART_COLORS.reach }]} subtitle="Unique people reached over time" title="Reach Trend" wide />
     </section>
   );
 }
@@ -904,7 +954,7 @@ function AudienceSection({ data, withTitle }: { data: PlatformDashboard; withTit
       <KpiGrid rows={audienceKpis(data)} />
       <div className="facebook-two-grid">
         <PulseTrendCard data={data} keys={[{ id: "followers", label: "Followers", color: V1_CHART_COLORS.followers }]} localZoom subtitle="Follower trajectory" title="Followers Trend" />
-        <PulseTrendCard data={data} keys={[...V1_FOLLOWER_FLOW_KEYS]} subtitle={followerFlowSubtitle(data)} title="New Followers Trend" />
+        <PulseTrendCard connectGaps data={data} keys={[...V1_FOLLOWER_FLOW_KEYS]} subtitle={followerFlowSubtitle(data)} title="New Followers Trend" />
       </div>
       {/* Page like source and hourly activity are not offered for Facebook
           Pages; the API answers with zeroes or nothing. Audience geography
