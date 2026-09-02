@@ -15,6 +15,7 @@ from app.core import (
     load_settings,
 )
 from app.domain.platforms import CapabilityId, PlatformId
+from app.infrastructure.providers.linkedin.runtime import create_linkedin_activation_runtime
 from app.infrastructure.providers.meta.runtime import create_meta_activation_runtime
 from app.infrastructure.providers.tiktok.runtime import create_tiktok_activation_runtime
 from app.infrastructure.providers.x.runtime import create_x_activation_runtime
@@ -95,6 +96,29 @@ CONFIG_KEYS = (
     "SOCIAL_X_ACTIVATION_ENABLED_AT",
     "SOCIAL_X_ACTIVATION_EXPIRES_AT",
     "SOCIAL_X_PROVIDER_TIMEOUT_SECONDS",
+    "SOCIAL_LINKEDIN_PROVIDER_PROFILE",
+    "SOCIAL_LINKEDIN_API_VERSION",
+    "SOCIAL_LINKEDIN_OAUTH_APP_ID",
+    "SOCIAL_LINKEDIN_OAUTH_APP_SECRET",
+    "SOCIAL_LINKEDIN_ACCOUNT_ENABLED",
+    "SOCIAL_LINKEDIN_ACCOUNT_OAUTH_MODE",
+    "SOCIAL_LINKEDIN_COLLECTION_ENABLED",
+    "SOCIAL_LINKEDIN_AUTHORIZATION_URL",
+    "SOCIAL_LINKEDIN_TOKEN_URL",
+    "SOCIAL_LINKEDIN_REST_BASE_URL",
+    "SOCIAL_LINKEDIN_ORGANIZATION_ACLS_URL",
+    "SOCIAL_LINKEDIN_ORGANIZATIONS_URL",
+    "SOCIAL_LINKEDIN_POSTS_URL",
+    "SOCIAL_LINKEDIN_SHARE_STATISTICS_URL",
+    "SOCIAL_LINKEDIN_FOLLOWER_STATISTICS_URL",
+    "SOCIAL_LINKEDIN_PAGE_STATISTICS_URL",
+    "SOCIAL_LINKEDIN_ACCOUNT_REQUIRED_SCOPES",
+    "SOCIAL_LINKEDIN_REDIRECT_URI",
+    "SOCIAL_LINKEDIN_OAUTH_STATE_SECRET",
+    "SOCIAL_LINKEDIN_ACTIVATION_GATE_ENABLED",
+    "SOCIAL_LINKEDIN_ACTIVATION_ENABLED_AT",
+    "SOCIAL_LINKEDIN_ACTIVATION_EXPIRES_AT",
+    "SOCIAL_LINKEDIN_PROVIDER_TIMEOUT_SECONDS",
     "SOCIAL_VAULT_ENABLED",
     "SOCIAL_WORKER_SCHEDULE_ENABLED",
     "SOCIAL_AI_SUMMARY_ENABLED",
@@ -168,6 +192,7 @@ def test_production_standalone_ready_is_fail_closed(
     assert settings.tiktok.account_enabled is False
     assert settings.youtube.account_enabled is False
     assert settings.x.account_enabled is False
+    assert settings.linkedin.account_enabled is False
     assert settings.worker_schedule_enabled is False
 
     monkeypatch.setenv("SOCIAL_WRITES_ENABLED", "true")
@@ -498,5 +523,68 @@ def test_x_endpoint_and_collection_gates_fail_closed(
 
     monkeypatch.delenv("SOCIAL_X_AUTHORIZATION_URL")
     monkeypatch.setenv("SOCIAL_X_COLLECTION_ENABLED", "true")
+    with pytest.raises(ConfigurationError, match="requires the account integration"):
+        load_settings()
+
+
+def test_complete_local_linkedin_configuration_is_fail_closed_then_accepted(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    keyring = {"local-key": base64.b64encode(b"l" * 32).decode("ascii")}
+    values = {
+        "SOCIAL_WRITES_ENABLED": "true",
+        "SOCIAL_DB_URL": (
+            "postgresql+psycopg://local:local@127.0.0.1/social_media_v2_local"
+        ),
+        "SOCIAL_VAULT_ENABLED": "true",
+        "SOCIAL_LINKEDIN_ACCOUNT_ENABLED": "true",
+        "SOCIAL_LINKEDIN_ACCOUNT_OAUTH_MODE": "manual_intent_only",
+        "SOCIAL_LINKEDIN_OAUTH_APP_ID": "local-linkedin-client-id",
+        "SOCIAL_LINKEDIN_OAUTH_APP_SECRET": "local-linkedin-client-secret",
+        "SOCIAL_LINKEDIN_ACTIVATION_GATE_ENABLED": "true",
+        "SOCIAL_LINKEDIN_ACTIVATION_ENABLED_AT": "2026-08-31T10:00:00Z",
+        "SOCIAL_LINKEDIN_ACTIVATION_EXPIRES_AT": "2026-09-30T10:00:00Z",
+        "SOCIAL_CREDENTIAL_ACTIVE_KEY_ID": "local-key",
+        "SOCIAL_CREDENTIAL_KEYRING_JSON": json.dumps(keyring),
+    }
+    for key, value in values.items():
+        monkeypatch.setenv(key, value)
+
+    with pytest.raises(ConfigurationError, match="state secret"):
+        load_settings()
+
+    monkeypatch.setenv("SOCIAL_LINKEDIN_OAUTH_STATE_SECRET", "l" * 32)
+    settings = load_settings()
+
+    assert settings.linkedin.account_enabled is True
+    assert settings.linkedin.collection_enabled is False
+    assert settings.linkedin.api_version == "202608"
+    assert settings.linkedin_activation.gate_enabled is True
+
+    monkeypatch.setenv("SOCIAL_LINKEDIN_COLLECTION_ENABLED", "true")
+    settings = load_settings()
+    assert settings_worker_config(settings).provider_egress_enabled is True
+    engine = create_engine(settings.db.url)
+    try:
+        coordinator = create_linkedin_activation_runtime(
+            settings=settings,
+            policy=WritePolicy.from_settings(settings),
+            engine=engine,
+            authority_store=MemoryAuthority(),
+        )
+    finally:
+        engine.dispose()
+    assert coordinator is not None
+
+
+def test_linkedin_endpoint_and_collection_gates_fail_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("SOCIAL_LINKEDIN_API_VERSION", "202507")
+    with pytest.raises(ConfigurationError, match="API version"):
+        load_settings()
+
+    monkeypatch.delenv("SOCIAL_LINKEDIN_API_VERSION")
+    monkeypatch.setenv("SOCIAL_LINKEDIN_COLLECTION_ENABLED", "true")
     with pytest.raises(ConfigurationError, match="requires the account integration"):
         load_settings()

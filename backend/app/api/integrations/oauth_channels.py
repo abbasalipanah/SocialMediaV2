@@ -41,7 +41,11 @@ def create_oauth_channel_router(
     reporting_store: ReportingStore | None,
     policy: WritePolicy,
     activations: Mapping[PlatformId, OAuthChannelActivationCoordinator],
-    platforms: tuple[PlatformId, ...] = (PlatformId.X, PlatformId.YOUTUBE),
+    platforms: tuple[PlatformId, ...] = (
+        PlatformId.X,
+        PlatformId.LINKEDIN,
+        PlatformId.YOUTUBE,
+    ),
 ) -> APIRouter:
     router = APIRouter()
     registered = set(platforms)
