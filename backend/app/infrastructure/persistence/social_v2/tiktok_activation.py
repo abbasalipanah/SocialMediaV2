@@ -417,7 +417,8 @@ class ProjectionTikTokActivationStore:
             connection.execute(
                 text(
                     """UPDATE social_projection_state
-                       SET payload_json=payload_json || jsonb_build_object('state', 'disconnected'),
+                       SET status='inactive',
+                           payload_json=payload_json || jsonb_build_object('state', 'disconnected'),
                            updated_at=now()
                        WHERE projection_key=:key"""
                 ),

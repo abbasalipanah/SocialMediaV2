@@ -86,6 +86,16 @@ def test_tiktok_account_cannot_be_pending_for_two_brands(
     disconnected = store.disconnect(brand_id=101, business_id="creator-1")
     assert disconnected is not None
     assert disconnected.state == "disconnected"
+    with store.engine.connect() as connection:
+        projection = connection.execute(
+            text(
+                """SELECT status, payload_json->>'state'
+                   FROM social_projection_state
+                   WHERE projection_key=:key"""
+            ),
+            {"key": f"v2:tiktok:connection-credential:{first.connection_id}"},
+        ).one()
+        assert projection == ("inactive", "disconnected")
     transferred = store.create_pending(
         brand_id=102,
         business_id="creator-1",
@@ -156,6 +166,7 @@ def _schema() -> tuple[str, ...]:
            )""",
         """CREATE TABLE social_projection_state (
                projection_key varchar(255) PRIMARY KEY,
+               status varchar(32) NOT NULL DEFAULT 'active',
                payload_json jsonb NOT NULL,
                updated_at timestamptz NOT NULL DEFAULT now()
            )""",
