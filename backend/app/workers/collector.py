@@ -67,6 +67,10 @@ from app.infrastructure.persistence.social_v2 import (
 from app.infrastructure.persistence.social_v2.collection_targets import (
     CollectionTargetRow,
 )
+from app.infrastructure.providers.linkedin import (
+    LinkedInOAuthProvider,
+    LinkedInOAuthTransport,
+)
 from app.infrastructure.providers.meta.audience import MetaAudienceReader
 from app.infrastructure.providers.meta.facebook.comments import FacebookCommentsReader
 from app.infrastructure.providers.meta.facebook.content import FacebookContentReader
@@ -99,6 +103,7 @@ from app.infrastructure.providers.youtube import (
     YouTubeOAuthProvider,
     YouTubeOAuthTransport,
 )
+from app.workers.linkedin import collect_linkedin_account, create_linkedin_readers
 from app.workers.platform_registry import (
     CollectorRegistration,
     PlatformCollectorRegistry,
@@ -380,6 +385,12 @@ class StandaloneCollector:
                 platforms=(PlatformId.X,),
                 enabled=lambda: self.settings.x.collection_enabled,
                 collect=self._collect_x,
+            ),
+            CollectorRegistration(
+                provider="linkedin",
+                platforms=(PlatformId.LINKEDIN,),
+                enabled=lambda: self.settings.linkedin.collection_enabled,
+                collect=self._collect_linkedin,
             ),
             CollectorRegistration(
                 provider="youtube",
@@ -1427,6 +1438,71 @@ class StandaloneCollector:
             metric_count=result.metric_count,
             content_count=result.content_count,
             comment_count=result.comment_count,
+            media_count=result.media_count,
+            error_code=result.error_code,
+            backfill_complete=result.backfill_complete,
+        )
+
+    def _collect_linkedin(
+        self,
+        row: CollectionTargetRow,
+        timings: dict[str, float],
+    ) -> WorkerAccountResult:
+        provider = LinkedInOAuthProvider(
+            config=self.settings.linkedin,
+            transport=LinkedInOAuthTransport(
+                app_id=self.settings.linkedin.oauth_app_id,
+                app_secret=self.settings.linkedin.oauth_app_secret,
+                token_url=self.settings.linkedin.token_url,
+                organization_acls_url=self.settings.linkedin.organization_acls_url,
+                organizations_url=self.settings.linkedin.organizations_url,
+                api_version=self.settings.linkedin.api_version,
+                timeout_seconds=(
+                    self.settings.linkedin_activation.provider_timeout_seconds
+                ),
+            ),
+        )
+        access = OAuthChannelAccessManager(
+            platform=PlatformId.LINKEDIN,
+            required_scopes=self.settings.linkedin.required_scopes,
+            allowed_scopes=self.settings.linkedin.required_scopes,
+            provider=provider,
+            credential_store=self.credentials,
+        ).resolve(
+            credential_reference=row.credential_reference,
+            external_id=row.external_id,
+        )
+        account = ProviderAccount(
+            platform=PlatformId.LINKEDIN,
+            account_id=row.external_id,
+            credential=ProviderCredential(access_token=access.access_token),
+        )
+        readers = create_linkedin_readers(
+            config=self.settings.linkedin,
+            account=account,
+            timeout_seconds=(
+                self.settings.linkedin_activation.provider_timeout_seconds
+            ),
+        )
+        with _phase(timings, "linkedin"):
+            result = collect_linkedin_account(
+                account=account,
+                local_account_id=row.asset_id,
+                brand_id=row.brand_id,
+                readers=readers,
+                metric_store=self.metrics,
+                content_store=self.content,
+                checkpoint_store=self.checkpoints,
+                persist_media=self._persist_media,
+                backfill_complete=_backfill_complete(row.backfill_status),
+            )
+        return WorkerAccountResult(
+            platform=row.platform.value,
+            brand_id=row.brand_id,
+            asset_id=row.asset_id,
+            status=result.status,
+            metric_count=result.metric_count,
+            content_count=result.content_count,
             media_count=result.media_count,
             error_code=result.error_code,
             backfill_complete=result.backfill_complete,
