@@ -100,6 +100,7 @@ def stores() -> Iterator[
                     completion_rate double precision,
                     reposts_count integer,
                     quotes_count integer,
+                    clicks_count integer,
                     link_clicks integer,
                     profile_clicks integer,
                     video_views_count integer,

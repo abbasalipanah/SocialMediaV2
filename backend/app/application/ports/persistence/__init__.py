@@ -81,6 +81,7 @@ class ContentRecord:
     completion_rate: float | None = None
     reposts_count: int | None = None
     quotes_count: int | None = None
+    clicks_count: int | None = None
     link_clicks: int | None = None
     profile_clicks: int | None = None
     video_views_count: int | None = None
@@ -100,6 +101,7 @@ class ContentRecord:
             self.shares_count,
             self.reposts_count,
             self.quotes_count,
+            self.clicks_count,
             self.link_clicks,
             self.profile_clicks,
             self.video_views_count,

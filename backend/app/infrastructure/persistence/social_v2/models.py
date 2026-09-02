@@ -100,6 +100,7 @@ content_rows = Table(
     Column("completion_rate", Float, nullable=True),
     Column("reposts_count", Integer, nullable=True),
     Column("quotes_count", Integer, nullable=True),
+    Column("clicks_count", Integer, nullable=True),
     Column("link_clicks", Integer, nullable=True),
     Column("profile_clicks", Integer, nullable=True),
     Column("video_views_count", Integer, nullable=True),

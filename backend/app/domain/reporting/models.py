@@ -106,6 +106,7 @@ class DashboardContent:
     profile_visits: float | None
     reposts_count: int | None
     quotes_count: int | None
+    clicks_count: int | None
     link_clicks: int | None
     profile_clicks: int | None
     video_views_count: int | None

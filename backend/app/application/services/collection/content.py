@@ -149,6 +149,7 @@ def _content_record(target: CollectionTarget, item: ProviderRecord) -> ContentRe
         completion_rate=_optional_number(fields, "completion_rate"),
         reposts_count=_optional_count(fields, "reposts_count"),
         quotes_count=_optional_count(fields, "quotes_count"),
+        clicks_count=_optional_count(fields, "clicks_count"),
         link_clicks=_optional_count(fields, "link_clicks"),
         profile_clicks=_optional_count(fields, "profile_clicks"),
         video_views_count=_optional_count(fields, "video_views_count"),
