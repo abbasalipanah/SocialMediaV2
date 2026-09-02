@@ -119,6 +119,7 @@ LINKEDIN_TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
 LINKEDIN_REST_BASE_URL = "https://api.linkedin.com/rest"
 LINKEDIN_ORGANIZATION_ACLS_URL = f"{LINKEDIN_REST_BASE_URL}/organizationAcls"
 LINKEDIN_ORGANIZATIONS_URL = f"{LINKEDIN_REST_BASE_URL}/organizations"
+LINKEDIN_NETWORK_SIZES_URL = f"{LINKEDIN_REST_BASE_URL}/networkSizes"
 LINKEDIN_POSTS_URL = f"{LINKEDIN_REST_BASE_URL}/posts"
 LINKEDIN_SHARE_STATISTICS_URL = (
     f"{LINKEDIN_REST_BASE_URL}/organizationalEntityShareStatistics"
@@ -133,7 +134,7 @@ LINKEDIN_REDIRECT_URI = (
     "https://social.theaccumulate.com/api/social/linkedin/oauth/callback"
 )
 LINKEDIN_REQUIRED_SCOPES = (
-    "r_organization_admin",
+    "rw_organization_admin",
     "r_organization_social",
 )
 
@@ -336,6 +337,7 @@ class LinkedInConfig:
     rest_base_url: str
     organization_acls_url: str
     organizations_url: str
+    network_sizes_url: str
     posts_url: str
     share_statistics_url: str
     follower_statistics_url: str
@@ -763,6 +765,7 @@ def _validate_linkedin(
         (config.rest_base_url, LINKEDIN_REST_BASE_URL),
         (config.organization_acls_url, LINKEDIN_ORGANIZATION_ACLS_URL),
         (config.organizations_url, LINKEDIN_ORGANIZATIONS_URL),
+        (config.network_sizes_url, LINKEDIN_NETWORK_SIZES_URL),
         (config.posts_url, LINKEDIN_POSTS_URL),
         (config.share_statistics_url, LINKEDIN_SHARE_STATISTICS_URL),
         (config.follower_statistics_url, LINKEDIN_FOLLOWER_STATISTICS_URL),
@@ -1031,6 +1034,10 @@ def load_settings() -> AppSettings:
         organizations_url=_env(
             "SOCIAL_LINKEDIN_ORGANIZATIONS_URL",
             LINKEDIN_ORGANIZATIONS_URL,
+        ).rstrip("/"),
+        network_sizes_url=_env(
+            "SOCIAL_LINKEDIN_NETWORK_SIZES_URL",
+            LINKEDIN_NETWORK_SIZES_URL,
         ).rstrip("/"),
         posts_url=_env("SOCIAL_LINKEDIN_POSTS_URL", LINKEDIN_POSTS_URL),
         share_statistics_url=_env(

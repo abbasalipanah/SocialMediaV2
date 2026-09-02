@@ -149,15 +149,27 @@ def bootstrap_registry(settings: AppSettings | None = None) -> PlatformCapabilit
                 reason=reason,
             )
         )
-    for platform in (PlatformId.LINKEDIN,):
-        records.extend(
+    linkedin_collection = settings is not None and settings.linkedin.collection_enabled
+    for capability in CapabilityId:
+        if not linkedin_collection:
+            status = CapabilityStatus.NOT_CONFIGURED
+            reason = "provider_not_configured"
+        elif capability in {CapabilityId.PROFILE, CapabilityId.CONTENT}:
+            status = CapabilityStatus.AVAILABLE
+            reason = "company_page_collector_available"
+        elif capability is CapabilityId.AUDIENCE:
+            status = CapabilityStatus.PARTIAL
+            reason = "staff_count_and_association_type_available"
+        else:
+            status = CapabilityStatus.UNSUPPORTED
+            reason = "linkedin_comments_not_implemented"
+        records.append(
             CapabilityRecord(
-                platform=platform,
+                platform=PlatformId.LINKEDIN,
                 capability=capability,
-                status=CapabilityStatus.NOT_CONFIGURED,
-                reason="provider_not_configured",
+                status=status,
+                reason=reason,
             )
-            for capability in CapabilityId
         )
     youtube_collection = settings is not None and settings.youtube.collection_enabled
     for capability in CapabilityId:

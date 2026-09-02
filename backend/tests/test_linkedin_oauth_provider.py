@@ -13,7 +13,7 @@ from app.infrastructure.providers.linkedin import (
     LinkedInOAuthTransport,
 )
 
-SCOPES = ("r_organization_admin", "r_organization_social")
+SCOPES = ("rw_organization_admin", "r_organization_social")
 
 
 class Sender:

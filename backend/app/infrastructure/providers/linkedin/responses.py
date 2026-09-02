@@ -42,10 +42,28 @@ def optional_count(payload: Mapping[str, Any], key: str) -> int | None:
     return int(value)
 
 
+def required_count(payload: Mapping[str, Any], key: str) -> int:
+    value = optional_count(payload, key)
+    if value is None:
+        raise LinkedInResponseError("linkedin_response_field_invalid")
+    return value
+
+
+def elements(payload: Mapping[str, Any], *, limit: int = 100) -> tuple[Mapping[str, Any], ...]:
+    value = payload.get("elements")
+    if not isinstance(value, list) or len(value) > limit:
+        raise LinkedInResponseError("linkedin_response_elements_invalid")
+    if any(not isinstance(item, Mapping) for item in value):
+        raise LinkedInResponseError("linkedin_response_elements_invalid")
+    return tuple(value)
+
+
 __all__ = [
     "LinkedInResponseError",
+    "elements",
     "optional_count",
     "optional_text",
     "required_mapping",
+    "required_count",
     "required_text",
 ]

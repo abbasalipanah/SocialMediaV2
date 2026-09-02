@@ -17,6 +17,7 @@ class MetricCatalogError(ValueError):
 
 class MetricId(StrEnum):
     FOLLOWERS = "followers"
+    FOLLOWER_GAINS = "follower_gains"
     FOLLOWING = "following"
     NEW_FOLLOWERS = "new_followers"
     FOLLOWS = "follows"
@@ -33,6 +34,7 @@ class MetricId(StrEnum):
     PAGE_VIEWS = "page_views"
     PROFILE_VIEWS = "profile_views"
     WEBSITE_CLICKS = "website_clicks"
+    CLICKS = "clicks"
     TOTAL_ACTIONS = "total_actions"
     REACTIONS = "reactions"
     MEDIA_COUNT = "media_count"
@@ -805,12 +807,59 @@ def bootstrap_metric_catalog() -> MetricCatalog:
                 views_field="impression_count",
                 interactions_field="interactions",
             ),
-            *_organic_platform_metrics(
+            _profile_snapshot(
                 PlatformId.LINKEDIN,
-                followers_field="follower_count",
-                media_count_field="post_count",
-                views_field="impressions",
-                interactions_field="interactions",
+                MetricId.FOLLOWERS,
+                "first_degree_size",
+                allowed_breakdowns=("staff_count", "association_type"),
+            ),
+            _profile_snapshot_delta(
+                PlatformId.LINKEDIN,
+                MetricId.NEW_FOLLOWERS,
+                operator=DerivationOperator.POSITIVE_SNAPSHOT_DELTA,
+            ),
+            _profile_snapshot_delta(
+                PlatformId.LINKEDIN,
+                MetricId.FOLLOWS,
+                operator=DerivationOperator.POSITIVE_SNAPSHOT_DELTA,
+            ),
+            _profile_snapshot_delta(
+                PlatformId.LINKEDIN,
+                MetricId.UNFOLLOWS,
+                operator=DerivationOperator.NEGATIVE_SNAPSHOT_DELTA,
+            ),
+            _profile_snapshot_delta(
+                PlatformId.LINKEDIN,
+                MetricId.FOLLOWERS_NET,
+                operator=DerivationOperator.SIGNED_SNAPSHOT_DELTA,
+            ),
+            _profile_flow(
+                PlatformId.LINKEDIN,
+                MetricId.FOLLOWER_GAINS,
+                "organic_and_paid_follower_gain",
+            ),
+            _profile_flow(PlatformId.LINKEDIN, MetricId.VIEWS, "impression_count"),
+            _profile_flow(
+                PlatformId.LINKEDIN,
+                MetricId.REACH,
+                "unique_impressions_count",
+            ),
+            _profile_flow(
+                PlatformId.LINKEDIN,
+                MetricId.INTERACTIONS,
+                "click_like_comment_share_count",
+            ),
+            _profile_flow(PlatformId.LINKEDIN, MetricId.CLICKS, "click_count"),
+            _profile_flow(
+                PlatformId.LINKEDIN,
+                MetricId.PAGE_VIEWS,
+                "all_page_views",
+            ),
+            _profile_ratio(
+                PlatformId.LINKEDIN,
+                MetricId.ENGAGEMENT_RATE,
+                MetricId.INTERACTIONS,
+                MetricId.VIEWS,
             ),
             *_organic_platform_metrics(
                 PlatformId.YOUTUBE,
