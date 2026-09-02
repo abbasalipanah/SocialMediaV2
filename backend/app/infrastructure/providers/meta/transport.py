@@ -49,7 +49,7 @@ class MetaTransport:
         rate_guard: MetaRateGuard,
         wire: httpx.BaseTransport | None = None,
         base_url: str = META_GRAPH_BASE_URL,
-        api_version: str = "v23.0",
+        api_version: str = "v26.0",
         timeout_seconds: float = 30.0,
         max_retries: int = 5,
         base_backoff_seconds: float = 0.6,
