@@ -14,11 +14,14 @@ prepare_platform_canary_env() {
   local local_state="$root/.local"
   local credential_file="${SOCIAL_YOUTUBE_DEV_CLIENT_FILE:-$root/.secrets/socialmedia/youtube-dev-client.json}"
   local x_credential_file="${SOCIAL_X_DEV_APP_FILE:-$root/.secrets/socialmedia/x-dev-oauth.json}"
+  local linkedin_credential_file="${SOCIAL_LINKEDIN_DEV_APP_FILE:-$root/.secrets/socialmedia/linkedin-dev-oauth.json}"
   local oauth_state_file="$local_state/youtube-canary-oauth-state.secret"
   local vault_key_file="$local_state/youtube-canary-vault.key"
   local x_oauth_state_file="$local_state/x-canary-oauth-state.secret"
+  local linkedin_oauth_state_file="$local_state/linkedin-canary-oauth-state.secret"
   local expected_redirect_uri="http://localhost:8126/api/social/youtube/oauth/callback"
   local x_expected_redirect_uri="http://localhost:8126/api/social/x/oauth/callback"
+  local linkedin_expected_redirect_uri="http://localhost:8126/api/social/linkedin/oauth/callback"
   local command_name
 
   for command_name in jq openssl; do
@@ -76,6 +79,25 @@ prepare_platform_canary_env() {
     chmod 600 "$x_oauth_state_file"
   fi
 
+  if [[ -f "$linkedin_credential_file" ]]; then
+    if [[ "$(stat -c '%a' "$linkedin_credential_file")" != "600" ]]; then
+      echo "LinkedIn development OAuth credential must have mode 0600." >&2
+      return 1
+    fi
+    if ! jq -e --arg redirect_uri "$linkedin_expected_redirect_uri" '
+      (.web.client_id | type == "string" and length > 5)
+      and (.web.client_secret | type == "string" and length > 10)
+      and (.web.redirect_uris == [$redirect_uri])
+    ' "$linkedin_credential_file" >/dev/null; then
+      echo "LinkedIn development OAuth credential does not match the approved contract." >&2
+      return 1
+    fi
+    if [[ ! -f "$linkedin_oauth_state_file" ]]; then
+      openssl rand -base64 48 >"$linkedin_oauth_state_file"
+    fi
+    chmod 600 "$linkedin_oauth_state_file"
+  fi
+
   local youtube_client_id
   local youtube_client_secret
   local oauth_state_secret
@@ -99,7 +121,7 @@ prepare_platform_canary_env() {
   export SOCIAL_LOCAL_API_PORT="8127"
   export SOCIAL_LOCAL_FRONTEND_PORT="8126"
   export SOCIAL_LOCAL_ACTIVATION_PROFILE="platform_canary"
-  export VITE_LOCAL_PREVIEW_PLATFORMS="youtube,x"
+  export VITE_LOCAL_PREVIEW_PLATFORMS="youtube,x,linkedin"
   export SOCIAL_VAULT_ENABLED=true
   export SOCIAL_WORKER_SCHEDULE_ENABLED=false
   export SOCIAL_CREDENTIAL_ACTIVE_KEY_ID="youtube-dev-key"
@@ -134,6 +156,27 @@ prepare_platform_canary_env() {
     export SOCIAL_X_ACTIVATION_EXPIRES_AT="$expires_at"
   else
     echo "X OAuth remains disabled until this mode-0600 file exists: $x_credential_file" >&2
+  fi
+
+  export SOCIAL_LINKEDIN_ACCOUNT_ENABLED=false
+  export SOCIAL_LINKEDIN_ACCOUNT_OAUTH_MODE=disabled
+  export SOCIAL_LINKEDIN_COLLECTION_ENABLED=false
+  export SOCIAL_LINKEDIN_ACTIVATION_GATE_ENABLED=false
+  if [[ -f "$linkedin_credential_file" ]]; then
+    export SOCIAL_LINKEDIN_OAUTH_APP_ID
+    export SOCIAL_LINKEDIN_OAUTH_APP_SECRET
+    export SOCIAL_LINKEDIN_OAUTH_APP_ID="$(jq -er '.web.client_id' "$linkedin_credential_file")"
+    export SOCIAL_LINKEDIN_OAUTH_APP_SECRET="$(jq -er '.web.client_secret' "$linkedin_credential_file")"
+    export SOCIAL_LINKEDIN_ACCOUNT_ENABLED=true
+    export SOCIAL_LINKEDIN_ACCOUNT_OAUTH_MODE="manual_intent_only"
+    export SOCIAL_LINKEDIN_COLLECTION_ENABLED=true
+    export SOCIAL_LINKEDIN_REDIRECT_URI="$linkedin_expected_redirect_uri"
+    export SOCIAL_LINKEDIN_OAUTH_STATE_SECRET="$(tr -d '\r\n' <"$linkedin_oauth_state_file")"
+    export SOCIAL_LINKEDIN_ACTIVATION_GATE_ENABLED=true
+    export SOCIAL_LINKEDIN_ACTIVATION_ENABLED_AT="$enabled_at"
+    export SOCIAL_LINKEDIN_ACTIVATION_EXPIRES_AT="$expires_at"
+  else
+    echo "LinkedIn OAuth remains disabled until this mode-0600 file exists: $linkedin_credential_file" >&2
   fi
 
   # The canary must never inherit unrelated live provider or AI switches from
