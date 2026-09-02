@@ -551,6 +551,47 @@ describe("Phase 7 application shell", () => {
     expect(await screen.findByText("700", { selector: ".overview-kpi-card > strong" })).toBeInTheDocument();
   });
 
+  it("loads an exact user-selected reporting period only after it is applied", async () => {
+    const user = userEvent.setup();
+    const fallback = mockApi();
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/api/dashboards/overview") && url.includes("start_date=")) {
+        return Promise.resolve(json({
+          ...overviewDashboard,
+          meta: {
+            ...overviewDashboard.meta,
+            date_range: { start_on: "2026-07-01", end_on: "2026-07-10", key: "custom" },
+          },
+        }));
+      }
+      return fallback(input, init);
+    });
+    renderApp("/", request);
+
+    await user.selectOptions(await screen.findByRole(
+      "combobox",
+      { name: "Date period" },
+      { timeout: 3_000 },
+    ), "selected_period");
+    const dialog = screen.getByRole("dialog", { name: "Selected period" });
+    await user.clear(within(dialog).getByLabelText("Start date"));
+    await user.type(within(dialog).getByLabelText("Start date"), "2026-07-01");
+    await user.clear(within(dialog).getByLabelText("End date"));
+    await user.type(within(dialog).getByLabelText("End date"), "2026-07-10");
+
+    expect(request.mock.calls.some(([input]) => String(input).includes("start_date="))).toBe(false);
+    await user.click(within(dialog).getByRole("button", { name: "Apply" }));
+
+    await waitFor(() => expect(request.mock.calls.some(([input]) => String(input).includes(
+      "/api/dashboards/overview?brand_id=child-1&rollup=false&range=selected_period&start_date=2026-07-01&end_date=2026-07-10",
+    ))).toBe(true));
+    expect(await screen.findByRole("button", { name: "Edit selected period" })).toHaveAttribute(
+      "title",
+      "2026-07-01 to 2026-07-10",
+    );
+  });
+
   it("never shows an old platform delta under a newly selected date period", async () => {
     const user = userEvent.setup();
     const platformFor = (key: "last_7_days" | "last_30_days", value: number, previousValue: number) => ({
@@ -594,6 +635,54 @@ describe("Phase 7 application shell", () => {
 
     resolveSeven(json(platformFor("last_7_days", 700, 350)));
     expect(await screen.findAllByText("700", { selector: ".facebook-pulse-kpi > strong" })).not.toHaveLength(0);
+  });
+
+  it("passes an exact selected period to a platform dashboard", async () => {
+    const user = userEvent.setup();
+    const fallback = mockApi();
+    const request = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/api/dashboards/facebook") && url.includes("start_date=")) {
+        return Promise.resolve(json({
+          ...dashboard,
+          meta: {
+            ...dashboard.meta,
+            date_range: { start_on: "2026-07-03", end_on: "2026-07-12", key: "custom" },
+          },
+        }));
+      }
+      return fallback(input, init);
+    });
+    renderApp("/facebook", request);
+
+    await user.selectOptions(await screen.findByRole(
+      "combobox",
+      { name: "Date period" },
+      { timeout: 3_000 },
+    ), "selected_period");
+    const dialog = screen.getByRole("dialog", { name: "Selected period" });
+    await user.clear(within(dialog).getByLabelText("Start date"));
+    await user.type(within(dialog).getByLabelText("Start date"), "2026-07-03");
+    await user.clear(within(dialog).getByLabelText("End date"));
+    await user.type(within(dialog).getByLabelText("End date"), "2026-07-12");
+    await user.click(within(dialog).getByRole("button", { name: "Apply" }));
+
+    await waitFor(() => expect(request.mock.calls.some(([input]) => {
+      const url = String(input);
+      return url.includes("/api/dashboards/facebook") && url.includes("start_date=");
+    })).toBe(true));
+    const selectedPeriodUrl = String(request.mock.calls.find(([input]) => {
+      const url = String(input);
+      return url.includes("/api/dashboards/facebook") && url.includes("start_date=");
+    })?.[0]);
+    expect(selectedPeriodUrl).toContain("range=selected_period");
+    expect(selectedPeriodUrl).toContain("start_date=2026-07-03");
+    expect(selectedPeriodUrl).toContain("end_date=2026-07-12");
+    expect(selectedPeriodUrl).toContain("tab=cover");
+    expect(await screen.findByRole("button", { name: "Edit selected period" })).toHaveAttribute(
+      "title",
+      "2026-07-03 to 2026-07-12",
+    );
   });
 
   it("shows weekly AI Summary generation only to the Accumulate viewer operator", async () => {

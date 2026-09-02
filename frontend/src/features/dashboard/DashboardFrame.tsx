@@ -2,7 +2,7 @@ import { AlertTriangle, CalendarDays, RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 
 import type { DashboardMetric, DataStatus } from "../../api";
-import { RANGE_OPTIONS, type RangeKey } from "./catalog";
+import { PRESET_RANGE_OPTIONS, type PresetRangeKey } from "./catalog";
 import { ExportPng } from "./ExportPng";
 import { formatDate, humanize } from "./format";
 
@@ -19,8 +19,8 @@ export function DashboardHeader({
 }: {
   title: string;
   description: string;
-  range: RangeKey;
-  onRange: (range: RangeKey) => void;
+  range: PresetRangeKey;
+  onRange: (range: PresetRangeKey) => void;
   status: DataStatus;
   freshness: string;
   lastSync: string | null;
@@ -43,8 +43,8 @@ export function DashboardHeader({
         <label className="range-control">
           <CalendarDays size={16} />
           <span className="sr-only">Date range</span>
-          <select onChange={(event) => onRange(event.target.value as RangeKey)} value={range}>
-            {RANGE_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+          <select onChange={(event) => onRange(event.target.value as PresetRangeKey)} value={range}>
+            {PRESET_RANGE_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
           </select>
         </label>
         <ExportPng metrics={metrics} subtitle={exportSubtitle} title={title} />

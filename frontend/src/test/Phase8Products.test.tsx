@@ -308,8 +308,8 @@ describe("Phase 8 product surfaces", () => {
           }]}
           insightsError={false}
           insightsLoading={false}
-          onRange={() => undefined}
-          range="last_30_days"
+          onPeriod={() => undefined}
+          period={{ key: "last_30_days" }}
         />
       </MemoryRouter>,
     );
@@ -385,8 +385,8 @@ describe("Phase 8 product surfaces", () => {
             insights={[]}
             insightsError={false}
             insightsLoading={false}
-            onRange={() => undefined}
-            range="last_30_days"
+            onPeriod={() => undefined}
+            period={{ key: "last_30_days" }}
           />
         </MemoryRouter>,
       );

@@ -13,18 +13,22 @@ import {
 } from "../../api";
 import { useBrandScope } from "../../app/BrandScopeProvider";
 import { usePlatformAccounts } from "../../app/usePlatformAccounts";
-import type { DashboardTab, RangeKey } from "./catalog";
+import {
+  reportingPeriodQuery,
+  type DashboardTab,
+  type ReportingPeriod,
+} from "./catalog";
 
-export function useOverviewDashboard(range: RangeKey) {
+export function useOverviewDashboard(period: ReportingPeriod) {
   const { selectedBrandId, rollup } = useBrandScope();
   return useQuery({
-    queryKey: ["dashboard", "overview", selectedBrandId, rollup, range],
+    queryKey: ["dashboard", "overview", selectedBrandId, rollup, period.key, period.startDate, period.endDate],
     queryFn: ({ signal }) =>
       apiQuery(
         `/api/dashboards/overview${queryString({
           brand_id: selectedBrandId,
           rollup,
-          range,
+          ...reportingPeriodQuery(period),
         })}`,
         overviewDashboardSchema,
         signal,
@@ -35,7 +39,7 @@ export function useOverviewDashboard(range: RangeKey) {
 
 export function useChannelDashboard(
   platform: Platform,
-  range: RangeKey,
+  period: ReportingPeriod,
   tab: DashboardTab["id"],
 ) {
   const { selectedBrandId, rollup } = useBrandScope();
@@ -43,13 +47,13 @@ export function useChannelDashboard(
   const accountId = accountState.selectedAccountId === "all" ? undefined : accountState.selectedAccountId;
   return useQuery({
     enabled: !accountState.isLoading,
-    queryKey: ["dashboard", platform, selectedBrandId, rollup, accountId ?? "all", range, tab],
+    queryKey: ["dashboard", platform, selectedBrandId, rollup, accountId ?? "all", period.key, period.startDate, period.endDate, tab],
     queryFn: ({ signal }) =>
       apiQuery(
         `/api/dashboards/${platform}${queryString({
           brand_id: selectedBrandId,
           rollup,
-          range,
+          ...reportingPeriodQuery(period),
           account_id: accountId,
           tab,
         })}`,
@@ -94,12 +98,12 @@ export function useGenerateAiSummary() {
   const { selectedBrandId, rollup } = useBrandScope();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (range: RangeKey) =>
+    mutationFn: (period: ReportingPeriod) =>
       apiMutation(
         `/api/insights/generate${queryString({
           brand_id: selectedBrandId,
           rollup,
-          range,
+          ...reportingPeriodQuery(period),
         })}`,
         insightSchema,
         { method: "POST" },

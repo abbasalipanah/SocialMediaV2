@@ -1,4 +1,3 @@
-import { CalendarDays } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "../../routing";
 
@@ -11,7 +10,15 @@ import {
   DashboardError,
   DashboardLoading,
 } from "./DashboardFrame";
-import { PLATFORM_DESCRIPTIONS, PLATFORM_LABELS, RANGE_OPTIONS, platformTabs, type DashboardTab, type RangeKey } from "./catalog";
+import {
+  DEFAULT_REPORTING_PERIOD,
+  PLATFORM_DESCRIPTIONS,
+  PLATFORM_LABELS,
+  platformTabs,
+  type DashboardTab,
+  type ReportingPeriod,
+} from "./catalog";
+import { DatePeriodControl } from "./DatePeriodControl";
 import { useChannelDashboard } from "./useDashboard";
 import { ReportExport } from "./ReportExport";
 
@@ -43,8 +50,8 @@ export function PlatformPage({ platform }: { platform: Platform }) {
     ?.capabilities.some((item) => item.capability === "audience" && ["available", "partial"].includes(item.status)) ?? false;
   const tabs = platformTabs(platform, audienceAvailable);
   const [tab, setTab] = useState<DashboardTab["id"]>(() => tabFromSearch(location.search, tabs));
-  const [range, setRange] = useState<RangeKey>("last_30_days");
-  const query = useChannelDashboard(platform, range, tab);
+  const [period, setPeriod] = useState<ReportingPeriod>(DEFAULT_REPORTING_PERIOD);
+  const query = useChannelDashboard(platform, period, tab);
 
   useEffect(() => {
     setTab(tabFromSearch(location.search, tabs));
@@ -103,10 +110,15 @@ export function PlatformPage({ platform }: { platform: Platform }) {
               </button>
             ))}
           </div>
-          <label className="platform-range-control">
-            <span><CalendarDays size={18} /></span>
-            <span><small>{storyView ? "Date Range" : "Date Period"}</small><select aria-label={storyView ? "Date range" : "Date period"} onChange={(event) => setRange(event.target.value as RangeKey)} value={range}>{RANGE_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></span>
-          </label>
+          <DatePeriodControl
+            ariaLabel={storyView ? "Date range" : "Date period"}
+            controlClassName="platform-range-control"
+            label={storyView ? "Date Range" : "Date Period"}
+            onChange={setPeriod}
+            period={period}
+            resolvedEndDate={data.meta.date_range.end_on}
+            resolvedStartDate={data.meta.date_range.start_on}
+          />
           <ReportExport
             accountId={data.meta.resolved_account_ids.length === 1 ? data.meta.resolved_account_ids[0] : undefined}
             brandId={selectedBrandId}

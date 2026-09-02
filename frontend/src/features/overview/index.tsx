@@ -6,7 +6,10 @@ import {
   DashboardError,
   DashboardLoading,
 } from "../dashboard/DashboardFrame";
-import type { RangeKey } from "../dashboard/catalog";
+import {
+  DEFAULT_REPORTING_PERIOD,
+  type ReportingPeriod,
+} from "../dashboard/catalog";
 import {
   useAiSummaryLimit,
   useGenerateAiSummary,
@@ -16,10 +19,10 @@ import {
 import { AccumulateSocialOverview } from "./AccumulateSocialOverview";
 
 export default function OverviewPage() {
-  const [range, setRange] = useState<RangeKey>("last_30_days");
+  const [period, setPeriod] = useState<ReportingPeriod>(DEFAULT_REPORTING_PERIOD);
   const { user } = useAuth();
   const { selectedBrand, selectedBrandId, rollup } = useBrandScope();
-  const query = useOverviewDashboard(range);
+  const query = useOverviewDashboard(period);
   const insights = useInsights();
   const canGenerateAiSummary = Boolean(
     user
@@ -47,9 +50,9 @@ export default function OverviewPage() {
       insights={insights.data?.items ?? []}
       insightsError={insights.isError}
       insightsLoading={insights.isPending}
-      onGenerateAiSummary={() => generateAiSummary.mutateAsync(range)}
-      onRange={setRange}
-      range={range}
+      onGenerateAiSummary={() => generateAiSummary.mutateAsync(period)}
+      onPeriod={setPeriod}
+      period={period}
     />
   );
 }
