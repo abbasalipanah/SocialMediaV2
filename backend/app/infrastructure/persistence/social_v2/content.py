@@ -18,7 +18,7 @@ class SocialContentStore(SocialStoreBase):
     def __init__(self, engine: Engine, write_policy: WritePolicy) -> None:
         super().__init__(engine, write_policy)
 
-    def upsert(self, record: ContentRecord) -> None:
+    def upsert(self, record: ContentRecord, *, preserve_insights: bool = False) -> None:
         self._assert_mutation("content.upsert")
         with self.engine.begin() as connection:
             self._assert_account_scope(
@@ -70,41 +70,83 @@ class SocialContentStore(SocialStoreBase):
                         message=EXCLUDED.message,
                         media_url=EXCLUDED.media_url,
                         created_time=EXCLUDED.created_time,
-                        likes_count=EXCLUDED.likes_count,
-                        comments_count=EXCLUDED.comments_count,
-                        shares_count=EXCLUDED.shares_count,
-                        views_count=EXCLUDED.views_count,
-                        reach_count=EXCLUDED.reach_count,
+                        likes_count=CASE WHEN :preserve_insights
+                            THEN content_items.likes_count ELSE EXCLUDED.likes_count END,
+                        comments_count=CASE WHEN :preserve_insights
+                            THEN content_items.comments_count ELSE EXCLUDED.comments_count END,
+                        shares_count=CASE WHEN :preserve_insights
+                            THEN content_items.shares_count ELSE EXCLUDED.shares_count END,
+                        views_count=CASE WHEN :preserve_insights
+                            THEN content_items.views_count ELSE EXCLUDED.views_count END,
+                        reach_count=CASE WHEN :preserve_insights
+                            THEN content_items.reach_count ELSE EXCLUDED.reach_count END,
                         cover_url=EXCLUDED.cover_url,
                         thumbnail_url=EXCLUDED.thumbnail_url,
                         cover_candidates=EXCLUDED.cover_candidates,
                         thumbnail_candidates=EXCLUDED.thumbnail_candidates,
                         media_url_candidates=EXCLUDED.media_url_candidates,
-                        full_video_watched_rate=EXCLUDED.full_video_watched_rate,
-                        total_time_watched=EXCLUDED.total_time_watched,
-                        average_time_watched=EXCLUDED.average_time_watched,
-                        interactions_count=EXCLUDED.interactions_count,
-                        replies_count=EXCLUDED.replies_count,
-                        saves_count=EXCLUDED.saves_count,
-                        sticker_taps=EXCLUDED.sticker_taps,
-                        profile_visits=EXCLUDED.profile_visits,
-                        follows_count=EXCLUDED.follows_count,
-                        taps_forward=EXCLUDED.taps_forward,
-                        taps_back=EXCLUDED.taps_back,
-                        swipe_forward=EXCLUDED.swipe_forward,
-                        exits=EXCLUDED.exits,
-                        navigation_count=EXCLUDED.navigation_count,
-                        completion_rate=EXCLUDED.completion_rate,
-                        reposts_count=EXCLUDED.reposts_count,
-                        quotes_count=EXCLUDED.quotes_count,
-                        link_clicks=EXCLUDED.link_clicks,
-                        profile_clicks=EXCLUDED.profile_clicks,
-                        video_views_count=EXCLUDED.video_views_count,
-                        video_playback_0_count=EXCLUDED.video_playback_0_count,
-                        video_playback_25_count=EXCLUDED.video_playback_25_count,
-                        video_playback_50_count=EXCLUDED.video_playback_50_count,
-                        video_playback_75_count=EXCLUDED.video_playback_75_count,
-                        video_playback_100_count=EXCLUDED.video_playback_100_count,
+                        full_video_watched_rate=CASE WHEN :preserve_insights
+                            THEN content_items.full_video_watched_rate
+                            ELSE EXCLUDED.full_video_watched_rate END,
+                        total_time_watched=CASE WHEN :preserve_insights
+                            THEN content_items.total_time_watched
+                            ELSE EXCLUDED.total_time_watched END,
+                        average_time_watched=CASE WHEN :preserve_insights
+                            THEN content_items.average_time_watched
+                            ELSE EXCLUDED.average_time_watched END,
+                        interactions_count=CASE WHEN :preserve_insights
+                            THEN content_items.interactions_count
+                            ELSE EXCLUDED.interactions_count END,
+                        replies_count=CASE WHEN :preserve_insights
+                            THEN content_items.replies_count ELSE EXCLUDED.replies_count END,
+                        saves_count=CASE WHEN :preserve_insights
+                            THEN content_items.saves_count ELSE EXCLUDED.saves_count END,
+                        sticker_taps=CASE WHEN :preserve_insights
+                            THEN content_items.sticker_taps ELSE EXCLUDED.sticker_taps END,
+                        profile_visits=CASE WHEN :preserve_insights
+                            THEN content_items.profile_visits ELSE EXCLUDED.profile_visits END,
+                        follows_count=CASE WHEN :preserve_insights
+                            THEN content_items.follows_count ELSE EXCLUDED.follows_count END,
+                        taps_forward=CASE WHEN :preserve_insights
+                            THEN content_items.taps_forward ELSE EXCLUDED.taps_forward END,
+                        taps_back=CASE WHEN :preserve_insights
+                            THEN content_items.taps_back ELSE EXCLUDED.taps_back END,
+                        swipe_forward=CASE WHEN :preserve_insights
+                            THEN content_items.swipe_forward ELSE EXCLUDED.swipe_forward END,
+                        exits=CASE WHEN :preserve_insights
+                            THEN content_items.exits ELSE EXCLUDED.exits END,
+                        navigation_count=CASE WHEN :preserve_insights
+                            THEN content_items.navigation_count
+                            ELSE EXCLUDED.navigation_count END,
+                        completion_rate=CASE WHEN :preserve_insights
+                            THEN content_items.completion_rate
+                            ELSE EXCLUDED.completion_rate END,
+                        reposts_count=CASE WHEN :preserve_insights
+                            THEN content_items.reposts_count ELSE EXCLUDED.reposts_count END,
+                        quotes_count=CASE WHEN :preserve_insights
+                            THEN content_items.quotes_count ELSE EXCLUDED.quotes_count END,
+                        link_clicks=CASE WHEN :preserve_insights
+                            THEN content_items.link_clicks ELSE EXCLUDED.link_clicks END,
+                        profile_clicks=CASE WHEN :preserve_insights
+                            THEN content_items.profile_clicks ELSE EXCLUDED.profile_clicks END,
+                        video_views_count=CASE WHEN :preserve_insights
+                            THEN content_items.video_views_count
+                            ELSE EXCLUDED.video_views_count END,
+                        video_playback_0_count=CASE WHEN :preserve_insights
+                            THEN content_items.video_playback_0_count
+                            ELSE EXCLUDED.video_playback_0_count END,
+                        video_playback_25_count=CASE WHEN :preserve_insights
+                            THEN content_items.video_playback_25_count
+                            ELSE EXCLUDED.video_playback_25_count END,
+                        video_playback_50_count=CASE WHEN :preserve_insights
+                            THEN content_items.video_playback_50_count
+                            ELSE EXCLUDED.video_playback_50_count END,
+                        video_playback_75_count=CASE WHEN :preserve_insights
+                            THEN content_items.video_playback_75_count
+                            ELSE EXCLUDED.video_playback_75_count END,
+                        video_playback_100_count=CASE WHEN :preserve_insights
+                            THEN content_items.video_playback_100_count
+                            ELSE EXCLUDED.video_playback_100_count END,
                         updated_at=now()"""
                 ),
                 {
@@ -151,6 +193,7 @@ class SocialContentStore(SocialStoreBase):
                     "video_playback_50_count": record.video_playback_50_count,
                     "video_playback_75_count": record.video_playback_75_count,
                     "video_playback_100_count": record.video_playback_100_count,
+                    "preserve_insights": preserve_insights,
                 },
             )
 

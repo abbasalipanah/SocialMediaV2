@@ -1,7 +1,7 @@
 {
   "routes": [
     {
-      "path": "/v23.0/page-1",
+      "path": "/v26.0/page-1",
       "after": null,
       "responses": [
         {

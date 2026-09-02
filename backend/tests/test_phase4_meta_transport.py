@@ -65,7 +65,7 @@ def test_meta_request_uses_canonical_host_version_and_authorization_header() -> 
     )
     assert transport.get("me", {"fields": "id,name"}) == {"id": "page-1"}
     request = requests[0]
-    assert str(request.url) == "https://graph.facebook.com/v23.0/me?fields=id%2Cname"
+    assert str(request.url) == "https://graph.facebook.com/v26.0/me?fields=id%2Cname"
     assert request.headers["authorization"] == "Bearer disposable-access-value"
     assert "disposable-access-value" not in str(request.url)
 

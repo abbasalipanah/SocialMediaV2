@@ -25,17 +25,17 @@ def _media_bytes(source_url: str) -> bytes:
 def main() -> int:
     fixture = json.loads(Path(os.environ["GOLDEN_FIXTURE"]).read_text(encoding="utf-8"))
     routes = {(route["path"], route["after"]): route for route in fixture["routes"]}
-    profile = routes[("/v23.0/page-1", None)]["responses"][0]["json"]
-    first = routes[("/v23.0/page-1/published_posts", None)]["responses"][0]["json"]
-    second = routes[("/v23.0/page-1/published_posts", "fb-next")]["responses"][0]["json"]
+    profile = routes[("/v26.0/page-1", None)]["responses"][0]["json"]
+    first = routes[("/v26.0/page-1/published_posts", None)]["responses"][0]["json"]
+    second = routes[("/v26.0/page-1/published_posts", "fb-next")]["responses"][0]["json"]
     fb_rows = [*first["data"], *second["data"]]
-    fb_comment_rows = routes[("/v23.0/post-1/comments", None)]["responses"][0]["json"][
+    fb_comment_rows = routes[("/v26.0/post-1/comments", None)]["responses"][0]["json"][
         "data"
     ]
-    ig_profile = routes[("/v23.0/ig-1", None)]["responses"][0]["json"]
-    ig_rows = routes[("/v23.0/ig-1/media", None)]["responses"][0]["json"]["data"]
-    story_rows = routes[("/v23.0/ig-1/stories", None)]["responses"][0]["json"]["data"]
-    comment_rows = routes[("/v23.0/ig-post-1/comments", None)]["responses"][0]["json"][
+    ig_profile = routes[("/v26.0/ig-1", None)]["responses"][0]["json"]
+    ig_rows = routes[("/v26.0/ig-1/media", None)]["responses"][0]["json"]["data"]
+    story_rows = routes[("/v26.0/ig-1/stories", None)]["responses"][0]["json"]["data"]
+    comment_rows = routes[("/v26.0/ig-post-1/comments", None)]["responses"][0]["json"][
         "data"
     ]
     engine = create_engine(os.environ["PARITY_DATABASE_URL"])

@@ -34,7 +34,7 @@ class FakeMetaActivation:
         assert context.brand_id == 101
         self.calls.append("start")
         return ActivationStart(
-            authorization_url="https://www.facebook.com/v23.0/dialog/oauth?state=bound",
+            authorization_url="https://www.facebook.com/v26.0/dialog/oauth?state=bound",
             expires_at=datetime.now(UTC) + timedelta(minutes=15),
         )
 

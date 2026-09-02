@@ -22,6 +22,7 @@ from sqlalchemy import Engine, create_engine, text
 
 from app.application.ports.checkpoints import CheckpointKey, ProviderCheckpoint
 from app.application.ports.credentials import CredentialRef, SecretToken, TokenKind
+from app.application.ports.persistence import ContentRecord
 from app.application.ports.platforms import (
     ProviderAccount,
     ProviderCredential,
@@ -157,6 +158,16 @@ DEFAULT_RUN_BUDGET_SECONDS = 1200
 # seven seconds to spare, which is not a margin. Still a fraction of the run
 # budget, so a genuinely stuck account cannot take the window with it.
 DEFAULT_ACCOUNT_BUDGET_SECONDS = 300
+# The scheduled orchestrator snapshots every Instagram Story feed before any
+# slow content/audience work. Discovery is one bounded feed read per account;
+# enrichment is allowed a larger slice only for accounts that actually have a
+# live Story. A permanently slow account therefore cannot hide every account
+# queued behind it.
+STORY_DISCOVERY_ACCOUNT_BUDGET_SECONDS = 30
+STORY_ENRICHMENT_ACCOUNT_BUDGET_SECONDS = 180
+STORY_ENRICHMENT_RUN_BUDGET_SECONDS = 600
+STORY_DISCOVERY_PAGE_SIZE = 100
+STORY_ENRICHMENT_PAGE_SIZE = 10
 # How many of an account's most recent posts get their comments re-read
 # each run. Older posts keep whatever was collected when they were new.
 COMMENTED_CONTENT_PER_RUN = 25
@@ -280,6 +291,19 @@ def _lazy_phase_budget(
     return available
 
 
+class _StorySnapshotContentStore:
+    """Persist expiring Story identity without erasing held insight values."""
+
+    def __init__(self, store: SocialContentStore) -> None:
+        self._store = store
+
+    def upsert(self, record: ContentRecord) -> None:
+        self._store.upsert(record, preserve_insights=True)
+
+    def list_for_account(self, account_id: int) -> tuple[ContentRecord, ...]:
+        return self._store.list_for_account(account_id)
+
+
 class AccountBudgetExceeded(BaseException):
     """Raised in the collector's own thread when an account outstays its budget.
 
@@ -308,6 +332,8 @@ class StandaloneCollector:
         self.engine = engine
         self._run_budget_seconds = run_budget_seconds
         self._account_budget_seconds = account_budget_seconds
+        self.story_hot_lane_complete = True
+        self.story_hot_lane_failures = 0
         self.policy = WritePolicy.from_settings(settings)
         self.policy.assert_allows_mutation("standalone_collection")
         try:
@@ -368,13 +394,13 @@ class StandaloneCollector:
             self.media_fetcher.close()
 
     @contextmanager
-    def _account_budget(self) -> Iterator[None]:
+    def _account_budget(self, seconds: int | None = None) -> Iterator[None]:
         """Interrupt one account that outstays its share of the run.
 
         SIGALRM is only usable from the main thread, which is where the worker
         runs; anywhere else the budget is skipped rather than pretended.
         """
-        seconds = self._account_budget_seconds
+        seconds = self._account_budget_seconds if seconds is None else seconds
         if not seconds or threading.current_thread() is not threading.main_thread():
             yield
             return
@@ -393,6 +419,7 @@ class StandaloneCollector:
         brand_id: int | None,
         asset_id: int | None,
         only_new: bool = False,
+        durable_round: bool = False,
     ) -> tuple[WorkerAccountResult, ...]:
         selected = self.collectors.enabled_platforms(platforms)
         if not selected:
@@ -403,10 +430,23 @@ class StandaloneCollector:
             asset_id=asset_id,
             only_new=only_new,
         )
-        results: list[WorkerAccountResult] = []
         deadline = time.monotonic() + self._run_budget_seconds if self._run_budget_seconds else None
-        logger.info("collection_started accounts=%s", len(rows))
-        for index, row in enumerate(rows, start=1):
+        if durable_round and PlatformId.INSTAGRAM in selected:
+            self._collect_story_hot_lane(rows, deadline=deadline)
+        scheduled_round = self.targets.scheduled_round(rows) if durable_round else None
+        collection_rows = scheduled_round.targets if scheduled_round is not None else rows
+        results: list[WorkerAccountResult] = []
+        logger.info(
+            "collection_started accounts=%s%s",
+            len(collection_rows),
+            (
+                f" round={scheduled_round.round_id} "
+                f"round_progress={scheduled_round.completed_count}/{scheduled_round.total_count}"
+                if scheduled_round is not None
+                else ""
+            ),
+        )
+        for index, row in enumerate(collection_rows, start=1):
             if deadline is not None and time.monotonic() >= deadline:
                 # Stop on our own terms. Being killed by the service timeout
                 # aborts whichever account is mid-write, and because the next
@@ -414,14 +454,22 @@ class StandaloneCollector:
                 logger.warning(
                     "collection_budget_exhausted collected=%s remaining=%s",
                     index - 1,
-                    len(rows) - index + 1,
+                    len(collection_rows) - index + 1,
                 )
                 break
             started = time.monotonic()
             timings: dict[str, float] = {}
             try:
                 with self._account_budget():
-                    result = self._collect(row, timings)
+                    result = self._collect(
+                        row,
+                        timings,
+                        # The scheduled hot lane already captured and enriched
+                        # Stories for every Instagram account before this slow
+                        # phase. Manual/targeted runs retain the self-contained
+                        # account behavior.
+                        include_stories=not durable_round,
+                    )
                 self.targets.mark_success(
                     row,
                     datetime.now(UTC),
@@ -481,7 +529,7 @@ class StandaloneCollector:
                 "collection_account_done index=%s/%s platform=%s brand_id=%s "
                 "link_id=%s status=%s seconds=%.1f phases=%s",
                 index,
-                len(rows),
+                len(collection_rows),
                 row.platform.value,
                 row.brand_id,
                 row.link_id,
@@ -495,7 +543,240 @@ class StandaloneCollector:
                 or "-",
             )
             results.append(result)
+            if scheduled_round is not None:
+                completed, total = self.targets.advance_scheduled_round(
+                    round_id=scheduled_round.round_id,
+                    link_id=row.link_id,
+                )
+                if completed == total:
+                    logger.info(
+                        "collection_round_complete round=%s accounts=%s",
+                        scheduled_round.round_id,
+                        total,
+                    )
         return tuple(results)
+
+    def _collect_story_hot_lane(
+        self,
+        rows: tuple[CollectionTargetRow, ...],
+        *,
+        deadline: float | None,
+    ) -> None:
+        """Capture every live Story feed, then enrich accounts with live rows.
+
+        The first pass deliberately avoids per-item insights and media files.
+        It makes the expiring provider records durable for all accounts in a
+        few bounded requests. The second pass adds insights and owned media,
+        oldest-enriched account first, within its own checkpointed time slice.
+        """
+        instagram_rows = tuple(
+            row for row in rows if row.platform is PlatformId.INSTAGRAM
+        )
+        self.story_hot_lane_complete = True
+        self.story_hot_lane_failures = 0
+        if not instagram_rows:
+            return
+        logger.info("story_hot_lane_started accounts=%s", len(instagram_rows))
+        active: list[CollectionTargetRow] = []
+        captured = 0
+        for index, row in enumerate(instagram_rows, start=1):
+            discovery_budget = STORY_DISCOVERY_ACCOUNT_BUDGET_SECONDS
+            if deadline is not None:
+                remaining_seconds = int(deadline - time.monotonic())
+                if remaining_seconds < 1:
+                    remaining = len(instagram_rows) - index + 1
+                    self.story_hot_lane_failures += remaining
+                    logger.warning(
+                        "story_discovery_budget_exhausted remaining=%s", remaining
+                    )
+                    break
+                discovery_budget = min(discovery_budget, remaining_seconds)
+            try:
+                with self._account_budget(discovery_budget):
+                    result = self._collect_instagram_stories(
+                        row,
+                        insights=False,
+                        persist_media=False,
+                        checkpoint_suffix="stories.discovery",
+                        page_size=STORY_DISCOVERY_PAGE_SIZE,
+                    )
+            except AccountBudgetExceeded:
+                result = WorkerAccountResult(
+                    platform=row.platform.value,
+                    brand_id=row.brand_id,
+                    asset_id=row.asset_id,
+                    status="failed",
+                    error_code="story_discovery_budget_exceeded",
+                )
+            except Exception as exc:
+                result = WorkerAccountResult(
+                    platform=row.platform.value,
+                    brand_id=row.brand_id,
+                    asset_id=row.asset_id,
+                    status="failed",
+                    error_code=_error_code(exc),
+                )
+            if result.status != "success":
+                self.story_hot_lane_failures += 1
+                logger.warning(
+                    "story_discovery_failed index=%s/%s link_id=%s reason=%s",
+                    index,
+                    len(instagram_rows),
+                    row.link_id,
+                    result.error_code or result.status,
+                )
+                continue
+            captured += result.content_count
+            if result.content_count:
+                active.append(row)
+
+        # The existing `.stories` checkpoint records completed enrichment and
+        # survives deploys. Oldest first makes an unfinished enrichment round
+        # resume on the next half-hour tick instead of restarting at one brand.
+        oldest = datetime.min.replace(tzinfo=UTC)
+
+        def last_enriched(target_row: CollectionTargetRow) -> datetime:
+            checkpoint = self.checkpoints.get(
+                CheckpointKey(
+                    platform=PlatformId.INSTAGRAM,
+                    capability=CapabilityId.CONTENT,
+                    account_id=f"{target_row.external_id}.stories",
+                )
+            )
+            return (
+                checkpoint.observed_through
+                if checkpoint and checkpoint.observed_through
+                else oldest
+            )
+
+        active.sort(key=lambda row: (last_enriched(row), row.link_id))
+        enrichment_deadline = time.monotonic() + STORY_ENRICHMENT_RUN_BUDGET_SECONDS
+        if deadline is not None:
+            enrichment_deadline = min(enrichment_deadline, deadline)
+        enriched = 0
+        for index, row in enumerate(active, start=1):
+            if time.monotonic() >= enrichment_deadline:
+                remaining = len(active) - index + 1
+                self.story_hot_lane_failures += remaining
+                logger.warning("story_enrichment_budget_exhausted remaining=%s", remaining)
+                break
+            try:
+                with self._account_budget(STORY_ENRICHMENT_ACCOUNT_BUDGET_SECONDS):
+                    result = self._collect_instagram_stories(
+                        row,
+                        insights=True,
+                        persist_media=True,
+                        checkpoint_suffix="stories",
+                        page_size=STORY_ENRICHMENT_PAGE_SIZE,
+                    )
+            except AccountBudgetExceeded:
+                result = WorkerAccountResult(
+                    platform=row.platform.value,
+                    brand_id=row.brand_id,
+                    asset_id=row.asset_id,
+                    status="failed",
+                    error_code="story_enrichment_budget_exceeded",
+                )
+            except Exception as exc:
+                result = WorkerAccountResult(
+                    platform=row.platform.value,
+                    brand_id=row.brand_id,
+                    asset_id=row.asset_id,
+                    status="failed",
+                    error_code=_error_code(exc),
+                )
+            if result.status == "success":
+                enriched += result.content_count
+            else:
+                self.story_hot_lane_failures += 1
+                logger.warning(
+                    "story_enrichment_failed link_id=%s reason=%s",
+                    row.link_id,
+                    result.error_code or result.status,
+                )
+        self.story_hot_lane_complete = self.story_hot_lane_failures == 0
+        logger.info(
+            "story_hot_lane_done accounts=%s active_accounts=%s captured=%s "
+            "enriched=%s failures=%s",
+            len(instagram_rows),
+            len(active),
+            captured,
+            enriched,
+            self.story_hot_lane_failures,
+        )
+
+    def _collect_instagram_stories(
+        self,
+        row: CollectionTargetRow,
+        *,
+        insights: bool,
+        persist_media: bool,
+        checkpoint_suffix: str,
+        page_size: int,
+    ) -> WorkerAccountResult:
+        token = self._access_token(row.platform, row.credential_reference)
+        account = ProviderAccount(
+            platform=PlatformId.INSTAGRAM,
+            account_id=row.external_id,
+            credential=ProviderCredential(access_token=token),
+        )
+        transport = MetaTransport(
+            credential=account.credential,
+            rate_guard=MetaRateGuard(sleeper=time.sleep),
+            base_url=self.settings.meta.graph_base_url,
+            api_version=self.settings.meta.graph_version,
+            timeout_seconds=self.settings.meta_activation.provider_timeout_seconds,
+            egress_enabled=True,
+        )
+        target = CollectionTarget(
+            account=account,
+            local_account_id=row.asset_id,
+            brand_id=row.brand_id,
+        )
+        media_available = _lazy_phase_budget(MEDIA_PHASE_BUDGET_SECONDS)
+
+        def persist_story_media(item: ProviderRecord) -> int:
+            try:
+                return self._persist_media(target, item, can_fetch=media_available)
+            except Exception:
+                # The expiring Story record and its insights are more important
+                # than a file copy. A CDN/file fault must not roll back the feed
+                # checkpoint or make later Stories wait behind this one.
+                return 0
+
+        try:
+            outcome = collect_content(
+                target=target,
+                reader=InstagramContentReader(
+                    transport,
+                    stories=True,
+                    insights=insights,
+                    page_size=page_size,
+                ),
+                content_store=(
+                    self.content
+                    if insights
+                    else _StorySnapshotContentStore(self.content)
+                ),
+                checkpoint_store=self.checkpoints,
+                record_sink=persist_story_media if persist_media else None,
+                checkpoint_account_id=f"{account.account_id}.{checkpoint_suffix}",
+                max_pages=20,
+                refresh_only=True,
+            )
+            return WorkerAccountResult(
+                platform=row.platform.value,
+                brand_id=row.brand_id,
+                asset_id=row.asset_id,
+                status=(
+                    "success" if outcome.status is CollectionStatus.SUCCESS else "partial"
+                ),
+                content_count=outcome.content_count,
+                media_count=outcome.media_count,
+                error_code=outcome.error_code,
+            )
+        finally:
+            transport.close()
 
     def verify_pending_tiktok(self, connection_id: int) -> WorkerAccountResult:
         pending = self.targets.pending_tiktok(connection_id)
@@ -535,13 +816,23 @@ class StandaloneCollector:
         return result
 
     def _collect(
-        self, row: CollectionTargetRow, timings: dict[str, float] | None = None
+        self,
+        row: CollectionTargetRow,
+        timings: dict[str, float] | None = None,
+        *,
+        include_stories: bool = True,
     ) -> WorkerAccountResult:
         timings = {} if timings is None else timings
+        if row.platform is PlatformId.INSTAGRAM and not include_stories:
+            return self._collect_meta(row, timings, include_stories=False)
         return self.collectors.collect(row.platform, row, timings)
 
     def _collect_meta(
-        self, row: CollectionTargetRow, timings: dict[str, float]
+        self,
+        row: CollectionTargetRow,
+        timings: dict[str, float],
+        *,
+        include_stories: bool = True,
     ) -> WorkerAccountResult:
         token = self._access_token(row.platform, row.credential_reference)
         if row.platform is PlatformId.FACEBOOK:
@@ -765,7 +1056,7 @@ class StandaloneCollector:
                 partial_errors.add("content_unavailable")
             story_content_count = 0
             story_media_count = 0
-            if row.platform is PlatformId.INSTAGRAM:
+            if row.platform is PlatformId.INSTAGRAM and include_stories:
                 story_reader = InstagramContentReader(
                     transport,
                     stories=True,
@@ -1370,7 +1661,9 @@ def _validate_media_url(value: str) -> None:
         raise ValueError("media_url_rejected")
 
 
-def collection_exit_code(results: Sequence[WorkerAccountResult]) -> int:
+def collection_exit_code(
+    results: Sequence[WorkerAccountResult], *, critical_failure: bool = False
+) -> int:
     """Whether the run itself failed, not whether every account was perfect.
 
     Exiting non-zero on any imperfect account marked every run failed, because
@@ -1381,6 +1674,8 @@ def collection_exit_code(results: Sequence[WorkerAccountResult]) -> int:
     A run that reached nothing is worth waking someone for; one that collected
     what it could is not.
     """
+    if critical_failure:
+        return 1
     if not results:
         return 0
     return 0 if any(item.status != "failed" for item in results) else 1
@@ -1521,14 +1816,28 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"provider_message: {message}")
                 raise
         else:
+            durable_round = bool(
+                args.scheduled
+                and args.platform == "all"
+                and args.brand_id is None
+                and args.asset_id is None
+                and not args.only_new
+            )
             results = collector.collect_connected(
                 platforms=_platforms(args.platform),
                 brand_id=args.brand_id,
                 asset_id=args.asset_id,
                 only_new=args.only_new,
+                durable_round=durable_round,
             )
         print(json.dumps([asdict(item) for item in results], separators=(",", ":")))
-        return collection_exit_code(results)
+        return collection_exit_code(
+            results,
+            critical_failure=(
+                bool(getattr(args, "scheduled", False))
+                and not collector.story_hot_lane_complete
+            ),
+        )
     finally:
         if collector is not None:
             collector.close()

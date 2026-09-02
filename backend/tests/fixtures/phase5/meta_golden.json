@@ -1,7 +1,7 @@
 {
   "routes": [
     {
-      "path": "/v23.0/page-1",
+      "path": "/v26.0/page-1",
       "after": null,
       "responses": [
         {
@@ -17,7 +17,7 @@
       ]
     },
     {
-      "path": "/v23.0/page-1/published_posts",
+      "path": "/v26.0/page-1/published_posts",
       "after": null,
       "responses": [
         {
@@ -42,7 +42,7 @@
       ]
     },
     {
-      "path": "/v23.0/page-1/published_posts",
+      "path": "/v26.0/page-1/published_posts",
       "after": "fb-next",
       "responses": [
         {
@@ -66,7 +66,7 @@
       ]
     },
     {
-      "path": "/v23.0/post-1/comments",
+      "path": "/v26.0/post-1/comments",
       "after": null,
       "responses": [
         {
@@ -92,7 +92,7 @@
       ]
     },
     {
-      "path": "/v23.0/ig-1",
+      "path": "/v26.0/ig-1",
       "after": null,
       "responses": [
         {
@@ -109,7 +109,7 @@
       ]
     },
     {
-      "path": "/v23.0/ig-1/media",
+      "path": "/v26.0/ig-1/media",
       "after": null,
       "responses": [
         {
@@ -134,7 +134,7 @@
       ]
     },
     {
-      "path": "/v23.0/ig-1/stories",
+      "path": "/v26.0/ig-1/stories",
       "after": null,
       "responses": [
         {
@@ -154,7 +154,7 @@
       ]
     },
     {
-      "path": "/v23.0/ig-post-1/comments",
+      "path": "/v26.0/ig-post-1/comments",
       "after": null,
       "responses": [
         {

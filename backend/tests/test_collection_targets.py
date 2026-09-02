@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Iterator, Mapping
 from typing import Any, cast
@@ -12,6 +13,7 @@ from app.domain.platforms import PlatformId
 from app.infrastructure.persistence.social_v2.collection_targets import (
     CollectionTargetRow,
     SocialCollectionTargetStore,
+    _collection_round_payload,
 )
 
 
@@ -50,6 +52,42 @@ class _Engine:
 
     def connect(self) -> _Connection:
         return self.connection
+
+
+class _ScalarResult:
+    def __init__(self, value: object) -> None:
+        self.value = value
+
+    def scalar_one_or_none(self) -> object:
+        return self.value
+
+
+class _RoundConnection:
+    def __init__(self, engine: _RoundEngine) -> None:
+        self.engine = engine
+
+    def __enter__(self) -> _RoundConnection:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        return None
+
+    def execute(self, statement: object, parameters: Mapping[str, object]) -> _ScalarResult:
+        sql = str(statement)
+        if "SELECT payload_json" in sql:
+            return _ScalarResult(self.engine.payload)
+        if "social_projection_state" in sql and "payload" in parameters:
+            self.engine.payload = json.loads(str(parameters["payload"]))
+            return _ScalarResult(None)
+        raise AssertionError(sql)
+
+
+class _RoundEngine:
+    def __init__(self) -> None:
+        self.payload: dict[str, object] | None = None
+
+    def begin(self) -> _RoundConnection:
+        return _RoundConnection(self)
 
 
 def test_list_connected_accepts_legacy_active_and_canonical_connected_statuses() -> None:
@@ -204,3 +242,51 @@ def test_list_connected_skips_only_invalid_meta_target(caplog: Any) -> None:
     assert [target.link_id for target in targets] == [13]
     assert "social_collection_target_skipped link_id=57" in caplog.text
     assert "meta_connection_payload_invalid" in caplog.text
+
+
+def test_collection_round_payload_is_strict_and_keeps_position() -> None:
+    assert _collection_round_payload(
+        {
+            "format_version": 1,
+            "round_id": 7,
+            "account_link_ids": [11, 13, 17],
+            "next_index": 2,
+        }
+    ) == (7, [11, 13, 17], 2)
+
+
+def test_durable_round_resumes_and_appends_new_accounts_to_the_same_round() -> None:
+    def target(link_id: int) -> CollectionTargetRow:
+        return CollectionTargetRow(
+            link_id=link_id,
+            connection_id=link_id + 10,
+            asset_id=link_id + 20,
+            brand_id=link_id + 30,
+            platform=PlatformId.FACEBOOK,
+            external_id=f"page-{link_id}",
+            display_name=f"Page {link_id}",
+            credential_reference=f"vault:{link_id}",
+            backfill_status="complete",
+        )
+
+    engine = _RoundEngine()
+    store = SocialCollectionTargetStore(
+        cast(Engine, engine),
+        WritePolicy(runtime_mode=RuntimeMode.STAGING, writes_enabled=True),
+    )
+    first, second, newly_added = target(1), target(2), target(3)
+
+    round_one = store.scheduled_round((first, second))
+    assert round_one.round_id == 1
+    assert [row.link_id for row in round_one.targets] == [1, 2]
+    assert store.advance_scheduled_round(round_id=1, link_id=1) == (1, 2)
+
+    resumed = store.scheduled_round((first, second, newly_added))
+    assert resumed.round_id == 1
+    assert [row.link_id for row in resumed.targets] == [2, 3]
+    assert store.advance_scheduled_round(round_id=1, link_id=2) == (2, 3)
+    assert store.advance_scheduled_round(round_id=1, link_id=3) == (3, 3)
+
+    round_two = store.scheduled_round((first, second, newly_added))
+    assert round_two.round_id == 2
+    assert [row.link_id for row in round_two.targets] == [1, 2, 3]

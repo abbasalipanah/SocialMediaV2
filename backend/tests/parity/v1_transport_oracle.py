@@ -18,7 +18,7 @@ def main() -> int:
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
     graph = module.MetaGraphClient(
-        base_url=f"{os.environ['FAKE_META_ORIGIN']}/v23.0",
+        base_url=f"{os.environ['FAKE_META_ORIGIN']}/v26.0",
         access_token=os.environ["FIXTURE_PROVIDER_TOKEN"],
         max_retries=2,
         base_backoff_s=0,
