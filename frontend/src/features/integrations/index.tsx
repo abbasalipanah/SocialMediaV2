@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   Check,
   Link2,
+  Linkedin,
   PlugZap,
   RefreshCw,
   ShieldCheck,
@@ -36,6 +37,10 @@ const PROVIDER_COPY: Record<OAuthProvider, { label: string; description: string 
   x: {
     label: "X",
     description: "Authorize read-only X profile and post access. Account selection and mapping stay in Settings.",
+  },
+  linkedin: {
+    label: "LinkedIn",
+    description: "Authorize read-only Company Page, post and follower analytics. Page selection and mapping stay in Settings.",
   },
   youtube: {
     label: "YouTube",
@@ -77,11 +82,15 @@ export function buildAuthorizationProviders(connections: ReportingConnection[]):
   const xConnection = latestConnection(
     connections.filter((item) => item.platform === "x"),
   );
+  const linkedinConnection = latestConnection(
+    connections.filter((item) => item.platform === "linkedin"),
+  );
 
   return ([
     ["meta", metaConnection],
     ["tiktok", tiktokConnection],
     ["x", xConnection],
+    ["linkedin", linkedinConnection],
     ["youtube", youtubeConnection],
   ] as const).map(([provider, connection]) => ({
     provider,
@@ -140,7 +149,7 @@ export default function IntegrationsPage() {
       )}
 
       <section aria-label="Authorization summary" className="integrations-summary-grid">
-        <SummaryCard icon={<PlugZap size={21} />} label="OAuth providers" tone="indigo" value={4} />
+        <SummaryCard icon={<PlugZap size={21} />} label="OAuth providers" tone="indigo" value={5} />
         <SummaryCard icon={<Check size={21} />} label="Authorized" tone="emerald" value={authorizedCount} />
         <SummaryCard icon={<AlertTriangle size={21} />} label="Reconnect required" tone="amber" value={attentionCount} />
       </section>
@@ -192,6 +201,7 @@ function ProviderIcon({ provider }: { provider: OAuthProvider }) {
   if (provider === "meta") return <span aria-hidden="true" className="oauth-meta-mark">∞</span>;
   if (provider === "tiktok") return <span aria-hidden="true" className="integration-tiktok-mark">♪</span>;
   if (provider === "youtube") return <Youtube aria-hidden="true" size={22} />;
+  if (provider === "linkedin") return <Linkedin aria-hidden="true" size={22} />;
   return <span aria-hidden="true" className="social-x-mark">𝕏</span>;
 }
 

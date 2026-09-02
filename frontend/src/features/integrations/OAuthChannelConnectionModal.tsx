@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, Check, Link2, RefreshCw, ShieldCheck, X as CloseIcon, Youtube } from "lucide-react";
+import { AlertTriangle, Check, Link2, Linkedin, RefreshCw, ShieldCheck, X as CloseIcon, Youtube } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -14,7 +14,7 @@ import {
   queryString,
 } from "../../api";
 
-export type ManagedOAuthChannel = "x" | "youtube";
+export type ManagedOAuthChannel = "linkedin" | "x" | "youtube";
 
 type OAuthChannelMessage = {
   type: `social-media:${ManagedOAuthChannel}-oauth`;
@@ -38,6 +38,12 @@ const PROVIDER_COPY: Record<ManagedOAuthChannel, {
     entities: "accounts",
     access: "Read-only profile and post access",
   },
+  linkedin: {
+    label: "LinkedIn",
+    entity: "Company Page",
+    entities: "Company Pages",
+    access: "Read-only Company Page analytics access",
+  },
   youtube: {
     label: "YouTube",
     entity: "channel",
@@ -47,9 +53,9 @@ const PROVIDER_COPY: Record<ManagedOAuthChannel, {
 };
 
 function ProviderIcon({ provider, size }: { provider: ManagedOAuthChannel; size: number }) {
-  return provider === "youtube"
-    ? <Youtube aria-hidden="true" size={size} />
-    : <span aria-hidden="true" className="social-x-mark">𝕏</span>;
+  if (provider === "youtube") return <Youtube aria-hidden="true" size={size} />;
+  if (provider === "linkedin") return <Linkedin aria-hidden="true" size={size} />;
+  return <span aria-hidden="true" className="social-x-mark">𝕏</span>;
 }
 
 export function OAuthChannelConnectionModal({

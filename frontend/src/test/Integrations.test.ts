@@ -42,7 +42,7 @@ describe("buildAuthorizationProviders", () => {
   it("derives provider-level OAuth status without requiring account rows", () => {
     const providers = buildAuthorizationProviders(connections);
 
-    expect(providers).toHaveLength(4);
+    expect(providers).toHaveLength(5);
     expect(providers.find((item) => item.provider === "meta")).toMatchObject({
       status: "authorized",
       connection: { connection_id: 2 },
@@ -58,6 +58,10 @@ describe("buildAuthorizationProviders", () => {
     expect(providers.find((item) => item.provider === "x")).toMatchObject({
       status: "authorized",
       connection: { connection_id: 4 },
+    });
+    expect(providers.find((item) => item.provider === "linkedin")).toMatchObject({
+      status: "not_authorized",
+      connection: null,
     });
   });
 });

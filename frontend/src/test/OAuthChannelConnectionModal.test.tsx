@@ -152,4 +152,40 @@ describe("OAuthChannelConnectionModal", () => {
       "/api/integrations/x/accounts/link?brand_id=42",
     ));
   });
+
+  it("presents LinkedIn discoveries as Company Pages", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/self-service/readiness")) return json({
+        ...readiness,
+        platform: "linkedin",
+        linked_account_count: 0,
+        linked_accounts: [],
+        available_accounts: [{
+          connection_id: 31,
+          external_id: "987654",
+          display_name: "The Accumulate AI",
+          state: "available",
+        }],
+      });
+      throw new Error(`Unexpected request: ${url}`);
+    }));
+    const queryCache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={queryCache}>
+        <OAuthChannelConnectionModal
+          brandId="42"
+          brandName="LinkedIn Brand"
+          onChanged={vi.fn()}
+          onClose={vi.fn()}
+          provider="linkedin"
+        />
+      </QueryClientProvider>,
+    );
+
+    const dialog = await screen.findByRole("dialog", { name: "Manage LinkedIn Company Pages" });
+    expect(await within(dialog).findByRole("checkbox", { name: /The Accumulate AI/ })).toBeEnabled();
+    expect(within(dialog).getByText(/Read-only Company Page analytics access/)).toBeInTheDocument();
+  });
 });

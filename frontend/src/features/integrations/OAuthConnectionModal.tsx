@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, Link2, RefreshCw, ShieldCheck, X as CloseIcon, Youtube } from "lucide-react";
+import { AlertTriangle, Check, Link2, Linkedin, RefreshCw, ShieldCheck, X as CloseIcon, Youtube } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -11,7 +11,7 @@ import {
   tiktokSelfServiceStartSchema,
 } from "../../api";
 
-export type OAuthProvider = "meta" | "tiktok" | "x" | "youtube";
+export type OAuthProvider = "linkedin" | "meta" | "tiktok" | "x" | "youtube";
 
 type OAuthMessage = {
   type: `social-media:${OAuthProvider}-oauth`;
@@ -52,6 +52,14 @@ const PROVIDER_COPY: Record<OAuthProvider, {
     startPath: "/api/integrations/x/oauth/start",
     intro: "Sign in to X and approve read-only profile and post access.",
     completion: "X authorization completed. Select the account for this Brand in Settings.",
+  },
+  linkedin: {
+    label: "LinkedIn",
+    popupName: "social-media-linkedin-oauth",
+    messageType: "social-media:linkedin-oauth",
+    startPath: "/api/integrations/linkedin/oauth/start",
+    intro: "Sign in to LinkedIn and approve read-only access to the Company Pages you administer.",
+    completion: "LinkedIn authorization completed. Select the Company Page for this Brand in Settings.",
   },
   youtube: {
     label: "YouTube",
@@ -155,6 +163,8 @@ export function OAuthConnectionModal({ provider, brandId, brandName, onClose, on
                 ? <span aria-hidden="true" className="integration-tiktok-mark">♪</span>
                 : provider === "youtube"
                   ? <Youtube aria-hidden="true" size={22} />
+                  : provider === "linkedin"
+                    ? <Linkedin aria-hidden="true" size={22} />
                   : <span aria-hidden="true" className="social-x-mark">𝕏</span>}
           </div>
           <div><h2 id="oauth-connect-title">Authorize {copy.label}</h2><p>{brandName} · OAuth authorization only</p></div>

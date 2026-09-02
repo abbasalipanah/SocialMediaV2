@@ -117,7 +117,7 @@ function SocialAccounts({
           connections.find((item) => item.platform === platform)?.state ??
           "not connected";
         const platformCanBeManaged = canManage(platform);
-        const connectionAvailable = ["meta", "tiktok", "x", "youtube"].includes(
+        const connectionAvailable = ["meta", "tiktok", "x", "linkedin", "youtube"].includes(
           platformDefinition(platform).connectionProvider,
         );
         return (
@@ -315,7 +315,7 @@ export function SetupDrawer({
   const canManagePlatform = (platform: Platform) =>
     platform === "tiktok"
       ? canManageTikTok
-      : platform === "x" || platform === "youtube"
+      : platform === "x" || platform === "linkedin" || platform === "youtube"
         ? canManageOAuthChannel
       : platform === "facebook" || platform === "instagram"
         ? canManageMeta
@@ -329,7 +329,7 @@ export function SetupDrawer({
     setTikTokConnectionOpen(false);
   };
   const managePlatform = (platform: Platform) => {
-    if (platform === "x" || platform === "youtube") {
+    if (platform === "x" || platform === "linkedin" || platform === "youtube") {
       setOAuthChannelConnection(platform);
       return;
     }
