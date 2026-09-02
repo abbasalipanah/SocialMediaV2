@@ -18,7 +18,10 @@ import app.workers.collector as collector_module
 from app.application.ports.checkpoints import CheckpointKey, ProviderCheckpoint
 from app.application.services.collection import CollectionOutcome, CollectionStatus
 from app.domain.platforms import CapabilityId, PlatformId
-from app.infrastructure.persistence.social_v2.collection_targets import CollectionTargetRow
+from app.infrastructure.persistence.social_v2.collection_targets import (
+    CollectionTargetRow,
+    ScheduledCollectionRound,
+)
 from app.workers.collector import (
     DAILY_METRIC_BACKFILL_DAYS,
     DEFAULT_ACCOUNT_BUDGET_SECONDS,
@@ -29,9 +32,11 @@ from app.workers.collector import (
     META_BACKFILL_PAGE_SIZE,
     AccountBudgetExceeded,
     StandaloneCollector,
+    WorkerAccountResult,
     _daily_metric_window_start,
     _error_code,
     _lazy_phase_budget,
+    _StorySnapshotContentStore,
 )
 
 
@@ -258,7 +263,7 @@ def test_meta_daily_failure_does_not_abandon_later_capabilities(monkeypatch) -> 
     collector.settings = SimpleNamespace(
         meta=SimpleNamespace(
             graph_base_url="https://graph.facebook.com",
-            graph_version="v23.0",
+            graph_version="v26.0",
         ),
         meta_activation=SimpleNamespace(provider_timeout_seconds=1),
     )
@@ -289,3 +294,166 @@ def test_meta_daily_failure_does_not_abandon_later_capabilities(monkeypatch) -> 
     assert content_calls == ["content", "stories"]
     assert collector.checkpoints.put_called is False
     assert fake_transport.closed is True
+
+
+def test_scheduled_orchestrator_runs_story_lane_before_durable_round(monkeypatch) -> None:
+    instagram = CollectionTargetRow(
+        link_id=11,
+        connection_id=21,
+        asset_id=31,
+        brand_id=41,
+        platform=PlatformId.INSTAGRAM,
+        external_id="ig-1",
+        display_name="IG One",
+        credential_reference="vault:ig",
+        backfill_status="complete",
+    )
+    facebook = CollectionTargetRow(
+        link_id=12,
+        connection_id=22,
+        asset_id=32,
+        brand_id=42,
+        platform=PlatformId.FACEBOOK,
+        external_id="page-1",
+        display_name="Page One",
+        credential_reference="vault:fb",
+        backfill_status="complete",
+    )
+    events: list[str] = []
+
+    class FakeTargets:
+        def list_connected(self, **_kwargs: object):
+            return (instagram, facebook)
+
+        def scheduled_round(self, rows):
+            events.append("round")
+            return ScheduledCollectionRound(3, rows, 0, 2)
+
+        def mark_success(self, row, *_args, **_kwargs):
+            events.append(f"success:{row.link_id}")
+
+        def advance_scheduled_round(self, *, round_id: int, link_id: int):
+            events.append(f"advance:{round_id}:{link_id}")
+            return (1 if link_id == 11 else 2, 2)
+
+    collector = StandaloneCollector.__new__(StandaloneCollector)
+    collector.settings = SimpleNamespace(
+        meta=SimpleNamespace(collection_enabled=True),
+        tiktok=SimpleNamespace(collection_enabled=False),
+    )
+    collector.targets = FakeTargets()
+    collector._run_budget_seconds = None
+    collector._account_budget_seconds = None
+    collector._collect_story_hot_lane = lambda _rows, deadline: events.append("stories")
+
+    def collect(row, _timings, *, include_stories: bool):
+        events.append(f"collect:{row.link_id}:stories={include_stories}")
+        return WorkerAccountResult(
+            platform=row.platform.value,
+            brand_id=row.brand_id,
+            asset_id=row.asset_id,
+            status="success",
+        )
+
+    collector._collect = collect
+
+    collector.collect_connected(
+        platforms=(PlatformId.FACEBOOK, PlatformId.INSTAGRAM),
+        brand_id=None,
+        asset_id=None,
+        durable_round=True,
+    )
+
+    assert events[:2] == ["stories", "round"]
+    assert "collect:11:stories=False" in events
+    assert "collect:12:stories=False" in events
+    assert events[-1] == "advance:3:12"
+
+
+def test_story_discovery_covers_all_accounts_before_any_enrichment(monkeypatch) -> None:
+    rows = tuple(
+        CollectionTargetRow(
+            link_id=link_id,
+            connection_id=link_id + 10,
+            asset_id=link_id + 20,
+            brand_id=link_id + 30,
+            platform=PlatformId.INSTAGRAM,
+            external_id=f"ig-{link_id}",
+            display_name=f"IG {link_id}",
+            credential_reference=f"vault:{link_id}",
+            backfill_status="complete",
+        )
+        for link_id in (1, 2, 3)
+    )
+    calls: list[tuple[int, bool]] = []
+
+    class FakeCheckpoints:
+        def get(self, _key):
+            return None
+
+    collector = StandaloneCollector.__new__(StandaloneCollector)
+    collector._account_budget_seconds = None
+    collector.checkpoints = FakeCheckpoints()
+
+    def collect_story(row, *, insights, **_kwargs):
+        calls.append((row.link_id, insights))
+        return WorkerAccountResult(
+            platform="instagram",
+            brand_id=row.brand_id,
+            asset_id=row.asset_id,
+            status="success",
+            content_count=1 if row.link_id != 2 else 0,
+        )
+
+    collector._collect_instagram_stories = collect_story
+    collector._collect_story_hot_lane(rows, deadline=None)
+
+    assert calls == [
+        (1, False),
+        (2, False),
+        (3, False),
+        (1, True),
+        (3, True),
+    ]
+    assert collector.story_hot_lane_complete is True
+
+
+def test_story_discovery_respects_the_total_scheduled_run_deadline(monkeypatch) -> None:
+    rows = tuple(
+        CollectionTargetRow(
+            link_id=link_id,
+            connection_id=link_id + 10,
+            asset_id=link_id + 20,
+            brand_id=link_id + 30,
+            platform=PlatformId.INSTAGRAM,
+            external_id=f"ig-{link_id}",
+            display_name=f"IG {link_id}",
+            credential_reference=f"vault:{link_id}",
+            backfill_status="complete",
+        )
+        for link_id in (1, 2)
+    )
+    collector = StandaloneCollector.__new__(StandaloneCollector)
+    collector._account_budget_seconds = None
+    collector._collect_instagram_stories = lambda *_args, **_kwargs: pytest.fail(
+        "expired discovery lane must not call the provider"
+    )
+    monkeypatch.setattr(collector_module.time, "monotonic", lambda: 11.0)
+
+    collector._collect_story_hot_lane(rows, deadline=10.0)
+
+    assert collector.story_hot_lane_complete is False
+    assert collector.story_hot_lane_failures == 2
+
+
+def test_story_snapshot_requests_insight_preserving_upsert() -> None:
+    calls: list[tuple[object, bool]] = []
+
+    class FakeContentStore:
+        def upsert(self, record: object, *, preserve_insights: bool = False) -> None:
+            calls.append((record, preserve_insights))
+
+    record = object()
+    _StorySnapshotContentStore(FakeContentStore()).upsert(record)
+
+    assert calls == [(record, True)]

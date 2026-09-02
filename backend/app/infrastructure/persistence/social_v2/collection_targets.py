@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -37,6 +38,19 @@ class PendingTikTokTarget:
     external_id: str
     display_name: str
     credential_reference: str
+
+
+@dataclass(frozen=True)
+class ScheduledCollectionRound:
+    """Durable account order for one complete scheduled collection round."""
+
+    round_id: int
+    targets: tuple[CollectionTargetRow, ...]
+    completed_count: int
+    total_count: int
+
+
+SCHEDULED_COLLECTION_ROUND_KEY = "v2:collection-round:scheduled-all"
 
 
 class SocialCollectionTargetStore:
@@ -125,6 +139,115 @@ class SocialCollectionTargetStore:
                         exc,
                     )
             return tuple(targets)
+
+    def scheduled_round(
+        self,
+        targets: tuple[CollectionTargetRow, ...],
+    ) -> ScheduledCollectionRound:
+        """Return the unfinished tail of a stable, durable account round.
+
+        A timer process can stop at its time budget without losing its place.
+        Accounts disconnected after the round began are skipped. Newly
+        connected accounts are appended to the unfinished tail, so one
+        orchestrator owns collection without delaying them until a later round.
+        """
+        self._write_policy.assert_allows_mutation("collection_round.load")
+        current = {target.link_id: target for target in targets}
+        if len(current) != len(targets):
+            raise ValueError("collection_round_duplicate_target")
+        with self.engine.begin() as connection:
+            stored = connection.execute(
+                text(
+                    """SELECT payload_json FROM social_projection_state
+                       WHERE projection_key=:key
+                       FOR UPDATE"""
+                ),
+                {"key": SCHEDULED_COLLECTION_ROUND_KEY},
+            ).scalar_one_or_none()
+            previous_round_id = 0
+            account_ids: list[int] = []
+            next_index = 0
+            if stored is not None:
+                previous_round_id, account_ids, next_index = _collection_round_payload(stored)
+            # A completed (or first) round snapshots a fresh stable order. Do
+            # not continuously rebuild the list from last_synced_at: doing so
+            # was what let the tail disappear behind the same front accounts.
+            if stored is None or next_index >= len(account_ids):
+                round_id = previous_round_id + 1
+                account_ids = [target.link_id for target in targets]
+                next_index = 0
+            else:
+                round_id = previous_round_id
+                # Accounts can be deliberately disconnected while a round is
+                # in progress. Remove them from the unfinished tail so each
+                # subsequent acknowledgement still names the exact next ID.
+                # Newly added IDs are appended after the existing unfinished
+                # tail, preserving fairness without needing a second timer.
+                account_ids = [
+                    *account_ids[:next_index],
+                    *(link_id for link_id in account_ids[next_index:] if link_id in current),
+                ]
+                known_ids = set(account_ids)
+                account_ids.extend(
+                    target.link_id for target in targets if target.link_id not in known_ids
+                )
+            payload = _collection_round_json(round_id, account_ids, next_index)
+            connection.execute(
+                text(
+                    """INSERT INTO social_projection_state
+                       (projection_key, payload_json, updated_at)
+                       VALUES (:key, CAST(:payload AS jsonb), now())
+                       ON CONFLICT (projection_key) DO UPDATE
+                       SET payload_json=EXCLUDED.payload_json, updated_at=now()"""
+                ),
+                {"key": SCHEDULED_COLLECTION_ROUND_KEY, "payload": payload},
+            )
+        remaining = tuple(
+            current[link_id]
+            for link_id in account_ids[next_index:]
+            if link_id in current
+        )
+        return ScheduledCollectionRound(
+            round_id=round_id,
+            targets=remaining,
+            completed_count=next_index,
+            total_count=len(account_ids),
+        )
+
+    def advance_scheduled_round(self, *, round_id: int, link_id: int) -> tuple[int, int]:
+        """Durably acknowledge one attempted target in the current round."""
+        self._write_policy.assert_allows_mutation("collection_round.advance")
+        with self.engine.begin() as connection:
+            stored = connection.execute(
+                text(
+                    """SELECT payload_json FROM social_projection_state
+                       WHERE projection_key=:key
+                       FOR UPDATE"""
+                ),
+                {"key": SCHEDULED_COLLECTION_ROUND_KEY},
+            ).scalar_one_or_none()
+            if stored is None:
+                raise RuntimeError("collection_round_missing")
+            stored_round_id, account_ids, next_index = _collection_round_payload(stored)
+            if stored_round_id != round_id:
+                raise RuntimeError("collection_round_changed")
+            if next_index >= len(account_ids) or account_ids[next_index] != link_id:
+                raise RuntimeError("collection_round_out_of_order")
+            next_index += 1
+            connection.execute(
+                text(
+                    """UPDATE social_projection_state
+                       SET payload_json=CAST(:payload AS jsonb), updated_at=now()
+                       WHERE projection_key=:key"""
+                ),
+                {
+                    "key": SCHEDULED_COLLECTION_ROUND_KEY,
+                    "payload": _collection_round_json(
+                        stored_round_id, account_ids, next_index
+                    ),
+                },
+            )
+        return next_index, len(account_ids)
 
     def pending_tiktok(self, connection_id: int) -> PendingTikTokTarget | None:
         if connection_id < 1:
@@ -334,8 +457,45 @@ def _connected_target(row: Mapping[str, Any]) -> CollectionTargetRow:
         platform=platform,
         external_id=str(row["external_id"]),
         display_name=str(row["display_name"]),
-            credential_reference=reference,
+        credential_reference=reference,
         backfill_status=str(row["backfill_status"]),
+    )
+
+
+def _collection_round_payload(payload: Mapping[str, Any]) -> tuple[int, list[int], int]:
+    try:
+        if int(payload["format_version"]) != 1:
+            raise ValueError
+        round_id = int(payload["round_id"])
+        raw_ids = payload["account_link_ids"]
+        next_index = int(payload["next_index"])
+        if (
+            round_id < 1
+            or not isinstance(raw_ids, list)
+            or any(
+                isinstance(value, bool) or not isinstance(value, int) or value < 1
+                for value in raw_ids
+            )
+            or len(set(raw_ids)) != len(raw_ids)
+            or next_index < 0
+            or next_index > len(raw_ids)
+        ):
+            raise ValueError
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("collection_round_payload_invalid") from exc
+    return round_id, list(raw_ids), next_index
+
+
+def _collection_round_json(round_id: int, account_ids: list[int], next_index: int) -> str:
+    return json.dumps(
+        {
+            "format_version": 1,
+            "round_id": round_id,
+            "account_link_ids": account_ids,
+            "next_index": next_index,
+        },
+        separators=(",", ":"),
+        sort_keys=True,
     )
 
 
@@ -355,5 +515,6 @@ def _credential_reference(payload: Mapping[str, object]) -> str:
 __all__ = [
     "CollectionTargetRow",
     "PendingTikTokTarget",
+    "ScheduledCollectionRound",
     "SocialCollectionTargetStore",
 ]

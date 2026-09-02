@@ -36,3 +36,7 @@ def test_a_run_that_reached_nothing_is_a_failure() -> None:
 
 def test_a_run_with_no_accounts_to_collect_is_not_a_failure() -> None:
     assert collection_exit_code(()) == 0
+
+
+def test_incomplete_story_hot_lane_is_a_critical_run_failure() -> None:
+    assert collection_exit_code((_result("success"),), critical_failure=True) == 1

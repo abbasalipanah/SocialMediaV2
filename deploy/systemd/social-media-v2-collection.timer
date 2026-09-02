@@ -4,7 +4,10 @@ Description=Run Social Media V2 collection every 30 minutes
 [Timer]
 OnCalendar=*:0/30
 Persistent=true
-RandomizedDelaySec=90
+# Stories expire upstream, so collection begins on the half-hour boundary
+# instead of being deliberately jittered as much as ninety seconds later.
+AccuracySec=1s
+RandomizedDelaySec=0
 Unit=social-media-v2-collection.service
 
 [Install]
