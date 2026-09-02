@@ -565,6 +565,15 @@ describe("Phase 7 application shell", () => {
           },
         }));
       }
+      if (url.includes("/api/dashboards/facebook") && url.includes("start_date=")) {
+        return Promise.resolve(json({
+          ...dashboard,
+          meta: {
+            ...dashboard.meta,
+            date_range: { start_on: "2026-07-01", end_on: "2026-07-10", key: "custom" },
+          },
+        }));
+      }
       return fallback(input, init);
     });
     renderApp("/", request);
@@ -590,6 +599,25 @@ describe("Phase 7 application shell", () => {
       "title",
       "2026-07-01 to 2026-07-10",
     );
+    expect(JSON.parse(window.localStorage.getItem("social-media-v2:reporting-period:user-1") ?? "null")).toEqual({
+      key: "selected_period",
+      startDate: "2026-07-01",
+      endDate: "2026-07-10",
+    });
+
+    const channelNavigation = screen.getByRole("navigation", { name: "Connected social channels" });
+    await user.click(within(channelNavigation).getByRole("link", { name: "Facebook" }));
+    expect(await screen.findByRole(
+      "combobox",
+      { name: "Date period" },
+      { timeout: 3_000 },
+    )).toHaveValue("selected_period");
+    await waitFor(() => expect(request.mock.calls.some(([input]) => {
+      const url = String(input);
+      return url.includes("/api/dashboards/facebook")
+        && url.includes("start_date=2026-07-01")
+        && url.includes("end_date=2026-07-10");
+    })).toBe(true));
   });
 
   it("never shows an old platform delta under a newly selected date period", async () => {

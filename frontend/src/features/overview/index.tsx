@@ -1,5 +1,3 @@
-import { useState } from "react";
-
 import { useBrandScope } from "../../app/BrandScopeProvider";
 import { useAuth } from "../../auth";
 import {
@@ -7,19 +5,16 @@ import {
   DashboardLoading,
 } from "../dashboard/DashboardFrame";
 import {
-  DEFAULT_REPORTING_PERIOD,
-  type ReportingPeriod,
-} from "../dashboard/catalog";
-import {
   useAiSummaryLimit,
   useGenerateAiSummary,
   useInsights,
   useOverviewDashboard,
 } from "../dashboard/useDashboard";
+import { useReportingPeriod } from "../dashboard/useReportingPeriod";
 import { AccumulateSocialOverview } from "./AccumulateSocialOverview";
 
 export default function OverviewPage() {
-  const [period, setPeriod] = useState<ReportingPeriod>(DEFAULT_REPORTING_PERIOD);
+  const [period, setPeriod] = useReportingPeriod();
   const { user } = useAuth();
   const { selectedBrand, selectedBrandId, rollup } = useBrandScope();
   const query = useOverviewDashboard(period);

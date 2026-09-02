@@ -11,15 +11,14 @@ import {
   DashboardLoading,
 } from "./DashboardFrame";
 import {
-  DEFAULT_REPORTING_PERIOD,
   PLATFORM_DESCRIPTIONS,
   PLATFORM_LABELS,
   platformTabs,
   type DashboardTab,
-  type ReportingPeriod,
 } from "./catalog";
 import { DatePeriodControl } from "./DatePeriodControl";
 import { useChannelDashboard } from "./useDashboard";
+import { useReportingPeriod } from "./useReportingPeriod";
 import { ReportExport } from "./ReportExport";
 
 function TabContent({ platform, tab, data }: {
@@ -50,7 +49,7 @@ export function PlatformPage({ platform }: { platform: Platform }) {
     ?.capabilities.some((item) => item.capability === "audience" && ["available", "partial"].includes(item.status)) ?? false;
   const tabs = platformTabs(platform, audienceAvailable);
   const [tab, setTab] = useState<DashboardTab["id"]>(() => tabFromSearch(location.search, tabs));
-  const [period, setPeriod] = useState<ReportingPeriod>(DEFAULT_REPORTING_PERIOD);
+  const [period, setPeriod] = useReportingPeriod();
   const query = useChannelDashboard(platform, period, tab);
 
   useEffect(() => {
