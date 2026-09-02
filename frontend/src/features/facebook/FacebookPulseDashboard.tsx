@@ -73,6 +73,7 @@ type ContentSortKey =
   | "date"
   | "type"
   | "views"
+  | "reach"
   | "interactions"
   | "likes"
   | "comments"
@@ -81,6 +82,7 @@ type ContentSortKey =
   | "quotes"
   | "saves"
   | "link_clicks"
+  | "provider_clicks"
   | "profile_clicks"
   | "profile_visits"
   | "video_views"
@@ -119,8 +121,10 @@ function safeContentUrl(rawUrl: string): string | null {
   }
 }
 
-function contentEngagement(item: DashboardContent): number | null {
-  const delivery = item.reach !== null && item.reach > 0 ? item.reach : item.views;
+function contentEngagement(item: DashboardContent, preferImpressions = false): number | null {
+  const delivery = preferImpressions
+    ? item.views
+    : item.reach !== null && item.reach > 0 ? item.reach : item.views;
   return delivery !== null && delivery > 0 && item.interactions !== null
     ? (item.interactions / delivery) * 100
     : null;
@@ -144,11 +148,16 @@ function contentDateLabel(value: string | null): string {
     }).format(parsed);
 }
 
-function contentSortValue(item: DashboardContent, key: ContentSortKey): string | number | null {
+function contentSortValue(
+  item: DashboardContent,
+  key: ContentSortKey,
+  preferImpressions = false,
+): string | number | null {
   if (key === "caption") return item.message || `Untitled ${humanize(item.content_type).toLowerCase()}`;
   if (key === "date") return contentPublishedAt(item);
   if (key === "type") return humanize(item.content_type);
   if (key === "views") return item.views;
+  if (key === "reach") return item.reach;
   if (key === "interactions") return item.interactions;
   if (key === "likes") return item.likes_count;
   if (key === "comments") return item.comments_count;
@@ -157,10 +166,11 @@ function contentSortValue(item: DashboardContent, key: ContentSortKey): string |
   if (key === "quotes") return item.quotes_count;
   if (key === "saves") return item.saves_count;
   if (key === "link_clicks") return item.link_clicks;
+  if (key === "provider_clicks") return item.clicks_count;
   if (key === "profile_clicks") return item.profile_clicks;
   if (key === "profile_visits") return item.profile_visits;
   if (key === "video_views") return item.video_views_count;
-  return contentEngagement(item);
+  return contentEngagement(item, preferImpressions);
 }
 
 function defaultContentSortDirection(key: ContentSortKey): ContentSortDirection {
@@ -819,16 +829,17 @@ export function PerformingContentTable({
   variant = "default",
 }: {
   content: DashboardContent[];
-  variant?: "default" | "x";
+  variant?: "default" | "linkedin" | "x";
 }) {
   const x = variant === "x";
+  const linkedin = variant === "linkedin";
   const [sort, setSort] = useState<{ direction: ContentSortDirection; key: ContentSortKey }>({
     direction: "desc",
     key: "date",
   });
   const rows = useMemo(() => [...content].sort((left, right) => {
-    const leftValue = contentSortValue(left, sort.key);
-    const rightValue = contentSortValue(right, sort.key);
+    const leftValue = contentSortValue(left, sort.key, linkedin);
+    const rightValue = contentSortValue(right, sort.key, linkedin);
     if (leftValue === null && rightValue === null) return left.external_content_id.localeCompare(right.external_content_id);
     if (leftValue === null) return 1;
     if (rightValue === null) return -1;
@@ -846,15 +857,16 @@ export function PerformingContentTable({
   const sortDirection = (key: ContentSortKey) => sort.key === key ? sort.direction : null;
   return (
     <article className="facebook-pulse-table-card">
-      <PulseTableHeading title={x ? "All Performing Posts" : "All Performing Content"} />
+      <PulseTableHeading title={x || linkedin ? "All Performing Posts" : "All Performing Content"} />
       <div className="facebook-table-scroll"><table className="facebook-performing-content-table"><thead><tr>
         <th>#</th>
         <th>Cover</th>
         <SortableContentHeader activeDirection={sortDirection("caption")} label="Caption" onSort={() => sortBy("caption")} />
         <SortableContentHeader activeDirection={sortDirection("date")} label="Date" onSort={() => sortBy("date")} />
         <SortableContentHeader activeDirection={sortDirection("type")} label="Type" onSort={() => sortBy("type")} />
-        <SortableContentHeader activeDirection={sortDirection("views")} label={x ? "Impressions" : "Post Views"} onSort={() => sortBy("views")} />
-        <SortableContentHeader activeDirection={sortDirection("interactions")} label={x ? "Engagements" : "Interactions"} onSort={() => sortBy("interactions")} />
+        <SortableContentHeader activeDirection={sortDirection("views")} label={x || linkedin ? "Impressions" : "Post Views"} onSort={() => sortBy("views")} />
+        {linkedin && <SortableContentHeader activeDirection={sortDirection("reach")} label="Unique Impressions" onSort={() => sortBy("reach")} />}
+        <SortableContentHeader activeDirection={sortDirection("interactions")} label={x || linkedin ? "Engagements" : "Interactions"} onSort={() => sortBy("interactions")} />
         <SortableContentHeader activeDirection={sortDirection("likes")} label="Likes" onSort={() => sortBy("likes")} />
         <SortableContentHeader activeDirection={sortDirection("comments")} label={x ? "Replies" : "Comments"} onSort={() => sortBy("comments")} />
         {x
@@ -867,9 +879,10 @@ export function PerformingContentTable({
         {x && <SortableContentHeader activeDirection={sortDirection("link_clicks")} label="Link Clicks" onSort={() => sortBy("link_clicks")} />}
         {x && <SortableContentHeader activeDirection={sortDirection("profile_clicks")} label="Profile Clicks" onSort={() => sortBy("profile_clicks")} />}
         {x && <SortableContentHeader activeDirection={sortDirection("video_views")} label="Video Views" onSort={() => sortBy("video_views")} />}
-        <SortableContentHeader activeDirection={sortDirection("engagement")} label={x ? "Engagement Rate" : "Engagement"} onSort={() => sortBy("engagement")} />
+        {linkedin && <SortableContentHeader activeDirection={sortDirection("provider_clicks")} label="Clicks" onSort={() => sortBy("provider_clicks")} />}
+        <SortableContentHeader activeDirection={sortDirection("engagement")} label={x || linkedin ? "Engagement Rate" : "Engagement"} onSort={() => sortBy("engagement")} />
       </tr></thead><tbody>
-        {rows.length === 0 ? <tr><td colSpan={x ? 16 : 11}>{x ? "No posts were collected in this period." : "No content was collected in this period."}</td></tr> : rows.map((item, index) => {
+        {rows.length === 0 ? <tr><td colSpan={x ? 16 : linkedin ? 13 : 11}>{x || linkedin ? "No posts were collected in this period." : "No content was collected in this period."}</td></tr> : rows.map((item, index) => {
           const contentUrl = safeContentUrl(item.permalink);
           const title = item.message || `Untitled ${humanize(item.content_type).toLowerCase()}`;
           const cover = (
@@ -880,7 +893,7 @@ export function PerformingContentTable({
             </span>
           );
           const caption = <b className="facebook-content-caption" title={title}>{title}</b>;
-          const engagement = contentEngagement(item);
+          const engagement = contentEngagement(item, linkedin);
           return (
             <tr key={`${item.account_id}-${item.external_content_id}`}>
               <td>{index + 1}</td>
@@ -897,6 +910,7 @@ export function PerformingContentTable({
               <td title={item.published_at ?? undefined}>{contentDateLabel(item.published_at)}</td>
               <td><ContentTypeChip contentType={item.content_type} /></td>
               <td>{item.views === null ? "—" : formatNumber(item.views)}</td>
+              {linkedin && <td>{compact(item.reach)}</td>}
               <td>{compact(item.interactions)}</td>
               <td>{compact(item.likes_count)}</td>
               <td>{compact(item.comments_count)}</td>
@@ -905,6 +919,7 @@ export function PerformingContentTable({
               {x && <td>{compact(item.link_clicks)}</td>}
               {x && <td>{compact(item.profile_clicks)}</td>}
               {x && <td>{compact(item.video_views_count)}</td>}
+              {linkedin && <td>{compact(item.clicks_count)}</td>}
               <td>{engagement === null ? "—" : <span className="facebook-engagement-score">{engagement.toFixed(1)}%</span>}</td>
             </tr>
           );

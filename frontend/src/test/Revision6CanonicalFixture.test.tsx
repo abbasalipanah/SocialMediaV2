@@ -287,6 +287,7 @@ function adapt(payload: SourcePayload): PlatformDashboard {
       average_time_watched: item.average_time_watched ?? null,
       saves_count: null,
       profile_visits: null,
+      clicks_count: null,
       reposts_count: null,
       quotes_count: null,
       link_clicks: null,

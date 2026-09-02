@@ -130,6 +130,7 @@ export const platformAccountsSchema = z.object({
 
 export const metricIdSchema = z.enum([
   "followers",
+  "follower_gains",
   "following",
   "new_followers",
   "follows",
@@ -146,6 +147,7 @@ export const metricIdSchema = z.enum([
   "page_views",
   "profile_views",
   "website_clicks",
+  "clicks",
   "total_actions",
   "reactions",
   "media_count",
@@ -251,6 +253,7 @@ export const dashboardContentSchema = z.object({
   total_time_watched: z.number().nullable(),
   average_time_watched: z.number().nullable(),
   saves_count: z.number().nullable(),
+  clicks_count: z.number().int().nullable().default(null),
   profile_visits: z.number().nullable(),
   reposts_count: z.number().int().nullable().default(null),
   quotes_count: z.number().int().nullable().default(null),

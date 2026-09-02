@@ -1,5 +1,5 @@
 import { CalendarDays } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { lazy, useEffect, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "../../routing";
 
 import type { Platform } from "../../api";
@@ -16,6 +16,12 @@ import {
 import { PLATFORM_DESCRIPTIONS, PLATFORM_LABELS, RANGE_OPTIONS, platformTabs, type DashboardTab, type RangeKey } from "./catalog";
 import { useChannelDashboard } from "./useDashboard";
 import { ReportExport } from "./ReportExport";
+
+const LinkedInPulseDashboard = lazy(() =>
+  import("../linkedin/LinkedInPulseDashboard").then((module) => ({
+    default: module.LinkedInPulseDashboard,
+  })),
+);
 
 function TabContent({ platform, tab, data }: {
   platform: Platform;
@@ -47,7 +53,12 @@ function TabContent({ platform, tab, data }: {
         tab={tab as "cover" | "profile" | "content" | "audience"}
       />
     ),
-    linkedin: () => <StandardPlatformDashboard data={data} platform={platform} tab={tab} />,
+    linkedin: () => (
+      <LinkedInPulseDashboard
+        data={data}
+        tab={tab as "cover" | "page" | "content" | "audience"}
+      />
+    ),
     youtube: () => <StandardPlatformDashboard data={data} platform={platform} tab={tab} />,
   };
   return renderers[platform]();

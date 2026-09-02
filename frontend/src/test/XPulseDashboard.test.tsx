@@ -66,6 +66,7 @@ const dashboard: PlatformDashboard = {
       average_time_watched: null,
       saves_count: 5,
       profile_visits: null,
+      clicks_count: null,
       reposts_count: 6,
       quotes_count: 3,
       link_clicks: 11,

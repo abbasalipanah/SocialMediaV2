@@ -443,6 +443,7 @@ describe("Phase 8 product surfaces", () => {
         average_time_watched: null,
         saves_count: null,
         profile_visits: null,
+        clicks_count: null,
         data_status: "partial" as const,
       }],
     } as unknown as PlatformDashboard;
@@ -589,6 +590,7 @@ describe("Phase 8 product surfaces", () => {
         average_time_watched: null,
         saves_count: null,
         profile_visits: null,
+        clicks_count: null,
         reposts_count: null,
         quotes_count: null,
         link_clicks: null,

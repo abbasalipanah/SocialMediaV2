@@ -17,6 +17,7 @@ export type RangeKey = (typeof RANGE_OPTIONS)[number]["id"];
 
 export const METRIC_LABELS: Record<MetricId, string> = {
   followers: "Followers",
+  follower_gains: "Follower gains",
   following: "Following",
   new_followers: "New followers",
   follows: "Follows",
@@ -33,6 +34,7 @@ export const METRIC_LABELS: Record<MetricId, string> = {
   page_views: "Page views",
   profile_views: "Profile views",
   website_clicks: "Website clicks",
+  clicks: "Clicks",
   total_actions: "Total actions",
   reactions: "Reactions",
   media_count: "Published content",
@@ -61,7 +63,7 @@ export const PRIMARY_METRICS: Record<Platform | "overview", MetricId[]> = {
     "video_engagement_rate",
   ],
   x: ["followers", "new_followers", "views", "interactions", "engagement_rate", "media_count"],
-  linkedin: ["followers", "new_followers", "views", "interactions", "engagement_rate", "media_count"],
+  linkedin: ["followers", "follower_gains", "views", "reach", "page_views", "engagement_rate"],
   youtube: ["followers", "new_followers", "views", "interactions", "engagement_rate", "media_count"],
 };
 
