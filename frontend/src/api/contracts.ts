@@ -161,6 +161,10 @@ export const metricIdSchema = z.enum([
   "video_shares_total",
   "video_engagements_total",
   "video_engagement_rate",
+  "engaged_views",
+  "watch_time_minutes",
+  "playlist_additions",
+  "playlist_removals",
 ]);
 export type MetricId = z.infer<typeof metricIdSchema>;
 

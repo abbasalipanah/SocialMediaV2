@@ -8,7 +8,7 @@ import { FacebookPulseDashboard } from "../facebook/FacebookPulseDashboard";
 import { InstagramPulseDashboard } from "../instagram/InstagramPulseDashboard";
 import { TikTokPulseDashboard } from "../tiktok/TikTokPulseDashboard";
 import { XPulseDashboard } from "../x/XPulseDashboard";
-import { StandardPlatformDashboard } from "./StandardPlatformDashboard";
+import { YouTubePulseDashboard } from "../youtube/YouTubePulseDashboard";
 import {
   DashboardError,
   DashboardLoading,
@@ -59,7 +59,12 @@ function TabContent({ platform, tab, data }: {
         tab={tab as "cover" | "page" | "content" | "audience"}
       />
     ),
-    youtube: () => <StandardPlatformDashboard data={data} platform={platform} tab={tab} />,
+    youtube: () => (
+      <YouTubePulseDashboard
+        data={data}
+        tab={tab as "account" | "cover" | "content" | "audience"}
+      />
+    ),
   };
   return renderers[platform]();
 }

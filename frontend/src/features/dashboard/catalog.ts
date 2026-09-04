@@ -48,6 +48,10 @@ export const METRIC_LABELS: Record<MetricId, string> = {
   video_shares_total: "Video shares",
   video_engagements_total: "Video engagements",
   video_engagement_rate: "Video engagement rate",
+  engaged_views: "Engaged views",
+  watch_time_minutes: "Watch time",
+  playlist_additions: "Playlist additions",
+  playlist_removals: "Playlist removals",
 };
 
 export const PRIMARY_METRICS: Record<Platform | "overview", MetricId[]> = {
@@ -64,7 +68,7 @@ export const PRIMARY_METRICS: Record<Platform | "overview", MetricId[]> = {
   ],
   x: ["followers", "new_followers", "views", "interactions", "engagement_rate", "media_count"],
   linkedin: ["followers", "follower_gains", "views", "reach", "page_views", "engagement_rate"],
-  youtube: ["followers", "new_followers", "views", "interactions", "engagement_rate", "media_count"],
+  youtube: ["followers", "views", "engaged_views", "watch_time_minutes", "follows", "engagement_rate"],
 };
 
 export const TREND_METRICS: MetricId[] = [
@@ -80,6 +84,13 @@ export const TREND_METRICS: MetricId[] = [
   "profile_views",
   "video_views_total",
   "video_engagements_total",
+  "engaged_views",
+  "watch_time_minutes",
+  "video_likes_daily",
+  "video_comments_daily",
+  "video_shares_daily",
+  "playlist_additions",
+  "playlist_removals",
 ];
 
 export function platformTabs(platform: Platform, audienceAvailable: boolean): DashboardTab[] {

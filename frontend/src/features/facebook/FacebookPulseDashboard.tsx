@@ -829,10 +829,11 @@ export function PerformingContentTable({
   variant = "default",
 }: {
   content: DashboardContent[];
-  variant?: "default" | "linkedin" | "x";
+  variant?: "default" | "linkedin" | "x" | "youtube";
 }) {
   const x = variant === "x";
   const linkedin = variant === "linkedin";
+  const youtube = variant === "youtube";
   const [sort, setSort] = useState<{ direction: ContentSortDirection; key: ContentSortKey }>({
     direction: "desc",
     key: "date",
@@ -857,16 +858,16 @@ export function PerformingContentTable({
   const sortDirection = (key: ContentSortKey) => sort.key === key ? sort.direction : null;
   return (
     <article className="facebook-pulse-table-card">
-      <PulseTableHeading title={x || linkedin ? "All Performing Posts" : "All Performing Content"} />
+      <PulseTableHeading title={youtube ? "All Performing Videos" : x || linkedin ? "All Performing Posts" : "All Performing Content"} />
       <div className="facebook-table-scroll"><table className="facebook-performing-content-table"><thead><tr>
         <th>#</th>
         <th>Cover</th>
         <SortableContentHeader activeDirection={sortDirection("caption")} label="Caption" onSort={() => sortBy("caption")} />
         <SortableContentHeader activeDirection={sortDirection("date")} label="Date" onSort={() => sortBy("date")} />
         <SortableContentHeader activeDirection={sortDirection("type")} label="Type" onSort={() => sortBy("type")} />
-        <SortableContentHeader activeDirection={sortDirection("views")} label={x || linkedin ? "Impressions" : "Post Views"} onSort={() => sortBy("views")} />
+        <SortableContentHeader activeDirection={sortDirection("views")} label={youtube ? "Views" : x || linkedin ? "Impressions" : "Post Views"} onSort={() => sortBy("views")} />
         {linkedin && <SortableContentHeader activeDirection={sortDirection("reach")} label="Unique Impressions" onSort={() => sortBy("reach")} />}
-        <SortableContentHeader activeDirection={sortDirection("interactions")} label={x || linkedin ? "Engagements" : "Interactions"} onSort={() => sortBy("interactions")} />
+        <SortableContentHeader activeDirection={sortDirection("interactions")} label={youtube ? "Visible Engagements" : x || linkedin ? "Engagements" : "Interactions"} onSort={() => sortBy("interactions")} />
         <SortableContentHeader activeDirection={sortDirection("likes")} label="Likes" onSort={() => sortBy("likes")} />
         <SortableContentHeader activeDirection={sortDirection("comments")} label={x ? "Replies" : "Comments"} onSort={() => sortBy("comments")} />
         {x
@@ -880,7 +881,7 @@ export function PerformingContentTable({
         {x && <SortableContentHeader activeDirection={sortDirection("profile_clicks")} label="Profile Clicks" onSort={() => sortBy("profile_clicks")} />}
         {x && <SortableContentHeader activeDirection={sortDirection("video_views")} label="Video Views" onSort={() => sortBy("video_views")} />}
         {linkedin && <SortableContentHeader activeDirection={sortDirection("provider_clicks")} label="Clicks" onSort={() => sortBy("provider_clicks")} />}
-        <SortableContentHeader activeDirection={sortDirection("engagement")} label={x || linkedin ? "Engagement Rate" : "Engagement"} onSort={() => sortBy("engagement")} />
+        <SortableContentHeader activeDirection={sortDirection("engagement")} label={youtube ? "Visible Engagement Rate" : x || linkedin ? "Engagement Rate" : "Engagement"} onSort={() => sortBy("engagement")} />
       </tr></thead><tbody>
         {rows.length === 0 ? <tr><td colSpan={x ? 16 : linkedin ? 13 : 11}>{x || linkedin ? "No posts were collected in this period." : "No content was collected in this period."}</td></tr> : rows.map((item, index) => {
           const contentUrl = safeContentUrl(item.permalink);
@@ -893,7 +894,7 @@ export function PerformingContentTable({
             </span>
           );
           const caption = <b className="facebook-content-caption" title={title}>{title}</b>;
-          const engagement = contentEngagement(item, linkedin);
+          const engagement = contentEngagement(item, linkedin || youtube);
           return (
             <tr key={`${item.account_id}-${item.external_content_id}`}>
               <td>{index + 1}</td>
