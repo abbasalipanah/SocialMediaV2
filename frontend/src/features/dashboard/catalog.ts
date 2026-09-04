@@ -73,6 +73,7 @@ export const METRIC_LABELS: Record<MetricId, string> = {
   watch_time_minutes: "Watch time",
   playlist_additions: "Playlist additions",
   playlist_removals: "Playlist removals",
+  viewer_percentage: "Viewer percentage",
 };
 
 export const PRIMARY_METRICS: Record<Platform | "overview", MetricId[]> = {

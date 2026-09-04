@@ -165,6 +165,7 @@ export const metricIdSchema = z.enum([
   "watch_time_minutes",
   "playlist_additions",
   "playlist_removals",
+  "viewer_percentage",
 ]);
 export type MetricId = z.infer<typeof metricIdSchema>;
 
@@ -206,7 +207,7 @@ export const dashboardMetricSchema = z.object({
   previous_value: z.number().nullable(),
   delta_pct: z.number().nullable(),
   semantic_type: z.enum(["snapshot", "flow", "cumulative", "ratio"]),
-  unit: z.enum(["count", "ratio"]),
+  unit: z.enum(["count", "ratio", "percentage"]),
   data_status: dataStatusSchema,
   methodology: z.string().min(1),
   availability_reason: z.string().nullable(),

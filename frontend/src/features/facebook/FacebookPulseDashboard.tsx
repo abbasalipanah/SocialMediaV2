@@ -63,7 +63,7 @@ export type PulseKpi = {
   delta: number | null;
   icon: LucideIcon;
   color: string;
-  unit?: "count" | "ratio";
+  unit?: "count" | "ratio" | "percentage";
 };
 
 export type PieRow = { label: string; value: number; color: string };
@@ -320,7 +320,13 @@ function PulseKpiCard({ item }: { item: PulseKpi }) {
           {item.delta === null ? "—" : `${Math.abs(item.delta).toFixed(1)}%`}
         </span>
       </div>
-      <strong>{item.value === null ? "—" : item.unit === "ratio" ? new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 1 }).format(item.value) : compact(item.value)}</strong>
+      <strong>{item.value === null
+        ? "—"
+        : item.unit === "ratio"
+          ? new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 1 }).format(item.value)
+          : item.unit === "percentage"
+            ? `${item.value.toFixed(1)}%`
+            : compact(item.value)}</strong>
       <span>{item.label}</span>
     </article>
   );

@@ -1788,7 +1788,7 @@ export interface components {
          * MetricId
          * @enum {string}
          */
-        MetricId: "followers" | "follower_gains" | "following" | "new_followers" | "follows" | "unfollows" | "followers_net" | "reach" | "reach_paid" | "reach_organic" | "views" | "views_paid" | "views_organic" | "interactions" | "engagement_rate" | "page_views" | "profile_views" | "website_clicks" | "clicks" | "total_actions" | "reactions" | "media_count" | "video_views_total" | "video_views_change" | "video_likes_daily" | "video_comments_daily" | "video_shares_daily" | "video_likes_total" | "video_comments_total" | "video_shares_total" | "video_engagements_total" | "video_engagement_rate" | "engaged_views" | "watch_time_minutes" | "playlist_additions" | "playlist_removals";
+        MetricId: "followers" | "follower_gains" | "following" | "new_followers" | "follows" | "unfollows" | "followers_net" | "reach" | "reach_paid" | "reach_organic" | "views" | "views_paid" | "views_organic" | "interactions" | "engagement_rate" | "page_views" | "profile_views" | "website_clicks" | "clicks" | "total_actions" | "reactions" | "media_count" | "video_views_total" | "video_views_change" | "video_likes_daily" | "video_comments_daily" | "video_shares_daily" | "video_likes_total" | "video_comments_total" | "video_shares_total" | "video_engagements_total" | "video_engagement_rate" | "engaged_views" | "watch_time_minutes" | "playlist_additions" | "playlist_removals" | "viewer_percentage";
         /** OAuthChannelAccountItem */
         OAuthChannelAccountItem: {
             /** Connection Id */
@@ -2244,7 +2244,7 @@ export interface components {
          * Unit
          * @enum {string}
          */
-        Unit: "count" | "ratio";
+        Unit: "count" | "ratio" | "percentage";
         /** ValidationError */
         ValidationError: {
             /** Context */

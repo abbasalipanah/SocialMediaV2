@@ -81,6 +81,12 @@ const dashboard: PlatformDashboard = {
     { metric_id: "views", dimension: "youtube_traffic_source", items: [{ key: "YT_SEARCH", value: 30_000, percentage: 62.5 }, { key: "RELATED_VIDEO", value: 18_000, percentage: 37.5 }] },
     { metric_id: "views", dimension: "youtube_subscribed_status", items: [{ key: "SUBSCRIBED", value: 16_000, percentage: 33.33 }, { key: "UNSUBSCRIBED", value: 32_000, percentage: 66.67 }] },
     { metric_id: "views", dimension: "youtube_content_type", items: [{ key: "VIDEO_ON_DEMAND", value: 30_000, percentage: 62.5 }, { key: "SHORTS", value: 18_000, percentage: 37.5 }] },
+    { metric_id: "views", dimension: "youtube_operating_system", items: [{ key: "ANDROID", value: 30_000, percentage: 62.5 }, { key: "WINDOWS", value: 18_000, percentage: 37.5 }] },
+    { metric_id: "views", dimension: "youtube_playback_location", items: [{ key: "WATCH", value: 36_000, percentage: 75 }, { key: "EMBEDDED", value: 12_000, percentage: 25 }] },
+    { metric_id: "views", dimension: "youtube_product", items: [{ key: "CORE", value: 40_000, percentage: 83.33 }, { key: "MUSIC", value: 8_000, percentage: 16.67 }] },
+    { metric_id: "views", dimension: "youtube_live_status", items: [{ key: "VIDEO_ON_DEMAND", value: 45_000, percentage: 93.75 }, { key: "LIVE", value: 3_000, percentage: 6.25 }] },
+    { metric_id: "viewer_percentage", dimension: "youtube_viewer_age", items: [{ key: "age18-24", value: 42, percentage: 42 }, { key: "age25-34", value: 58, percentage: 58 }] },
+    { metric_id: "viewer_percentage", dimension: "youtube_viewer_gender", items: [{ key: "female", value: 55, percentage: 55 }, { key: "male", value: 45, percentage: 45 }] },
   ],
   content: [{
     account_id: 101,
@@ -149,9 +155,15 @@ describe("YouTube pulse dashboard", () => {
     expect(screen.getAllByText("Engaged Views").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Watch Time (hours)").length).toBeGreaterThan(0);
     expect(screen.getByRole("heading", { name: "Content Type Performance" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Video Engagement Activity" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Video Watch Time" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Device Type" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Traffic Sources" })).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Audience Demographics" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Viewer Age" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Viewer Gender" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Operating Systems" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Playback Locations" })).toBeInTheDocument();
+    expect(screen.getByText("Avg. View Duration (sec)")).toBeInTheDocument();
     expect(document.querySelectorAll(".facebook-pulse-kpi")).toHaveLength(18);
 
     const table = screen.getByRole("heading", { name: "All Performing Videos" }).closest("article");
@@ -173,11 +185,23 @@ describe("YouTube pulse dashboard", () => {
     expect(dashboard.content[0]?.shares_count).toBeNull();
   });
 
-  it("shows one honest audience state instead of unsupported empty charts", () => {
+  it("keeps the supported audience structure visible when privacy-thresholded rows are unavailable", () => {
     render(<YouTubePulseDashboard data={{ ...dashboard, breakdowns: [] }} tab="audience" />);
 
-    expect(screen.getByText("YouTube has not returned audience playback breakdowns for this channel and period yet.")).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Device Type" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("heading", { name: "Traffic Sources" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Viewer Age" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Device Type" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Traffic Sources" })).toBeInTheDocument();
+    expect(screen.queryByText("No YouTube channel connected")).not.toBeInTheDocument();
+  });
+
+  it("explains how to populate analytics when no channel is linked", () => {
+    render(<YouTubePulseDashboard data={{
+      ...dashboard,
+      meta: { ...dashboard.meta, resolved_account_ids: [] },
+      breakdowns: [],
+    }} tab="audience" />);
+
+    expect(screen.getByText("No YouTube channel connected")).toBeInTheDocument();
+    expect(screen.getByText(/Connect a YouTube channel in Integrations/u)).toBeInTheDocument();
   });
 });
