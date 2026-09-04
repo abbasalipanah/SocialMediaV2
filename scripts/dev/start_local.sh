@@ -101,15 +101,16 @@ export SOCIAL_META_ACTIVATION_GATE_ENABLED=false
 ) &
 backend_pid=$!
 
-for attempt in $(seq 1 40); do
-  if curl --fail --silent "http://127.0.0.1:${API_PORT}/api/health" >/dev/null; then
+for attempt in $(seq 1 240); do
+  if curl --noproxy '*' --fail --silent --max-time 1 \
+    "http://127.0.0.1:${API_PORT}/api/health" >/dev/null; then
     break
   fi
   if ! kill -0 "$backend_pid" 2>/dev/null; then
     echo "Local demo backend stopped during startup." >&2
     exit 1
   fi
-  if [[ "$attempt" -eq 40 ]]; then
+  if [[ "$attempt" -eq 240 ]]; then
     echo "Local demo backend did not become ready." >&2
     exit 1
   fi
