@@ -23,6 +23,7 @@ from app.domain.metrics import (
     MetricId,
 )
 from app.domain.platforms import PlatformId
+from app.domain.platforms.catalog import platform_definition
 from app.domain.reporting import (
     AvailabilityStatus,
     CommunitySummary,
@@ -34,6 +35,7 @@ from app.domain.reporting import (
     DashboardContentMetrics,
     DashboardContentSummary,
     DashboardHashtag,
+    DashboardMentionSummary,
     DashboardMetric,
     DashboardMetricMethodology,
     DashboardNamedValue,
@@ -442,6 +444,7 @@ def metric_breakdowns(
     samples: tuple[ReportingMetric, ...],
 ) -> tuple[DashboardBreakdown, ...]:
     latest: dict[tuple[MetricId, str, str, int], ReportingMetric] = {}
+    youtube_flows: dict[tuple[MetricId, str, str, int], float] = defaultdict(float)
     for sample in samples:
         if sample.breakdown_key is None or sample.breakdown_value is None:
             continue
@@ -451,12 +454,21 @@ def metric_breakdowns(
             sample.breakdown_value,
             sample.account_id,
         )
+        if (
+            sample.platform is PlatformId.YOUTUBE
+            and sample.breakdown_key.startswith("youtube_")
+            and sample.metric_id in {MetricId.VIEWS, MetricId.WATCH_TIME_MINUTES}
+        ):
+            youtube_flows[key] += sample.value
+            continue
         current = latest.get(key)
         if current is None or sample.observed_on >= current.observed_on:
             latest[key] = sample
     grouped: dict[tuple[MetricId, str], dict[str, float]] = defaultdict(lambda: defaultdict(float))
     for (metric_id, dimension, value, _), sample in latest.items():
         grouped[(metric_id, dimension)][value] += sample.value
+    for (metric_id, dimension, value, _), amount in youtube_flows.items():
+        grouped[(metric_id, dimension)][value] += amount
     return tuple(
         DashboardBreakdown(
             metric_id=metric_id,
@@ -481,6 +493,19 @@ _ENGAGEMENT_TIME_ZONE = ZoneInfo("Europe/Istanbul")
 _WEEKDAY_LABELS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
 
+def _optional_float(value: int | float | None) -> float | None:
+    return float(value) if value is not None else None
+
+
+def _content_interactions(row: ReportingContent) -> float | None:
+    if row.interactions_count is not None:
+        return float(row.interactions_count)
+    counters = (row.likes_count, row.comments_count, row.shares_count)
+    if any(value is None for value in counters):
+        return None
+    return float(sum(value for value in counters if value is not None))
+
+
 def best_time_to_engage_breakdown(
     platform: PlatformId,
     rows: tuple[ReportingContent, ...],
@@ -496,12 +521,6 @@ def best_time_to_engage_breakdown(
     recommendation.
     """
 
-    if platform not in {
-        PlatformId.FACEBOOK,
-        PlatformId.INSTAGRAM,
-        PlatformId.TIKTOK,
-    }:
-        return None
     buckets: dict[tuple[int, int], list[float]] = defaultdict(list)
     for row in rows:
         if row.published_at is None or "story" in row.content_type.strip().lower():
@@ -510,11 +529,9 @@ def best_time_to_engage_breakdown(
         if published_at.tzinfo is None:
             published_at = published_at.replace(tzinfo=UTC)
         local = published_at.astimezone(_ENGAGEMENT_TIME_ZONE)
-        engagement = (
-            row.interactions_count
-            if row.interactions_count is not None
-            else float(row.likes_count + row.comments_count + row.shares_count)
-        )
+        engagement = _content_interactions(row)
+        if engagement is None:
+            continue
         buckets[(local.weekday(), (local.hour // 2) * 2)].append(float(engagement))
     if not buckets:
         return None
@@ -553,10 +570,10 @@ def content_cards(rows: tuple[ReportingContent, ...]) -> tuple[DashboardContent,
             likes_count=row.likes_count,
             comments_count=row.comments_count,
             shares_count=row.shares_count,
-            interactions=int(
-                row.interactions_count
-                if row.interactions_count is not None
-                else row.likes_count + row.comments_count + row.shares_count
+            interactions=(
+                int(interactions)
+                if (interactions := _content_interactions(row)) is not None
+                else None
             ),
             views=row.views_count,
             reach=row.reach_count,
@@ -573,6 +590,20 @@ def content_cards(rows: tuple[ReportingContent, ...]) -> tuple[DashboardContent,
             full_video_watched_rate=row.full_video_watched_rate,
             total_time_watched=row.total_time_watched,
             average_time_watched=row.average_time_watched,
+            saves_count=row.saves_count,
+            profile_visits=row.profile_visits,
+            reposts_count=row.reposts_count,
+            quotes_count=row.quotes_count,
+            clicks_count=row.clicks_count,
+            link_clicks=row.link_clicks,
+            profile_clicks=row.profile_clicks,
+            video_views_count=row.video_views_count,
+            video_playback_0_count=row.video_playback_0_count,
+            video_playback_25_count=row.video_playback_25_count,
+            video_playback_50_count=row.video_playback_50_count,
+            video_playback_75_count=row.video_playback_75_count,
+            video_playback_100_count=row.video_playback_100_count,
+            completion_rate=row.completion_rate,
             data_status=(
                 DataStatus.AVAILABLE
                 if row.views_count is not None and row.reach_count is not None
@@ -598,10 +629,10 @@ def _comparison(value: float | None, previous: float | None) -> DashboardCompari
 class _ContentTotals:
     views: float | None
     reach: float | None
-    likes: float
-    comments: float
-    shares: float
-    interactions: float
+    likes: float | None
+    comments: float | None
+    shares: float | None
+    interactions: float | None
     engagement_rate: float | None
 
 
@@ -618,17 +649,10 @@ def content_metric_comparisons(
     def totals(source: tuple[ReportingContent, ...]) -> _ContentTotals:
         views = optional_sum(tuple(row.views_count for row in source))
         reach = optional_sum(tuple(row.reach_count for row in source))
-        likes = float(sum(row.likes_count for row in source))
-        comments = float(sum(row.comments_count for row in source))
-        shares = float(sum(row.shares_count for row in source))
-        interactions = sum(
-            float(
-                row.interactions_count
-                if row.interactions_count is not None
-                else row.likes_count + row.comments_count + row.shares_count
-            )
-            for row in source
-        )
+        likes = optional_sum(tuple(_optional_float(row.likes_count) for row in source))
+        comments = optional_sum(tuple(_optional_float(row.comments_count) for row in source))
+        shares = optional_sum(tuple(_optional_float(row.shares_count) for row in source))
+        interactions = optional_sum(tuple(_content_interactions(row) for row in source))
         return _ContentTotals(
             views=views,
             reach=reach,
@@ -637,7 +661,9 @@ def content_metric_comparisons(
             shares=shares,
             interactions=interactions,
             engagement_rate=(
-                interactions / views if views is not None and views > 0 else None
+                interactions / views
+                if interactions is not None and views is not None and views > 0
+                else None
             ),
         )
 
@@ -689,6 +715,38 @@ def community_summary(
                 key=lambda item: (-item.like_count, item.external_comment_id),
             )[:8]
         ),
+    )
+
+
+def mention_summary(
+    rows: tuple[ReportingComment, ...], *, accounts_available: bool
+) -> DashboardMentionSummary:
+    by_day: dict[date, int] = defaultdict(int)
+    author_keys: set[str] = set()
+    missing_dates = False
+    for row in rows:
+        if row.author_id:
+            author_keys.add(f"id:{row.author_id}")
+        elif row.author_name:
+            author_keys.add(f"name:{row.author_name.strip().casefold()}")
+        if row.commented_at is None:
+            missing_dates = True
+        else:
+            by_day[row.commented_at.astimezone(UTC).date()] += 1
+    if not accounts_available:
+        status = DataStatus.UNAVAILABLE
+    elif not rows or missing_dates:
+        status = DataStatus.PARTIAL
+    else:
+        status = DataStatus.AVAILABLE
+    return DashboardMentionSummary(
+        total=len(rows),
+        unique_authors=len(author_keys),
+        daily=tuple(
+            DashboardPoint(observed_on=observed_on, value=float(value))
+            for observed_on, value in sorted(by_day.items())
+        ),
+        data_status=status,
     )
 
 
@@ -983,7 +1041,7 @@ def audience_capabilities(
         else AvailabilityStatus.UNAVAILABLE
     )
     return DashboardAudienceCapabilities(
-        source="meta_graph_api_v23" if platform is PlatformId.INSTAGRAM else "tiktok_display_api",
+        source=platform_definition(platform).audience_source,
         geo=geo_status,
         age_gender=age_status,
         activity=(
@@ -1014,12 +1072,8 @@ def _optional_sum(values: tuple[float | None, ...]) -> float | None:
     return sum(available) if available else None
 
 
-def _story_interactions(row: ReportingContent) -> float:
-    return float(
-        row.interactions_count
-        if row.interactions_count is not None
-        else row.likes_count + row.comments_count + row.shares_count
-    )
+def _story_interactions(row: ReportingContent) -> float | None:
+    return _content_interactions(row)
 
 
 def _story_completion(rows: tuple[ReportingContent, ...]) -> float | None:
@@ -1032,14 +1086,14 @@ def _story_summary_from_rows(
 ) -> DashboardStorySummary:
     story_views = _optional_sum(tuple(row.views_count for row in rows))
     story_reach = _optional_sum(tuple(row.reach_count for row in rows))
-    story_interactions = sum(_story_interactions(row) for row in rows) if rows else None
-    story_replies = (
-        sum(
-            row.replies_count if row.replies_count is not None else float(row.comments_count)
+    story_interactions = _optional_sum(tuple(_story_interactions(row) for row in rows))
+    story_replies = _optional_sum(
+        tuple(
+            row.replies_count
+            if row.replies_count is not None
+            else _optional_float(row.comments_count)
             for row in rows
         )
-        if rows
-        else None
     )
     story_completion = _story_completion(rows)
     status = (
@@ -1165,11 +1219,15 @@ def stories_contract(
     actions_from_rows = {
         "replies": _optional_sum(
             tuple(
-                row.replies_count if row.replies_count is not None else float(row.comments_count)
+                row.replies_count
+                if row.replies_count is not None
+                else _optional_float(row.comments_count)
                 for row in story_rows
             )
         ),
-        "shares": _optional_sum(tuple(float(row.shares_count) for row in story_rows)),
+        "shares": _optional_sum(
+            tuple(_optional_float(row.shares_count) for row in story_rows)
+        ),
         "profile_visits": _optional_sum(tuple(row.profile_visits for row in story_rows)),
         MetricId.FOLLOWS.value: _optional_sum(tuple(row.follows_count for row in story_rows)),
         "sticker_taps": _optional_sum(tuple(row.sticker_taps for row in story_rows)),
@@ -1311,9 +1369,9 @@ def stories_contract(
                 replies=(
                     row.replies_count
                     if row.replies_count is not None
-                    else float(row.comments_count)
+                    else _optional_float(row.comments_count)
                 ),
-                shares=float(row.shares_count),
+                shares=_optional_float(row.shares_count),
                 profile_visits=row.profile_visits,
                 follows=row.follows_count,
                 sticker_taps=row.sticker_taps,
@@ -1377,6 +1435,7 @@ __all__ = [
     "metric_cards",
     "metric_methodology",
     "metric_series",
+    "mention_summary",
     "methodology_for_definition",
     "source_breakdown",
     "stories_contract",

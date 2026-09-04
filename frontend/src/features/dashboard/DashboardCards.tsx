@@ -158,10 +158,10 @@ export function ContentSection({ content, storyOnly = false }: { content: Dashbo
               <div className="content-meta"><span>{humanize(item.content_type)}</span><time>{item.published_at ? formatDate(item.published_at) : "Date unavailable"}</time></div>
               <p>{item.message || "Caption unavailable"}</p>
               <dl>
-                <div><dt>Likes</dt><dd>{formatNumber(item.likes_count)}</dd></div>
-                <div><dt>Comments</dt><dd>{formatNumber(item.comments_count)}</dd></div>
-                <div><dt>Shares</dt><dd>{formatNumber(item.shares_count)}</dd></div>
-                <div><dt>Interactions</dt><dd>{formatNumber(item.interactions)}</dd></div>
+                <div><dt>Likes</dt><dd>{item.likes_count === null ? "Unavailable" : formatNumber(item.likes_count)}</dd></div>
+                <div><dt>Comments</dt><dd>{item.comments_count === null ? "Unavailable" : formatNumber(item.comments_count)}</dd></div>
+                <div><dt>Shares</dt><dd>{item.shares_count === null ? "Unavailable" : formatNumber(item.shares_count)}</dd></div>
+                <div><dt>Interactions</dt><dd>{item.interactions === null ? "Unavailable" : formatNumber(item.interactions)}</dd></div>
               </dl>
               {item.permalink && <a href={item.permalink} rel="noreferrer" target="_blank">View original</a>}
             </div>

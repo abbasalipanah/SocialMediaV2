@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, Link2, RefreshCw, ShieldCheck, X } from "lucide-react";
+import { AlertTriangle, Check, Link2, Linkedin, RefreshCw, ShieldCheck, X as CloseIcon, Youtube } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -6,14 +6,15 @@ import {
   apiMutation,
   apiUrl,
   metaSelfServiceStartSchema,
+  oauthChannelStartSchema,
   queryString,
   tiktokSelfServiceStartSchema,
 } from "../../api";
 
-export type OAuthProvider = "meta" | "tiktok";
+export type OAuthProvider = "linkedin" | "meta" | "tiktok" | "x" | "youtube";
 
 type OAuthMessage = {
-  type: "social-media:meta-oauth" | "social-media:tiktok-oauth";
+  type: `social-media:${OAuthProvider}-oauth`;
   status: "success" | "error";
   brandId: string;
   connectionId: number | null;
@@ -43,6 +44,30 @@ const PROVIDER_COPY: Record<OAuthProvider, {
     startPath: "/api/integrations/tiktok/oauth/start",
     intro: "TikTok will always show its authorization screen. Confirm that the displayed TikTok Business identity belongs to this Brand before approving.",
     completion: "TikTok authorization completed. Verification and account-level maintenance remain separate from this page.",
+  },
+  x: {
+    label: "X",
+    popupName: "social-media-x-oauth",
+    messageType: "social-media:x-oauth",
+    startPath: "/api/integrations/x/oauth/start",
+    intro: "Sign in to X and approve read-only profile and post access.",
+    completion: "X authorization completed. Select the account for this Brand in Settings.",
+  },
+  linkedin: {
+    label: "LinkedIn",
+    popupName: "social-media-linkedin-oauth",
+    messageType: "social-media:linkedin-oauth",
+    startPath: "/api/integrations/linkedin/oauth/start",
+    intro: "Sign in to LinkedIn and approve read-only access to the Company Pages you administer.",
+    completion: "LinkedIn authorization completed. Select the Company Page for this Brand in Settings.",
+  },
+  youtube: {
+    label: "YouTube",
+    popupName: "social-media-youtube-oauth",
+    messageType: "social-media:youtube-oauth",
+    startPath: "/api/integrations/youtube/oauth/start",
+    intro: "Sign in to YouTube and approve read-only channel and analytics access.",
+    completion: "YouTube authorization completed. Select the channel for this Brand in Settings.",
   },
 };
 
@@ -106,9 +131,12 @@ export function OAuthConnectionModal({ provider, brandId, brandName, onClose, on
     setIsConnecting(true);
     try {
       const path = `${copy.startPath}${queryString({ brand_id: brandId })}`;
-      const started = provider === "meta"
-        ? await apiMutation(path, metaSelfServiceStartSchema, { method: "POST" })
-        : await apiMutation(path, tiktokSelfServiceStartSchema, { method: "POST" });
+      const startSchema = provider === "meta"
+        ? metaSelfServiceStartSchema
+        : provider === "tiktok"
+          ? tiktokSelfServiceStartSchema
+          : oauthChannelStartSchema;
+      const started = await apiMutation(path, startSchema, { method: "POST" });
       popup.location.replace(started.authorization_url);
     } catch (error) {
       popup.close();
@@ -129,10 +157,18 @@ export function OAuthConnectionModal({ provider, brandId, brandName, onClose, on
       <section aria-labelledby="oauth-connect-title" aria-modal="true" className="tiktok-connect-modal" role="dialog">
         <header>
           <div className={`integration-platform-icon platform-${provider}`}>
-            {provider === "meta" ? <span aria-hidden="true" className="oauth-meta-mark">∞</span> : <span aria-hidden="true" className="integration-tiktok-mark">♪</span>}
+            {provider === "meta"
+              ? <span aria-hidden="true" className="oauth-meta-mark">∞</span>
+              : provider === "tiktok"
+                ? <span aria-hidden="true" className="integration-tiktok-mark">♪</span>
+                : provider === "youtube"
+                  ? <Youtube aria-hidden="true" size={22} />
+                  : provider === "linkedin"
+                    ? <Linkedin aria-hidden="true" size={22} />
+                  : <span aria-hidden="true" className="social-x-mark">𝕏</span>}
           </div>
           <div><h2 id="oauth-connect-title">Authorize {copy.label}</h2><p>{brandName} · OAuth authorization only</p></div>
-          <button aria-label={`Close ${copy.label} authorization`} onClick={dismiss} type="button"><X size={18} /></button>
+          <button aria-label={`Close ${copy.label} authorization`} onClick={dismiss} type="button"><CloseIcon size={18} /></button>
         </header>
 
         {status && <div className={`tiktok-connect-status ${status.tone}`} role="status">{status.tone === "success" ? <Check size={17} /> : <AlertTriangle size={17} />}<span>{status.message}</span></div>}

@@ -1,4 +1,5 @@
 import type { MetricId, Platform } from "../../api";
+export { PLATFORM_DESCRIPTIONS, PLATFORM_LABELS } from "../../platforms/catalog";
 
 export type DashboardTab = {
   id: "account" | "audience" | "content" | "cover" | "overview" | "page" | "profile" | "stories" | "videos";
@@ -35,21 +36,9 @@ export function reportingPeriodQuery(period: ReportingPeriod) {
     end_date: period.key === "selected_period" ? period.endDate : undefined,
   };
 }
-
-export const PLATFORM_LABELS: Record<Platform, string> = {
-  facebook: "Facebook",
-  instagram: "Instagram",
-  tiktok: "TikTok",
-};
-
-export const PLATFORM_DESCRIPTIONS: Record<Platform, string> = {
-  facebook: "Unified Facebook performance monitor.",
-  instagram: "Unified Instagram performance monitor.",
-  tiktok: "Organic account, video and audience performance in one view.",
-};
-
 export const METRIC_LABELS: Record<MetricId, string> = {
   followers: "Followers",
+  follower_gains: "Follower gains",
   following: "Following",
   new_followers: "New followers",
   follows: "Follows",
@@ -66,6 +55,7 @@ export const METRIC_LABELS: Record<MetricId, string> = {
   page_views: "Page views",
   profile_views: "Profile views",
   website_clicks: "Website clicks",
+  clicks: "Clicks",
   total_actions: "Total actions",
   reactions: "Reactions",
   media_count: "Published content",
@@ -79,6 +69,11 @@ export const METRIC_LABELS: Record<MetricId, string> = {
   video_shares_total: "Video shares",
   video_engagements_total: "Video engagements",
   video_engagement_rate: "Video engagement rate",
+  engaged_views: "Engaged views",
+  watch_time_minutes: "Watch time",
+  playlist_additions: "Playlist additions",
+  playlist_removals: "Playlist removals",
+  viewer_percentage: "Viewer percentage",
 };
 
 export const PRIMARY_METRICS: Record<Platform | "overview", MetricId[]> = {
@@ -93,6 +88,9 @@ export const PRIMARY_METRICS: Record<Platform | "overview", MetricId[]> = {
     "video_shares_total",
     "video_engagement_rate",
   ],
+  x: ["followers", "new_followers", "views", "interactions", "engagement_rate", "media_count"],
+  linkedin: ["followers", "follower_gains", "views", "reach", "page_views", "engagement_rate"],
+  youtube: ["followers", "views", "engaged_views", "watch_time_minutes", "follows", "engagement_rate"],
 };
 
 export const TREND_METRICS: MetricId[] = [
@@ -108,6 +106,13 @@ export const TREND_METRICS: MetricId[] = [
   "profile_views",
   "video_views_total",
   "video_engagements_total",
+  "engaged_views",
+  "watch_time_minutes",
+  "video_likes_daily",
+  "video_comments_daily",
+  "video_shares_daily",
+  "playlist_additions",
+  "playlist_removals",
 ];
 
 export function platformTabs(platform: Platform, audienceAvailable: boolean): DashboardTab[] {
@@ -129,6 +134,24 @@ export function platformTabs(platform: Platform, audienceAvailable: boolean): Da
       { id: "cover", label: "Cover" },
       { id: "account", label: "Account" },
       { id: "content", label: "Content" },
+      { id: "audience", label: "Audience" },
+    ],
+    x: [
+      { id: "cover", label: "Cover" },
+      { id: "profile", label: "Profile" },
+      { id: "content", label: "Posts" },
+      { id: "audience", label: "Audience Signals" },
+    ],
+    linkedin: [
+      { id: "cover", label: "Cover" },
+      { id: "page", label: "Page" },
+      { id: "content", label: "Content" },
+      { id: "audience", label: "Audience" },
+    ],
+    youtube: [
+      { id: "cover", label: "Cover" },
+      { id: "account", label: "Channel" },
+      { id: "content", label: "Videos" },
       { id: "audience", label: "Audience" },
     ],
   };

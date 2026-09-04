@@ -20,8 +20,7 @@ import {
   type WorkspaceCapabilities,
 } from "../api";
 import { useAuth } from "../auth";
-
-const PLATFORMS: Platform[] = ["facebook", "instagram", "tiktok"];
+import { PLATFORM_IDS } from "../platforms/catalog";
 
 type AccountSelections = Partial<Record<Platform, number | "all">>;
 
@@ -104,14 +103,14 @@ export function BrandScopeProvider({ children }: { children: ReactNode }) {
     // Keep the remembered Brand in step with what is on screen.
     window.localStorage.setItem(selectedBrandStorageKey(user.user_id), defaultBrandId);
     if (stored && !storedBrandIsValid) {
-      PLATFORMS.forEach((platform) =>
+      PLATFORM_IDS.forEach((platform) =>
         window.localStorage.removeItem(selectedAccountStorageKey(user.user_id, platform)),
       );
       setAccountSelections({});
       return;
     }
     const remembered: AccountSelections = {};
-    PLATFORMS.forEach((platform) => {
+    PLATFORM_IDS.forEach((platform) => {
       const value = window.localStorage.getItem(selectedAccountStorageKey(user.user_id, platform));
       if (value === "all") remembered[platform] = "all";
       else if (value && Number.isSafeInteger(Number(value))) remembered[platform] = Number(value);
@@ -164,7 +163,7 @@ export function BrandScopeProvider({ children }: { children: ReactNode }) {
 
   const resetAccounts = useCallback(() => {
     setAccountSelections({});
-    PLATFORMS.forEach((platform) =>
+    PLATFORM_IDS.forEach((platform) =>
       window.localStorage.removeItem(selectedAccountStorageKey(user.user_id, platform)),
     );
   }, [user.user_id]);

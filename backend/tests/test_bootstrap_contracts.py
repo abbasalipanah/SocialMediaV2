@@ -48,6 +48,28 @@ def test_safe_environment_contract_is_complete() -> None:
         "SOCIAL_META_REDIRECT_URI=https://social.theaccumulate.com/api/social/meta/oauth/callback",
         "SOCIAL_META_OAUTH_STATE_SECRET=",
         "SOCIAL_META_ACTIVATION_GATE_ENABLED=false",
+        "SOCIAL_YOUTUBE_PROVIDER_PROFILE=youtube_data_analytics_v3_v2",
+        "SOCIAL_YOUTUBE_OAUTH_APP_ID=",
+        "SOCIAL_YOUTUBE_OAUTH_APP_SECRET=",
+        "SOCIAL_YOUTUBE_ACCOUNT_ENABLED=false",
+        "SOCIAL_YOUTUBE_ACCOUNT_OAUTH_MODE=disabled",
+        "SOCIAL_YOUTUBE_COLLECTION_ENABLED=false",
+        "SOCIAL_YOUTUBE_ACTIVATION_GATE_ENABLED=false",
+        "SOCIAL_X_PROVIDER_PROFILE=x_api_v2_oauth2_pkce_v1",
+        "SOCIAL_X_OAUTH_APP_ID=",
+        "SOCIAL_X_OAUTH_APP_SECRET=",
+        "SOCIAL_X_ACCOUNT_ENABLED=false",
+        "SOCIAL_X_ACCOUNT_OAUTH_MODE=disabled",
+        "SOCIAL_X_COLLECTION_ENABLED=false",
+        "SOCIAL_X_ACTIVATION_GATE_ENABLED=false",
+        "SOCIAL_LINKEDIN_PROVIDER_PROFILE=linkedin_community_management_rest_202608",
+        "SOCIAL_LINKEDIN_API_VERSION=202608",
+        "SOCIAL_LINKEDIN_OAUTH_APP_ID=",
+        "SOCIAL_LINKEDIN_OAUTH_APP_SECRET=",
+        "SOCIAL_LINKEDIN_ACCOUNT_ENABLED=false",
+        "SOCIAL_LINKEDIN_ACCOUNT_OAUTH_MODE=disabled",
+        "SOCIAL_LINKEDIN_COLLECTION_ENABLED=false",
+        "SOCIAL_LINKEDIN_ACTIVATION_GATE_ENABLED=false",
         "SOCIAL_AI_SUMMARY_ENABLED=false",
         "SOCIAL_AI_OPENROUTER_API_KEY=",
         "SOCIAL_AI_OPENROUTER_BASE_URL=https://openrouter.ai/api/v1",
@@ -68,6 +90,19 @@ def test_canonical_scaffold_and_frontend_entrypoints_exist() -> None:
     )
     for path in required:
         assert path.exists(), f"Missing required bootstrap path: {path}"
+
+
+def test_local_migrations_disable_x_activation_during_schema_setup() -> None:
+    script = (ROOT / "scripts" / "dev" / "ensure_local_db.sh").read_text(
+        encoding="utf-8"
+    )
+    required_overrides = {
+        "SOCIAL_X_ACCOUNT_ENABLED=false",
+        "SOCIAL_X_ACCOUNT_OAUTH_MODE=disabled",
+        "SOCIAL_X_COLLECTION_ENABLED=false",
+        "SOCIAL_X_ACTIVATION_GATE_ENABLED=false",
+    }
+    assert required_overrides.issubset(set(script.split()))
 
 
 def test_generic_migration_guide_is_not_a_repository_artifact() -> None:

@@ -7,6 +7,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Protocol
+from urllib.parse import urlparse
+
+_LOCAL_REDIRECT_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 
 
 class TikTokActivationError(RuntimeError):
@@ -50,7 +53,7 @@ class ActivationIntent:
             not self.requested_scopes
             or len(self.requested_scopes) != len(set(self.requested_scopes))
             or any(not scope.strip() for scope in self.requested_scopes)
-            or not self.redirect_uri.startswith("https://")
+            or not _valid_redirect_uri(self.redirect_uri)
             or any(
                 value.tzinfo is None
                 for value in (self.created_at, self.expires_at, self.leased_at)
@@ -60,6 +63,20 @@ class ActivationIntent:
             or (self.consumed_at is not None and self.consumed_at.tzinfo is None)
         ):
             raise TikTokActivationError("activation_intent_invalid")
+
+
+def _valid_redirect_uri(value: str) -> bool:
+    parsed = urlparse(value)
+    secure_or_loopback = parsed.scheme == "https" or (
+        parsed.scheme == "http" and parsed.hostname in _LOCAL_REDIRECT_HOSTS
+    )
+    return bool(
+        secure_or_loopback
+        and parsed.hostname
+        and not any(
+            (parsed.username, parsed.password, parsed.params, parsed.query, parsed.fragment)
+        )
+    )
 
 
 @dataclass(frozen=True)
@@ -143,6 +160,10 @@ class TikTokActivationStatePort(ActivationStatePort, Protocol):
     def verified_brand_id(self, token: str) -> int: ...
 
 
+class OAuthActivationStatePort(ActivationStatePort, Protocol):
+    def verified_brand_id(self, token: str) -> int: ...
+
+
 class TikTokActivationProvider(Protocol):
     @property
     def activation_enabled(self) -> bool: ...
@@ -204,6 +225,7 @@ __all__ = [
     "ActivationStart",
     "ActivationStateClaims",
     "ActivationStatePort",
+    "OAuthActivationStatePort",
     "TikTokActivationStatePort",
     "ProviderAccountGrant",
     "ProviderPayloadTransport",

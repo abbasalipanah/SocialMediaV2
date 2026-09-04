@@ -17,6 +17,7 @@ class MetricCatalogError(ValueError):
 
 class MetricId(StrEnum):
     FOLLOWERS = "followers"
+    FOLLOWER_GAINS = "follower_gains"
     FOLLOWING = "following"
     NEW_FOLLOWERS = "new_followers"
     FOLLOWS = "follows"
@@ -33,6 +34,7 @@ class MetricId(StrEnum):
     PAGE_VIEWS = "page_views"
     PROFILE_VIEWS = "profile_views"
     WEBSITE_CLICKS = "website_clicks"
+    CLICKS = "clicks"
     TOTAL_ACTIONS = "total_actions"
     REACTIONS = "reactions"
     MEDIA_COUNT = "media_count"
@@ -46,6 +48,11 @@ class MetricId(StrEnum):
     VIDEO_SHARES_TOTAL = "video_shares_total"
     VIDEO_ENGAGEMENTS_TOTAL = "video_engagements_total"
     VIDEO_ENGAGEMENT_RATE = "video_engagement_rate"
+    ENGAGED_VIEWS = "engaged_views"
+    WATCH_TIME_MINUTES = "watch_time_minutes"
+    PLAYLIST_ADDITIONS = "playlist_additions"
+    PLAYLIST_REMOVALS = "playlist_removals"
+    VIEWER_PERCENTAGE = "viewer_percentage"
 
 
 class EntityScope(StrEnum):
@@ -63,6 +70,7 @@ class SemanticType(StrEnum):
 class Unit(StrEnum):
     COUNT = "count"
     RATIO = "ratio"
+    PERCENTAGE = "percentage"
 
 
 class CollectionGranularity(StrEnum):
@@ -328,6 +336,39 @@ def _profile_flow(
     )
 
 
+def _profile_percentage_snapshot(
+    platform: PlatformId,
+    metric_id: MetricId,
+    source_field: str,
+    *,
+    allowed_breakdowns: tuple[str, ...],
+) -> MetricDefinition:
+    return MetricDefinition(
+        metric_id=metric_id,
+        platform=platform,
+        entity_scope=EntityScope.PROFILE,
+        semantic_type=SemanticType.SNAPSHOT,
+        unit=Unit.PERCENTAGE,
+        source_field=source_field,
+        collection_granularity=CollectionGranularity.SAMPLE,
+        period_aggregation=AggregationPolicy.LAST_VALID,
+        brand_rollup_aggregation=AggregationPolicy.SUM,
+        null_policy=NullPolicy.NOT_AVAILABLE,
+        reset_policy=ResetPolicy.NOT_APPLICABLE,
+        derived_from_metric_ids=(),
+        derivation_operator=None,
+        derivation_version=None,
+        derivation_window=None,
+        first_sample_policy=FirstSamplePolicy.NOT_APPLICABLE,
+        numerator_metric_id=None,
+        denominator_metric_id=None,
+        zero_denominator_policy=ZeroDenominatorPolicy.NOT_APPLICABLE,
+        allowed_breakdowns=allowed_breakdowns,
+        required_capability=CapabilityId.AUDIENCE,
+        version=1,
+    )
+
+
 def _profile_cumulative_delta(
     platform: PlatformId,
     metric_id: MetricId,
@@ -426,6 +467,54 @@ def _profile_ratio(
         allowed_breakdowns=(),
         required_capability=CapabilityId.PROFILE,
         version=1,
+    )
+
+
+def _organic_platform_metrics(
+    platform: PlatformId,
+    *,
+    followers_field: str,
+    media_count_field: str,
+    views_field: str,
+    interactions_field: str,
+    views_breakdowns: tuple[str, ...] = (),
+) -> tuple[MetricDefinition, ...]:
+    return (
+        _profile_snapshot(platform, MetricId.FOLLOWERS, followers_field),
+        _profile_snapshot(platform, MetricId.MEDIA_COUNT, media_count_field),
+        _profile_snapshot_delta(
+            platform,
+            MetricId.NEW_FOLLOWERS,
+            operator=DerivationOperator.POSITIVE_SNAPSHOT_DELTA,
+        ),
+        _profile_snapshot_delta(
+            platform,
+            MetricId.FOLLOWS,
+            operator=DerivationOperator.POSITIVE_SNAPSHOT_DELTA,
+        ),
+        _profile_snapshot_delta(
+            platform,
+            MetricId.UNFOLLOWS,
+            operator=DerivationOperator.NEGATIVE_SNAPSHOT_DELTA,
+        ),
+        _profile_snapshot_delta(
+            platform,
+            MetricId.FOLLOWERS_NET,
+            operator=DerivationOperator.SIGNED_SNAPSHOT_DELTA,
+        ),
+        _profile_flow(
+            platform,
+            MetricId.VIEWS,
+            views_field,
+            allowed_breakdowns=views_breakdowns,
+        ),
+        _profile_flow(platform, MetricId.INTERACTIONS, interactions_field),
+        _profile_ratio(
+            platform,
+            MetricId.ENGAGEMENT_RATE,
+            MetricId.INTERACTIONS,
+            MetricId.VIEWS,
+        ),
     )
 
 
@@ -756,6 +845,125 @@ def bootstrap_metric_catalog() -> MetricCatalog:
             *engagement_counters,
             engagements_total,
             engagement_rate,
+            *_organic_platform_metrics(
+                PlatformId.X,
+                followers_field="followers_count",
+                media_count_field="tweet_count",
+                views_field="impression_count",
+                interactions_field="interactions",
+            ),
+            _profile_snapshot(
+                PlatformId.LINKEDIN,
+                MetricId.FOLLOWERS,
+                "first_degree_size",
+                allowed_breakdowns=("staff_count", "association_type"),
+            ),
+            _profile_snapshot_delta(
+                PlatformId.LINKEDIN,
+                MetricId.NEW_FOLLOWERS,
+                operator=DerivationOperator.POSITIVE_SNAPSHOT_DELTA,
+            ),
+            _profile_snapshot_delta(
+                PlatformId.LINKEDIN,
+                MetricId.FOLLOWS,
+                operator=DerivationOperator.POSITIVE_SNAPSHOT_DELTA,
+            ),
+            _profile_snapshot_delta(
+                PlatformId.LINKEDIN,
+                MetricId.UNFOLLOWS,
+                operator=DerivationOperator.NEGATIVE_SNAPSHOT_DELTA,
+            ),
+            _profile_snapshot_delta(
+                PlatformId.LINKEDIN,
+                MetricId.FOLLOWERS_NET,
+                operator=DerivationOperator.SIGNED_SNAPSHOT_DELTA,
+            ),
+            _profile_flow(
+                PlatformId.LINKEDIN,
+                MetricId.FOLLOWER_GAINS,
+                "organic_and_paid_follower_gain",
+            ),
+            _profile_flow(PlatformId.LINKEDIN, MetricId.VIEWS, "impression_count"),
+            _profile_flow(
+                PlatformId.LINKEDIN,
+                MetricId.REACH,
+                "unique_impressions_count",
+            ),
+            _profile_flow(
+                PlatformId.LINKEDIN,
+                MetricId.INTERACTIONS,
+                "click_like_comment_share_count",
+            ),
+            _profile_flow(PlatformId.LINKEDIN, MetricId.CLICKS, "click_count"),
+            _profile_flow(
+                PlatformId.LINKEDIN,
+                MetricId.PAGE_VIEWS,
+                "all_page_views",
+            ),
+            _profile_ratio(
+                PlatformId.LINKEDIN,
+                MetricId.ENGAGEMENT_RATE,
+                MetricId.INTERACTIONS,
+                MetricId.VIEWS,
+            ),
+            *_organic_platform_metrics(
+                PlatformId.YOUTUBE,
+                followers_field="subscriber_count",
+                media_count_field="video_count",
+                views_field="views",
+                interactions_field="interactions",
+                views_breakdowns=(
+                    "youtube_country",
+                    "youtube_device_type",
+                    "youtube_traffic_source",
+                    "youtube_subscribed_status",
+                    "youtube_content_type",
+                    "youtube_operating_system",
+                    "youtube_playback_location",
+                    "youtube_product",
+                    "youtube_live_status",
+                ),
+            ),
+            _profile_flow(PlatformId.YOUTUBE, MetricId.ENGAGED_VIEWS, "engagedViews"),
+            _profile_flow(
+                PlatformId.YOUTUBE,
+                MetricId.WATCH_TIME_MINUTES,
+                "estimatedMinutesWatched",
+                allowed_breakdowns=(
+                    "youtube_country",
+                    "youtube_device_type",
+                    "youtube_traffic_source",
+                    "youtube_subscribed_status",
+                    "youtube_content_type",
+                    "youtube_operating_system",
+                    "youtube_playback_location",
+                    "youtube_product",
+                    "youtube_live_status",
+                ),
+            ),
+            _profile_flow(PlatformId.YOUTUBE, MetricId.VIDEO_LIKES_DAILY, "likes"),
+            _profile_flow(PlatformId.YOUTUBE, MetricId.VIDEO_COMMENTS_DAILY, "comments"),
+            _profile_flow(PlatformId.YOUTUBE, MetricId.VIDEO_SHARES_DAILY, "shares"),
+            _profile_flow(
+                PlatformId.YOUTUBE,
+                MetricId.PLAYLIST_ADDITIONS,
+                "videosAddedToPlaylists",
+            ),
+            _profile_flow(
+                PlatformId.YOUTUBE,
+                MetricId.PLAYLIST_REMOVALS,
+                "videosRemovedFromPlaylists",
+            ),
+            _profile_percentage_snapshot(
+                PlatformId.YOUTUBE,
+                MetricId.VIEWER_PERCENTAGE,
+                "viewerPercentage",
+                allowed_breakdowns=(
+                    "youtube_viewer_age",
+                    "youtube_viewer_gender",
+                    "youtube_viewer_age_gender",
+                ),
+            ),
         )
     )
 

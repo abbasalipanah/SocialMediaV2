@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dashboards/linkedin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Endpoint */
+        get: operations["endpoint_api_dashboards_linkedin_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dashboards/overview": {
         parameters: {
             query?: never;
@@ -98,6 +115,40 @@ export interface paths {
         };
         /** Endpoint */
         get: operations["endpoint_api_dashboards_tiktok_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dashboards/x": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Endpoint */
+        get: operations["endpoint_api_dashboards_x_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dashboards/youtube": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Endpoint */
+        get: operations["endpoint_api_dashboards_youtube_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -166,6 +217,74 @@ export interface paths {
         };
         /** Insight Limit */
         get: operations["insight_limit_api_insights_limit_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/linkedin/accounts/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link */
+        post: operations["link_api_integrations_linkedin_accounts_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/linkedin/accounts/unlink": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unlink */
+        delete: operations["unlink_api_integrations_linkedin_accounts_unlink_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/linkedin/oauth/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start */
+        post: operations["start_api_integrations_linkedin_oauth_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/linkedin/self-service/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Readiness */
+        get: operations["readiness_api_integrations_linkedin_self_service_readiness_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -344,6 +463,142 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/integrations/x/accounts/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link */
+        post: operations["link_api_integrations_x_accounts_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/x/accounts/unlink": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unlink */
+        delete: operations["unlink_api_integrations_x_accounts_unlink_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/x/oauth/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start */
+        post: operations["start_api_integrations_x_oauth_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/x/self-service/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Readiness */
+        get: operations["readiness_api_integrations_x_self_service_readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/youtube/accounts/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Link */
+        post: operations["link_api_integrations_youtube_accounts_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/youtube/accounts/unlink": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Unlink */
+        delete: operations["unlink_api_integrations_youtube_accounts_unlink_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/youtube/oauth/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start */
+        post: operations["start_api_integrations_youtube_oauth_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integrations/youtube/self-service/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Readiness */
+        get: operations["readiness_api_integrations_youtube_self_service_readiness_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/media/{platform}/{content_id}": {
         parameters: {
             query?: never;
@@ -446,6 +701,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/platforms/linkedin/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Endpoint */
+        get: operations["endpoint_api_platforms_linkedin_accounts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/platforms/tiktok/accounts": {
         parameters: {
             query?: never;
@@ -455,6 +727,40 @@ export interface paths {
         };
         /** Endpoint */
         get: operations["endpoint_api_platforms_tiktok_accounts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/platforms/x/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Endpoint */
+        get: operations["endpoint_api_platforms_x_accounts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/platforms/youtube/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Endpoint */
+        get: operations["endpoint_api_platforms_youtube_accounts_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -685,6 +991,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/social/linkedin/oauth/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Callback */
+        get: operations["callback_api_social_linkedin_oauth_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/social/meta/oauth/callback": {
         parameters: {
             query?: never;
@@ -711,6 +1034,40 @@ export interface paths {
         };
         /** Tiktok Activation Callback */
         get: operations["tiktok_activation_callback_api_social_tiktok_oauth_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/social/x/oauth/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Callback */
+        get: operations["callback_api_social_x_oauth_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/social/youtube/oauth/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Callback */
+        get: operations["callback_api_social_youtube_oauth_callback_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -963,8 +1320,12 @@ export interface components {
             account_id: number;
             /** Average Time Watched */
             average_time_watched: number | null;
+            /** Clicks Count */
+            clicks_count: number | null;
             /** Comments Count */
-            comments_count: number;
+            comments_count: number | null;
+            /** Completion Rate */
+            completion_rate: number | null;
             /** Content Type */
             content_type: string;
             /** Cover Candidates */
@@ -977,9 +1338,11 @@ export interface components {
             /** Full Video Watched Rate */
             full_video_watched_rate: number | null;
             /** Interactions */
-            interactions: number;
+            interactions: number | null;
             /** Likes Count */
-            likes_count: number;
+            likes_count: number | null;
+            /** Link Clicks */
+            link_clicks: number | null;
             /** Media Url */
             media_url: string;
             /** Media Url Candidates */
@@ -988,18 +1351,40 @@ export interface components {
             message: string;
             /** Permalink */
             permalink: string;
+            /** Profile Clicks */
+            profile_clicks: number | null;
+            /** Profile Visits */
+            profile_visits: number | null;
             /** Published At */
             published_at: string | null;
+            /** Quotes Count */
+            quotes_count: number | null;
             /** Reach */
             reach: number | null;
+            /** Reposts Count */
+            reposts_count: number | null;
+            /** Saves Count */
+            saves_count: number | null;
             /** Shares Count */
-            shares_count: number;
+            shares_count: number | null;
             /** Thumbnail Candidates */
             thumbnail_candidates: string[];
             /** Thumbnail Url */
             thumbnail_url: string | null;
             /** Total Time Watched */
             total_time_watched: number | null;
+            /** Video Playback 0 Count */
+            video_playback_0_count: number | null;
+            /** Video Playback 100 Count */
+            video_playback_100_count: number | null;
+            /** Video Playback 25 Count */
+            video_playback_25_count: number | null;
+            /** Video Playback 50 Count */
+            video_playback_50_count: number | null;
+            /** Video Playback 75 Count */
+            video_playback_75_count: number | null;
+            /** Video Views Count */
+            video_views_count: number | null;
             /** Views */
             views: number | null;
         };
@@ -1031,6 +1416,16 @@ export interface components {
             count: number;
             /** Name */
             name: string;
+        };
+        /** DashboardMentionSummary */
+        DashboardMentionSummary: {
+            /** Daily */
+            daily: components["schemas"]["DashboardPoint"][];
+            data_status: components["schemas"]["DataStatus"];
+            /** Total */
+            total: number;
+            /** Unique Authors */
+            unique_authors: number;
         };
         /** DashboardMeta */
         DashboardMeta: {
@@ -1393,7 +1788,82 @@ export interface components {
          * MetricId
          * @enum {string}
          */
-        MetricId: "followers" | "following" | "new_followers" | "follows" | "unfollows" | "followers_net" | "reach" | "reach_paid" | "reach_organic" | "views" | "views_paid" | "views_organic" | "interactions" | "engagement_rate" | "page_views" | "profile_views" | "website_clicks" | "total_actions" | "reactions" | "media_count" | "video_views_total" | "video_views_change" | "video_likes_daily" | "video_comments_daily" | "video_shares_daily" | "video_likes_total" | "video_comments_total" | "video_shares_total" | "video_engagements_total" | "video_engagement_rate";
+        MetricId: "followers" | "follower_gains" | "following" | "new_followers" | "follows" | "unfollows" | "followers_net" | "reach" | "reach_paid" | "reach_organic" | "views" | "views_paid" | "views_organic" | "interactions" | "engagement_rate" | "page_views" | "profile_views" | "website_clicks" | "clicks" | "total_actions" | "reactions" | "media_count" | "video_views_total" | "video_views_change" | "video_likes_daily" | "video_comments_daily" | "video_shares_daily" | "video_likes_total" | "video_comments_total" | "video_shares_total" | "video_engagements_total" | "video_engagement_rate" | "engaged_views" | "watch_time_minutes" | "playlist_additions" | "playlist_removals" | "viewer_percentage";
+        /** OAuthChannelAccountItem */
+        OAuthChannelAccountItem: {
+            /** Connection Id */
+            connection_id: number | null;
+            /** Display Name */
+            display_name: string;
+            /** External Id */
+            external_id: string;
+            /** State */
+            state: string;
+        };
+        /** OAuthChannelLinkPayload */
+        OAuthChannelLinkPayload: {
+            /** Connection Id */
+            connection_id: number;
+            /** External Ids */
+            external_ids: string[];
+        };
+        /** OAuthChannelLinkResponse */
+        OAuthChannelLinkResponse: {
+            /** Connection Id */
+            connection_id: number;
+            /** Connection State */
+            connection_state: string;
+            /** Linked Count */
+            linked_count: number;
+        };
+        /** OAuthChannelReadinessResponse */
+        OAuthChannelReadinessResponse: {
+            /** Available Accounts */
+            available_accounts: components["schemas"]["OAuthChannelAccountItem"][];
+            /** Brand Id */
+            brand_id: string;
+            /** Can Manage */
+            can_manage: boolean;
+            /**
+             * Checked At
+             * Format: date-time
+             */
+            checked_at: string;
+            /** Connection State */
+            connection_state: string;
+            /** Linked Account Count */
+            linked_account_count: number;
+            /** Linked Accounts */
+            linked_accounts: components["schemas"]["OAuthChannelAccountItem"][];
+            /** Oauth Start Available */
+            oauth_start_available: boolean;
+            platform: components["schemas"]["PlatformId"];
+            /** Reason */
+            reason: string;
+            runtime_mode: components["schemas"]["RuntimeMode"];
+            /** Writes Enabled */
+            writes_enabled: boolean;
+        };
+        /** OAuthChannelStartResponse */
+        OAuthChannelStartResponse: {
+            /** Authorization Url */
+            authorization_url: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /** OAuthChannelUnlinkResponse */
+        OAuthChannelUnlinkResponse: {
+            /** Brand Id */
+            brand_id: string;
+            /** Connection State */
+            connection_state: string;
+            /** External Id */
+            external_id: string;
+            platform: components["schemas"]["PlatformId"];
+        };
         /** OperationsReadinessResponse */
         OperationsReadinessResponse: {
             /** Database Configured */
@@ -1438,6 +1908,7 @@ export interface components {
             content: components["schemas"]["DashboardContent"][];
             content_metrics: components["schemas"]["DashboardContentMetrics"];
             content_summary: components["schemas"]["DashboardContentSummary"];
+            mentions: components["schemas"]["DashboardMentionSummary"] | null;
             meta: components["schemas"]["DashboardMeta"];
             metric_methodology: components["schemas"]["DashboardMetricMethodology"];
             /** Metrics */
@@ -1453,7 +1924,7 @@ export interface components {
          * PlatformId
          * @enum {string}
          */
-        PlatformId: "facebook" | "instagram" | "tiktok";
+        PlatformId: "facebook" | "instagram" | "tiktok" | "x" | "linkedin" | "youtube";
         /** ReadinessPlatform */
         ReadinessPlatform: {
             /** Account Count */
@@ -1773,7 +2244,7 @@ export interface components {
          * Unit
          * @enum {string}
          */
-        Unit: "count" | "ratio";
+        Unit: "count" | "ratio" | "percentage";
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -1979,6 +2450,46 @@ export interface operations {
             };
         };
     };
+    endpoint_api_dashboards_linkedin_get: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+                rollup?: boolean;
+                range?: string;
+                start_date?: string | null;
+                end_date?: string | null;
+                account_id?: number | null;
+                content_type?: string | null;
+                tab?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformDashboard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     overview_api_dashboards_overview_get: {
         parameters: {
             query?: {
@@ -2018,6 +2529,86 @@ export interface operations {
         };
     };
     endpoint_api_dashboards_tiktok_get: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+                rollup?: boolean;
+                range?: string;
+                start_date?: string | null;
+                end_date?: string | null;
+                account_id?: number | null;
+                content_type?: string | null;
+                tab?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformDashboard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    endpoint_api_dashboards_x_get: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+                rollup?: boolean;
+                range?: string;
+                start_date?: string | null;
+                end_date?: string | null;
+                account_id?: number | null;
+                content_type?: string | null;
+                tab?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformDashboard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    endpoint_api_dashboards_youtube_get: {
         parameters: {
             query?: {
                 brand_id?: string | null;
@@ -2173,6 +2764,143 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AiSummaryLimitResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_api_integrations_linkedin_accounts_link_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OAuthChannelLinkPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelLinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlink_api_integrations_linkedin_accounts_unlink_delete: {
+        parameters: {
+            query: {
+                brand_id: string;
+                external_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelUnlinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_api_integrations_linkedin_oauth_start_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readiness_api_integrations_linkedin_self_service_readiness_get: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelReadinessResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2525,6 +3253,280 @@ export interface operations {
             };
         };
     };
+    link_api_integrations_x_accounts_link_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OAuthChannelLinkPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelLinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlink_api_integrations_x_accounts_unlink_delete: {
+        parameters: {
+            query: {
+                brand_id: string;
+                external_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelUnlinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_api_integrations_x_oauth_start_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readiness_api_integrations_x_self_service_readiness_get: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelReadinessResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_api_integrations_youtube_accounts_link_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OAuthChannelLinkPayload"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelLinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlink_api_integrations_youtube_accounts_unlink_delete: {
+        parameters: {
+            query: {
+                brand_id: string;
+                external_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelUnlinkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_api_integrations_youtube_oauth_start_post: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelStartResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readiness_api_integrations_youtube_self_service_readiness_get: {
+        parameters: {
+            query: {
+                brand_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthChannelReadinessResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     social_media_api_media__platform___content_id__get: {
         parameters: {
             query?: {
@@ -2735,7 +3737,109 @@ export interface operations {
             };
         };
     };
+    endpoint_api_platforms_linkedin_accounts_get: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+                rollup?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformAccountsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     endpoint_api_platforms_tiktok_accounts_get: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+                rollup?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformAccountsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    endpoint_api_platforms_x_accounts_get: {
+        parameters: {
+            query?: {
+                brand_id?: string | null;
+                rollup?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlatformAccountsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    endpoint_api_platforms_youtube_accounts_get: {
         parameters: {
             query?: {
                 brand_id?: string | null;
@@ -2772,7 +3876,7 @@ export interface operations {
     create_report_api_reports_xlsx_post: {
         parameters: {
             query: {
-                surface: "overview" | "facebook" | "instagram" | "tiktok";
+                surface: "overview" | "facebook" | "instagram" | "tiktok" | "x" | "linkedin" | "youtube";
                 tab?: string;
                 brand_id?: string | null;
                 rollup?: boolean;
@@ -3247,6 +4351,37 @@ export interface operations {
             };
         };
     };
+    callback_api_social_linkedin_oauth_callback_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     meta_activation_callback_api_social_meta_oauth_callback_get: {
         parameters: {
             query?: never;
@@ -3291,6 +4426,68 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    callback_api_social_x_oauth_callback_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    callback_api_social_youtube_oauth_callback_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: {
+                social_media_session?: string | null;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

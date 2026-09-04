@@ -8,6 +8,8 @@ from .content import SocialContentStore
 from .media import SocialMediaStore
 from .meta_activation import ProjectionMetaConnectionStore
 from .metrics import SocialMetricStore
+from .oauth_channels import ProjectionOAuthConnectionStore
+from .oauth_intents import ProjectionOAuthIntentStore
 from .reporting import SocialReportingStore
 
 __all__ = [
@@ -21,4 +23,6 @@ __all__ = [
     "SocialMetricStore",
     "SocialReportingStore",
     "ProjectionMetaConnectionStore",
+    "ProjectionOAuthConnectionStore",
+    "ProjectionOAuthIntentStore",
 ]

@@ -127,6 +127,69 @@ def bootstrap_registry(settings: AppSettings | None = None) -> PlatformCapabilit
             ),
         )
     )
+    x_collection = settings is not None and settings.x.collection_enabled
+    for capability in CapabilityId:
+        if not x_collection:
+            status = CapabilityStatus.NOT_CONFIGURED
+            reason = "provider_not_configured"
+        elif capability in {CapabilityId.PROFILE, CapabilityId.CONTENT}:
+            status = CapabilityStatus.AVAILABLE
+            reason = "standalone_collector_available"
+        elif capability is CapabilityId.COMMENTS:
+            status = CapabilityStatus.PARTIAL
+            reason = "account_mentions_only"
+        else:
+            status = CapabilityStatus.UNSUPPORTED
+            reason = f"x_{capability.value}_not_implemented"
+        records.append(
+            CapabilityRecord(
+                platform=PlatformId.X,
+                capability=capability,
+                status=status,
+                reason=reason,
+            )
+        )
+    linkedin_collection = settings is not None and settings.linkedin.collection_enabled
+    for capability in CapabilityId:
+        if not linkedin_collection:
+            status = CapabilityStatus.NOT_CONFIGURED
+            reason = "provider_not_configured"
+        elif capability in {CapabilityId.PROFILE, CapabilityId.CONTENT}:
+            status = CapabilityStatus.AVAILABLE
+            reason = "company_page_collector_available"
+        elif capability is CapabilityId.AUDIENCE:
+            status = CapabilityStatus.PARTIAL
+            reason = "staff_count_and_association_type_available"
+        else:
+            status = CapabilityStatus.UNSUPPORTED
+            reason = "linkedin_comments_not_implemented"
+        records.append(
+            CapabilityRecord(
+                platform=PlatformId.LINKEDIN,
+                capability=capability,
+                status=status,
+                reason=reason,
+            )
+        )
+    youtube_collection = settings is not None and settings.youtube.collection_enabled
+    for capability in CapabilityId:
+        if not youtube_collection:
+            status = CapabilityStatus.NOT_CONFIGURED
+            reason = "provider_not_configured"
+        elif capability is CapabilityId.AUDIENCE:
+            status = CapabilityStatus.PARTIAL
+            reason = "playback_audience_breakdowns_available"
+        else:
+            status = CapabilityStatus.AVAILABLE
+            reason = "standalone_collector_available"
+        records.append(
+            CapabilityRecord(
+                platform=PlatformId.YOUTUBE,
+                capability=capability,
+                status=status,
+                reason=reason,
+            )
+        )
     return PlatformCapabilityRegistry(tuple(records))
 
 

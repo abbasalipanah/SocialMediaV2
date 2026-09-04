@@ -1,0 +1,250 @@
+"""X user-post timeline normalization."""
+
+from __future__ import annotations
+
+from collections.abc import Callable, Mapping
+from datetime import UTC, datetime
+from typing import Any
+
+from app.application.ports.platforms import ProviderAccount, ProviderRecord
+from app.application.ports.platforms.content import ContentPage
+from app.core.time import utc_now
+from app.domain.platforms import PlatformId
+
+from .responses import XResponseError, optional_count, optional_text, required_mapping
+from .wire import X_POSTS_PAGE_SIZE
+
+
+class XContentReader:
+    def __init__(
+        self,
+        fetch: Callable[[ProviderAccount, str | None], Mapping[str, Any]],
+        *,
+        clock: Callable[[], datetime] = utc_now,
+    ) -> None:
+        self._fetch = fetch
+        self._clock = clock
+
+    def list_content(
+        self,
+        account: ProviderAccount,
+        *,
+        cursor: str | None = None,
+    ) -> ContentPage:
+        if account.platform is not PlatformId.X:
+            raise ValueError("provider_family_mismatch")
+        observed_at = self._clock()
+        payload = self._fetch(account, cursor)
+        items = payload.get("data", [])
+        if not isinstance(items, list) or len(items) > X_POSTS_PAGE_SIZE:
+            raise XResponseError("x_timeline_response_invalid")
+        media = _media_by_key(payload)
+        records = tuple(_record(item, media, observed_at) for item in items)
+        if len({item.external_id for item in records}) != len(records):
+            raise XResponseError("x_timeline_response_invalid")
+        return ContentPage(
+            items=records,
+            next_cursor=_next_cursor(payload),
+            observed_at=observed_at,
+        )
+
+
+def _record(
+    raw: object,
+    media: Mapping[str, Mapping[str, Any]],
+    observed_at: datetime,
+) -> ProviderRecord:
+    if not isinstance(raw, Mapping):
+        raise XResponseError("x_timeline_response_invalid")
+    tweet_id = _numeric_id(raw.get("id"))
+    public = required_mapping(raw, "public_metrics")
+    private = raw.get("non_public_metrics", {})
+    if not isinstance(private, Mapping):
+        raise XResponseError("x_timeline_response_invalid")
+    attached = _attached_media(raw, media)
+    candidates = tuple(
+        value
+        for item in attached
+        if (value := optional_text(item, "url") or optional_text(item, "preview_image_url"))
+    )
+    likes = optional_count(public, "like_count")
+    replies = optional_count(public, "reply_count")
+    reposts = optional_count(public, "retweet_count")
+    quotes = optional_count(public, "quote_count")
+    bookmarks = optional_count(public, "bookmark_count")
+    link_clicks = optional_count(private, "url_link_clicks")
+    profile_clicks = optional_count(private, "user_profile_clicks")
+    interactions = optional_count(private, "engagements")
+    if interactions is None:
+        values = (likes, replies, reposts, quotes, bookmarks)
+        interactions = sum(value or 0 for value in values) if any(
+            value is not None for value in values
+        ) else None
+    media_url = candidates[0] if candidates else ""
+    video_metrics = _video_metrics(attached)
+    return ProviderRecord(
+        external_id=tweet_id,
+        observed_at=observed_at,
+        fields={
+            "content_type": _content_type(raw, attached),
+            "permalink": f"https://x.com/i/web/status/{tweet_id}",
+            "message": optional_text(raw, "text") or "",
+            "media_url": media_url,
+            "cover_url": media_url or None,
+            "thumbnail_url": media_url or None,
+            "cover_candidates": candidates,
+            "thumbnail_candidates": candidates,
+            "media_url_candidates": candidates,
+            "published_at": _timestamp(raw.get("created_at")),
+            "likes_count": likes,
+            "comments_count": replies,
+            "replies_count": replies,
+            "shares_count": _sum_optional(reposts, quotes),
+            "reposts_count": reposts,
+            "quotes_count": quotes,
+            "views_count": optional_count(public, "impression_count"),
+            "reach_count": None,
+            "interactions_count": interactions,
+            "saves_count": bookmarks,
+            "link_clicks": link_clicks,
+            "profile_clicks": profile_clicks,
+            **video_metrics,
+        },
+    )
+
+
+def _media_by_key(payload: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
+    includes = payload.get("includes", {})
+    if not isinstance(includes, Mapping):
+        raise XResponseError("x_timeline_response_invalid")
+    items = includes.get("media", [])
+    if not isinstance(items, list) or len(items) > 400:
+        raise XResponseError("x_timeline_response_invalid")
+    mapped: dict[str, Mapping[str, Any]] = {}
+    for item in items:
+        if not isinstance(item, Mapping):
+            raise XResponseError("x_timeline_response_invalid")
+        key = str(item.get("media_key") or "").strip()
+        if not key or key in mapped:
+            raise XResponseError("x_timeline_response_invalid")
+        mapped[key] = item
+    return mapped
+
+
+def _attached_media(
+    tweet: Mapping[str, Any],
+    media: Mapping[str, Mapping[str, Any]],
+) -> tuple[Mapping[str, Any], ...]:
+    attachments = tweet.get("attachments", {})
+    if not isinstance(attachments, Mapping):
+        raise XResponseError("x_timeline_response_invalid")
+    keys = attachments.get("media_keys", [])
+    if not isinstance(keys, list) or any(not isinstance(key, str) for key in keys):
+        raise XResponseError("x_timeline_response_invalid")
+    try:
+        return tuple(media[key] for key in keys)
+    except KeyError as exc:
+        raise XResponseError("x_timeline_response_invalid") from exc
+
+
+def _content_type(
+    tweet: Mapping[str, Any],
+    items: tuple[Mapping[str, Any], ...],
+) -> str:
+    kinds = {optional_text(item, "type") for item in items}
+    if "video" in kinds or "animated_gif" in kinds:
+        return "video"
+    if "photo" in kinds:
+        return "image"
+    entities = tweet.get("entities", {})
+    if not isinstance(entities, Mapping):
+        raise XResponseError("x_timeline_response_invalid")
+    urls = entities.get("urls", [])
+    if not isinstance(urls, list):
+        raise XResponseError("x_timeline_response_invalid")
+    return "link" if urls else "text"
+
+
+def _video_metrics(items: tuple[Mapping[str, Any], ...]) -> dict[str, int | float | None]:
+    videos = tuple(
+        item
+        for item in items
+        if optional_text(item, "type") in {"video", "animated_gif"}
+    )
+    if not videos:
+        return {
+            "video_views_count": None,
+            "video_playback_0_count": None,
+            "video_playback_25_count": None,
+            "video_playback_50_count": None,
+            "video_playback_75_count": None,
+            "video_playback_100_count": None,
+            "completion_rate": None,
+        }
+
+    public_rows = tuple(_optional_metrics(item, "public_metrics") for item in videos)
+    private_rows = tuple(_optional_metrics(item, "non_public_metrics") for item in videos)
+    starts = _sum_metric(private_rows, "playback_0_count")
+    completions = _sum_metric(private_rows, "playback_100_count")
+    return {
+        "video_views_count": _sum_metric(public_rows, "view_count"),
+        "video_playback_0_count": starts,
+        "video_playback_25_count": _sum_metric(private_rows, "playback_25_count"),
+        "video_playback_50_count": _sum_metric(private_rows, "playback_50_count"),
+        "video_playback_75_count": _sum_metric(private_rows, "playback_75_count"),
+        "video_playback_100_count": completions,
+        "completion_rate": (
+            completions / starts
+            if starts is not None and starts > 0 and completions is not None
+            else None
+        ),
+    }
+
+
+def _optional_metrics(
+    item: Mapping[str, Any], key: str
+) -> Mapping[str, Any]:
+    value = item.get(key, {})
+    if not isinstance(value, Mapping):
+        raise XResponseError("x_timeline_response_invalid")
+    return value
+
+
+def _sum_metric(rows: tuple[Mapping[str, Any], ...], key: str) -> int | None:
+    return _sum_optional(*(optional_count(row, key) for row in rows))
+
+
+def _next_cursor(payload: Mapping[str, Any]) -> str | None:
+    meta = payload.get("meta", {})
+    if not isinstance(meta, Mapping):
+        raise XResponseError("x_timeline_response_invalid")
+    return optional_text(meta, "next_token")
+
+
+def _numeric_id(value: object) -> str:
+    if not isinstance(value, str) or not value.isdigit() or len(value) > 32:
+        raise XResponseError("x_timeline_response_invalid")
+    return value
+
+
+def _timestamp(value: object) -> datetime | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise XResponseError("x_timeline_response_invalid")
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise XResponseError("x_timeline_response_invalid") from exc
+    if parsed.tzinfo is None:
+        raise XResponseError("x_timeline_response_invalid")
+    return parsed.astimezone(UTC)
+
+
+def _sum_optional(*values: int | None) -> int | None:
+    return sum(value or 0 for value in values) if any(
+        value is not None for value in values
+    ) else None
+
+
+__all__ = ["XContentReader"]

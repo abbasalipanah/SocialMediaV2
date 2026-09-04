@@ -32,6 +32,8 @@ from app.application.queries import (
 from app.application.queries.dashboard_aggregation import (
     best_time_to_engage_breakdown,
     comment_sentiment_breakdown,
+    content_cards,
+    content_metric_comparisons,
     source_breakdown,
     top_hashtags,
 )
@@ -42,6 +44,40 @@ from app.domain.reporting import DataStatus, ReportingRange
 from app.main import create_app
 
 NOW = datetime(2026, 7, 14, 12, tzinfo=UTC)
+
+
+def test_content_contract_preserves_unavailable_provider_counters() -> None:
+    row = ReportingContent(
+        account_id=31,
+        brand_id="101",
+        platform=PlatformId.YOUTUBE,
+        external_content_id="video-a",
+        content_type="video",
+        permalink="https://www.youtube.com/watch?v=video-a",
+        message="Video",
+        media_url="",
+        published_at=datetime(2026, 7, 1, 8, tzinfo=UTC),
+        likes_count=7,
+        comments_count=None,
+        shares_count=None,
+        views_count=100,
+        saves_count=4,
+        profile_visits=9,
+    )
+
+    card = content_cards((row,))[0]
+    comparisons = content_metric_comparisons((row,), ())
+
+    assert card.likes_count == 7
+    assert card.comments_count is None
+    assert card.shares_count is None
+    assert card.interactions is None
+    assert card.saves_count == 4
+    assert card.profile_visits == 9
+    assert comparisons.likes.value == 7
+    assert comparisons.comments.value is None
+    assert comparisons.shares.value is None
+    assert comparisons.interactions.value is None
 
 
 class FakeAiSummary:
@@ -1179,9 +1215,15 @@ def test_phase6_openapi_publishes_typed_response_contracts() -> None:
         "/api/dashboards/facebook": "PlatformDashboard",
         "/api/dashboards/instagram": "PlatformDashboard",
         "/api/dashboards/tiktok": "PlatformDashboard",
+        "/api/dashboards/x": "PlatformDashboard",
+        "/api/dashboards/linkedin": "PlatformDashboard",
+        "/api/dashboards/youtube": "PlatformDashboard",
         "/api/platforms/facebook/accounts": "PlatformAccountsResponse",
         "/api/platforms/instagram/accounts": "PlatformAccountsResponse",
         "/api/platforms/tiktok/accounts": "PlatformAccountsResponse",
+        "/api/platforms/x/accounts": "PlatformAccountsResponse",
+        "/api/platforms/linkedin/accounts": "PlatformAccountsResponse",
+        "/api/platforms/youtube/accounts": "PlatformAccountsResponse",
         "/api/settings/brands": "SettingsBrandsResponse",
         "/api/settings/social-accounts": "SocialAccountsResponse",
         "/api/settings/brand-links": "BrandLinksResponse",
@@ -1289,6 +1331,9 @@ async def test_phase6_routes_are_scoped_read_only_and_honest(phase6_fixture) -> 
             "facebook": (2, True),
             "instagram": (1, True),
             "tiktok": (1, True),
+            "x": (0, False),
+            "linkedin": (0, False),
+            "youtube": (0, False),
         }
         readiness = await client.get(
             "/api/operations/readiness",
@@ -1297,7 +1342,14 @@ async def test_phase6_routes_are_scoped_read_only_and_honest(phase6_fixture) -> 
         assert readiness.status_code == 200
         assert {
             item["platform"]: item["account_count"] for item in readiness.json()["platforms"]
-        } == {"facebook": 2, "instagram": 1, "tiktok": 1}
+        } == {
+            "facebook": 2,
+            "instagram": 1,
+            "tiktok": 1,
+            "x": 0,
+            "linkedin": 0,
+            "youtube": 0,
+        }
         assert (
             await client.get(
                 "/api/settings/social-accounts",

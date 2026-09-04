@@ -7,6 +7,9 @@ class PlatformId(StrEnum):
     FACEBOOK = "facebook"
     INSTAGRAM = "instagram"
     TIKTOK = "tiktok"
+    X = "x"
+    LINKEDIN = "linkedin"
+    YOUTUBE = "youtube"
 
     @classmethod
     def exact_set(cls) -> set[str]:
@@ -20,4 +23,7 @@ class CapabilityId(StrEnum):
     AUDIENCE = "audience"
 
 
-__all__ = ["CapabilityId", "PlatformId"]
+X_MENTIONS_CONTENT_ID = "__x_mentions__"
+
+
+__all__ = ["CapabilityId", "PlatformId", "X_MENTIONS_CONTENT_ID"]

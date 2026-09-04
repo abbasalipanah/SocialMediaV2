@@ -3,10 +3,12 @@ import {
   Lock,
   Home,
   Instagram,
+  Linkedin,
   PieChart,
   PlugZap,
   Settings,
   X,
+  Youtube,
 } from "lucide-react";
 import type { ComponentType } from "react";
 import { NavLink } from "../routing";
@@ -14,6 +16,8 @@ import { NavLink } from "../routing";
 import type { Platform } from "../api";
 import { accumulateUrl } from "../app/accumulateLink";
 import { useBrandScope } from "../app/BrandScopeProvider";
+import { PLATFORM_CATALOG } from "../platforms/catalog";
+import { platformNavigationAvailable } from "../platforms/navigation";
 
 type SidebarProps = {
   open: boolean;
@@ -26,16 +30,21 @@ const TiktokMark = ({ size = 20 }: { size?: number }) => (
   <span aria-hidden="true" className="tiktok-mark" style={{ fontSize: size }}>♪</span>
 );
 
-const platformNavigation: Array<{
-  label: string;
-  path: string;
-  platform: Platform;
-  icon: ComponentType<{ size?: number }>;
-}> = [
-  { label: "Facebook", path: "/facebook", platform: "facebook", icon: Facebook },
-  { label: "Instagram", path: "/instagram", platform: "instagram", icon: Instagram },
-  { label: "TikTok", path: "/tiktok", platform: "tiktok", icon: TiktokMark },
-];
+const platformIcons = {
+  facebook: Facebook,
+  instagram: Instagram,
+  tiktok: TiktokMark,
+  x: X,
+  linkedin: Linkedin,
+  youtube: Youtube,
+} satisfies Record<Platform, ComponentType<{ size?: number }>>;
+
+const platformNavigation = PLATFORM_CATALOG.map((platform) => ({
+  label: platform.label,
+  path: `/${platform.route}`,
+  platform: platform.id,
+  icon: platformIcons[platform.id],
+}));
 
 export const SOCIAL_NAVIGATION_LABELS = [
   "Home",
@@ -45,13 +54,6 @@ export const SOCIAL_NAVIGATION_LABELS = [
   "Settings",
   "Integrations",
 ] as const;
-
-function platformAvailable(platform: Platform, capabilities: ReturnType<typeof useBrandScope>["capabilities"]) {
-  return (
-    capabilities?.platforms.find((item) => item.platform === platform)?.navigation_available ??
-    false
-  );
-}
 
 function NavigationLink({
   path,
@@ -134,7 +136,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 <NavigationLink
                   icon={Icon}
                   label={label}
-                  locked={!platformAvailable(platform, capabilities)}
+                  locked={!platformNavigationAvailable(platform, capabilities)}
                   onClick={onClose}
                   path={path}
                 />

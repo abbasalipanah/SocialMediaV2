@@ -45,6 +45,7 @@ from app.application.services.collection.media import (
     FetchedMedia,
     MediaBudgetDeferred,
 )
+from app.application.services.oauth_channel_access import OAuthChannelAccessManager
 from app.core import AppSettings, ConfigurationError, WritePolicy, load_settings
 from app.domain.metrics import (
     FACEBOOK_DAILY_SOURCE_METRICS,
@@ -65,6 +66,10 @@ from app.infrastructure.persistence.social_v2 import (
 )
 from app.infrastructure.persistence.social_v2.collection_targets import (
     CollectionTargetRow,
+)
+from app.infrastructure.providers.linkedin import (
+    LinkedInOAuthProvider,
+    LinkedInOAuthTransport,
 )
 from app.infrastructure.providers.meta.audience import MetaAudienceReader
 from app.infrastructure.providers.meta.facebook.comments import FacebookCommentsReader
@@ -93,6 +98,18 @@ from app.infrastructure.providers.tiktok.accounts import (
     parse_token,
     parse_token_info,
 )
+from app.infrastructure.providers.x import XOAuthProvider, XOAuthTransport
+from app.infrastructure.providers.youtube import (
+    YouTubeOAuthProvider,
+    YouTubeOAuthTransport,
+)
+from app.workers.linkedin import collect_linkedin_account, create_linkedin_readers
+from app.workers.platform_registry import (
+    CollectorRegistration,
+    PlatformCollectorRegistry,
+)
+from app.workers.x import collect_x_account, create_x_readers
+from app.workers.youtube import collect_youtube_account, create_youtube_readers
 
 logger = logging.getLogger(__name__)
 
@@ -345,6 +362,43 @@ class StandaloneCollector:
             else None
         )
         self.media_fetcher = _MediaFetcher() if self.media_files is not None else None
+        self.collectors = PlatformCollectorRegistry(self._collector_registrations())
+
+    def _collector_registrations(
+        self,
+    ) -> tuple[CollectorRegistration[CollectionTargetRow, WorkerAccountResult], ...]:
+        return (
+            CollectorRegistration(
+                provider="meta",
+                platforms=(PlatformId.FACEBOOK, PlatformId.INSTAGRAM),
+                enabled=lambda: self.settings.meta.collection_enabled,
+                collect=self._collect_meta,
+            ),
+            CollectorRegistration(
+                provider="tiktok",
+                platforms=(PlatformId.TIKTOK,),
+                enabled=lambda: self.settings.tiktok.collection_enabled,
+                collect=self._collect_tiktok,
+            ),
+            CollectorRegistration(
+                provider="x",
+                platforms=(PlatformId.X,),
+                enabled=lambda: self.settings.x.collection_enabled,
+                collect=self._collect_x,
+            ),
+            CollectorRegistration(
+                provider="linkedin",
+                platforms=(PlatformId.LINKEDIN,),
+                enabled=lambda: self.settings.linkedin.collection_enabled,
+                collect=self._collect_linkedin,
+            ),
+            CollectorRegistration(
+                provider="youtube",
+                platforms=(PlatformId.YOUTUBE,),
+                enabled=lambda: self.settings.youtube.collection_enabled,
+                collect=self._collect_youtube,
+            ),
+        )
 
     def close(self) -> None:
         if self.media_fetcher is not None:
@@ -378,15 +432,7 @@ class StandaloneCollector:
         only_new: bool = False,
         durable_round: bool = False,
     ) -> tuple[WorkerAccountResult, ...]:
-        selected = tuple(
-            platform
-            for platform in platforms
-            if (
-                platform in {PlatformId.FACEBOOK, PlatformId.INSTAGRAM}
-                and self.settings.meta.collection_enabled
-            )
-            or (platform is PlatformId.TIKTOK and self.settings.tiktok.collection_enabled)
-        )
+        selected = self.collectors.enabled_platforms(platforms)
         if not selected:
             raise ConfigurationError("No requested V2 collector is enabled")
         rows = self.targets.list_connected(
@@ -788,9 +834,9 @@ class StandaloneCollector:
         include_stories: bool = True,
     ) -> WorkerAccountResult:
         timings = {} if timings is None else timings
-        if row.platform is PlatformId.TIKTOK:
-            return self._collect_tiktok(row, timings)
-        return self._collect_meta(row, timings, include_stories=include_stories)
+        if row.platform is PlatformId.INSTAGRAM and not include_stories:
+            return self._collect_meta(row, timings, include_stories=False)
+        return self.collectors.collect(row.platform, row, timings)
 
     def _collect_meta(
         self,
@@ -1268,6 +1314,198 @@ class StandaloneCollector:
             comment_count=comment_count,
             media_count=content.media_count,
             error_code=_partial_error_code(partial_errors),
+        )
+
+    def _collect_youtube(
+        self,
+        row: CollectionTargetRow,
+        timings: dict[str, float],
+    ) -> WorkerAccountResult:
+        oauth_transport = YouTubeOAuthTransport(
+            token_url=self.settings.youtube.token_url,
+            revoke_url=self.settings.youtube.revoke_url,
+            get_urls=(
+                self.settings.youtube.userinfo_url,
+                self.settings.youtube.channels_url,
+            ),
+            timeout_seconds=self.settings.youtube_activation.provider_timeout_seconds,
+        )
+        provider = YouTubeOAuthProvider(
+            config=self.settings.youtube,
+            transport=oauth_transport,
+        )
+        access = OAuthChannelAccessManager(
+            platform=PlatformId.YOUTUBE,
+            required_scopes=self.settings.youtube.required_scopes,
+            allowed_scopes=self.settings.youtube.required_scopes,
+            provider=provider,
+            credential_store=self.credentials,
+        ).resolve(
+            credential_reference=row.credential_reference,
+            external_id=row.external_id,
+        )
+        account = ProviderAccount(
+            platform=PlatformId.YOUTUBE,
+            account_id=row.external_id,
+            credential=ProviderCredential(access_token=access.access_token),
+        )
+        readers = create_youtube_readers(
+            config=self.settings.youtube,
+            account=account,
+            timeout_seconds=self.settings.youtube_activation.provider_timeout_seconds,
+        )
+        with _phase(timings, "youtube"):
+            result = collect_youtube_account(
+                account=account,
+                local_account_id=row.asset_id,
+                brand_id=row.brand_id,
+                readers=readers,
+                metric_store=self.metrics,
+                content_store=self.content,
+                comment_store=self.comments,
+                checkpoint_store=self.checkpoints,
+                persist_media=self._persist_media,
+                backfill_complete=_backfill_complete(row.backfill_status),
+            )
+        return WorkerAccountResult(
+            platform=row.platform.value,
+            brand_id=row.brand_id,
+            asset_id=row.asset_id,
+            status=result.status,
+            metric_count=result.metric_count,
+            content_count=result.content_count,
+            comment_count=result.comment_count,
+            media_count=result.media_count,
+            error_code=result.error_code,
+            backfill_complete=result.backfill_complete,
+        )
+
+    def _collect_x(
+        self,
+        row: CollectionTargetRow,
+        timings: dict[str, float],
+    ) -> WorkerAccountResult:
+        provider = XOAuthProvider(
+            config=self.settings.x,
+            transport=XOAuthTransport(
+                app_id=self.settings.x.oauth_app_id,
+                app_secret=self.settings.x.oauth_app_secret,
+                token_url=self.settings.x.token_url,
+                revoke_url=self.settings.x.revoke_url,
+                get_urls=(self.settings.x.users_me_url,),
+                timeout_seconds=self.settings.x_activation.provider_timeout_seconds,
+            ),
+            pkce_secret=self.settings.x_activation.oauth_state_secret.encode(),
+        )
+        access = OAuthChannelAccessManager(
+            platform=PlatformId.X,
+            required_scopes=self.settings.x.required_scopes,
+            allowed_scopes=self.settings.x.required_scopes,
+            provider=provider,
+            credential_store=self.credentials,
+        ).resolve(
+            credential_reference=row.credential_reference,
+            external_id=row.external_id,
+        )
+        account = ProviderAccount(
+            platform=PlatformId.X,
+            account_id=row.external_id,
+            credential=ProviderCredential(access_token=access.access_token),
+        )
+        readers = create_x_readers(
+            config=self.settings.x,
+            account=account,
+            timeout_seconds=self.settings.x_activation.provider_timeout_seconds,
+        )
+        with _phase(timings, "x"):
+            result = collect_x_account(
+                account=account,
+                local_account_id=row.asset_id,
+                brand_id=row.brand_id,
+                readers=readers,
+                metric_store=self.metrics,
+                content_store=self.content,
+                comment_store=self.comments,
+                checkpoint_store=self.checkpoints,
+                persist_media=self._persist_media,
+                backfill_complete=_backfill_complete(row.backfill_status),
+            )
+        return WorkerAccountResult(
+            platform=row.platform.value,
+            brand_id=row.brand_id,
+            asset_id=row.asset_id,
+            status=result.status,
+            metric_count=result.metric_count,
+            content_count=result.content_count,
+            comment_count=result.comment_count,
+            media_count=result.media_count,
+            error_code=result.error_code,
+            backfill_complete=result.backfill_complete,
+        )
+
+    def _collect_linkedin(
+        self,
+        row: CollectionTargetRow,
+        timings: dict[str, float],
+    ) -> WorkerAccountResult:
+        provider = LinkedInOAuthProvider(
+            config=self.settings.linkedin,
+            transport=LinkedInOAuthTransport(
+                app_id=self.settings.linkedin.oauth_app_id,
+                app_secret=self.settings.linkedin.oauth_app_secret,
+                token_url=self.settings.linkedin.token_url,
+                organization_acls_url=self.settings.linkedin.organization_acls_url,
+                organizations_url=self.settings.linkedin.organizations_url,
+                api_version=self.settings.linkedin.api_version,
+                timeout_seconds=(
+                    self.settings.linkedin_activation.provider_timeout_seconds
+                ),
+            ),
+        )
+        access = OAuthChannelAccessManager(
+            platform=PlatformId.LINKEDIN,
+            required_scopes=self.settings.linkedin.required_scopes,
+            allowed_scopes=self.settings.linkedin.required_scopes,
+            provider=provider,
+            credential_store=self.credentials,
+        ).resolve(
+            credential_reference=row.credential_reference,
+            external_id=row.external_id,
+        )
+        account = ProviderAccount(
+            platform=PlatformId.LINKEDIN,
+            account_id=row.external_id,
+            credential=ProviderCredential(access_token=access.access_token),
+        )
+        readers = create_linkedin_readers(
+            config=self.settings.linkedin,
+            account=account,
+            timeout_seconds=(
+                self.settings.linkedin_activation.provider_timeout_seconds
+            ),
+        )
+        with _phase(timings, "linkedin"):
+            result = collect_linkedin_account(
+                account=account,
+                local_account_id=row.asset_id,
+                brand_id=row.brand_id,
+                readers=readers,
+                metric_store=self.metrics,
+                content_store=self.content,
+                checkpoint_store=self.checkpoints,
+                persist_media=self._persist_media,
+                backfill_complete=_backfill_complete(row.backfill_status),
+            )
+        return WorkerAccountResult(
+            platform=row.platform.value,
+            brand_id=row.brand_id,
+            asset_id=row.asset_id,
+            status=result.status,
+            metric_count=result.metric_count,
+            content_count=result.content_count,
+            media_count=result.media_count,
+            error_code=result.error_code,
+            backfill_complete=result.backfill_complete,
         )
 
     def _tiktok_readers(

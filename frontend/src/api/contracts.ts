@@ -1,8 +1,9 @@
 import { z } from "zod";
 
 import type { components } from "./openapi.generated";
+import { PLATFORM_IDS } from "../platforms/catalog";
 
-export const platformSchema = z.enum(["facebook", "instagram", "tiktok"]);
+export const platformSchema = z.enum(PLATFORM_IDS);
 export type Platform = z.infer<typeof platformSchema>;
 
 export const authUserSchema = z.object({
@@ -129,6 +130,7 @@ export const platformAccountsSchema = z.object({
 
 export const metricIdSchema = z.enum([
   "followers",
+  "follower_gains",
   "following",
   "new_followers",
   "follows",
@@ -145,6 +147,7 @@ export const metricIdSchema = z.enum([
   "page_views",
   "profile_views",
   "website_clicks",
+  "clicks",
   "total_actions",
   "reactions",
   "media_count",
@@ -158,6 +161,11 @@ export const metricIdSchema = z.enum([
   "video_shares_total",
   "video_engagements_total",
   "video_engagement_rate",
+  "engaged_views",
+  "watch_time_minutes",
+  "playlist_additions",
+  "playlist_removals",
+  "viewer_percentage",
 ]);
 export type MetricId = z.infer<typeof metricIdSchema>;
 
@@ -199,7 +207,7 @@ export const dashboardMetricSchema = z.object({
   previous_value: z.number().nullable(),
   delta_pct: z.number().nullable(),
   semantic_type: z.enum(["snapshot", "flow", "cumulative", "ratio"]),
-  unit: z.enum(["count", "ratio"]),
+  unit: z.enum(["count", "ratio", "percentage"]),
   data_status: dataStatusSchema,
   methodology: z.string().min(1),
   availability_reason: z.string().nullable(),
@@ -235,10 +243,10 @@ export const dashboardContentSchema = z.object({
   message: z.string(),
   media_url: z.string(),
   published_at: z.string().nullable(),
-  likes_count: z.number().int(),
-  comments_count: z.number().int(),
-  shares_count: z.number().int(),
-  interactions: z.number().int(),
+  likes_count: z.number().int().nullable(),
+  comments_count: z.number().int().nullable(),
+  shares_count: z.number().int().nullable(),
+  interactions: z.number().int().nullable(),
   views: z.number().nullable(),
   reach: z.number().nullable(),
   cover_url: z.string().nullable(),
@@ -249,6 +257,20 @@ export const dashboardContentSchema = z.object({
   full_video_watched_rate: z.number().nullable(),
   total_time_watched: z.number().nullable(),
   average_time_watched: z.number().nullable(),
+  saves_count: z.number().nullable(),
+  clicks_count: z.number().int().nullable().default(null),
+  profile_visits: z.number().nullable(),
+  reposts_count: z.number().int().nullable().default(null),
+  quotes_count: z.number().int().nullable().default(null),
+  link_clicks: z.number().int().nullable().default(null),
+  profile_clicks: z.number().int().nullable().default(null),
+  video_views_count: z.number().int().nullable().default(null),
+  video_playback_0_count: z.number().int().nullable().default(null),
+  video_playback_25_count: z.number().int().nullable().default(null),
+  video_playback_50_count: z.number().int().nullable().default(null),
+  video_playback_75_count: z.number().int().nullable().default(null),
+  video_playback_100_count: z.number().int().nullable().default(null),
+  completion_rate: z.number().nullable().default(null),
   data_status: dataStatusSchema,
 });
 export type DashboardContent = z.infer<typeof dashboardContentSchema>;
@@ -417,6 +439,12 @@ export const platformDashboardSchema = z.object({
   metric_methodology: dashboardMetricMethodologySchema,
   audience_capabilities: dashboardAudienceCapabilitiesSchema,
   stories: dashboardStoriesSchema,
+  mentions: z.object({
+    total: z.number().int().nonnegative(),
+    unique_authors: z.number().int().nonnegative(),
+    daily: z.array(z.object({ observed_on: z.string(), value: z.number() })),
+    data_status: dataStatusSchema,
+  }).nullable().default(null),
 });
 export type PlatformDashboard = z.infer<typeof platformDashboardSchema> &
   components["schemas"]["PlatformDashboard"];
@@ -695,6 +723,51 @@ export const metaRefreshResponseSchema = z.object({
   instagram_count: z.number().int().nonnegative(),
   discovered_count: z.number().int().nonnegative(),
 });
+
+export const oauthChannelAccountSchema = z.object({
+  connection_id: z.number().int().positive().nullable(),
+  external_id: z.string().min(1),
+  display_name: z.string().min(1),
+  state: z.string().min(1),
+});
+export type OAuthChannelAccount = z.infer<typeof oauthChannelAccountSchema>;
+
+export const oauthChannelReadinessSchema = z.object({
+  brand_id: z.string().min(1),
+  platform: z.enum(["x", "linkedin", "youtube"]),
+  can_manage: z.boolean(),
+  connection_state: z.string().min(1),
+  linked_account_count: z.number().int().nonnegative(),
+  linked_accounts: z.array(oauthChannelAccountSchema),
+  available_accounts: z.array(oauthChannelAccountSchema),
+  oauth_start_available: z.boolean(),
+  reason: z.string().min(1),
+  runtime_mode: z.string().min(1),
+  writes_enabled: z.boolean(),
+  checked_at: z.string(),
+});
+export type OAuthChannelReadiness = z.infer<typeof oauthChannelReadinessSchema>;
+
+export const oauthChannelStartSchema = z.object({
+  authorization_url: z.string().url(),
+  expires_at: z.string(),
+});
+export type OAuthChannelStart = z.infer<typeof oauthChannelStartSchema>;
+
+export const oauthChannelLinkResponseSchema = z.object({
+  connection_id: z.number().int().positive(),
+  linked_count: z.number().int().nonnegative(),
+  connection_state: z.string().min(1),
+});
+export type OAuthChannelLinkResponse = z.infer<typeof oauthChannelLinkResponseSchema>;
+
+export const oauthChannelUnlinkResponseSchema = z.object({
+  brand_id: z.string().min(1),
+  platform: z.enum(["x", "linkedin", "youtube"]),
+  external_id: z.string().min(1),
+  connection_state: z.string().min(1),
+});
+export type OAuthChannelUnlinkResponse = z.infer<typeof oauthChannelUnlinkResponseSchema>;
 
 export const reportJobSchema = z.object({
   job_id: z.string().min(1),

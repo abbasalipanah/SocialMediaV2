@@ -174,6 +174,7 @@ const dashboard = {
   metric_methodology: { follower_flow: "unavailable", engagement_rate: "unavailable", reach: "unavailable" },
   audience_capabilities: { source: null, geo: "unavailable", age_gender: "unavailable", activity: "unavailable" },
   stories: null,
+  mentions: null,
 };
 
 const overviewDashboard = {
@@ -389,7 +390,7 @@ function buttonContaining(text: string): HTMLButtonElement {
 describe("Phase 7 application shell", () => {
   beforeEach(() => vi.restoreAllMocks());
 
-  it("keeps the canonical page catalog limited to the three social channels", () => {
+  it("keeps the canonical page catalog aligned with all six social channels", () => {
     expect(SOCIAL_NAVIGATION_LABELS).toEqual([
       "Home",
       "Analytics",
@@ -397,6 +398,9 @@ describe("Phase 7 application shell", () => {
       "Facebook",
       "Instagram",
       "TikTok",
+      "X",
+      "LinkedIn",
+      "YouTube",
       "Settings",
       "Integrations",
     ]);
@@ -419,7 +423,7 @@ describe("Phase 7 application shell", () => {
     );
     // A channel the Brand has not connected keeps its place, locked, so the
     // navigation reads the same for every Brand instead of silently varying.
-    for (const unconnected of ["Instagram", "TikTok"]) {
+    for (const unconnected of ["Instagram", "TikTok", "X", "LinkedIn", "YouTube"]) {
       expect(within(primary).queryByRole("link", { name: unconnected })).not.toBeInTheDocument();
       const locked = within(primary).getByTitle(`${unconnected} is not connected for this Brand`);
       expect(locked).toHaveAttribute("aria-disabled", "true");
@@ -755,6 +759,7 @@ describe("Phase 7 application shell", () => {
     expect(within(primary).getByRole("link", { name: "Integrations" })).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Reauthorize Meta" })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Authorize TikTok" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Authorize YouTube" })).toBeEnabled();
     expect(screen.queryByText("Connected accounts", { exact: false })).not.toBeInTheDocument();
     expect(screen.queryByText("Facebook Main")).not.toBeInTheDocument();
     expect(screen.queryByText("page-17")).not.toBeInTheDocument();

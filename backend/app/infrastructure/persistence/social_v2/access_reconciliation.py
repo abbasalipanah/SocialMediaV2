@@ -16,6 +16,9 @@ RECONCILIATION_REASONS = frozenset(
         "reauthorization_required",
     }
 )
+RECONCILABLE_PLATFORMS = frozenset(
+    {PlatformId.FACEBOOK, PlatformId.INSTAGRAM, PlatformId.TIKTOK}
+)
 _ACTIVE_LINK_STATUSES = frozenset({"active", "connected"})
 _SUPPORTED_LINK_STATUSES = _ACTIVE_LINK_STATUSES | {"disconnected"}
 _LOCK_ID = 724_662_219
@@ -33,7 +36,12 @@ class ExactAccountRef:
     external_id: str
 
     def __post_init__(self) -> None:
-        if self.link_id < 1 or self.brand_id < 1 or not self.external_id.strip():
+        if (
+            self.link_id < 1
+            or self.brand_id < 1
+            or self.platform not in RECONCILABLE_PLATFORMS
+            or not self.external_id.strip()
+        ):
             raise ValueError("account_reference_invalid")
 
 
@@ -387,6 +395,7 @@ __all__ = [
     "AccessReconciliationResult",
     "AccountAccessReconciliationStore",
     "ExactAccountRef",
+    "RECONCILABLE_PLATFORMS",
     "RECONCILIATION_REASONS",
     "parse_exact_account_ref",
 ]

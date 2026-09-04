@@ -7,9 +7,13 @@
     "#topology": "topojson-client"
   },
   "scripts": {
-    "dev": "../scripts/dev/start_local.sh",
+    "dev": "../scripts/dev/start_platform_canary.sh",
     "dev:frontend": "vite",
     "dev:local": "../scripts/dev/start_local.sh",
+    "dev:youtube": "../scripts/dev/start_platform_canary.sh",
+    "collect:youtube": "../scripts/dev/collect_youtube_canary.sh",
+    "collect:x": "../scripts/dev/collect_x_canary.sh",
+    "collect:linkedin": "../scripts/dev/collect_linkedin_canary.sh",
     "generate:api": "openapi-typescript ../docs/contracts/social-media-v2-openapi.json -o src/api/openapi.generated.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "test": "vitest run",

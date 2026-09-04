@@ -106,7 +106,7 @@ function contentKpis(data: PlatformDashboard): PulseKpi[] {
   const views = viewsMetric?.value ?? data.content_metrics.views.value ?? collectedTotal("views");
   const reach = reachMetric?.value ?? data.content_metrics.reach.value ?? collectedTotal("reach");
   const interactions = data.content_metrics.interactions.value ?? totals.interactions;
-  const engagementRate = views && views > 0 ? interactions / views : null;
+  const engagementRate = views && views > 0 && interactions !== null ? interactions / views : null;
   const previousViews = viewsFromMetric
     ? viewsMetric.previous_value
     : data.content_metrics.views.previous_value;
@@ -137,11 +137,14 @@ function audienceKpis(data: PlatformDashboard): PulseKpi[] {
 
 function engagementRows(content: DashboardContent[]): PieRow[] {
   const totals = derivedContentTotals(content);
-  return [
+  const rows: Array<{ label: string; value: number | null; color: string }> = [
     { label: "Likes", value: totals.likes, color: V1_CHART_COLORS.likes },
     { label: "Comments", value: totals.comments, color: V1_CHART_COLORS.comments },
     { label: "Shares", value: totals.shares, color: V1_CHART_COLORS.shares },
-  ].filter((item) => item.value > 0);
+  ];
+  return rows.flatMap((item) => item.value !== null && item.value > 0
+    ? [{ ...item, value: item.value }]
+    : []);
 }
 
 const BREAKDOWN_COLORS = ["#8b5cf6", "#14b8a6", "#f59e0b", "#ec4899", "#38bdf8", "#6366f1"];

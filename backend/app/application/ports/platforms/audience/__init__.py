@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Protocol
 
 from app.application.ports.platforms import ProviderAccount
+from app.domain.metrics import MetricId
 
 
 @dataclass(frozen=True)
@@ -15,6 +16,7 @@ class AudienceSnapshot:
     account_id: str
     observed_at: datetime
     breakdowns: Mapping[str, Mapping[str, float | int | None]]
+    metric_id: MetricId = MetricId.FOLLOWERS
 
 
 class AudienceReader(Protocol):

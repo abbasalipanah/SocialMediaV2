@@ -41,7 +41,7 @@ import {
   V1_OVERVIEW_PLATFORM_COLORS,
 } from "../dashboard/visualPalette";
 
-type OverviewPlatformId = Platform | "linkedin" | "x" | "youtube";
+type OverviewPlatformId = Platform;
 
 const PLATFORM_DISPLAY_ORDER: OverviewPlatformId[] = [
   "instagram",
@@ -70,7 +70,7 @@ const PLATFORM_COLORS: Record<OverviewPlatformId, string> = {
   youtube: "#FF0033",
 };
 
-const COMING_SOON_PLATFORMS = ["linkedin", "x", "youtube"] as const satisfies ReadonlyArray<OverviewPlatformId>;
+const COMING_SOON_PLATFORMS = ["linkedin", "youtube"] as const satisfies ReadonlyArray<OverviewPlatformId>;
 
 const CHANNEL_WINDOW_SIZE = 3;
 const CHANNEL_ROTATION_MS = 4_500;
@@ -539,7 +539,9 @@ function contentSnapshot(content: DashboardContent[]) {
   const totals = new Map<string, number>();
   content.forEach((item) => {
     const label = humanize(item.content_type || "Unknown");
-    totals.set(label, (totals.get(label) ?? 0) + item.interactions);
+    if (item.interactions !== null) {
+      totals.set(label, (totals.get(label) ?? 0) + item.interactions);
+    }
   });
   const ranked = [...totals.entries()].sort((left, right) => right[1] - left[1]);
   const visible = ranked.length <= 4
@@ -576,7 +578,10 @@ function contentPlatformMap(data: OverviewDashboard): Map<number, Platform> {
 
 function TopContent({ data }: { data: OverviewDashboard }) {
   const platforms = contentPlatformMap(data);
-  const posts = [...data.content].sort((left, right) => right.interactions - left.interactions).slice(0, 3);
+  const posts = [...data.content]
+    .filter((item) => item.interactions !== null)
+    .sort((left, right) => (right.interactions ?? 0) - (left.interactions ?? 0))
+    .slice(0, 3);
   return (
     <article className="overview-card overview-top-content">
       <div className="overview-card-title"><div><h2>Top Performing Content</h2><p>Selected period</p></div></div>
@@ -585,7 +590,7 @@ function TopContent({ data }: { data: OverviewDashboard }) {
         {posts.map((post, index) => {
           const platform = platforms.get(post.account_id);
           const thumbnail = post.cover_url || post.thumbnail_url || post.media_url;
-          const engagement = post.reach && post.reach > 0 ? post.interactions / post.reach : null;
+          const engagement = post.reach && post.reach > 0 && post.interactions !== null ? post.interactions / post.reach : null;
           const title = post.message || `${humanize(post.content_type)} content`;
           return (
             <div key={`${post.account_id}-${post.external_content_id}`}>
@@ -595,7 +600,7 @@ function TopContent({ data }: { data: OverviewDashboard }) {
                 {post.permalink ? <a href={post.permalink} rel="noreferrer" target="_blank">{title}</a> : <strong>{title}</strong>}
                 <span>{platform && <><i className={`platform-${platform}`}><PlatformIcon platform={platform} size={12} /></i>{PLATFORM_NAMES[platform]}</>}</span>
               </div>
-              <dl><div><dt>Reach</dt><dd>{displayValue(post.reach)}</dd></div><div><dt>Interactions</dt><dd>{formatNumber(post.interactions)}</dd></div><div><dt>Eng. rate</dt><dd>{percentValue(engagement)}</dd></div></dl>
+              <dl><div><dt>Reach</dt><dd>{displayValue(post.reach)}</dd></div><div><dt>Interactions</dt><dd>{displayValue(post.interactions)}</dd></div><div><dt>Eng. rate</dt><dd>{percentValue(engagement)}</dd></div></dl>
             </div>
           );
         })}

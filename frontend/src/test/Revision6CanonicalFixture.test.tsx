@@ -285,6 +285,20 @@ function adapt(payload: SourcePayload): PlatformDashboard {
       full_video_watched_rate: item.full_video_watched_rate ?? null,
       total_time_watched: item.total_time_watched ?? null,
       average_time_watched: item.average_time_watched ?? null,
+      saves_count: null,
+      profile_visits: null,
+      clicks_count: null,
+      reposts_count: null,
+      quotes_count: null,
+      link_clicks: null,
+      profile_clicks: null,
+      video_views_count: null,
+      video_playback_0_count: null,
+      video_playback_25_count: null,
+      video_playback_50_count: null,
+      video_playback_75_count: null,
+      video_playback_100_count: null,
+      completion_rate: null,
       data_status: item.views === undefined || item.reach === undefined ? "partial" : "available",
     })),
     community: {
@@ -330,6 +344,7 @@ function adapt(payload: SourcePayload): PlatformDashboard {
       items: payload.stories.items.map((item) => ({ ...item, sticker_taps: null, saves: null, data_status: "available" })),
       data_status: "available",
     } : null,
+    mentions: null,
   };
 }
 

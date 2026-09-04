@@ -17,6 +17,7 @@ from app.application.queries.dashboard_aggregation import (
     content_metric_comparisons,
     content_summary,
     freshness,
+    mention_summary,
     metric_breakdowns,
     metric_cards,
     metric_methodology,
@@ -27,7 +28,8 @@ from app.application.queries.dashboard_aggregation import (
 )
 from app.application.queries.reporting_range import previous_reporting_range
 from app.domain.metrics import MetricCatalog, MetricId, SemanticType
-from app.domain.platforms import PlatformId
+from app.domain.platforms import X_MENTIONS_CONTENT_ID, PlatformId
+from app.domain.platforms.catalog import overview_platforms
 from app.domain.reporting import (
     CommunitySummary,
     DashboardMeta,
@@ -388,6 +390,20 @@ def _build_platform_dashboard(
         if account_ids
         else ()
     )
+    mention_rows = (
+        tuple(
+            row
+            for row in comment_rows
+            if row.external_content_id == X_MENTIONS_CONTENT_ID
+        )
+        if platform is PlatformId.X
+        else ()
+    )
+    community_rows = tuple(
+        row
+        for row in comment_rows
+        if row.external_content_id != X_MENTIONS_CONTENT_ID
+    )
     cards, metric_warnings = metric_cards(
         platform=platform,
         account_ids=account_ids,
@@ -418,7 +434,7 @@ def _build_platform_dashboard(
     breakdowns = tuple(
         item for item in breakdowns if item.dimension != "comment_sentiment"
     )
-    if sentiment := comment_sentiment_breakdown(comment_rows):
+    if sentiment := comment_sentiment_breakdown(community_rows):
         breakdowns += (sentiment,)
     if engagement_time := best_time_to_engage_breakdown(platform, content_rows):
         breakdowns = tuple(
@@ -461,7 +477,7 @@ def _build_platform_dashboard(
         ),
         breakdowns=breakdowns,
         content=content_cards(content_rows),
-        community=community_summary(comment_rows, accounts_available=bool(accounts)),
+        community=community_summary(community_rows, accounts_available=bool(accounts)),
         top_hashtags=top_hashtags(content_rows),
         content_summary=content_summary(
             content_rows,
@@ -485,6 +501,11 @@ def _build_platform_dashboard(
             previous_rows=previous_content_rows,
             breakdowns=breakdowns,
             date_range=query.date_range,
+        ),
+        mentions=(
+            mention_summary(mention_rows, accounts_available=bool(accounts))
+            if platform is PlatformId.X
+            else None
         ),
     )
 
@@ -525,7 +546,7 @@ def build_overview_dashboard(
             query=query,
             now=generated,
         )
-        for platform in PlatformId
+        for platform in overview_platforms()
     )
     metrics = tuple(
         result

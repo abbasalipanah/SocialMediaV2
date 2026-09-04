@@ -26,18 +26,25 @@ from app.core import Boundary, mark_boundary
 from app.core.security import sha256_text
 from app.domain.metrics import MetricCatalog
 from app.domain.platforms import PlatformId
+from app.domain.platforms.catalog import PLATFORM_CATALOG
 from app.infrastructure.reports import (
     ReportContext,
     build_overview_xlsx,
     build_platform_xlsx,
 )
 
-ReportSurface = Literal["overview", "facebook", "instagram", "tiktok"]
+ReportSurface = Literal[
+    "overview",
+    "facebook",
+    "instagram",
+    "tiktok",
+    "x",
+    "linkedin",
+    "youtube",
+]
 
 PLATFORM_TABS = {
-    PlatformId.FACEBOOK: frozenset({"cover", "page", "content", "audience"}),
-    PlatformId.INSTAGRAM: frozenset({"cover", "page", "content", "stories", "audience"}),
-    PlatformId.TIKTOK: frozenset({"cover", "account", "content", "audience"}),
+    definition.platform: definition.dashboard_tabs for definition in PLATFORM_CATALOG
 }
 
 

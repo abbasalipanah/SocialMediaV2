@@ -1,4 +1,10 @@
-import { lazy, Suspense, type ReactNode } from "react";
+import {
+  lazy,
+  Suspense,
+  type ComponentType,
+  type LazyExoticComponent,
+  type ReactNode,
+} from "react";
 import { Navigate, Outlet, Route, Routes, useLocation } from "../routing";
 
 import type { Platform } from "../api";
@@ -6,6 +12,8 @@ import type { Platform } from "../api";
 import { BrandScopeProvider, useBrandScope } from "../app/BrandScopeProvider";
 import { useAuth } from "../auth";
 import { AppShell } from "../layout";
+import { PLATFORM_CATALOG } from "../platforms/catalog";
+import { platformNavigationAvailable } from "../platforms/navigation";
 import { ScreenState } from "../ui";
 import { LoginPage } from "./LoginPage";
 import { SsoConsumePage } from "./SsoConsumePage";
@@ -13,6 +21,17 @@ import { SsoConsumePage } from "./SsoConsumePage";
 const FacebookPage = lazy(() => import("../features/facebook"));
 const InstagramPage = lazy(() => import("../features/instagram"));
 const TikTokPage = lazy(() => import("../features/tiktok"));
+const XPage = lazy(() => import("../features/x"));
+const LinkedInPage = lazy(() => import("../features/linkedin"));
+const YouTubePage = lazy(() => import("../features/youtube"));
+const platformPages = {
+  facebook: FacebookPage,
+  instagram: InstagramPage,
+  tiktok: TikTokPage,
+  x: XPage,
+  linkedin: LinkedInPage,
+  youtube: YouTubePage,
+} satisfies Record<Platform, LazyExoticComponent<ComponentType>>;
 const OverviewPage = lazy(() => import("../features/overview"));
 const SettingsPage = lazy(() => import("../features/settings"));
 const IntegrationsPage = lazy(() => import("../features/integrations"));
@@ -64,9 +83,7 @@ function PlatformGuard({ platform, children }: { platform: Platform; children: R
   // route has to agree: without this the page still opened from a bookmark, a
   // back button, or a Brand switch that left the URL where it was, and it
   // rendered an empty dashboard headed "No Accounts".
-  const available = capabilities?.platforms.find(
-    (item) => item.platform === platform,
-  )?.navigation_available;
+  const available = platformNavigationAvailable(platform, capabilities);
   return available ? children : <Navigate replace to="/overview" />;
 }
 
@@ -97,30 +114,20 @@ export function AppRoutes() {
         <Route element={<AuthenticatedWorkspace />}>
           <Route element={<AppShell />}>
             <Route path="overview" element={<OverviewPage />} />
-            <Route
-              path="facebook"
-              element={
-                <PlatformGuard platform="facebook">
-                  <FacebookPage />
-                </PlatformGuard>
-              }
-            />
-            <Route
-              path="instagram"
-              element={
-                <PlatformGuard platform="instagram">
-                  <InstagramPage />
-                </PlatformGuard>
-              }
-            />
-            <Route
-              path="tiktok"
-              element={
-                <PlatformGuard platform="tiktok">
-                  <TikTokPage />
-                </PlatformGuard>
-              }
-            />
+            {PLATFORM_CATALOG.map((platform) => {
+              const PlatformPage = platformPages[platform.id];
+              return (
+                <Route
+                  key={platform.id}
+                  path={platform.route}
+                  element={
+                    <PlatformGuard platform={platform.id}>
+                      <PlatformPage />
+                    </PlatformGuard>
+                  }
+                />
+              );
+            })}
             <Route path="integrations" element={<IntegrationsGuard><IntegrationsPage /></IntegrationsGuard>} />
             <Route path="settings" element={<SettingsGuard><SettingsPage /></SettingsGuard>}>
               <Route

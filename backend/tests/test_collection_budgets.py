@@ -342,6 +342,7 @@ def test_scheduled_orchestrator_runs_story_lane_before_durable_round(monkeypatch
         tiktok=SimpleNamespace(collection_enabled=False),
     )
     collector.targets = FakeTargets()
+    collector.collectors = SimpleNamespace(enabled_platforms=lambda platforms: platforms)
     collector._run_budget_seconds = None
     collector._account_budget_seconds = None
     collector._collect_story_hot_lane = lambda _rows, deadline: events.append("stories")

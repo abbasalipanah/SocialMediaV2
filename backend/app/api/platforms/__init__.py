@@ -10,6 +10,7 @@ from app.api.scope import resolve_request_scope
 from app.application.ports import AuthorityStore, ReportingStore
 from app.core import Boundary, mark_boundary
 from app.domain.platforms import PlatformId
+from app.domain.platforms.catalog import PLATFORM_CATALOG
 
 
 def create_platform_router(
@@ -61,9 +62,11 @@ def create_platform_router(
             path, endpoint, methods=["GET"], response_model=PlatformAccountsResponse
         )
 
-    _register("/api/platforms/facebook/accounts", PlatformId.FACEBOOK)
-    _register("/api/platforms/instagram/accounts", PlatformId.INSTAGRAM)
-    _register("/api/platforms/tiktok/accounts", PlatformId.TIKTOK)
+    for definition in PLATFORM_CATALOG:
+        _register(
+            f"/api/platforms/{definition.route}/accounts",
+            definition.platform,
+        )
     return router
 
 

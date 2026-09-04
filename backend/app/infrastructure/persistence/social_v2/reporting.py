@@ -161,6 +161,12 @@ class SocialReportingStore:
                        i.saves_count, i.sticker_taps, i.profile_visits,
                        i.follows_count, i.taps_forward, i.taps_back,
                        i.swipe_forward, i.exits, i.navigation_count, i.completion_rate,
+                       i.reposts_count, i.quotes_count, i.clicks_count,
+                       i.link_clicks,
+                       i.profile_clicks, i.video_views_count,
+                       i.video_playback_0_count, i.video_playback_25_count,
+                       i.video_playback_50_count, i.video_playback_75_count,
+                       i.video_playback_100_count,
                        EXISTS (
                            SELECT 1 FROM media_assets AS m
                            WHERE m.asset_id=i.asset_id AND m.content_id=i.content_id
@@ -204,9 +210,9 @@ class SocialReportingStore:
                         else str(row["media_url"])
                     ),
                     published_at=row["created_time"],
-                    likes_count=int(row["likes_count"]),
-                    comments_count=int(row["comments_count"]),
-                    shares_count=int(row["shares_count"]),
+                    likes_count=_optional_int(row["likes_count"]),
+                    comments_count=_optional_int(row["comments_count"]),
+                    shares_count=_optional_int(row["shares_count"]),
                     views_count=_optional_float(row["views_count"]),
                     reach_count=_optional_float(row["reach_count"]),
                     cover_url=(
@@ -280,6 +286,17 @@ class SocialReportingStore:
                     exits=_optional_float(row["exits"]),
                     navigation_count=_optional_float(row["navigation_count"]),
                     completion_rate=_optional_float(row["completion_rate"]),
+                    reposts_count=_optional_int(row["reposts_count"]),
+                    quotes_count=_optional_int(row["quotes_count"]),
+                    clicks_count=_optional_int(row["clicks_count"]),
+                    link_clicks=_optional_int(row["link_clicks"]),
+                    profile_clicks=_optional_int(row["profile_clicks"]),
+                    video_views_count=_optional_int(row["video_views_count"]),
+                    video_playback_0_count=_optional_int(row["video_playback_0_count"]),
+                    video_playback_25_count=_optional_int(row["video_playback_25_count"]),
+                    video_playback_50_count=_optional_int(row["video_playback_50_count"]),
+                    video_playback_75_count=_optional_int(row["video_playback_75_count"]),
+                    video_playback_100_count=_optional_int(row["video_playback_100_count"]),
                 )
                 for row in rows
             )
@@ -296,7 +313,7 @@ class SocialReportingStore:
         _validate_range(start_on, end_on)
         statement = _expanded(
             """SELECT c.asset_id, c.platform, c.content_id, c.comment_id,
-                      c.user_name, c.text, c.like_count, c.reply_count,
+                      c.user_id, c.user_name, c.text, c.like_count, c.reply_count,
                       c.answered, c.commented_at, c.sentiment
                FROM content_comments AS c
                WHERE c.asset_id IN :account_ids
@@ -323,6 +340,7 @@ class SocialReportingStore:
                     answered=bool(row["answered"]),
                     commented_at=row["commented_at"],
                     sentiment=row["sentiment"],
+                    author_id=row["user_id"],
                 )
                 for row in rows
             )
@@ -489,6 +507,10 @@ def _validate_range(start_on: date, end_on: date) -> None:
 
 def _optional_float(value: object) -> float | None:
     return float(cast(Any, value)) if value is not None else None
+
+
+def _optional_int(value: object) -> int | None:
+    return int(cast(Any, value)) if value is not None else None
 
 
 def _string_tuple(value: object) -> tuple[str, ...]:

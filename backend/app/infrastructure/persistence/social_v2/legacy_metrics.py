@@ -52,7 +52,7 @@ KNOWN_LEGACY_METRIC_IDS_BY_PLATFORM: dict[PlatformId, frozenset[str]] = {
             "audience_countries",
             "audience_country",
             "audience_heatmap",
-            "clicks",
+            MetricId.CLICKS.value,
             "comments",
             "engaged_users",
             MetricId.ENGAGEMENT_RATE.value,

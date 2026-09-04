@@ -11,6 +11,7 @@ from typing import Any, cast
 
 from sqlalchemy import Engine, text
 
+from app.application.ports import OAUTH_CHANNEL_PLATFORMS
 from app.core.write_policy import WritePolicy
 from app.domain.platforms import PlatformId
 
@@ -109,7 +110,9 @@ class SocialCollectionTargetStore:
                           ON ps.projection_key=CASE
                             WHEN la.platform='tiktok'
                               THEN 'v2:tiktok:connection-credential:' || la.connection_id
-                            ELSE 'v2:meta:connection:' || la.connection_id
+                            WHEN la.platform IN ('facebook', 'instagram')
+                              THEN 'v2:meta:connection:' || la.connection_id
+                            ELSE 'v2:oauth:' || la.platform || ':connection:' || la.connection_id
                           END
                         WHERE {' AND '.join(clauses)}
                         -- Least recently collected first. A fixed order starved the
@@ -435,6 +438,22 @@ def _connected_target(row: Mapping[str, Any]) -> CollectionTargetRow:
     payload = _payload(row["payload_json"])
     if platform is PlatformId.TIKTOK:
         reference = _credential_reference(payload)
+    elif platform in OAUTH_CHANNEL_PLATFORMS:
+        if payload.get("format_version") != 1 or payload.get("platform") != platform.value:
+            raise ValueError("oauth_connection_payload_invalid")
+        accounts = payload.get("accounts")
+        if not isinstance(accounts, list):
+            raise ValueError("oauth_connection_payload_invalid")
+        matches = [
+            item
+            for item in accounts
+            if isinstance(item, Mapping)
+            and item.get("platform") == platform.value
+            and str(item.get("external_id") or "") == str(row["external_id"])
+        ]
+        if len(matches) != 1:
+            raise ValueError("oauth_connection_payload_invalid")
+        reference = _credential_reference(matches[0])
     else:
         accounts = payload.get("accounts")
         if not isinstance(accounts, list):

@@ -2,14 +2,19 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-LOCAL_STATE="$ROOT/.local"
-RUNTIME_ENV="$LOCAL_STATE/social-media-v2-db.env"
-CONTAINER="social-media-v2-postgres"
-VOLUME="social_media_v2_postgres_data"
-IMAGE="postgres:16-alpine"
-HOST_PORT="55432"
-DATABASE="social_media_v2_local"
-DATABASE_USER="social_media_v2"
+LOCAL_STATE="${SOCIAL_LOCAL_STATE_DIR:-$ROOT/.local}"
+RUNTIME_ENV="${SOCIAL_LOCAL_DB_ENV_FILE:-$LOCAL_STATE/social-media-v2-db.env}"
+CONTAINER="${SOCIAL_LOCAL_DB_CONTAINER:-social-media-v2-postgres}"
+VOLUME="${SOCIAL_LOCAL_DB_VOLUME:-social_media_v2_postgres_data}"
+IMAGE="${SOCIAL_LOCAL_DB_IMAGE:-postgres:16-alpine}"
+HOST_PORT="${SOCIAL_LOCAL_DB_PORT:-55432}"
+DATABASE="${SOCIAL_LOCAL_DB_NAME:-social_media_v2_local}"
+DATABASE_USER="${SOCIAL_LOCAL_DB_USER:-social_media_v2}"
+
+if [[ ! "$HOST_PORT" =~ ^[0-9]+$ ]] || ((HOST_PORT < 1 || HOST_PORT > 65535)); then
+  echo "Invalid local database port: $HOST_PORT" >&2
+  exit 1
+fi
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "Docker is required for the isolated Social Media V2 local database." >&2
@@ -82,6 +87,18 @@ APP_ENV=development \
 SOCIAL_RUNTIME_MODE=development \
 SOCIAL_WRITES_ENABLED=false \
 SOCIAL_DB_REQUIRE_TLS=false \
+SOCIAL_YOUTUBE_ACCOUNT_ENABLED=false \
+SOCIAL_YOUTUBE_ACCOUNT_OAUTH_MODE=disabled \
+SOCIAL_YOUTUBE_COLLECTION_ENABLED=false \
+SOCIAL_YOUTUBE_ACTIVATION_GATE_ENABLED=false \
+SOCIAL_X_ACCOUNT_ENABLED=false \
+SOCIAL_X_ACCOUNT_OAUTH_MODE=disabled \
+SOCIAL_X_COLLECTION_ENABLED=false \
+SOCIAL_X_ACTIVATION_GATE_ENABLED=false \
+SOCIAL_LINKEDIN_ACCOUNT_ENABLED=false \
+SOCIAL_LINKEDIN_ACCOUNT_OAUTH_MODE=disabled \
+SOCIAL_LINKEDIN_COLLECTION_ENABLED=false \
+SOCIAL_LINKEDIN_ACTIVATION_GATE_ENABLED=false \
 "$ROOT/backend/.venv/bin/python" "$ROOT/backend/scripts/apply_migrations.py"
 
 echo "Social Media V2 local database is ready on 127.0.0.1:${HOST_PORT}."

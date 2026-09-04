@@ -55,9 +55,9 @@ class ReportingContent:
     message: str
     media_url: str
     published_at: datetime | None
-    likes_count: int
-    comments_count: int
-    shares_count: int
+    likes_count: int | None
+    comments_count: int | None
+    shares_count: int | None
     views_count: float | None = None
     reach_count: float | None = None
     cover_url: str | None = None
@@ -80,6 +80,17 @@ class ReportingContent:
     exits: float | None = None
     navigation_count: float | None = None
     completion_rate: float | None = None
+    reposts_count: int | None = None
+    quotes_count: int | None = None
+    clicks_count: int | None = None
+    link_clicks: int | None = None
+    profile_clicks: int | None = None
+    video_views_count: int | None = None
+    video_playback_0_count: int | None = None
+    video_playback_25_count: int | None = None
+    video_playback_50_count: int | None = None
+    video_playback_75_count: int | None = None
+    video_playback_100_count: int | None = None
 
 
 @dataclass(frozen=True)
@@ -95,6 +106,7 @@ class ReportingComment:
     answered: bool
     commented_at: datetime | None
     sentiment: str | None = None
+    author_id: str | None = None
 
 
 @dataclass(frozen=True)

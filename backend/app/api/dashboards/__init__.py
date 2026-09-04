@@ -19,6 +19,7 @@ from app.application.queries import (
 from app.core import Boundary, mark_boundary
 from app.domain.metrics import MetricCatalog
 from app.domain.platforms import PlatformId
+from app.domain.platforms.catalog import PLATFORM_CATALOG
 from app.domain.reporting import OverviewDashboard, PlatformDashboard
 
 ALLOWED_TABS = {
@@ -188,9 +189,11 @@ def create_dashboard_router(
             path, endpoint, methods=["GET"], response_model=PlatformDashboard
         )
 
-    _register_platform("/api/dashboards/facebook", PlatformId.FACEBOOK)
-    _register_platform("/api/dashboards/instagram", PlatformId.INSTAGRAM)
-    _register_platform("/api/dashboards/tiktok", PlatformId.TIKTOK)
+    for definition in PLATFORM_CATALOG:
+        _register_platform(
+            f"/api/dashboards/{definition.route}",
+            definition.platform,
+        )
     return router
 
 

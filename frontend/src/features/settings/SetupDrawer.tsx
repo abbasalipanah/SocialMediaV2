@@ -1,5 +1,15 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Circle, Facebook, Instagram, Radio, Settings2, Store } from "lucide-react";
+import {
+  Check,
+  Circle,
+  Facebook,
+  Instagram,
+  Linkedin,
+  Radio,
+  Settings2,
+  Store,
+  Youtube,
+} from "lucide-react";
 import { useState } from "react";
 
 import type {
@@ -18,17 +28,23 @@ import {
   syncJobsSchema,
 } from "../../api";
 import { useBrandScope } from "../../app/BrandScopeProvider";
+import { PLATFORM_IDS, platformDefinition } from "../../platforms/catalog";
 import { Dialog } from "../../ui";
 import { MetaConnectionModal } from "../integrations/MetaConnectionModal";
+import {
+  OAuthChannelConnectionModal,
+  type ManagedOAuthChannel,
+} from "../integrations/OAuthChannelConnectionModal";
 import { TikTokConnectionModal } from "../integrations/TikTokConnectionModal";
 import { PLATFORM_LABELS } from "../dashboard/catalog";
 import { formatDate, humanize } from "../dashboard/format";
 
-const PLATFORMS: Platform[] = ["facebook", "instagram", "tiktok"];
-
 function PlatformSymbol({ platform }: { platform: Platform }) {
   if (platform === "facebook") return <Facebook size={19} />;
   if (platform === "instagram") return <Instagram size={19} />;
+  if (platform === "linkedin") return <Linkedin size={19} />;
+  if (platform === "youtube") return <Youtube size={19} />;
+  if (platform === "x") return <span className="drawer-tiktok">𝕏</span>;
   return <span className="drawer-tiktok">♪</span>;
 }
 
@@ -90,7 +106,7 @@ function SocialAccounts({
 }) {
   return (
     <div className="setup-platform-list">
-      {PLATFORMS.map((platform) => {
+      {PLATFORM_IDS.map((platform) => {
         const linked = accounts.filter((item) => item.platform === platform);
         // The account's own connection state, not the connection list's. A Meta
         // connection is stored once under `facebook` and serves Instagram too,
@@ -101,6 +117,9 @@ function SocialAccounts({
           connections.find((item) => item.platform === platform)?.state ??
           "not connected";
         const platformCanBeManaged = canManage(platform);
+        const connectionAvailable = ["meta", "tiktok", "x", "linkedin", "youtube"].includes(
+          platformDefinition(platform).connectionProvider,
+        );
         return (
           <article key={platform}>
             <div className={`setup-platform-icon setup-${platform}`}>
@@ -123,10 +142,12 @@ function SocialAccounts({
             </span>
             <button
               className="settings-row-action"
-              disabled={!platformCanBeManaged}
+              disabled={!connectionAvailable || !platformCanBeManaged}
               onClick={() => onConnect(platform)}
               title={
-                platformCanBeManaged
+                !connectionAvailable
+                  ? `${PLATFORM_LABELS[platform]} connection is not configured yet`
+                  : platformCanBeManaged
                   ? undefined
                   : `Needs permission to manage ${PLATFORM_LABELS[platform]} connections`
               }
@@ -246,6 +267,7 @@ export function SetupDrawer({
   const { capabilities } = useBrandScope();
   const [connecting, setConnecting] = useState<Platform | null>(null);
   const [tiktokConnectionOpen, setTikTokConnectionOpen] = useState(false);
+  const [oauthChannelConnection, setOAuthChannelConnection] = useState<ManagedOAuthChannel | null>(null);
 
   // Fetched for the Brand whose row was clicked, not filtered out of the page's
   // lists: those are scoped to the Brand the workspace is currently on, so any
@@ -289,8 +311,15 @@ export function SetupDrawer({
   // lacking one must not disable the other platform.
   const canManageMeta = capabilities?.permissions.meta_connection_manage === true;
   const canManageTikTok = capabilities?.permissions.tiktok_connection_manage === true;
+  const canManageOAuthChannel = capabilities?.permissions.settings_visible === true;
   const canManagePlatform = (platform: Platform) =>
-    platform === "tiktok" ? canManageTikTok : canManageMeta;
+    platform === "tiktok"
+      ? canManageTikTok
+      : platform === "x" || platform === "linkedin" || platform === "youtube"
+        ? canManageOAuthChannel
+      : platform === "facebook" || platform === "instagram"
+        ? canManageMeta
+        : false;
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["settings"] });
@@ -298,6 +327,13 @@ export function SetupDrawer({
   const refreshAndCloseConnection = () => {
     refresh();
     setTikTokConnectionOpen(false);
+  };
+  const managePlatform = (platform: Platform) => {
+    if (platform === "x" || platform === "linkedin" || platform === "youtube") {
+      setOAuthChannelConnection(platform);
+      return;
+    }
+    setConnecting(platform);
   };
 
   return (
@@ -334,16 +370,16 @@ export function SetupDrawer({
           <Section
             index={2}
             title="Social Accounts"
-            hint="Connect Facebook, Instagram or TikTok for this Brand, or edit what is already linked."
+            hint="Connect a configured social platform for this Brand, or edit what is already linked."
           >
             <SocialAccounts
               accounts={brandAccounts}
               canManage={canManagePlatform}
               connections={brandConnections}
               loading={loadingAccounts}
-              onConnect={setConnecting}
+              onConnect={managePlatform}
             />
-            {!canManageMeta && !canManageTikTok && (
+            {!canManageMeta && !canManageTikTok && !canManageOAuthChannel && (
               <p className="setup-note">
                 Linking accounts needs permission to manage social connections for {brandName}.
               </p>
@@ -392,6 +428,15 @@ export function SetupDrawer({
           brandName={brandName}
           onClose={() => setTikTokConnectionOpen(false)}
           onConnected={refreshAndCloseConnection}
+        />
+      )}
+      {oauthChannelConnection && (
+        <OAuthChannelConnectionModal
+          brandId={brand.brand_id}
+          brandName={brandName}
+          onChanged={refresh}
+          onClose={() => setOAuthChannelConnection(null)}
+          provider={oauthChannelConnection}
         />
       )}
     </>

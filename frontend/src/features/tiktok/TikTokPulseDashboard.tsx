@@ -217,11 +217,14 @@ function metricPie(data: PlatformDashboard, definitions: Array<{ id: MetricId; l
 
 function contentEngagementRows(content: DashboardContent[]): PieRow[] {
   const totals = derivedContentTotals(content);
-  return [
+  const rows: Array<{ label: string; value: number | null; color: string }> = [
     { label: "Likes", value: totals.likes, color: V1_CHART_COLORS.likes },
     { label: "Comments", value: totals.comments, color: V1_CHART_COLORS.comments },
     { label: "Shares", value: totals.shares, color: V1_CHART_COLORS.shares },
-  ].filter((item) => item.value > 0);
+  ];
+  return rows.flatMap((item) => item.value !== null && item.value > 0
+    ? [{ ...item, value: item.value }]
+    : []);
 }
 
 function AccountSection({ data, withTitle }: { data: PlatformDashboard; withTitle: boolean }) {

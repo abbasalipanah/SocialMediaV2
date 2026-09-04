@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, useEffect, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "../../routing";
 
 import type { Platform } from "../../api";
@@ -6,6 +6,8 @@ import { useBrandScope } from "../../app/BrandScopeProvider";
 import { FacebookPulseDashboard } from "../facebook/FacebookPulseDashboard";
 import { InstagramPulseDashboard } from "../instagram/InstagramPulseDashboard";
 import { TikTokPulseDashboard } from "../tiktok/TikTokPulseDashboard";
+import { XPulseDashboard } from "../x/XPulseDashboard";
+import { YouTubePulseDashboard } from "../youtube/YouTubePulseDashboard";
 import {
   DashboardError,
   DashboardLoading,
@@ -21,18 +23,56 @@ import { useChannelDashboard } from "./useDashboard";
 import { useReportingPeriod } from "./useReportingPeriod";
 import { ReportExport } from "./ReportExport";
 
+const LinkedInPulseDashboard = lazy(() =>
+  import("../linkedin/LinkedInPulseDashboard").then((module) => ({
+    default: module.LinkedInPulseDashboard,
+  })),
+);
+
 function TabContent({ platform, tab, data }: {
   platform: Platform;
   tab: DashboardTab["id"];
   data: NonNullable<ReturnType<typeof useChannelDashboard>["data"]>;
 }) {
-  if (platform === "facebook") {
-    return <FacebookPulseDashboard data={data} tab={tab as "cover" | "page" | "content" | "audience"} />;
-  }
-  if (platform === "instagram") {
-    return <InstagramPulseDashboard data={data} tab={tab as "cover" | "page" | "content" | "stories" | "audience"} />;
-  }
-  return <TikTokPulseDashboard data={data} tab={tab as "account" | "cover" | "content" | "audience"} />;
+  const renderers: Record<Platform, () => ReactNode> = {
+    facebook: () => (
+      <FacebookPulseDashboard
+        data={data}
+        tab={tab as "cover" | "page" | "content" | "audience"}
+      />
+    ),
+    instagram: () => (
+      <InstagramPulseDashboard
+        data={data}
+        tab={tab as "cover" | "page" | "content" | "stories" | "audience"}
+      />
+    ),
+    tiktok: () => (
+      <TikTokPulseDashboard
+        data={data}
+        tab={tab as "account" | "cover" | "content" | "audience"}
+      />
+    ),
+    x: () => (
+      <XPulseDashboard
+        data={data}
+        tab={tab as "cover" | "profile" | "content" | "audience"}
+      />
+    ),
+    linkedin: () => (
+      <LinkedInPulseDashboard
+        data={data}
+        tab={tab as "cover" | "page" | "content" | "audience"}
+      />
+    ),
+    youtube: () => (
+      <YouTubePulseDashboard
+        data={data}
+        tab={tab as "account" | "cover" | "content" | "audience"}
+      />
+    ),
+  };
+  return renderers[platform]();
 }
 
 function tabFromSearch(search: string, tabs: DashboardTab[]): DashboardTab["id"] {

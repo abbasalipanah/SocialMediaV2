@@ -93,6 +93,7 @@ const baseDashboard = {
   metric_methodology: { follower_flow: "unavailable", engagement_rate: "unavailable", reach: "unavailable" },
   audience_capabilities: { source: null, geo: "unavailable" as const, age_gender: "unavailable" as const, activity: "unavailable" as const },
   stories: null,
+  mentions: null,
 };
 
 const account: ReportingAccount = {
@@ -331,9 +332,9 @@ describe("Phase 8 product surfaces", () => {
     expect(document.querySelector(".overview-performance-line")).toHaveAttribute("stroke-width", "1.25");
     expect(document.querySelector(".overview-performance-line")).toHaveAttribute("data-curve", "monotone");
     expect(document.querySelectorAll(".overview-performance-area")).toHaveLength(1);
-    const comingSoon = screen.getByLabelText("LinkedIn, X, YouTube Coming soon");
+    const comingSoon = screen.getByLabelText("LinkedIn, YouTube Coming soon");
     expect(within(comingSoon).getByLabelText("LinkedIn logo")).toBeInTheDocument();
-    expect(within(comingSoon).getByLabelText("X logo")).toBeInTheDocument();
+    expect(within(comingSoon).queryByLabelText("X logo")).not.toBeInTheDocument();
     expect(within(comingSoon).getByLabelText("YouTube logo")).toBeInTheDocument();
     expect(within(comingSoon).getByText("Coming soon")).toBeInTheDocument();
     expect(screen.getByText("Scale short-form content")).toBeInTheDocument();
@@ -398,9 +399,9 @@ describe("Phase 8 product surfaces", () => {
 
       expect(within(carousel).queryByText("Instagram")).not.toBeInTheDocument();
       expect(within(carousel).getByText("LinkedIn")).toBeInTheDocument();
-      const comingSoon = screen.getByLabelText("X, YouTube Coming soon");
+      const comingSoon = screen.getByLabelText("YouTube Coming soon");
       expect(within(comingSoon).queryByLabelText("LinkedIn logo")).not.toBeInTheDocument();
-      expect(within(comingSoon).getByLabelText("X logo")).toBeInTheDocument();
+      expect(within(comingSoon).queryByLabelText("X logo")).not.toBeInTheDocument();
       expect(within(comingSoon).getByLabelText("YouTube logo")).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
@@ -440,6 +441,9 @@ describe("Phase 8 product surfaces", () => {
         full_video_watched_rate: null,
         total_time_watched: null,
         average_time_watched: null,
+        saves_count: null,
+        profile_visits: null,
+        clicks_count: null,
         data_status: "partial" as const,
       }],
     } as unknown as PlatformDashboard;
@@ -518,6 +522,8 @@ describe("Phase 8 product surfaces", () => {
         full_video_watched_rate: null,
         total_time_watched: null,
         average_time_watched: null,
+        saves_count: null,
+        profile_visits: null,
         data_status: "partial" as const,
       }],
     } as unknown as PlatformDashboard;
@@ -582,6 +588,20 @@ describe("Phase 8 product surfaces", () => {
         full_video_watched_rate: null,
         total_time_watched: null,
         average_time_watched: null,
+        saves_count: null,
+        profile_visits: null,
+        clicks_count: null,
+        reposts_count: null,
+        quotes_count: null,
+        link_clicks: null,
+        profile_clicks: null,
+        video_views_count: null,
+        video_playback_0_count: null,
+        video_playback_25_count: null,
+        video_playback_50_count: null,
+        video_playback_75_count: null,
+        video_playback_100_count: null,
+        completion_rate: null,
         data_status: "partial",
       }],
     };

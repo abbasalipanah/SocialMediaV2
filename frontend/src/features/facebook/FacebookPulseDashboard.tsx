@@ -63,7 +63,7 @@ export type PulseKpi = {
   delta: number | null;
   icon: LucideIcon;
   color: string;
-  unit?: "count" | "ratio";
+  unit?: "count" | "ratio" | "percentage";
 };
 
 export type PieRow = { label: string; value: number; color: string };
@@ -73,10 +73,19 @@ type ContentSortKey =
   | "date"
   | "type"
   | "views"
+  | "reach"
   | "interactions"
   | "likes"
   | "comments"
   | "shares"
+  | "reposts"
+  | "quotes"
+  | "saves"
+  | "link_clicks"
+  | "provider_clicks"
+  | "profile_clicks"
+  | "profile_visits"
+  | "video_views"
   | "engagement";
 type ContentSortDirection = "asc" | "desc";
 
@@ -112,9 +121,11 @@ function safeContentUrl(rawUrl: string): string | null {
   }
 }
 
-function contentEngagement(item: DashboardContent): number | null {
-  const delivery = item.reach !== null && item.reach > 0 ? item.reach : item.views;
-  return delivery !== null && delivery > 0
+function contentEngagement(item: DashboardContent, preferImpressions = false): number | null {
+  const delivery = preferImpressions
+    ? item.views
+    : item.reach !== null && item.reach > 0 ? item.reach : item.views;
+  return delivery !== null && delivery > 0 && item.interactions !== null
     ? (item.interactions / delivery) * 100
     : null;
 }
@@ -137,16 +148,29 @@ function contentDateLabel(value: string | null): string {
     }).format(parsed);
 }
 
-function contentSortValue(item: DashboardContent, key: ContentSortKey): string | number | null {
+function contentSortValue(
+  item: DashboardContent,
+  key: ContentSortKey,
+  preferImpressions = false,
+): string | number | null {
   if (key === "caption") return item.message || `Untitled ${humanize(item.content_type).toLowerCase()}`;
   if (key === "date") return contentPublishedAt(item);
   if (key === "type") return humanize(item.content_type);
   if (key === "views") return item.views;
+  if (key === "reach") return item.reach;
   if (key === "interactions") return item.interactions;
   if (key === "likes") return item.likes_count;
   if (key === "comments") return item.comments_count;
   if (key === "shares") return item.shares_count;
-  return contentEngagement(item);
+  if (key === "reposts") return item.reposts_count;
+  if (key === "quotes") return item.quotes_count;
+  if (key === "saves") return item.saves_count;
+  if (key === "link_clicks") return item.link_clicks;
+  if (key === "provider_clicks") return item.clicks_count;
+  if (key === "profile_clicks") return item.profile_clicks;
+  if (key === "profile_visits") return item.profile_visits;
+  if (key === "video_views") return item.video_views_count;
+  return contentEngagement(item, preferImpressions);
 }
 
 function defaultContentSortDirection(key: ContentSortKey): ContentSortDirection {
@@ -189,15 +213,16 @@ function ContentTypeChip({ contentType }: { contentType: string }) {
 }
 
 export function derivedContentTotals(content: DashboardContent[]) {
-  return content.reduce(
-    (current, item) => ({
-      likes: current.likes + item.likes_count,
-      comments: current.comments + item.comments_count,
-      shares: current.shares + item.shares_count,
-      interactions: current.interactions + item.interactions,
-    }),
-    { likes: 0, comments: 0, shares: 0, interactions: 0 },
-  );
+  const total = (values: Array<number | null>): number | null => {
+    const available = values.filter((value): value is number => value !== null);
+    return available.length > 0 ? available.reduce((sum, value) => sum + value, 0) : null;
+  };
+  return {
+    likes: total(content.map((item) => item.likes_count)),
+    comments: total(content.map((item) => item.comments_count)),
+    shares: total(content.map((item) => item.shares_count)),
+    interactions: total(content.map((item) => item.interactions)),
+  };
 }
 
 export function comparisonDelta(value: number | null, previous: number | null): number | null {
@@ -250,7 +275,7 @@ function contentKpis(data: PlatformDashboard): PulseKpi[] {
   const views = viewsMetric?.value ?? data.content_metrics.views.value ?? collectedTotal("views");
   const reach = reachMetric?.value ?? data.content_metrics.reach.value ?? collectedTotal("reach");
   const interactions = data.content_metrics.interactions.value ?? totals.interactions;
-  const engagementRate = views && views > 0 ? interactions / views : null;
+  const engagementRate = views && views > 0 && interactions !== null ? interactions / views : null;
   const previousViews = viewsFromMetric
     ? viewsMetric.previous_value
     : data.content_metrics.views.previous_value;
@@ -295,7 +320,13 @@ function PulseKpiCard({ item }: { item: PulseKpi }) {
           {item.delta === null ? "—" : `${Math.abs(item.delta).toFixed(1)}%`}
         </span>
       </div>
-      <strong>{item.value === null ? "—" : item.unit === "ratio" ? new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 1 }).format(item.value) : compact(item.value)}</strong>
+      <strong>{item.value === null
+        ? "—"
+        : item.unit === "ratio"
+          ? new Intl.NumberFormat("en-US", { style: "percent", maximumFractionDigits: 1 }).format(item.value)
+          : item.unit === "percentage"
+            ? `${item.value.toFixed(1)}%`
+            : compact(item.value)}</strong>
       <span>{item.label}</span>
     </article>
   );
@@ -648,11 +679,14 @@ export function summaryPieRows(
 
 function engagementRows(content: DashboardContent[]): PieRow[] {
   const totals = derivedContentTotals(content);
-  return [
+  const rows: Array<{ label: string; value: number | null; color: string }> = [
     { label: "Likes", value: totals.likes, color: V1_CHART_COLORS.likes },
     { label: "Comments", value: totals.comments, color: V1_CHART_COLORS.comments },
     { label: "Shares", value: totals.shares, color: V1_CHART_COLORS.shares },
-  ].filter((item) => item.value > 0);
+  ];
+  return rows.flatMap((item) => item.value !== null && item.value > 0
+    ? [{ ...item, value: item.value }]
+    : []);
 }
 
 export function SimplePulseTable({ title, subtitle, columns, rows, emptyCopy = "No data in selected range." }: { title: string; subtitle?: string; columns: string[]; rows: Array<Array<ReactNode>>; emptyCopy?: string }) {
@@ -796,14 +830,23 @@ export function PulseHeatmapCard({ breakdowns }: { breakdowns: DashboardBreakdow
   );
 }
 
-export function PerformingContentTable({ content }: { content: DashboardContent[] }) {
+export function PerformingContentTable({
+  content,
+  variant = "default",
+}: {
+  content: DashboardContent[];
+  variant?: "default" | "linkedin" | "x" | "youtube";
+}) {
+  const x = variant === "x";
+  const linkedin = variant === "linkedin";
+  const youtube = variant === "youtube";
   const [sort, setSort] = useState<{ direction: ContentSortDirection; key: ContentSortKey }>({
     direction: "desc",
     key: "date",
   });
   const rows = useMemo(() => [...content].sort((left, right) => {
-    const leftValue = contentSortValue(left, sort.key);
-    const rightValue = contentSortValue(right, sort.key);
+    const leftValue = contentSortValue(left, sort.key, linkedin);
+    const rightValue = contentSortValue(right, sort.key, linkedin);
     if (leftValue === null && rightValue === null) return left.external_content_id.localeCompare(right.external_content_id);
     if (leftValue === null) return 1;
     if (rightValue === null) return -1;
@@ -821,21 +864,32 @@ export function PerformingContentTable({ content }: { content: DashboardContent[
   const sortDirection = (key: ContentSortKey) => sort.key === key ? sort.direction : null;
   return (
     <article className="facebook-pulse-table-card">
-      <PulseTableHeading title="All Performing Content" />
+      <PulseTableHeading title={youtube ? "All Performing Videos" : x || linkedin ? "All Performing Posts" : "All Performing Content"} />
       <div className="facebook-table-scroll"><table className="facebook-performing-content-table"><thead><tr>
         <th>#</th>
         <th>Cover</th>
         <SortableContentHeader activeDirection={sortDirection("caption")} label="Caption" onSort={() => sortBy("caption")} />
         <SortableContentHeader activeDirection={sortDirection("date")} label="Date" onSort={() => sortBy("date")} />
         <SortableContentHeader activeDirection={sortDirection("type")} label="Type" onSort={() => sortBy("type")} />
-        <SortableContentHeader activeDirection={sortDirection("views")} label="Post Views" onSort={() => sortBy("views")} />
-        <SortableContentHeader activeDirection={sortDirection("interactions")} label="Interactions" onSort={() => sortBy("interactions")} />
+        <SortableContentHeader activeDirection={sortDirection("views")} label={youtube ? "Views" : x || linkedin ? "Impressions" : "Post Views"} onSort={() => sortBy("views")} />
+        {linkedin && <SortableContentHeader activeDirection={sortDirection("reach")} label="Unique Impressions" onSort={() => sortBy("reach")} />}
+        <SortableContentHeader activeDirection={sortDirection("interactions")} label={youtube ? "Visible Engagements" : x || linkedin ? "Engagements" : "Interactions"} onSort={() => sortBy("interactions")} />
         <SortableContentHeader activeDirection={sortDirection("likes")} label="Likes" onSort={() => sortBy("likes")} />
-        <SortableContentHeader activeDirection={sortDirection("comments")} label="Comments" onSort={() => sortBy("comments")} />
-        <SortableContentHeader activeDirection={sortDirection("shares")} label="Shares" onSort={() => sortBy("shares")} />
-        <SortableContentHeader activeDirection={sortDirection("engagement")} label="Engagement" onSort={() => sortBy("engagement")} />
+        <SortableContentHeader activeDirection={sortDirection("comments")} label={x ? "Replies" : "Comments"} onSort={() => sortBy("comments")} />
+        {x
+          ? <>
+            <SortableContentHeader activeDirection={sortDirection("reposts")} label="Reposts" onSort={() => sortBy("reposts")} />
+            <SortableContentHeader activeDirection={sortDirection("quotes")} label="Quotes" onSort={() => sortBy("quotes")} />
+          </>
+          : <SortableContentHeader activeDirection={sortDirection("shares")} label="Shares" onSort={() => sortBy("shares")} />}
+        {x && <SortableContentHeader activeDirection={sortDirection("saves")} label="Bookmarks" onSort={() => sortBy("saves")} />}
+        {x && <SortableContentHeader activeDirection={sortDirection("link_clicks")} label="Link Clicks" onSort={() => sortBy("link_clicks")} />}
+        {x && <SortableContentHeader activeDirection={sortDirection("profile_clicks")} label="Profile Clicks" onSort={() => sortBy("profile_clicks")} />}
+        {x && <SortableContentHeader activeDirection={sortDirection("video_views")} label="Video Views" onSort={() => sortBy("video_views")} />}
+        {linkedin && <SortableContentHeader activeDirection={sortDirection("provider_clicks")} label="Clicks" onSort={() => sortBy("provider_clicks")} />}
+        <SortableContentHeader activeDirection={sortDirection("engagement")} label={youtube ? "Visible Engagement Rate" : x || linkedin ? "Engagement Rate" : "Engagement"} onSort={() => sortBy("engagement")} />
       </tr></thead><tbody>
-        {rows.length === 0 ? <tr><td colSpan={11}>No content was collected in this period.</td></tr> : rows.map((item, index) => {
+        {rows.length === 0 ? <tr><td colSpan={x ? 16 : linkedin ? 13 : 11}>{x || linkedin ? "No posts were collected in this period." : "No content was collected in this period."}</td></tr> : rows.map((item, index) => {
           const contentUrl = safeContentUrl(item.permalink);
           const title = item.message || `Untitled ${humanize(item.content_type).toLowerCase()}`;
           const cover = (
@@ -846,7 +900,7 @@ export function PerformingContentTable({ content }: { content: DashboardContent[
             </span>
           );
           const caption = <b className="facebook-content-caption" title={title}>{title}</b>;
-          const engagement = contentEngagement(item);
+          const engagement = contentEngagement(item, linkedin || youtube);
           return (
             <tr key={`${item.account_id}-${item.external_content_id}`}>
               <td>{index + 1}</td>
@@ -863,10 +917,16 @@ export function PerformingContentTable({ content }: { content: DashboardContent[
               <td title={item.published_at ?? undefined}>{contentDateLabel(item.published_at)}</td>
               <td><ContentTypeChip contentType={item.content_type} /></td>
               <td>{item.views === null ? "—" : formatNumber(item.views)}</td>
-              <td>{formatNumber(item.interactions)}</td>
-              <td>{formatNumber(item.likes_count)}</td>
-              <td>{formatNumber(item.comments_count)}</td>
-              <td>{formatNumber(item.shares_count)}</td>
+              {linkedin && <td>{compact(item.reach)}</td>}
+              <td>{compact(item.interactions)}</td>
+              <td>{compact(item.likes_count)}</td>
+              <td>{compact(item.comments_count)}</td>
+              {x ? <><td>{compact(item.reposts_count)}</td><td>{compact(item.quotes_count)}</td></> : <td>{compact(item.shares_count)}</td>}
+              {x && <td>{compact(item.saves_count)}</td>}
+              {x && <td>{compact(item.link_clicks)}</td>}
+              {x && <td>{compact(item.profile_clicks)}</td>}
+              {x && <td>{compact(item.video_views_count)}</td>}
+              {linkedin && <td>{compact(item.clicks_count)}</td>}
               <td>{engagement === null ? "—" : <span className="facebook-engagement-score">{engagement.toFixed(1)}%</span>}</td>
             </tr>
           );

@@ -10,7 +10,14 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_platform_id_is_the_exact_canonical_set() -> None:
-    assert PlatformId.exact_set() == {"facebook", "instagram", "tiktok"}
+    assert PlatformId.exact_set() == {
+        "facebook",
+        "instagram",
+        "tiktok",
+        "x",
+        "linkedin",
+        "youtube",
+    }
 
 
 def test_canonical_vocabulary_script_passes() -> None:
