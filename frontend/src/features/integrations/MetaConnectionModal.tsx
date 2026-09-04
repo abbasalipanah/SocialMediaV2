@@ -485,7 +485,7 @@ export function MetaConnectionModal({
                   <>
                     {platformDiscoveries.length > 8 && (
                       <div className="meta-account-tools">
-                        <label><Search size={15} /><input aria-label={`Search ${platformLabel}`} onChange={(event) => setAccountSearch(event.target.value)} placeholder="Search by name or ID" type="search" value={accountSearch} /></label>
+                        <label className="meta-account-search"><Search size={15} /><input aria-label={`Search ${platformLabel}`} className="meta-account-search-input" onChange={(event) => setAccountSearch(event.target.value)} placeholder="Search by name or ID" type="search" value={accountSearch} /></label>
                         <span>{filteredDiscoveries.length} shown</span>
                         <button disabled={filteredDiscoveries.length === 0} onClick={selectAllShown} type="button">Select shown</button>
                         <button disabled={filteredDiscoveries.length === 0} onClick={clearShown} type="button">Clear shown</button>
@@ -503,8 +503,8 @@ export function MetaConnectionModal({
                             ? { className: "selected", label: "Selected" }
                             : { className: "available", label: "Available" };
                       return (
-                        <label key={key}>
-                          <input checked={isSelected} onChange={() => toggle(item)} type="checkbox" />
+                        <label className="meta-account-row" key={key}>
+                          <input className="meta-account-checkbox" checked={isSelected} onChange={() => toggle(item)} type="checkbox" />
                           <span className={`integration-platform-icon platform-${item.platform}`}>{item.platform === "facebook" ? <Facebook size={17} /> : <Instagram size={17} />}</span>
                           <span><strong>{item.display_name}</strong><small>{item.platform === "facebook" ? "Facebook Page" : "Instagram Business"} · {item.external_id}</small></span>
                           <em className={badge.className}>{badge.label}</em>

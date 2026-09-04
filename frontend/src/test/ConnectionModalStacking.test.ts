@@ -39,6 +39,12 @@ describe("connection modal stacking", () => {
     expect(STYLES).toContain("overflow-y: auto; overscroll-behavior: contain;");
     expect(STYLES).toContain(".meta-connect-modal { width: min(680px, 100%); height:");
   });
+
+  it("keeps account-row checkbox sizing out of the catalog search field", () => {
+    expect(STYLES).toContain(".meta-account-tools .meta-account-search-input { width: 100%;");
+    expect(STYLES).toContain(".meta-discovery-list > .meta-account-row > .meta-account-checkbox { width: 16px;");
+    expect(STYLES).not.toContain(".meta-discovery-list input { width: 16px;");
+  });
 });
 
 describe("connection modal mounting", () => {

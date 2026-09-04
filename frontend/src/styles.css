@@ -2044,25 +2044,25 @@ body { background: var(--sm-bg); }
 .meta-discovery-list { display: grid; gap: 8px; margin: 0; padding: 14px; border: 1px solid #dbeafe; border-radius: 13px; background: white; }
 .meta-discovery-list legend { padding: 0 5px; color: #334155; font-size: .67rem; font-weight: 850; }
 .meta-account-tools { display: grid; grid-template-columns: minmax(150px, 1fr) auto auto auto; align-items: center; gap: 7px; margin-bottom: 3px; }
-.meta-account-tools > label { display: flex; min-width: 0; align-items: center; gap: 7px; padding: 7px 9px; color: #64748b; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; cursor: text; }
-.meta-account-tools input { width: 100%; min-width: 0; height: auto; padding: 0; border: 0; outline: 0; background: transparent; font-size: .62rem; }
+.meta-account-tools > .meta-account-search { display: flex; min-width: 0; align-items: center; gap: 7px; padding: 7px 9px; color: #64748b; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; cursor: text; }
+.meta-account-tools .meta-account-search-input { width: 100%; min-width: 0; height: auto; padding: 0; border: 0; outline: 0; background: transparent; font-size: .62rem; }
 .meta-account-tools > span { color: #64748b; font-size: .55rem; font-weight: 750; white-space: nowrap; }
 .meta-account-tools > button { padding: 6px 8px; color: #4338ca; border: 1px solid #c7d2fe; border-radius: 7px; background: #f8faff; font-size: .55rem; font-weight: 800; white-space: nowrap; }
 .meta-account-tools > button:disabled { cursor: not-allowed; opacity: .45; }
 .meta-account-empty { padding: 15px !important; text-align: center; }
-.meta-discovery-list label { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 10px; cursor: pointer; }
-.meta-discovery-list label:has(input:checked) { border-color: #a5b4fc; background: #f8faff; }
-.meta-discovery-list input { width: 16px; height: 16px; accent-color: #4f46e5; }
-.meta-discovery-list .integration-platform-icon { width: 34px; height: 34px; border-radius: 9px; }
-.meta-discovery-list label > span:last-child { min-width: 0; }
-.meta-discovery-list strong, .meta-discovery-list small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.meta-discovery-list strong { color: #0f172a; font-size: .68rem; }
-.meta-discovery-list small { margin-top: 3px; color: #64748b; font-size: .57rem; font-weight: 600; }
-.meta-discovery-list em { padding: 4px 7px; border-radius: 99px; font-size: .52rem; font-style: normal; font-weight: 800; white-space: nowrap; }
-.meta-discovery-list em.linked { color: #047857; background: #d1fae5; }
-.meta-discovery-list em.selected { color: #4338ca; background: #e0e7ff; }
-.meta-discovery-list em.unlink { color: #b91c1c; background: #fee2e2; }
-.meta-discovery-list em.available { color: #475569; background: #f1f5f9; }
+.meta-discovery-list > .meta-account-row { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px; border: 1px solid #e2e8f0; border-radius: 10px; cursor: pointer; }
+.meta-discovery-list > .meta-account-row:has(.meta-account-checkbox:checked) { border-color: #a5b4fc; background: #f8faff; }
+.meta-discovery-list > .meta-account-row > .meta-account-checkbox { width: 16px; height: 16px; accent-color: #4f46e5; }
+.meta-discovery-list > .meta-account-row .integration-platform-icon { width: 34px; height: 34px; border-radius: 9px; }
+.meta-discovery-list > .meta-account-row > span:last-child { min-width: 0; }
+.meta-discovery-list > .meta-account-row strong, .meta-discovery-list > .meta-account-row small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meta-discovery-list > .meta-account-row strong { color: #0f172a; font-size: .68rem; }
+.meta-discovery-list > .meta-account-row small { margin-top: 3px; color: #64748b; font-size: .57rem; font-weight: 600; }
+.meta-discovery-list > .meta-account-row em { padding: 4px 7px; border-radius: 99px; font-size: .52rem; font-style: normal; font-weight: 800; white-space: nowrap; }
+.meta-discovery-list > .meta-account-row em.linked { color: #047857; background: #d1fae5; }
+.meta-discovery-list > .meta-account-row em.selected { color: #4338ca; background: #e0e7ff; }
+.meta-discovery-list > .meta-account-row em.unlink { color: #b91c1c; background: #fee2e2; }
+.meta-discovery-list > .meta-account-row em.available { color: #475569; background: #f1f5f9; }
 .meta-current-links { display: grid; gap: 9px; padding: 14px; border: 1px solid #a7f3d0; border-radius: 13px; background: #f0fdf4; }
 .meta-current-links > h3 { margin: 0; color: #166534; font-size: .68rem; }
 .meta-current-links > div { display: grid; gap: 7px; }
@@ -2113,9 +2113,9 @@ body { background: var(--sm-bg); }
   .meta-account-catalog nav > button { padding: 8px 10px; }
   .meta-platform-heading { align-items: flex-start; flex-direction: column; gap: 3px; }
   .meta-account-tools { grid-template-columns: 1fr auto auto; }
-  .meta-account-tools > label { grid-column: 1 / -1; }
-  .meta-discovery-list label { grid-template-columns: auto auto minmax(0, 1fr); }
-  .meta-discovery-list em { grid-column: 2 / -1; justify-self: start; }
+  .meta-account-tools > .meta-account-search { grid-column: 1 / -1; }
+  .meta-discovery-list > .meta-account-row { grid-template-columns: auto auto minmax(0, 1fr); }
+  .meta-discovery-list > .meta-account-row em { grid-column: 2 / -1; justify-self: start; }
   .social-manager-tiktok-panel article { grid-template-columns: auto minmax(0, 1fr); }
   .social-manager-tiktok-actions { grid-column: 2; flex-wrap: wrap; justify-content: flex-start; }
 }

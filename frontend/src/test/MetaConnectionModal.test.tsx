@@ -224,4 +224,79 @@ describe("MetaConnectionModal", () => {
     expect(open).not.toHaveBeenCalled();
   });
 
+  it("filters a large Meta catalog by account name and external ID", async () => {
+    const catalogAccounts = Array.from({ length: 10 }, (_, index) => ({
+      platform: "facebook" as const,
+      external_id: `9000${index}`,
+      display_name: index === 7 ? "Aquamice" : `Brand ${index}`,
+    }));
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/api/integrations/meta/self-service/readiness")) {
+        return json({
+          brand_id: "286298",
+          can_manage: true,
+          connection_state: "disconnected",
+          facebook_linked_count: 0,
+          instagram_linked_count: 0,
+          linked_accounts: [],
+          discoveries: [],
+          catalog_accounts: catalogAccounts,
+          oauth_start_available: true,
+          reason: "self_service_available",
+          runtime_mode: "active",
+          writes_enabled: true,
+          checked_at: "2026-09-04T12:00:00Z",
+        });
+      }
+      if (url.includes("/api/integrations/tiktok/self-service/readiness")) {
+        return json({
+          brand_id: "286298",
+          can_manage: true,
+          connection_state: "disconnected",
+          linked_account_count: 0,
+          linked_accounts: [],
+          available_accounts: [],
+          oauth_start_available: true,
+          reason: "self_service_available",
+          runtime_mode: "active",
+          writes_enabled: true,
+          checked_at: "2026-09-04T12:00:00Z",
+        });
+      }
+      throw new Error(`Unexpected request: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const queryCache = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    render(
+      <QueryClientProvider client={queryCache}>
+        <MetaConnectionModal
+          brandId="286298"
+          brandName="AquaMICE"
+          focusPlatform="facebook"
+          onClose={vi.fn()}
+          onConnected={vi.fn()}
+          onManageTikTok={vi.fn()}
+          tiktokAccounts={[]}
+        />
+      </QueryClientProvider>,
+    );
+
+    const catalog = await screen.findByRole("region", { name: "Social accounts for AquaMICE" });
+    const search = await within(catalog).findByRole("searchbox", { name: "Search Facebook Pages" });
+    expect(within(catalog).getByText("10 shown")).toBeVisible();
+
+    await userEvent.type(search, "Aquamice");
+    expect(within(catalog).getByText("1 shown")).toBeVisible();
+    expect(within(catalog).getByText("Aquamice")).toBeVisible();
+    expect(within(catalog).queryByText("Brand 1")).not.toBeInTheDocument();
+
+    await userEvent.clear(search);
+    await userEvent.type(search, "90009");
+    expect(within(catalog).getByText("1 shown")).toBeVisible();
+    expect(within(catalog).getByText("Brand 9")).toBeVisible();
+    expect(within(catalog).queryByText("Aquamice")).not.toBeInTheDocument();
+  });
+
 });
