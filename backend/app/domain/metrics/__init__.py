@@ -52,6 +52,7 @@ class MetricId(StrEnum):
     WATCH_TIME_MINUTES = "watch_time_minutes"
     PLAYLIST_ADDITIONS = "playlist_additions"
     PLAYLIST_REMOVALS = "playlist_removals"
+    VIEWER_PERCENTAGE = "viewer_percentage"
 
 
 class EntityScope(StrEnum):
@@ -69,6 +70,7 @@ class SemanticType(StrEnum):
 class Unit(StrEnum):
     COUNT = "count"
     RATIO = "ratio"
+    PERCENTAGE = "percentage"
 
 
 class CollectionGranularity(StrEnum):
@@ -330,6 +332,39 @@ def _profile_flow(
         zero_denominator_policy=ZeroDenominatorPolicy.NOT_APPLICABLE,
         allowed_breakdowns=allowed_breakdowns,
         required_capability=CapabilityId.PROFILE,
+        version=1,
+    )
+
+
+def _profile_percentage_snapshot(
+    platform: PlatformId,
+    metric_id: MetricId,
+    source_field: str,
+    *,
+    allowed_breakdowns: tuple[str, ...],
+) -> MetricDefinition:
+    return MetricDefinition(
+        metric_id=metric_id,
+        platform=platform,
+        entity_scope=EntityScope.PROFILE,
+        semantic_type=SemanticType.SNAPSHOT,
+        unit=Unit.PERCENTAGE,
+        source_field=source_field,
+        collection_granularity=CollectionGranularity.SAMPLE,
+        period_aggregation=AggregationPolicy.LAST_VALID,
+        brand_rollup_aggregation=AggregationPolicy.SUM,
+        null_policy=NullPolicy.NOT_AVAILABLE,
+        reset_policy=ResetPolicy.NOT_APPLICABLE,
+        derived_from_metric_ids=(),
+        derivation_operator=None,
+        derivation_version=None,
+        derivation_window=None,
+        first_sample_policy=FirstSamplePolicy.NOT_APPLICABLE,
+        numerator_metric_id=None,
+        denominator_metric_id=None,
+        zero_denominator_policy=ZeroDenominatorPolicy.NOT_APPLICABLE,
+        allowed_breakdowns=allowed_breakdowns,
+        required_capability=CapabilityId.AUDIENCE,
         version=1,
     )
 
@@ -883,6 +918,10 @@ def bootstrap_metric_catalog() -> MetricCatalog:
                     "youtube_traffic_source",
                     "youtube_subscribed_status",
                     "youtube_content_type",
+                    "youtube_operating_system",
+                    "youtube_playback_location",
+                    "youtube_product",
+                    "youtube_live_status",
                 ),
             ),
             _profile_flow(PlatformId.YOUTUBE, MetricId.ENGAGED_VIEWS, "engagedViews"),
@@ -896,6 +935,10 @@ def bootstrap_metric_catalog() -> MetricCatalog:
                     "youtube_traffic_source",
                     "youtube_subscribed_status",
                     "youtube_content_type",
+                    "youtube_operating_system",
+                    "youtube_playback_location",
+                    "youtube_product",
+                    "youtube_live_status",
                 ),
             ),
             _profile_flow(PlatformId.YOUTUBE, MetricId.VIDEO_LIKES_DAILY, "likes"),
@@ -910,6 +953,16 @@ def bootstrap_metric_catalog() -> MetricCatalog:
                 PlatformId.YOUTUBE,
                 MetricId.PLAYLIST_REMOVALS,
                 "videosRemovedFromPlaylists",
+            ),
+            _profile_percentage_snapshot(
+                PlatformId.YOUTUBE,
+                MetricId.VIEWER_PERCENTAGE,
+                "viewerPercentage",
+                allowed_breakdowns=(
+                    "youtube_viewer_age",
+                    "youtube_viewer_gender",
+                    "youtube_viewer_age_gender",
+                ),
             ),
         )
     )

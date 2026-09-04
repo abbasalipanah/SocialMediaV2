@@ -2436,7 +2436,8 @@
           "engaged_views",
           "watch_time_minutes",
           "playlist_additions",
-          "playlist_removals"
+          "playlist_removals",
+          "viewer_percentage"
         ],
         "title": "MetricId",
         "type": "string"
@@ -3827,7 +3828,8 @@
       "Unit": {
         "enum": [
           "count",
-          "ratio"
+          "ratio",
+          "percentage"
         ],
         "title": "Unit",
         "type": "string"

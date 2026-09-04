@@ -36,6 +36,10 @@ YOUTUBE_BREAKDOWN_DIMENSIONS = {
     "insightTrafficSourceType": "youtube_traffic_source",
     "subscribedStatus": "youtube_subscribed_status",
     "creatorContentType": "youtube_content_type",
+    "operatingSystem": "youtube_operating_system",
+    "insightPlaybackLocationType": "youtube_playback_location",
+    "youtubeProduct": "youtube_product",
+    "liveOrOnDemand": "youtube_live_status",
 }
 
 
@@ -79,6 +83,19 @@ def daily_breakdown_query(
         "metrics": ",".join(YOUTUBE_BREAKDOWN_METRICS),
         "dimensions": f"day,{dimension}",
         "sort": f"day,-{MetricId.VIEWS.value}",
+    }
+
+
+def viewer_demographics_query(*, since: date, until: date) -> dict[str, str]:
+    if until < since:
+        raise ValueError("metric_range_invalid")
+    return {
+        "ids": "channel==MINE",
+        "startDate": since.isoformat(),
+        "endDate": until.isoformat(),
+        "metrics": "viewerPercentage",
+        "dimensions": "ageGroup,gender",
+        "sort": "gender,ageGroup",
     }
 
 
@@ -149,5 +166,6 @@ __all__ = [
     "daily_breakdown_query",
     "playlist_items_query",
     "uploads_playlist_query",
+    "viewer_demographics_query",
     "videos_query",
 ]

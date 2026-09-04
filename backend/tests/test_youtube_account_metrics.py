@@ -10,12 +10,15 @@ from app.domain.platforms import CapabilityId, PlatformId
 from app.infrastructure.providers.youtube import (
     YOUTUBE_BREAKDOWN_METRICS,
     YOUTUBE_DAILY_METRICS,
+    YouTubeAudienceReader,
     YouTubeDailyMetricsReader,
     YouTubeProfileReader,
     YouTubeResponseError,
+    YouTubeTransportError,
     channel_query,
     daily_breakdown_query,
     daily_metrics_query,
+    viewer_demographics_query,
 )
 
 NOW = datetime(2026, 8, 31, 12, tzinfo=UTC)
@@ -56,6 +59,16 @@ def test_youtube_queries_match_read_only_provider_contracts() -> None:
         "metrics": ",".join(YOUTUBE_BREAKDOWN_METRICS),
         "dimensions": "day,deviceType",
         "sort": "day,-views",
+    }
+    assert viewer_demographics_query(
+        since=date(2026, 8, 1), until=date(2026, 8, 28)
+    ) == {
+        "ids": "channel==MINE",
+        "startDate": "2026-08-01",
+        "endDate": "2026-08-28",
+        "metrics": "viewerPercentage",
+        "dimensions": "ageGroup,gender",
+        "sort": "gender,ageGroup",
     }
 
 
@@ -261,6 +274,10 @@ def test_youtube_daily_metrics_map_supported_playback_breakdowns() -> None:
         "insightTrafficSourceType",
         "subscribedStatus",
         "creatorContentType",
+        "operatingSystem",
+        "insightPlaybackLocationType",
+        "youtubeProduct",
+        "liveOrOnDemand",
     ]
     assert snapshots[0].metric_breakdowns[MetricId.VIEWS]["youtube_country"] == {
         "country-a": 60,
@@ -278,6 +295,92 @@ def test_youtube_breakdown_query_rejects_unapproved_dimensions() -> None:
             until=date(2026, 8, 2),
             dimension="gender",
         )
+
+
+def test_youtube_optional_breakdown_rejection_preserves_core_metrics() -> None:
+    def fetch_breakdown(
+        account: ProviderAccount,
+        since: date,
+        until: date,
+        dimension: str,
+    ) -> dict[str, object]:
+        if dimension == "youtubeProduct":
+            raise YouTubeTransportError("provider_http_rejected")
+        return {
+            "columnHeaders": [
+                {"name": "day"},
+                {"name": dimension},
+                {"name": "views"},
+                {"name": "estimatedMinutesWatched"},
+            ],
+            "rows": [["2026-08-01", "value", 100, 200]],
+        }
+
+    snapshots = YouTubeDailyMetricsReader(
+        lambda account, since, until: {
+            "columnHeaders": [{"name": name} for name in _columns()],
+            "rows": [["2026-08-01", 100, 80, 200, 7, 2, 1, 4, 0, 3, 0]],
+        },
+        fetch_breakdown,
+    ).fetch_daily_metrics(
+        _account(), since=date(2026, 8, 1), until=date(2026, 8, 1)
+    )
+
+    assert snapshots[0].metric_values[MetricId.VIEWS] == 100
+    assert "youtube_product" not in snapshots[0].metric_breakdowns[MetricId.VIEWS]
+
+
+def test_youtube_audience_maps_privacy_thresholded_demographics() -> None:
+    observed_ranges: list[tuple[date, date]] = []
+
+    def fetch(
+        account: ProviderAccount, since: date, until: date
+    ) -> dict[str, object]:
+        assert account.account_id == "UC-channel"
+        observed_ranges.append((since, until))
+        return {
+            "columnHeaders": [
+                {"name": "ageGroup"},
+                {"name": "gender"},
+                {"name": "viewerPercentage"},
+            ],
+            "rows": [
+                ["age18-24", "female", 30.5],
+                ["age18-24", "male", 19.5],
+                ["age25-34", "female", 20],
+                ["age25-34", "male", 30],
+            ],
+        }
+
+    snapshot = YouTubeAudienceReader(fetch, clock=lambda: NOW).fetch_audience(
+        _account()
+    )
+
+    assert observed_ranges == [(date(2026, 8, 3), date(2026, 8, 30))]
+    assert snapshot.metric_id is MetricId.VIEWER_PERCENTAGE
+    assert snapshot.breakdowns["youtube_viewer_age"] == {
+        "age18-24": 50,
+        "age25-34": 50,
+    }
+    assert snapshot.breakdowns["youtube_viewer_gender"] == {
+        "female": 50.5,
+        "male": 49.5,
+    }
+
+
+def test_youtube_audience_keeps_withheld_demographics_empty() -> None:
+    snapshot = YouTubeAudienceReader(
+        lambda account, since, until: {
+            "columnHeaders": [
+                {"name": "ageGroup"},
+                {"name": "gender"},
+                {"name": "viewerPercentage"},
+            ]
+        },
+        clock=lambda: NOW,
+    ).fetch_audience(_account())
+
+    assert snapshot.breakdowns == {}
 
 
 def _columns() -> tuple[str, ...]:

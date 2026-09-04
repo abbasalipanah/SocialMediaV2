@@ -73,3 +73,26 @@ def test_non_youtube_breakdown_keeps_latest_snapshot_semantics() -> None:
     breakdown = metric_breakdowns(samples)[0]
 
     assert breakdown.items[0].value == 60
+
+
+def test_youtube_demographics_keep_latest_snapshot_semantics() -> None:
+    samples = tuple(
+        ReportingMetric(
+            account_id=1,
+            brand_id="18",
+            platform=PlatformId.YOUTUBE,
+            observed_on=observed_on,
+            metric_id=MetricId.VIEWER_PERCENTAGE,
+            value=value,
+            breakdown_key="youtube_viewer_gender",
+            breakdown_value="female",
+        )
+        for observed_on, value in (
+            (date(2026, 8, 1), 45),
+            (date(2026, 8, 2), 55),
+        )
+    )
+
+    breakdown = metric_breakdowns(samples)[0]
+
+    assert breakdown.items[0].value == 55

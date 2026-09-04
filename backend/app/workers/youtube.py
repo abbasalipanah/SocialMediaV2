@@ -13,12 +13,14 @@ from app.application.ports.checkpoints import (
 )
 from app.application.ports.persistence import CommentStore, ContentStore, MetricStore
 from app.application.ports.platforms import ProviderAccount, ProviderRecord
+from app.application.ports.platforms.audience import AudienceReader
 from app.application.ports.platforms.comments import CommentsReader
 from app.application.ports.platforms.content import ContentReader
 from app.application.ports.platforms.profile import DailyMetricsReader, ProfileReader
 from app.application.services.collection import (
     CollectionStatus,
     CollectionTarget,
+    collect_audience,
     collect_comments,
     collect_content,
     collect_daily_metrics,
@@ -27,6 +29,7 @@ from app.application.services.collection import (
 from app.core import YouTubeConfig
 from app.domain.platforms import CapabilityId, PlatformId
 from app.infrastructure.providers.youtube import (
+    YouTubeAudienceReader,
     YouTubeCommentsReader,
     YouTubeContentReader,
     YouTubeDailyMetricsReader,
@@ -39,6 +42,7 @@ from app.infrastructure.providers.youtube import (
     playlist_items_query,
     uploads_playlist_query,
     videos_query,
+    viewer_demographics_query,
 )
 
 YOUTUBE_DAILY_CHECKPOINT_SUFFIX = "daily-metrics-v1"
@@ -55,6 +59,7 @@ class YouTubeReaders:
     daily: DailyMetricsReader
     content: ContentReader
     comments: CommentsReader
+    audience: AudienceReader | None = None
 
 
 @dataclass(frozen=True)
@@ -131,6 +136,12 @@ def create_youtube_readers(
                 comment_threads_query(video_id, cursor=cursor),
             )
         ),
+        audience=YouTubeAudienceReader(
+            lambda selected, since, until: get(
+                config.analytics_reports_url,
+                viewer_demographics_query(since=since, until=until),
+            )
+        ),
     )
 
 
@@ -169,6 +180,17 @@ def collect_youtube_account(
         today=observed_today,
         partial_errors=partial_errors,
     )
+    audience_count = 0
+    if readers.audience is not None:
+        try:
+            audience = collect_audience(
+                target=target,
+                reader=readers.audience,
+                metric_store=metric_store,
+            )
+            audience_count = audience.metric_count
+        except Exception:
+            partial_errors.add("audience_unavailable")
     comment_count = 0
     commented = 0
 
@@ -217,7 +239,7 @@ def collect_youtube_account(
         partial_errors.add("content_unavailable")
     return YouTubeCollectionResult(
         status="partial" if partial_errors else "success",
-        metric_count=profile.metric_count + daily_count,
+        metric_count=profile.metric_count + daily_count + audience_count,
         content_count=content_count,
         comment_count=comment_count,
         media_count=media_count,

@@ -14,6 +14,7 @@ from app.domain.metrics import MetricId
 from app.domain.platforms import PlatformId
 
 from .responses import YouTubeResponseError, report_rows
+from .transport import YouTubeTransportError
 from .wire import (
     YOUTUBE_BREAKDOWN_DIMENSIONS,
     YOUTUBE_BREAKDOWN_METRICS,
@@ -119,13 +120,20 @@ class YouTubeDailyMetricsReader:
         if self._fetch_breakdown is None:
             return by_day
         for provider_dimension, breakdown_key in YOUTUBE_BREAKDOWN_DIMENSIONS.items():
-            rows = report_rows(
-                self._fetch_breakdown(
+            try:
+                payload = self._fetch_breakdown(
                     account,
                     since,
                     until,
                     provider_dimension,
-                ),
+                )
+            except YouTubeTransportError:
+                # Optional reports can be withheld or unsupported for a
+                # particular channel. Preserve core daily analytics and let
+                # the dashboard report only the breakdowns actually returned.
+                continue
+            rows = report_rows(
+                payload,
                 required_columns=(
                     "day",
                     provider_dimension,

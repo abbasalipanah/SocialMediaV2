@@ -1,5 +1,6 @@
 """YouTube Data and Analytics API adapter boundary."""
 
+from .audience import YOUTUBE_DEMOGRAPHICS_WINDOW_DAYS, YouTubeAudienceReader
 from .comments import YouTubeCommentsReader
 from .content import YouTubeContentReader
 from .daily_metrics import (
@@ -28,6 +29,7 @@ from .wire import (
     playlist_items_query,
     uploads_playlist_query,
     videos_query,
+    viewer_demographics_query,
 )
 
 __all__ = [
@@ -38,8 +40,10 @@ __all__ = [
     "YOUTUBE_CHANNELS_URL",
     "YOUTUBE_COMMENT_THREADS_URL",
     "YOUTUBE_DAILY_METRICS",
+    "YOUTUBE_DEMOGRAPHICS_WINDOW_DAYS",
     "YOUTUBE_PLAYLIST_ITEMS_URL",
     "YOUTUBE_VIDEOS_URL",
+    "YouTubeAudienceReader",
     "YouTubeContentReader",
     "YouTubeCommentsReader",
     "YouTubeDailyMetricsReader",
@@ -57,6 +61,7 @@ __all__ = [
     "daily_metrics_query",
     "playlist_items_query",
     "uploads_playlist_query",
+    "viewer_demographics_query",
     "videos_query",
     "create_youtube_activation_runtime",
 ]

@@ -11,17 +11,19 @@ The implementation provides:
 - owned-channel discovery, explicit Brand selection, and confirmed unlinking;
 - bounded profile, 365-day daily metric, recent-video, and recent-comment collection;
 - YouTube-native views, engaged views, watch time, engagement, subscriber, playlist,
-  content-type, country, device, traffic-source, and subscription-status reporting;
+  content-type, country, device, operating-system, playback-location, YouTube-product,
+  live/on-demand, traffic-source, and subscription-status reporting;
+- privacy-thresholded 28-day viewer age and gender percentages when YouTube returns them;
 - automatic near-expiry access-token refresh before collection;
 - frontend authorization in Integrations and channel mapping in Settings;
 - fail-closed activation, write, scope, authority, and provider-response checks.
 
 The audience page uses aggregate playback breakdowns supplied by YouTube Analytics.
-It does not request or invent individual viewer data. Age and gender cards are omitted;
-if YouTube withholds aggregate playback breakdowns for a channel or period, the frontend
-shows one explicit unavailable state instead of empty charts. Per-video share counts are
-not exposed by the YouTube Data API and remain unavailable rather than being converted
-to zero.
+It does not request or invent individual viewer data. Age and gender are queried only as
+aggregate percentages for the latest 28-day window and can be empty when YouTube's
+privacy thresholds are not met. Each supported audience surface remains visible with an
+honest empty state when its report is withheld. Per-video share counts are not exposed by
+the YouTube Data API and remain unavailable rather than being converted to zero.
 
 ## Safe defaults
 

@@ -457,6 +457,7 @@ def metric_breakdowns(
         if (
             sample.platform is PlatformId.YOUTUBE
             and sample.breakdown_key.startswith("youtube_")
+            and sample.metric_id in {MetricId.VIEWS, MetricId.WATCH_TIME_MINUTES}
         ):
             youtube_flows[key] += sample.value
             continue

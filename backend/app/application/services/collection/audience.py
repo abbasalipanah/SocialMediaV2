@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from app.application.ports.persistence import MetricStore
 from app.application.ports.platforms.audience import AudienceReader
-from app.domain.metrics import MetricId
 
 from .contracts import CollectionOutcome, CollectionStatus, CollectionTarget
 
@@ -28,7 +27,7 @@ def collect_audience(
             account_id=target.local_account_id,
             brand_id=target.brand_id,
             observed_on=snapshot.observed_at.date(),
-            metric_id=MetricId.FOLLOWERS,
+            metric_id=snapshot.metric_id,
             breakdown_key=dimension,
             values=values,
         )
