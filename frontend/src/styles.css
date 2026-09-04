@@ -1067,6 +1067,22 @@ body { background: var(--sm-bg); }
 .social-range-card > span:nth-child(2) { display: grid; min-width: 105px; gap: 1px; }
 .social-range-card small { color: #94a3b8; font-size: .58rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .social-range-card select { padding: 0 18px 0 0; color: #0f172a; border: 0; outline: 0; background: transparent; font-size: .78rem; font-weight: 750; cursor: pointer; }
+.date-period-picker { position: relative; display: flex; min-width: 0; align-items: center; gap: 4px; }
+.date-period-edit { display: grid; width: 30px; height: 30px; place-items: center; padding: 0; color: #4f46e5; border: 1px solid #c7d2fe; border-radius: 9px; background: #eef2ff; cursor: pointer; }
+.date-period-edit:hover { color: #3730a3; border-color: #a5b4fc; background: #e0e7ff; }
+.date-period-panel { position: absolute; z-index: 60; top: calc(100% + 8px); right: 0; display: grid; width: min(340px, calc(100vw - 32px)); gap: 10px; padding: 15px; color: #0f172a; border: 1px solid #e2e8f0; border-radius: 14px; background: white; box-shadow: 0 18px 45px rgb(15 23 42 / 18%); }
+.date-period-panel > strong { font-size: .88rem; }
+.date-period-panel > span { color: #64748b; font-size: .7rem; }
+.date-period-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.date-period-fields label { display: grid; gap: 5px; color: #64748b; font-size: .65rem; font-weight: 750; }
+.date-period-fields input { width: 100%; min-width: 0; height: 38px; padding: 0 9px; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; font: inherit; font-size: .72rem; }
+.date-period-fields input:focus { border-color: #818cf8; outline: 3px solid rgb(129 140 248 / 18%); }
+.date-period-panel > p { margin: 0; color: #b91c1c; font-size: .68rem; }
+.date-period-actions { display: flex; justify-content: flex-end; gap: 7px; padding-top: 2px; }
+.date-period-actions button { min-height: 34px; padding: 7px 12px; color: #475569; border: 1px solid #e2e8f0; border-radius: 8px; background: white; font-size: .7rem; font-weight: 750; cursor: pointer; }
+.date-period-actions button.primary { color: white; border-color: #4f46e5; background: #4f46e5; }
+.date-period-actions button:hover { border-color: #c7d2fe; background: #f8fafc; }
+.date-period-actions button.primary:hover { border-color: #4338ca; background: #4338ca; }
 .social-connected-icons { display: flex; margin: 0 7px 0 0; padding-left: 11px; border-left: 1px solid #f1f5f9; }
 .social-connected-icons i, .social-audience-icons i { display: grid; width: 31px; height: 31px; place-items: center; color: white; border: 2px solid white; border-radius: 50%; box-shadow: 0 1px 4px rgb(15 23 42 / 12%); font-style: normal; }
 .social-connected-icons i + i, .social-audience-icons i + i { margin-left: -8px; }
@@ -1242,6 +1258,9 @@ body { background: var(--sm-bg); }
   .social-overview-page { padding-inline: 0; }
   .social-overview-controls { align-items: stretch; }
   .social-range-card { min-width: 0; }
+  .date-period-picker { flex: 1; }
+  .date-period-panel { right: auto; left: 0; }
+  .date-period-fields { grid-template-columns: 1fr; }
   .social-connected-icons { display: none; }
   .social-kpi-grid { grid-template-columns: 1fr; }
   .social-ai-content { align-items: flex-start; gap: 13px; padding: 18px; }

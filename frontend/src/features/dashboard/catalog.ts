@@ -6,15 +6,36 @@ export type DashboardTab = {
   label: string;
 };
 
-export const RANGE_OPTIONS = [
+export const PRESET_RANGE_OPTIONS = [
   { id: "last_7_days", label: "Last 7 Days" },
   { id: "last_30_days", label: "Last 30 Days" },
   { id: "last_90_days", label: "Last 90 Days" },
   { id: "last_365_days", label: "Last 365 Days" },
 ] as const;
 
+export const RANGE_OPTIONS = [
+  ...PRESET_RANGE_OPTIONS,
+  { id: "selected_period", label: "Selected Period" },
+] as const;
+
+export type PresetRangeKey = (typeof PRESET_RANGE_OPTIONS)[number]["id"];
 export type RangeKey = (typeof RANGE_OPTIONS)[number]["id"];
 
+export type ReportingPeriod = {
+  key: RangeKey;
+  startDate?: string;
+  endDate?: string;
+};
+
+export const DEFAULT_REPORTING_PERIOD: ReportingPeriod = { key: "last_30_days" };
+
+export function reportingPeriodQuery(period: ReportingPeriod) {
+  return {
+    range: period.key,
+    start_date: period.key === "selected_period" ? period.startDate : undefined,
+    end_date: period.key === "selected_period" ? period.endDate : undefined,
+  };
+}
 export const METRIC_LABELS: Record<MetricId, string> = {
   followers: "Followers",
   follower_gains: "Follower gains",

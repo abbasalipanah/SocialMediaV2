@@ -3,7 +3,6 @@ import {
   ArrowRight,
   ArrowUpRight,
   BrainCircuit,
-  CalendarDays,
   Eye,
   Facebook,
   Heart,
@@ -31,8 +30,9 @@ import type {
 } from "../../api";
 import { Link } from "../../routing";
 import { Dialog } from "../../ui";
+import { DatePeriodControl } from "../dashboard/DatePeriodControl";
 import { ReportExport } from "../dashboard/ReportExport";
-import { RANGE_OPTIONS, type RangeKey } from "../dashboard/catalog";
+import type { ReportingPeriod } from "../dashboard/catalog";
 import { formatDate, formatNumber, humanize } from "../dashboard/format";
 import {
   V1_TREND_FILL_BOTTOM_OPACITY,
@@ -862,8 +862,8 @@ function PlatformSummary({ data }: { data: OverviewDashboard }) {
 
 export function AccumulateSocialOverview({
   data,
-  range,
-  onRange,
+  period,
+  onPeriod,
   brandName,
   insights,
   insightsLoading,
@@ -876,8 +876,8 @@ export function AccumulateSocialOverview({
   onGenerateAiSummary,
 }: {
   data: OverviewDashboard;
-  range: RangeKey;
-  onRange: (range: RangeKey) => void;
+  period: ReportingPeriod;
+  onPeriod: (period: ReportingPeriod) => void;
   brandName: string;
   insights: ReportingInsight[];
   insightsLoading: boolean;
@@ -931,10 +931,16 @@ export function AccumulateSocialOverview({
       <header className="social-overview-header">
         <div><h1>Social Media Overview</h1><p>Organic performance across connected social channels.</p></div>
         <div className="social-overview-controls">
-          <label className="social-range-card">
-            <span className="social-range-icon"><CalendarDays size={18} /></span>
-            <span><small>Date period</small><select aria-label="Date period" onChange={(event) => onRange(event.target.value as RangeKey)} value={range}>{RANGE_OPTIONS.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select></span>
-          </label>
+          <DatePeriodControl
+            ariaLabel="Date period"
+            controlClassName="social-range-card"
+            iconClassName="social-range-icon"
+            label="Date period"
+            onChange={onPeriod}
+            period={period}
+            resolvedEndDate={data.meta.date_range.end_on}
+            resolvedStartDate={data.meta.date_range.start_on}
+          />
           <nav aria-label="Connected social channels" className="overview-platform-pills">
             {orderedPlatforms(data).map((platformData) => platformData.meta.platform && (
               <Link key={platformData.meta.platform} to={`/${platformData.meta.platform}`}><PlatformIcon platform={platformData.meta.platform} size={14} />{PLATFORM_NAMES[platformData.meta.platform]}</Link>
