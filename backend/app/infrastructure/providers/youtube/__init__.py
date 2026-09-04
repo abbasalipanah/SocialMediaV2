@@ -15,12 +15,15 @@ from .runtime import create_youtube_activation_runtime
 from .transport import YouTubeHttpTransport, YouTubeTransportError
 from .wire import (
     YOUTUBE_ANALYTICS_REPORTS_URL,
+    YOUTUBE_BREAKDOWN_DIMENSIONS,
+    YOUTUBE_BREAKDOWN_METRICS,
     YOUTUBE_CHANNELS_URL,
     YOUTUBE_COMMENT_THREADS_URL,
     YOUTUBE_PLAYLIST_ITEMS_URL,
     YOUTUBE_VIDEOS_URL,
     channel_query,
     comment_threads_query,
+    daily_breakdown_query,
     daily_metrics_query,
     playlist_items_query,
     uploads_playlist_query,
@@ -30,6 +33,8 @@ from .wire import (
 __all__ = [
     "MAX_YOUTUBE_DAILY_WINDOW_DAYS",
     "YOUTUBE_ANALYTICS_REPORTS_URL",
+    "YOUTUBE_BREAKDOWN_DIMENSIONS",
+    "YOUTUBE_BREAKDOWN_METRICS",
     "YOUTUBE_CHANNELS_URL",
     "YOUTUBE_COMMENT_THREADS_URL",
     "YOUTUBE_DAILY_METRICS",
@@ -48,6 +53,7 @@ __all__ = [
     "YouTubeTransportError",
     "channel_query",
     "comment_threads_query",
+    "daily_breakdown_query",
     "daily_metrics_query",
     "playlist_items_query",
     "uploads_playlist_query",

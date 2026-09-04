@@ -48,6 +48,10 @@ class MetricId(StrEnum):
     VIDEO_SHARES_TOTAL = "video_shares_total"
     VIDEO_ENGAGEMENTS_TOTAL = "video_engagements_total"
     VIDEO_ENGAGEMENT_RATE = "video_engagement_rate"
+    ENGAGED_VIEWS = "engaged_views"
+    WATCH_TIME_MINUTES = "watch_time_minutes"
+    PLAYLIST_ADDITIONS = "playlist_additions"
+    PLAYLIST_REMOVALS = "playlist_removals"
 
 
 class EntityScope(StrEnum):
@@ -438,6 +442,7 @@ def _organic_platform_metrics(
     media_count_field: str,
     views_field: str,
     interactions_field: str,
+    views_breakdowns: tuple[str, ...] = (),
 ) -> tuple[MetricDefinition, ...]:
     return (
         _profile_snapshot(platform, MetricId.FOLLOWERS, followers_field),
@@ -462,7 +467,12 @@ def _organic_platform_metrics(
             MetricId.FOLLOWERS_NET,
             operator=DerivationOperator.SIGNED_SNAPSHOT_DELTA,
         ),
-        _profile_flow(platform, MetricId.VIEWS, views_field),
+        _profile_flow(
+            platform,
+            MetricId.VIEWS,
+            views_field,
+            allowed_breakdowns=views_breakdowns,
+        ),
         _profile_flow(platform, MetricId.INTERACTIONS, interactions_field),
         _profile_ratio(
             platform,
@@ -867,6 +877,39 @@ def bootstrap_metric_catalog() -> MetricCatalog:
                 media_count_field="video_count",
                 views_field="views",
                 interactions_field="interactions",
+                views_breakdowns=(
+                    "youtube_country",
+                    "youtube_device_type",
+                    "youtube_traffic_source",
+                    "youtube_subscribed_status",
+                    "youtube_content_type",
+                ),
+            ),
+            _profile_flow(PlatformId.YOUTUBE, MetricId.ENGAGED_VIEWS, "engagedViews"),
+            _profile_flow(
+                PlatformId.YOUTUBE,
+                MetricId.WATCH_TIME_MINUTES,
+                "estimatedMinutesWatched",
+                allowed_breakdowns=(
+                    "youtube_country",
+                    "youtube_device_type",
+                    "youtube_traffic_source",
+                    "youtube_subscribed_status",
+                    "youtube_content_type",
+                ),
+            ),
+            _profile_flow(PlatformId.YOUTUBE, MetricId.VIDEO_LIKES_DAILY, "likes"),
+            _profile_flow(PlatformId.YOUTUBE, MetricId.VIDEO_COMMENTS_DAILY, "comments"),
+            _profile_flow(PlatformId.YOUTUBE, MetricId.VIDEO_SHARES_DAILY, "shares"),
+            _profile_flow(
+                PlatformId.YOUTUBE,
+                MetricId.PLAYLIST_ADDITIONS,
+                "videosAddedToPlaylists",
+            ),
+            _profile_flow(
+                PlatformId.YOUTUBE,
+                MetricId.PLAYLIST_REMOVALS,
+                "videosRemovedFromPlaylists",
             ),
         )
     )

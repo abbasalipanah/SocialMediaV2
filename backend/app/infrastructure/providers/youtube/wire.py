@@ -14,12 +14,29 @@ YOUTUBE_ANALYTICS_REPORTS_URL = "https://youtubeanalytics.googleapis.com/v2/repo
 
 YOUTUBE_DAILY_METRICS = (
     MetricId.VIEWS.value,
+    "engagedViews",
+    "estimatedMinutesWatched",
     "likes",
     "comments",
     "shares",
     "subscribersGained",
     "subscribersLost",
+    "videosAddedToPlaylists",
+    "videosRemovedFromPlaylists",
 )
+
+YOUTUBE_BREAKDOWN_METRICS = (
+    MetricId.VIEWS.value,
+    "estimatedMinutesWatched",
+)
+
+YOUTUBE_BREAKDOWN_DIMENSIONS = {
+    "country": "youtube_country",
+    "deviceType": "youtube_device_type",
+    "insightTrafficSourceType": "youtube_traffic_source",
+    "subscribedStatus": "youtube_subscribed_status",
+    "creatorContentType": "youtube_content_type",
+}
 
 
 def channel_query(channel_id: str) -> dict[str, str]:
@@ -42,6 +59,26 @@ def daily_metrics_query(*, since: date, until: date) -> dict[str, str]:
         "metrics": ",".join(YOUTUBE_DAILY_METRICS),
         "dimensions": "day",
         "sort": "day",
+    }
+
+
+def daily_breakdown_query(
+    *,
+    since: date,
+    until: date,
+    dimension: str,
+) -> dict[str, str]:
+    if until < since:
+        raise ValueError("metric_range_invalid")
+    if dimension not in YOUTUBE_BREAKDOWN_DIMENSIONS:
+        raise ValueError("metric_breakdown_invalid")
+    return {
+        "ids": "channel==MINE",
+        "startDate": since.isoformat(),
+        "endDate": until.isoformat(),
+        "metrics": ",".join(YOUTUBE_BREAKDOWN_METRICS),
+        "dimensions": f"day,{dimension}",
+        "sort": f"day,-{MetricId.VIEWS.value}",
     }
 
 
@@ -102,11 +139,14 @@ __all__ = [
     "YOUTUBE_CHANNELS_URL",
     "YOUTUBE_COMMENT_THREADS_URL",
     "YOUTUBE_DAILY_METRICS",
+    "YOUTUBE_BREAKDOWN_DIMENSIONS",
+    "YOUTUBE_BREAKDOWN_METRICS",
     "YOUTUBE_PLAYLIST_ITEMS_URL",
     "YOUTUBE_VIDEOS_URL",
     "channel_query",
     "comment_threads_query",
     "daily_metrics_query",
+    "daily_breakdown_query",
     "playlist_items_query",
     "uploads_playlist_query",
     "videos_query",

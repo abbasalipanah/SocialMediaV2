@@ -177,8 +177,8 @@ def bootstrap_registry(settings: AppSettings | None = None) -> PlatformCapabilit
             status = CapabilityStatus.NOT_CONFIGURED
             reason = "provider_not_configured"
         elif capability is CapabilityId.AUDIENCE:
-            status = CapabilityStatus.UNSUPPORTED
-            reason = "youtube_audience_not_implemented"
+            status = CapabilityStatus.PARTIAL
+            reason = "playback_audience_breakdowns_available"
         else:
             status = CapabilityStatus.AVAILABLE
             reason = "standalone_collector_available"

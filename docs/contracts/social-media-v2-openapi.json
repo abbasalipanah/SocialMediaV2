@@ -2432,7 +2432,11 @@
           "video_comments_total",
           "video_shares_total",
           "video_engagements_total",
-          "video_engagement_rate"
+          "video_engagement_rate",
+          "engaged_views",
+          "watch_time_minutes",
+          "playlist_additions",
+          "playlist_removals"
         ],
         "title": "MetricId",
         "type": "string"

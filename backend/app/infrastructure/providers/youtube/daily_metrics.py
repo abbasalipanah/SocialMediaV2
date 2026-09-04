@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections import defaultdict
 from collections.abc import Callable, Mapping
 from datetime import date
 from typing import Any
@@ -13,7 +14,11 @@ from app.domain.metrics import MetricId
 from app.domain.platforms import PlatformId
 
 from .responses import YouTubeResponseError, report_rows
-from .wire import YOUTUBE_DAILY_METRICS
+from .wire import (
+    YOUTUBE_BREAKDOWN_DIMENSIONS,
+    YOUTUBE_BREAKDOWN_METRICS,
+    YOUTUBE_DAILY_METRICS,
+)
 
 MAX_YOUTUBE_DAILY_WINDOW_DAYS = 31
 _REQUIRED_COLUMNS = ("day", *YOUTUBE_DAILY_METRICS)
@@ -23,8 +28,12 @@ class YouTubeDailyMetricsReader:
     def __init__(
         self,
         fetch: Callable[[ProviderAccount, date, date], Mapping[str, Any]],
+        fetch_breakdown: Callable[
+            [ProviderAccount, date, date, str], Mapping[str, Any]
+        ] | None = None,
     ) -> None:
         self._fetch = fetch
+        self._fetch_breakdown = fetch_breakdown
 
     def fetch_daily_metrics(
         self,
@@ -41,7 +50,7 @@ class YouTubeDailyMetricsReader:
             self._fetch(account, since, until),
             required_columns=_REQUIRED_COLUMNS,
         )
-        snapshots: list[DailyMetricSnapshot] = []
+        values_by_day: dict[date, dict[MetricId, float | int | None]] = {}
         observed_days: set[date] = set()
         for row in rows:
             observed_on = _day(row.get("day"))
@@ -54,22 +63,99 @@ class YouTubeDailyMetricsReader:
             shares = _number(row.get("shares"))
             values: dict[MetricId, float | int | None] = {
                 MetricId.VIEWS: views,
+                MetricId.ENGAGED_VIEWS: _number(row.get("engagedViews")),
+                MetricId.WATCH_TIME_MINUTES: _number(
+                    row.get("estimatedMinutesWatched")
+                ),
+                MetricId.VIDEO_LIKES_DAILY: likes,
+                MetricId.VIDEO_COMMENTS_DAILY: comments,
+                MetricId.VIDEO_SHARES_DAILY: shares,
                 MetricId.FOLLOWS: _number(row.get("subscribersGained")),
                 MetricId.UNFOLLOWS: _number(row.get("subscribersLost")),
+                MetricId.PLAYLIST_ADDITIONS: _number(
+                    row.get("videosAddedToPlaylists")
+                ),
+                MetricId.PLAYLIST_REMOVALS: _number(
+                    row.get("videosRemovedFromPlaylists")
+                ),
                 MetricId.INTERACTIONS: (
                     likes + comments + shares
                     if likes is not None and comments is not None and shares is not None
                     else None
                 ),
             }
-            snapshots.append(
-                DailyMetricSnapshot(
-                    account_id=account.account_id,
-                    observed_on=observed_on,
-                    metric_values=values,
-                )
+            values_by_day[observed_on] = values
+        breakdowns_by_day = self._breakdowns(
+            account,
+            since=since,
+            until=until,
+            observed_days=observed_days,
+        )
+        return tuple(
+            DailyMetricSnapshot(
+                account_id=account.account_id,
+                observed_on=observed_on,
+                metric_values=values_by_day[observed_on],
+                metric_breakdowns=breakdowns_by_day.get(observed_on, {}),
             )
-        return tuple(sorted(snapshots, key=lambda snapshot: snapshot.observed_on))
+            for observed_on in sorted(values_by_day)
+        )
+
+    def _breakdowns(
+        self,
+        account: ProviderAccount,
+        *,
+        since: date,
+        until: date,
+        observed_days: set[date],
+    ) -> dict[
+        date,
+        dict[MetricId, dict[str, dict[str, float | int]]],
+    ]:
+        by_day: dict[
+            date,
+            dict[MetricId, dict[str, dict[str, float | int]]],
+        ] = defaultdict(dict)
+        if self._fetch_breakdown is None:
+            return by_day
+        for provider_dimension, breakdown_key in YOUTUBE_BREAKDOWN_DIMENSIONS.items():
+            rows = report_rows(
+                self._fetch_breakdown(
+                    account,
+                    since,
+                    until,
+                    provider_dimension,
+                ),
+                required_columns=(
+                    "day",
+                    provider_dimension,
+                    *YOUTUBE_BREAKDOWN_METRICS,
+                ),
+            )
+            seen: set[tuple[date, str]] = set()
+            for row in rows:
+                observed_on = _day(row.get("day"))
+                raw_value = row.get(provider_dimension)
+                if (
+                    observed_on not in observed_days
+                    or not isinstance(raw_value, str)
+                    or not raw_value.strip()
+                    or (observed_on, raw_value) in seen
+                ):
+                    raise YouTubeResponseError("analytics_breakdown_invalid")
+                seen.add((observed_on, raw_value))
+                dimension_value = raw_value.strip()
+                for metric_id, source_name in (
+                    (MetricId.VIEWS, MetricId.VIEWS.value),
+                    (MetricId.WATCH_TIME_MINUTES, "estimatedMinutesWatched"),
+                ):
+                    value = _number(row.get(source_name))
+                    if value is None:
+                        continue
+                    by_metric = by_day[observed_on].setdefault(metric_id, {})
+                    by_dimension = by_metric.setdefault(breakdown_key, {})
+                    by_dimension[dimension_value] = value
+        return by_day
 
 
 def _day(value: object) -> date:

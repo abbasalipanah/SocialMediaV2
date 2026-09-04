@@ -120,6 +120,9 @@ def _record(payload: Mapping[str, Any], observed_at: datetime) -> ProviderRecord
     thumbnail = _thumbnail(snippet)
     likes = optional_count(statistics, "likeCount")
     comments = optional_count(statistics, "commentCount")
+    visible_interactions = (
+        likes + comments if likes is not None and comments is not None else None
+    )
     candidates = (thumbnail,) if thumbnail else ()
     return ProviderRecord(
         external_id=video_id,
@@ -142,7 +145,10 @@ def _record(payload: Mapping[str, Any], observed_at: datetime) -> ProviderRecord
             "shares_count": None,
             "views_count": optional_count(statistics, "viewCount"),
             "reach_count": None,
-            "interactions_count": None,
+            # The Data API exposes lifetime likes and comments but no
+            # per-video share count. Preserve shares as unavailable while
+            # making the sum of the two visible counters explicit.
+            "interactions_count": visible_interactions,
         },
     )
 

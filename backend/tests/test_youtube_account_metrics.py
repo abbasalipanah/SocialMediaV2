@@ -8,11 +8,13 @@ from app.application.ports.platforms import ProviderAccount, ProviderCredential
 from app.domain.metrics import MetricId, bootstrap_metric_catalog
 from app.domain.platforms import CapabilityId, PlatformId
 from app.infrastructure.providers.youtube import (
+    YOUTUBE_BREAKDOWN_METRICS,
     YOUTUBE_DAILY_METRICS,
     YouTubeDailyMetricsReader,
     YouTubeProfileReader,
     YouTubeResponseError,
     channel_query,
+    daily_breakdown_query,
     daily_metrics_query,
 )
 
@@ -42,6 +44,18 @@ def test_youtube_queries_match_read_only_provider_contracts() -> None:
         "metrics": ",".join(YOUTUBE_DAILY_METRICS),
         "dimensions": "day",
         "sort": "day",
+    }
+    assert daily_breakdown_query(
+        since=date(2026, 8, 1),
+        until=date(2026, 8, 2),
+        dimension="deviceType",
+    ) == {
+        "ids": "channel==MINE",
+        "startDate": "2026-08-01",
+        "endDate": "2026-08-02",
+        "metrics": ",".join(YOUTUBE_BREAKDOWN_METRICS),
+        "dimensions": "day,deviceType",
+        "sort": "day,-views",
     }
 
 
@@ -131,8 +145,8 @@ def test_youtube_daily_metrics_map_flows_and_sum_interactions() -> None:
                 for name in _columns()
             ],
             "rows": [
-                ["2026-08-02", 110, 8, 3, 2, 5, 1],
-                ["2026-08-01", 100, 7, 2, 1, 4, 0],
+                ["2026-08-02", 110, 95, 420, 8, 3, 2, 5, 1, 4, 1],
+                ["2026-08-01", 100, 85, 360, 7, 2, 1, 4, 0, 3, 0],
             ],
         }
 
@@ -147,8 +161,15 @@ def test_youtube_daily_metrics_map_flows_and_sum_interactions() -> None:
     ]
     assert snapshots[0].metric_values == {
         MetricId.VIEWS: 100,
+        MetricId.ENGAGED_VIEWS: 85,
+        MetricId.WATCH_TIME_MINUTES: 360,
+        MetricId.VIDEO_LIKES_DAILY: 7,
+        MetricId.VIDEO_COMMENTS_DAILY: 2,
+        MetricId.VIDEO_SHARES_DAILY: 1,
         MetricId.FOLLOWS: 4,
         MetricId.UNFOLLOWS: 0,
+        MetricId.PLAYLIST_ADDITIONS: 3,
+        MetricId.PLAYLIST_REMOVALS: 0,
         MetricId.INTERACTIONS: 10,
     }
     assert snapshots[1].metric_values[MetricId.INTERACTIONS] == 13
@@ -175,8 +196,8 @@ def test_youtube_daily_metrics_fail_closed_on_schema_drift_and_bad_days() -> Non
     duplicate_day = {
         "columnHeaders": [{"name": name} for name in _columns()],
         "rows": [
-            ["2026-08-01", 1, 1, 1, 1, 1, 1],
-            ["2026-08-01", 2, 2, 2, 2, 2, 2],
+            ["2026-08-01", 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            ["2026-08-01", 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
         ],
     }
     reader = YouTubeDailyMetricsReader(lambda account, since, until: duplicate_day)
@@ -196,6 +217,66 @@ def test_youtube_daily_metrics_reject_invalid_ranges() -> None:
     with pytest.raises(ValueError, match="^metric_range_invalid$"):
         reader.fetch_daily_metrics(
             _account(), since=date(2026, 7, 1), until=date(2026, 8, 1)
+        )
+
+
+def test_youtube_daily_metrics_map_supported_playback_breakdowns() -> None:
+    dimensions: list[str] = []
+
+    def fetch_breakdown(
+        account: ProviderAccount,
+        since: date,
+        until: date,
+        dimension: str,
+    ) -> dict[str, object]:
+        dimensions.append(dimension)
+        return {
+            "columnHeaders": [
+                {"name": "day"},
+                {"name": dimension},
+                {"name": "views"},
+                {"name": "estimatedMinutesWatched"},
+            ],
+            "rows": [
+                ["2026-08-01", f"{dimension}-a", 60, 120],
+                ["2026-08-01", f"{dimension}-b", 40, 80],
+            ],
+        }
+
+    reader = YouTubeDailyMetricsReader(
+        lambda account, since, until: {
+            "columnHeaders": [{"name": name} for name in _columns()],
+            "rows": [["2026-08-01", 100, 80, 200, 7, 2, 1, 4, 0, 3, 0]],
+        },
+        fetch_breakdown,
+    )
+
+    snapshots = reader.fetch_daily_metrics(
+        _account(), since=date(2026, 8, 1), until=date(2026, 8, 1)
+    )
+
+    assert dimensions == [
+        "country",
+        "deviceType",
+        "insightTrafficSourceType",
+        "subscribedStatus",
+        "creatorContentType",
+    ]
+    assert snapshots[0].metric_breakdowns[MetricId.VIEWS]["youtube_country"] == {
+        "country-a": 60,
+        "country-b": 40,
+    }
+    assert snapshots[0].metric_breakdowns[MetricId.WATCH_TIME_MINUTES][
+        "youtube_device_type"
+    ] == {"deviceType-a": 120, "deviceType-b": 80}
+
+
+def test_youtube_breakdown_query_rejects_unapproved_dimensions() -> None:
+    with pytest.raises(ValueError, match="^metric_breakdown_invalid$"):
+        daily_breakdown_query(
+            since=date(2026, 8, 1),
+            until=date(2026, 8, 2),
+            dimension="gender",
         )
 
 

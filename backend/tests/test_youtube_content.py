@@ -126,7 +126,8 @@ def test_youtube_content_maps_video_page_without_inventing_share_count() -> None
     assert first.fields["comments_count"] == 3
     assert first.fields["shares_count"] is None
     assert first.fields["views_count"] == 100
-    assert first.fields["interactions_count"] is None
+    assert first.fields["interactions_count"] == 10
+    assert first.fields["shares_count"] is None
     assert page.items[1].fields["likes_count"] is None
 
 

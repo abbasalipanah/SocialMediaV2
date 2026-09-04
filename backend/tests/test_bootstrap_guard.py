@@ -421,7 +421,11 @@ def test_complete_local_youtube_configuration_is_fail_closed_then_accepted(
     assert registry.get(
         PlatformId.YOUTUBE,
         CapabilityId.AUDIENCE,
-    ).status is CapabilityStatus.UNSUPPORTED
+    ).status is CapabilityStatus.PARTIAL
+    assert registry.get(
+        PlatformId.YOUTUBE,
+        CapabilityId.AUDIENCE,
+    ).reason == "playback_audience_breakdowns_available"
     engine = create_engine(settings.db.url)
     try:
         coordinator = create_youtube_activation_runtime(

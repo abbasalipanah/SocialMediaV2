@@ -71,9 +71,11 @@ class Profile:
 
 
 class Daily:
+    def __init__(self) -> None:
+        self.windows: list[tuple[date, date]] = []
+
     def fetch_daily_metrics(self, account, *, since, until):
-        assert since == date(2026, 8, 2)
-        assert until == date(2026, 8, 31)
+        self.windows.append((since, until))
         return (
             DailyMetricSnapshot(
                 account_id=account.account_id,
@@ -150,13 +152,14 @@ def test_youtube_worker_collects_supported_capabilities_without_audience() -> No
         credential=ProviderCredential(access_token="access-value"),
     )
 
+    daily = Daily()
     result = collect_youtube_account(
         account=account,
         local_account_id=81,
         brand_id=17,
         readers=YouTubeReaders(
             profile=Profile(),
-            daily=Daily(),
+            daily=daily,
             content=Content(),
             comments=Comments(),
         ),
@@ -170,17 +173,20 @@ def test_youtube_worker_collects_supported_capabilities_without_audience() -> No
     )
 
     assert result.status == "success"
-    assert result.metric_count == 4
+    assert result.metric_count == 26
     assert result.content_count == 1
     assert result.comment_count == 1
     assert result.media_count == 1
     assert result.backfill_complete is True
-    assert [point.metric_id for point in metrics.points] == [
+    assert [point.metric_id for point in metrics.points[:4]] == [
         MetricId.FOLLOWERS,
         MetricId.MEDIA_COUNT,
         MetricId.VIEWS,
         MetricId.INTERACTIONS,
     ]
+    assert daily.windows[0] == (date(2025, 9, 1), date(2025, 10, 1))
+    assert daily.windows[-1] == (date(2026, 8, 8), date(2026, 8, 31))
+    assert len(daily.windows) == 12
     assert content.items[0].shares_count is None
     assert comments.items[0].external_comment_id == "comment-1"
     assert media_items == ["video-1"]

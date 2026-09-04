@@ -9,12 +9,19 @@ The implementation provides:
 - read-only OAuth using OpenID identity, YouTube Data API, and YouTube Analytics scopes;
 - backend-only encrypted access and refresh-token storage;
 - owned-channel discovery, explicit Brand selection, and confirmed unlinking;
-- bounded profile, daily metric, recent-video, and recent-comment collection;
+- bounded profile, 365-day daily metric, recent-video, and recent-comment collection;
+- YouTube-native views, engaged views, watch time, engagement, subscriber, playlist,
+  content-type, country, device, traffic-source, and subscription-status reporting;
 - automatic near-expiry access-token refresh before collection;
 - frontend authorization in Integrations and channel mapping in Settings;
 - fail-closed activation, write, scope, authority, and provider-response checks.
 
-Audience data is not collected because the implemented provider endpoints do not supply a compatible audience-demographic contract. Missing engagement counters remain unavailable rather than being converted to zero.
+The audience page uses aggregate playback breakdowns supplied by YouTube Analytics.
+It does not request or invent individual viewer data. Age and gender cards are omitted;
+if YouTube withholds aggregate playback breakdowns for a channel or period, the frontend
+shows one explicit unavailable state instead of empty charts. Per-video share counts are
+not exposed by the YouTube Data API and remain unavailable rather than being converted
+to zero.
 
 ## Safe defaults
 
@@ -104,14 +111,16 @@ After the channel is linked, run one bounded collection against the isolated loc
 database:
 
 ```bash
-./scripts/dev/collect_youtube_canary.sh
+npm run collect:youtube
 ```
 
 The command enables YouTube provider reads only for that process, targets Brand 18,
 keeps the scheduler disabled, and rejects every database except
 `social_media_v2_platforms_dev` on `127.0.0.1:56432`. Refresh the browser after it
 finishes; the YouTube navigation and dashboard then use the collected profile,
-30-day analytics, recent videos, and available comments. Meta, TikTok, the live
+up to 365 days of analytics, recent videos, and available comments. Initial analytics
+backfill is split into provider-safe 31-day windows; later runs refresh only the current
+window. Meta, TikTok, the live
 database, the production OAuth client, and the live deployment are not used.
 
 Provider references: [Google web-server OAuth](https://developers.google.com/identity/protocols/oauth2/web-server), [YouTube OAuth](https://developers.google.com/youtube/reporting/guides/authorization/server-side-web-apps), [YouTube channel discovery](https://developers.google.com/youtube/v3/docs/channels/list), and [YouTube Analytics reports](https://developers.google.com/youtube/analytics/reference/reports/query).

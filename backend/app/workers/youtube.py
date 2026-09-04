@@ -34,6 +34,7 @@ from app.infrastructure.providers.youtube import (
     YouTubeProfileReader,
     channel_query,
     comment_threads_query,
+    daily_breakdown_query,
     daily_metrics_query,
     playlist_items_query,
     uploads_playlist_query,
@@ -41,7 +42,8 @@ from app.infrastructure.providers.youtube import (
 )
 
 YOUTUBE_DAILY_CHECKPOINT_SUFFIX = "daily-metrics-v1"
-YOUTUBE_DAILY_BACKFILL_DAYS = 30
+YOUTUBE_DAILY_BACKFILL_DAYS = 365
+YOUTUBE_DAILY_WINDOW_DAYS = 31
 YOUTUBE_CONTENT_PAGES_PER_RUN = 1
 YOUTUBE_COMMENTED_CONTENT_PER_RUN = 10
 YOUTUBE_COMMENT_PAGES_PER_CONTENT = 5
@@ -99,7 +101,15 @@ def create_youtube_readers(
             lambda _selected, since, until: get(
                 config.analytics_reports_url,
                 daily_metrics_query(since=since, until=until),
-            )
+            ),
+            lambda _selected, since, until, dimension: get(
+                config.analytics_reports_url,
+                daily_breakdown_query(
+                    since=since,
+                    until=until,
+                    dimension=dimension,
+                ),
+            ),
         ),
         content=YouTubeContentReader(
             lambda selected: get(
@@ -240,15 +250,24 @@ def _collect_daily(
             min(until, checkpoint.observed_through.astimezone(UTC).date()),
         )
     try:
-        outcome = collect_daily_metrics(
-            target=target,
-            reader=reader,
-            metric_store=metric_store,
-            since=since,
-            until=until,
-        )
-        if outcome.status is not CollectionStatus.SUCCESS:
-            partial_errors.add("daily_partial")
+        metric_count = 0
+        window_start = since
+        while window_start <= until:
+            window_end = min(
+                until,
+                window_start + timedelta(days=YOUTUBE_DAILY_WINDOW_DAYS - 1),
+            )
+            outcome = collect_daily_metrics(
+                target=target,
+                reader=reader,
+                metric_store=metric_store,
+                since=window_start,
+                until=window_end,
+            )
+            metric_count += outcome.metric_count
+            if outcome.status is not CollectionStatus.SUCCESS:
+                partial_errors.add("daily_partial")
+            window_start = window_end + timedelta(days=1)
         next_checkpoint = ProviderCheckpoint(
             key=key,
             version=1 if checkpoint is None else checkpoint.version + 1,
@@ -260,7 +279,7 @@ def _collect_daily(
             next_checkpoint,
             expected_version=checkpoint.version if checkpoint is not None else None,
         )
-        return outcome.metric_count
+        return metric_count
     except Exception:
         partial_errors.add("daily_unavailable")
         return 0
@@ -270,6 +289,7 @@ __all__ = [
     "YOUTUBE_COMMENTED_CONTENT_PER_RUN",
     "YOUTUBE_CONTENT_PAGES_PER_RUN",
     "YOUTUBE_DAILY_BACKFILL_DAYS",
+    "YOUTUBE_DAILY_WINDOW_DAYS",
     "YouTubeCollectionResult",
     "YouTubeReaders",
     "collect_youtube_account",

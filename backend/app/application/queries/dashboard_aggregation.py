@@ -444,6 +444,7 @@ def metric_breakdowns(
     samples: tuple[ReportingMetric, ...],
 ) -> tuple[DashboardBreakdown, ...]:
     latest: dict[tuple[MetricId, str, str, int], ReportingMetric] = {}
+    youtube_flows: dict[tuple[MetricId, str, str, int], float] = defaultdict(float)
     for sample in samples:
         if sample.breakdown_key is None or sample.breakdown_value is None:
             continue
@@ -453,12 +454,20 @@ def metric_breakdowns(
             sample.breakdown_value,
             sample.account_id,
         )
+        if (
+            sample.platform is PlatformId.YOUTUBE
+            and sample.breakdown_key.startswith("youtube_")
+        ):
+            youtube_flows[key] += sample.value
+            continue
         current = latest.get(key)
         if current is None or sample.observed_on >= current.observed_on:
             latest[key] = sample
     grouped: dict[tuple[MetricId, str], dict[str, float]] = defaultdict(lambda: defaultdict(float))
     for (metric_id, dimension, value, _), sample in latest.items():
         grouped[(metric_id, dimension)][value] += sample.value
+    for (metric_id, dimension, value, _), amount in youtube_flows.items():
+        grouped[(metric_id, dimension)][value] += amount
     return tuple(
         DashboardBreakdown(
             metric_id=metric_id,
